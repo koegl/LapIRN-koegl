@@ -37,7 +37,6 @@ from miccai2020_model_stage import (
 )
 from tqdm import tqdm
 
-
 # ---------------------------------------------------------------------------
 # Dataset
 # ---------------------------------------------------------------------------
@@ -75,8 +74,11 @@ class PSMARegSinglePairDataset(Data.Dataset):
         self.moving_pet = load_and_norm(moving_pet_path)
 
         # x = moving, y = fixed — each (2, H, W, D)
-        self.x = torch.cat([self.moving_ct, self.moving_pet], dim=0)
-        self.y = torch.cat([self.fixed_ct, self.fixed_pet], dim=0)
+        # self.x = torch.cat([self.moving_ct, self.moving_pet], dim=0)
+        # self.y = torch.cat([self.fixed_ct, self.fixed_pet], dim=0)
+
+        self.x = self.moving_ct
+        self.y = self.fixed_ct
 
     def __len__(self) -> int:
         return 1
@@ -151,7 +153,7 @@ def train_lvl1(
     ).to(device)
 
     loss_ncc_ct = multi_resolution_NCC(win=lvl1_ncc_win, scale=lvl1_ncc_scale)
-    loss_ncc_pet = multi_resolution_NCC(win=lvl1_ncc_win, scale=lvl1_ncc_scale)
+    # loss_ncc_pet = multi_resolution_NCC(win=lvl1_ncc_win, scale=lvl1_ncc_scale)
     loss_Jdet = neg_Jdet_loss
 
     grid_4 = generate_grid(imgshape_4)
@@ -175,7 +177,7 @@ def train_lvl1(
 
             # warped_x is (B, 2, H, W, D) — split channels
             warped_ct = warped_x[:, 0:1, ...]
-            warped_pet = warped_x[:, 1:2, ...]
+            # warped_pet = warped_x[:, 1:2, ...]
 
             # down_y is fixed downsampled — channel 1 of cat(x,y) downsampled 4x
             # cat(x,y) = [mov_ct, mov_pet, fix_ct, fix_pet], so index 2=fix_ct, 3=fix_pet
@@ -189,8 +191,8 @@ def train_lvl1(
             fixed_pet_4x = y_4x[:, 1:2, ...]
 
             ncc_ct = loss_ncc_ct(warped_ct, fixed_ct_4x)
-            ncc_pet = loss_ncc_pet(warped_pet, fixed_pet_4x)
-            loss_multiNCC = w_ct * ncc_ct + w_pet * ncc_pet
+            # ncc_pet = loss_ncc_pet(warped_pet, fixed_pet_4x)
+            loss_multiNCC = w_ct * ncc_ct  # + w_pet * ncc_pet
 
             F_X_Y_norm = transform_unit_flow_to_flow_cuda(
                 F_X_Y.permute(0, 2, 3, 4, 1).clone()
@@ -212,13 +214,13 @@ def train_lvl1(
                 tqdm.write(
                     f"NaN loss at step {step}: "
                     f"ncc_ct={ncc_ct.item():.6f} "
-                    f"ncc_pet={ncc_pet.item():.6f} "
+                    # f"ncc_pet={ncc_pet.item():.6f} "
                     f"smooth={loss_regulation.item():.6f} "
                     f"jac={loss_Jacobian.item():.6f} "
                     f"warped_ct_min={warped_ct.min().item():.4f} "
                     f"warped_ct_max={warped_ct.max().item():.4f} "
-                    f"warped_pet_min={warped_pet.min().item():.4f} "
-                    f"warped_pet_max={warped_pet.max().item():.4f}"
+                    # f"warped_pet_min={warped_pet.min().item():.4f} "
+                    # f"warped_pet_max={warped_pet.max().item():.4f}"
                 )
                 break
             loss.backward()
@@ -228,7 +230,7 @@ def train_lvl1(
                 {
                     "lvl1/loss": loss.item(),
                     "lvl1/ncc_ct": ncc_ct.item(),
-                    "lvl1/ncc_pet": ncc_pet.item(),
+                    # "lvl1/ncc_pet": ncc_pet.item(),
                     "lvl1/ncc": loss_multiNCC.item(),
                     "lvl1/jacobian": loss_Jacobian.item(),
                     "lvl1/smooth": loss_regulation.item(),
@@ -239,7 +241,7 @@ def train_lvl1(
             pbar.set_postfix(
                 loss=f"{loss.item():.4f}",
                 ncc_ct=f"{ncc_ct.item():.4f}",
-                ncc_pet=f"{ncc_pet.item():.4f}",
+                # ncc_pet=f"{ncc_pet.item():.4f}",
             )
             pbar.update(1)
 
@@ -309,7 +311,7 @@ def train_lvl2(
     ).to(device)
 
     loss_ncc_ct = multi_resolution_NCC(win=lvl2_ncc_win, scale=lvl2_ncc_scale)
-    loss_ncc_pet = multi_resolution_NCC(win=lvl2_ncc_win, scale=lvl2_ncc_scale)
+    # loss_ncc_pet = multi_resolution_NCC(win=lvl2_ncc_win, scale=lvl2_ncc_scale)
     loss_Jdet = neg_Jdet_loss
 
     grid_2 = generate_grid(imgshape_2)
@@ -343,8 +345,8 @@ def train_lvl2(
             fixed_pet_2x = y_2x[:, 1:2, ...]
 
             ncc_ct = loss_ncc_ct(warped_ct, fixed_ct_2x)
-            ncc_pet = loss_ncc_pet(warped_pet, fixed_pet_2x)
-            loss_multiNCC = w_ct * ncc_ct + w_pet * ncc_pet
+            # ncc_pet = loss_ncc_pet(warped_pet, fixed_pet_2x)
+            loss_multiNCC = w_ct * ncc_ct  # + w_pet * ncc_pet
 
             F_X_Y_norm = transform_unit_flow_to_flow_cuda(
                 F_X_Y.permute(0, 2, 3, 4, 1).clone()
@@ -465,7 +467,7 @@ def train_lvl3(
     ).to(device)
 
     loss_ncc_ct = multi_resolution_NCC(win=lvl3_ncc_win, scale=lvl3_ncc_scale)
-    loss_ncc_pet = multi_resolution_NCC(win=lvl3_ncc_win, scale=lvl3_ncc_scale)
+    # loss_ncc_pet = multi_resolution_NCC(win=lvl3_ncc_win, scale=lvl3_ncc_scale)
     loss_Jdet = neg_Jdet_loss
 
     grid = generate_grid(imgshape)
@@ -491,8 +493,8 @@ def train_lvl3(
             fixed_pet = y[:, 1:2, ...]
 
             ncc_ct = loss_ncc_ct(warped_ct, fixed_ct)
-            ncc_pet = loss_ncc_pet(warped_pet, fixed_pet)
-            loss_multiNCC = w_ct * ncc_ct + w_pet * ncc_pet
+            # ncc_pet = loss_ncc_pet(warped_pet, fixed_pet)
+            loss_multiNCC = w_ct * ncc_ct  # + w_pet * ncc_pet
 
             F_X_Y_norm = transform_unit_flow_to_flow_cuda(
                 F_X_Y.permute(0, 2, 3, 4, 1).clone()
@@ -597,8 +599,8 @@ def main() -> None:
                 lr=config.lr,
                 antifold=config.antifold,
                 smooth=config.smooth,
-                iteration_lvl1=config.iteration_lvl1,
-                n_checkpoint=config.n_checkpoint,
+                iteration_lvl1=config.iteration_lvl1 * config.iteration_multiplier,
+                n_checkpoint=config.n_checkpoint * config.iteration_multiplier,
                 model_dir=config.model_dir,
                 w_ct=config.w_ct,
                 w_pet=config.w_pet,
@@ -619,9 +621,9 @@ def main() -> None:
                 lr=config.lr,
                 antifold=config.antifold,
                 smooth=config.smooth,
-                freeze_step=config.freeze_step,
-                iteration_lvl2=config.iteration_lvl2,
-                n_checkpoint=config.n_checkpoint,
+                freeze_step=config.freeze_step * config.iteration_multiplier,
+                iteration_lvl2=config.iteration_lvl2 * config.iteration_multiplier,
+                n_checkpoint=config.n_checkpoint * config.iteration_multiplier,
                 model_dir=config.model_dir,
                 w_ct=config.w_ct,
                 w_pet=config.w_pet,
@@ -642,9 +644,9 @@ def main() -> None:
                 lr=config.lr,
                 antifold=config.antifold,
                 smooth=config.smooth,
-                freeze_step=config.freeze_step,
-                iteration_lvl3=config.iteration_lvl3,
-                n_checkpoint=config.n_checkpoint,
+                freeze_step=config.freeze_step * config.iteration_multiplier,
+                iteration_lvl3=config.iteration_lvl3 * config.iteration_multiplier,
+                n_checkpoint=config.n_checkpoint * config.iteration_multiplier,
                 model_dir=config.model_dir,
                 ckpt_dir=config.ckpt_dir,
                 fixed_ct_path=config.fixed_ct_path,

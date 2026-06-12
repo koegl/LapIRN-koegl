@@ -1,6 +1,6 @@
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Tuple
 
 
 @dataclass
@@ -23,21 +23,21 @@ class TrainingConfig:
     imgshape: Tuple[int, int, int] = (192, 192, 288)
 
     range_flow: float = 0.4
-    in_channel: int = 4
+    in_channel: int = 2
     n_classes: int = 3
-    lr: float = 1e-5
+    lr: float = 1e-2
     start_channel: int = 7
     antifold: float = 0.0
     smooth: float = 1.0
     w_ct: float = 1.0
     w_pet: float = 0.1
 
-    iteration_multiplier: int = 1000
-    iteration_lvl1: Optional[int] = None
-    iteration_lvl2: Optional[int] = None
-    iteration_lvl3: Optional[int] = None
-    freeze_step: Optional[int] = None
-    n_checkpoint: Optional[int] = None
+    iteration_multiplier: int = 100
+    iteration_lvl1: int = 10
+    iteration_lvl2: int = 10
+    iteration_lvl3: int = 20
+    freeze_step: int = 2
+    n_checkpoint: int = 1
 
     batch_size: int = 1
     shuffle: bool = False
