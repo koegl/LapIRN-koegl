@@ -2,11 +2,13 @@ import glob
 import os
 import sys
 from argparse import ArgumentParser
+from pathlib import Path
 
+import mlflow
+import nibabel as nib
 import numpy as np
 import torch
-import torch.utils.data as Data
-from Functions import Dataset_epoch, generate_grid, transform_unit_flow_to_flow_cuda
+from Functions import generate_grid, transform_unit_flow_to_flow_cuda
 from miccai2020_model_stage import (
     NCC,
     Miccai2020_LDR_laplacian_unit_add_lvl1,
@@ -28,7 +30,7 @@ parser.add_argument(
     "--iteration_lvl1",
     type=int,
     dest="iteration_lvl1",
-    default=30001,
+    default=3001,
     help="number of lvl1 iterations",
 )
 parser.add_argument(
@@ -104,6 +106,19 @@ iteration_lvl3 = opt.iteration_lvl3
 model_name = "LDR_OASIS_NCC_unit_add_reg_35_"
 
 
+def save_volume(
+    volume: torch.Tensor, out_dir: Path, step, reference_path: Path, name: str
+) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fixed_nib = nib.load(reference_path.as_posix())
+    affine = fixed_nib.affine
+
+    nib.save(
+        nib.Nifti1Image(volume.detach().squeeze().cpu().numpy(), affine),
+        str(out_dir / f"{name}_{step:05d}.nii.gz"),
+    )
+
+
 def train_lvl1():
     print("Training lvl1...")
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -122,8 +137,13 @@ def train_lvl1():
         param.requires_grad = False
         param.volatile = True
 
-    # OASIS
-    names = sorted(glob.glob(datapath + "/*.nii"))
+    X_vol = nib.load(datapath + "/moving_ct.nii.gz").get_fdata().astype("float32")
+    Y_vol = nib.load(datapath + "/fixed_ct.nii.gz").get_fdata().astype("float32")
+    X_vol = (X_vol - X_vol.min()) / (X_vol.max() - X_vol.min() + 1e-8)
+    Y_vol = (Y_vol - Y_vol.min()) / (Y_vol.max() - Y_vol.min() + 1e-8)
+    X_t = torch.from_numpy(X_vol).unsqueeze(0).unsqueeze(0)  # (1,1,H,W,D)
+    Y_t = torch.from_numpy(Y_vol).unsqueeze(0).unsqueeze(0)  # (1,1,H,W,D)
+    training_generator = [(X_t, Y_t)]
 
     grid_4 = generate_grid(imgshape_4)
     grid_4 = (
@@ -132,16 +152,16 @@ def train_lvl1():
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     # optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
-    model_dir = "../Model/Stage"
+    model_dir = "/home/iml/fryderyk.koegl/code/LapIRN-koegl/checkpoints/Model/Stage"
 
     if not os.path.isdir(model_dir):
-        os.mkdir(model_dir)
+        from pathlib import Path
+
+        Path(model_dir).mkdir(parents=True, exist_ok=True)
+        # os.mkdir(model_dir)
 
     lossall = np.zeros((4, iteration_lvl1 + 1))
 
-    training_generator = Data.DataLoader(
-        Dataset_epoch(names, norm=False), batch_size=1, shuffle=True, num_workers=4
-    )
     step = 0
     load_model = False
     if load_model is True:
@@ -159,8 +179,33 @@ def train_lvl1():
             X = X.to(device).float()
             Y = Y.to(device).float()
 
+            if step == 0:
+                save_volume(
+                    X,
+                    Path(model_dir) / "moving_image",
+                    step,
+                    Path(datapath) / "moving_ct.nii.gz",
+                    "moving_ct",
+                )
+                save_volume(
+                    Y,
+                    Path(model_dir) / "fixed_image",
+                    step,
+                    Path(datapath) / "fixed_ct.nii.gz",
+                    "fixed_ct",
+                )
+
             # output_disp_e0, warpped_inputx_lvl1_out, down_y, output_disp_e0_v, e0
             F_X_Y, X_Y, Y_4x, F_xy, _ = model(X, Y)
+
+            if step % 100 == 0:
+                save_volume(
+                    X_Y,
+                    Path(model_dir) / "warped_image",
+                    step,
+                    Path(datapath) / "fixed_ct.nii.gz",
+                    "warped_ct",
+                )
 
             # 3 level deep supervision NCC
             loss_multiNCC = loss_similarity(X_Y, Y_4x)
@@ -183,6 +228,7 @@ def train_lvl1():
 
             optimizer.zero_grad()  # clear gradients for this training step
             loss.backward()  # backpropagation, compute gradients
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()  # apply gradients
 
             lossall[:, step] = np.array(
@@ -204,6 +250,14 @@ def train_lvl1():
                 )
             )
             sys.stdout.flush()
+            mlflow.log_metrics(
+                {
+                    "lvl1/loss": loss.item(),
+                    "lvl1/ncc": loss_multiNCC.item(),
+                    "lvl1/smooth": loss_regulation.item(),
+                },
+                step=step,
+            )
 
             # with lr 1e-3 + with bias
             if step % n_checkpoint == 0:
@@ -268,8 +322,13 @@ def train_lvl2():
         param.requires_grad = False
         param.volatile = True
 
-    # OASIS
-    names = sorted(glob.glob(datapath + "/*.nii"))
+    X_vol = nib.load(datapath + "/moving_ct.nii.gz").get_fdata().astype("float32")
+    Y_vol = nib.load(datapath + "/fixed_ct.nii.gz").get_fdata().astype("float32")
+    X_vol = (X_vol - X_vol.min()) / (X_vol.max() - X_vol.min() + 1e-8)
+    Y_vol = (Y_vol - Y_vol.min()) / (Y_vol.max() - Y_vol.min() + 1e-8)
+    X_t = torch.from_numpy(X_vol).unsqueeze(0).unsqueeze(0)  # (1,1,H,W,D)
+    Y_t = torch.from_numpy(Y_vol).unsqueeze(0).unsqueeze(0)  # (1,1,H,W,D)
+    training_generator = [(X_t, Y_t)]
 
     grid_2 = generate_grid(imgshape_2)
     grid_2 = (
@@ -284,9 +343,6 @@ def train_lvl2():
 
     lossall = np.zeros((4, iteration_lvl2 + 1))
 
-    training_generator = Data.DataLoader(
-        Dataset_epoch(names, norm=False), batch_size=1, shuffle=True, num_workers=2
-    )
     step = 0
     load_model = False
     if load_model is True:
@@ -327,6 +383,7 @@ def train_lvl2():
 
             optimizer.zero_grad()  # clear gradients for this training step
             loss.backward()  # backpropagation, compute gradients
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()  # apply gradients
 
             lossall[:, step] = np.array(
@@ -348,6 +405,14 @@ def train_lvl2():
                 )
             )
             sys.stdout.flush()
+            mlflow.log_metrics(
+                {
+                    "lvl2/loss": loss.item(),
+                    "lvl2/ncc": loss_multiNCC.item(),
+                    "lvl2/smooth": loss_regulation.item(),
+                },
+                step=step,
+            )
 
             # with lr 1e-3 + with bias
             if step % n_checkpoint == 0:
@@ -425,8 +490,13 @@ def train_lvl3():
         param.requires_grad = False
         param.volatile = True
 
-    # OASIS
-    names = sorted(glob.glob(datapath + "/*.nii"))
+    X_vol = nib.load(datapath + "/moving_ct.nii.gz").get_fdata().astype("float32")
+    Y_vol = nib.load(datapath + "/fixed_ct.nii.gz").get_fdata().astype("float32")
+    X_vol = (X_vol - X_vol.min()) / (X_vol.max() - X_vol.min() + 1e-8)
+    Y_vol = (Y_vol - Y_vol.min()) / (Y_vol.max() - Y_vol.min() + 1e-8)
+    X_t = torch.from_numpy(X_vol).unsqueeze(0).unsqueeze(0)  # (1,1,H,W,D)
+    Y_t = torch.from_numpy(Y_vol).unsqueeze(0).unsqueeze(0)  # (1,1,H,W,D)
+    training_generator = [(X_t, Y_t)]
 
     grid = generate_grid(imgshape)
     grid = torch.from_numpy(np.reshape(grid, (1,) + grid.shape)).to(device).float()
@@ -440,9 +510,6 @@ def train_lvl3():
 
     lossall = np.zeros((4, iteration_lvl3 + 1))
 
-    training_generator = Data.DataLoader(
-        Dataset_epoch(names, norm=False), batch_size=1, shuffle=True, num_workers=2
-    )
     step = 0
     load_model = False
     if load_model is True:
@@ -483,6 +550,7 @@ def train_lvl3():
 
             optimizer.zero_grad()  # clear gradients for this training step
             loss.backward()  # backpropagation, compute gradients
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()  # apply gradients
 
             lossall[:, step] = np.array(
@@ -504,6 +572,14 @@ def train_lvl3():
                 )
             )
             sys.stdout.flush()
+            mlflow.log_metrics(
+                {
+                    "lvl3/loss": loss.item(),
+                    "lvl3/ncc": loss_multiNCC.item(),
+                    "lvl3/smooth": loss_regulation.item(),
+                },
+                step=step,
+            )
 
             # with lr 1e-3 + with bias
             if step % n_checkpoint == 0:
@@ -534,11 +610,29 @@ def train_lvl3():
     np.save(model_dir + "/loss" + model_name + "stagelvl3.npy", lossall)
 
 
-imgshape = (160, 192, 144)
-imgshape_4 = (160 / 4, 192 / 4, 144 / 4)
-imgshape_2 = (160 / 2, 192 / 2, 144 / 2)
+imgshape = (192, 192, 288)
+imgshape_4 = (192 // 4, 192 // 4, 288 // 4)  # (48, 48, 72)
+imgshape_2 = (192 // 2, 192 // 2, 288 // 2)  # (96, 96, 144)
 
 range_flow = 0.4
-train_lvl1()
-train_lvl2()
-train_lvl3()
+
+# datapath must point to a folder containing moving_ct.nii.gz and fixed_ct.nii.gz
+# Override default argparse value:
+datapath = "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006"
+
+mlflow.set_tracking_uri("sqlite:////home/iml/fryderyk.koegl/code/mlruns.db")
+mlflow.set_experiment("PSMAReg_LapIRN_overfit_CT_only")
+with mlflow.start_run():
+    mlflow.log_params(
+        {
+            "imgshape": str(imgshape),
+            "lr": lr,
+            "smooth": smooth,
+            "antifold": antifold,
+            "start_channel": start_channel,
+            "range_flow": range_flow,
+        }
+    )
+    train_lvl1()
+    # train_lvl2()
+    # train_lvl3()
