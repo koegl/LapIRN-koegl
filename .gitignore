@@ -1,0 +1,5 @@
+.venv/
+.env
+Code/__pycache__/*
+Code/checkpoints/*
+*.pyc
