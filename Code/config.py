@@ -23,6 +23,8 @@ class TrainingConfig:
     imgshape: Tuple[int, int, int] = (192, 192, 288)
 
     range_flow: float = 0.4
+    in_channel: int = 4
+    n_classes: int = 3
     lr: float = 1e-5
     start_channel: int = 7
     antifold: float = 0.0
@@ -40,6 +42,13 @@ class TrainingConfig:
     batch_size: int = 1
     shuffle: bool = False
     num_workers: int = 0
+
+    lvl1_ncc_win: int = 7
+    lvl1_ncc_scale: int = 1
+    lvl2_ncc_win: int = 5
+    lvl2_ncc_scale: int = 2
+    lvl3_ncc_win: int = 7
+    lvl3_ncc_scale: int = 3
 
     mlflow_tracking_uri: str = "sqlite:////home/iml/fryderyk.koegl/code/mlruns.db"
     mlflow_experiment: str = "PSMAReg_LapIRN_overfit"

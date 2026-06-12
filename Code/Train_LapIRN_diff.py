@@ -122,6 +122,8 @@ def train_lvl1(
     training_generator: Data.DataLoader,
     imgshape_4: Tuple[int, int, int],
     imgshape: Tuple[int, int, int],
+    in_channel: int,
+    n_classes: int,
     start_channel: int,
     range_flow: float,
     lr: float,
@@ -132,22 +134,24 @@ def train_lvl1(
     model_dir: Path,
     w_ct: float,
     w_pet: float,
+    lvl1_ncc_win: int,
+    lvl1_ncc_scale: int,
 ) -> None:
     """Train LapIRN level 1 (coarsest scale)."""
     print("Training lvl1...")
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     model = Miccai2020_LDR_laplacian_unit_add_lvl1(
-        in_channel=4,
-        n_classes=3,
+        in_channel=in_channel,
+        n_classes=n_classes,
         start_channel=start_channel,
         is_train=True,
         imgshape=imgshape_4,
         range_flow=range_flow,
     ).to(device)
 
-    loss_ncc_ct = multi_resolution_NCC(win=7, scale=1)
-    loss_ncc_pet = multi_resolution_NCC(win=7, scale=1)
+    loss_ncc_ct = multi_resolution_NCC(win=lvl1_ncc_win, scale=lvl1_ncc_scale)
+    loss_ncc_pet = multi_resolution_NCC(win=lvl1_ncc_win, scale=lvl1_ncc_scale)
     loss_Jdet = neg_Jdet_loss
 
     grid_4 = generate_grid(imgshape_4)
@@ -258,6 +262,8 @@ def train_lvl2(
     imgshape_4: Tuple[int, int, int],
     imgshape_2: Tuple[int, int, int],
     imgshape: Tuple[int, int, int],
+    in_channel: int,
+    n_classes: int,
     start_channel: int,
     range_flow: float,
     lr: float,
@@ -269,14 +275,16 @@ def train_lvl2(
     model_dir: Path,
     w_ct: float,
     w_pet: float,
+    lvl2_ncc_win: int,
+    lvl2_ncc_scale: int,
 ) -> None:
     """Train LapIRN level 2 (medium scale), with frozen lvl1 initially."""
     print("Training lvl2...")
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     model_lvl1 = Miccai2020_LDR_laplacian_unit_add_lvl1(
-        in_channel=4,
-        n_classes=3,
+        in_channel=in_channel,
+        n_classes=n_classes,
         start_channel=start_channel,
         is_train=True,
         imgshape=imgshape_4,
@@ -291,8 +299,8 @@ def train_lvl2(
         param.requires_grad = False
 
     model = Miccai2020_LDR_laplacian_unit_add_lvl2(
-        in_channel=4,
-        n_classes=3,
+        in_channel=in_channel,
+        n_classes=n_classes,
         start_channel=start_channel,
         is_train=True,
         imgshape=imgshape_2,
@@ -300,8 +308,8 @@ def train_lvl2(
         model_lvl1=model_lvl1,
     ).to(device)
 
-    loss_ncc_ct = multi_resolution_NCC(win=5, scale=2)
-    loss_ncc_pet = multi_resolution_NCC(win=5, scale=2)
+    loss_ncc_ct = multi_resolution_NCC(win=lvl2_ncc_win, scale=lvl2_ncc_scale)
+    loss_ncc_pet = multi_resolution_NCC(win=lvl2_ncc_win, scale=lvl2_ncc_scale)
     loss_Jdet = neg_Jdet_loss
 
     grid_2 = generate_grid(imgshape_2)
@@ -398,6 +406,8 @@ def train_lvl3(
     imgshape_4: Tuple[int, int, int],
     imgshape_2: Tuple[int, int, int],
     imgshape: Tuple[int, int, int],
+    in_channel: int,
+    n_classes: int,
     start_channel: int,
     range_flow: float,
     lr: float,
@@ -411,14 +421,16 @@ def train_lvl3(
     fixed_ct_path: Path,
     w_ct: float,
     w_pet: float,
+    lvl3_ncc_win: int,
+    lvl3_ncc_scale: int,
 ) -> None:
     """Train LapIRN level 3 (full resolution), with frozen lvl2 initially."""
     print("Training lvl3...")
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     model_lvl1 = Miccai2020_LDR_laplacian_unit_add_lvl1(
-        in_channel=4,
-        n_classes=3,
+        in_channel=in_channel,
+        n_classes=n_classes,
         start_channel=start_channel,
         is_train=True,
         imgshape=imgshape_4,
@@ -426,8 +438,8 @@ def train_lvl3(
     ).to(device)
 
     model_lvl2 = Miccai2020_LDR_laplacian_unit_add_lvl2(
-        in_channel=4,
-        n_classes=3,
+        in_channel=in_channel,
+        n_classes=n_classes,
         start_channel=start_channel,
         is_train=True,
         imgshape=imgshape_2,
@@ -443,8 +455,8 @@ def train_lvl3(
         param.requires_grad = False
 
     model = Miccai2020_LDR_laplacian_unit_add_lvl3(
-        in_channel=4,
-        n_classes=3,
+        in_channel=in_channel,
+        n_classes=n_classes,
         start_channel=start_channel,
         is_train=True,
         imgshape=imgshape,
@@ -452,8 +464,8 @@ def train_lvl3(
         model_lvl2=model_lvl2,
     ).to(device)
 
-    loss_ncc_ct = multi_resolution_NCC(win=7, scale=3)
-    loss_ncc_pet = multi_resolution_NCC(win=7, scale=3)
+    loss_ncc_ct = multi_resolution_NCC(win=lvl3_ncc_win, scale=lvl3_ncc_scale)
+    loss_ncc_pet = multi_resolution_NCC(win=lvl3_ncc_win, scale=lvl3_ncc_scale)
     loss_Jdet = neg_Jdet_loss
 
     grid = generate_grid(imgshape)
@@ -546,123 +558,101 @@ def train_lvl3(
 
 
 def main() -> None:
-
-    # --- Shapes --------------------------------------------------------------
-    # Full resolution — H, W, D
-    imgshape = (192, 192, 288)
-    # Downsampled shapes — must be integer tuples
-    imgshape_2 = (imgshape[0] // 2, imgshape[1] // 2, imgshape[2] // 2)  # (96, 96, 144)
-    imgshape_4 = (imgshape[0] // 4, imgshape[1] // 4, imgshape[2] // 4)  # (48, 48, 72)
-
-    # --- Hyperparameters -----------------------------------------------------
-    range_flow = 0.4
-    lr = 1e-5
-    start_channel = 7  # LapIRN default
-    antifold = 0.0  # Jacobian loss weight
-    smooth = 1.0  # smoothness loss weight
-    w_ct = 1.0
-    w_pet = 0.1
-
-    mult = 1000
-
-    # Iterations per level — keep small for overfit test
-    iteration_lvl1 = 1 * mult
-    iteration_lvl2 = 1 * mult
-    iteration_lvl3 = 2 * mult
-
-    freeze_step = int(iteration_lvl1 / 5)  # step at which lvl(n-1) is unfrozen
-    n_checkpoint = int(iteration_lvl1 / 10)  # checkpoint save frequency (steps)
+    config = TrainingConfig()
 
     # --- Dataloader ----------------------------------------------------------
     dataset = PSMARegSinglePairDataset(
-        fixed_ct_path=FIXED_CT_PATH,
-        fixed_pet_path=FIXED_PET_PATH,
-        moving_ct_path=MOVING_CT_PATH,
-        moving_pet_path=MOVING_PET_PATH,
+        fixed_ct_path=config.fixed_ct_path,
+        fixed_pet_path=config.fixed_pet_path,
+        moving_ct_path=config.moving_ct_path,
+        moving_pet_path=config.moving_pet_path,
     )
     training_generator = Data.DataLoader(
         dataset,
-        batch_size=1,
-        shuffle=False,
-        num_workers=0,
+        batch_size=config.batch_size,
+        shuffle=config.shuffle,
+        num_workers=config.num_workers,
     )
 
     # --- MLflow --------------------------------------------------------------
-    mlflow.set_tracking_uri("sqlite:////home/iml/fryderyk.koegl/code/mlruns.db")
-    mlflow.set_experiment("PSMAReg_LapIRN_overfit")
+    mlflow.set_tracking_uri(config.mlflow_tracking_uri)
+    mlflow.set_experiment(config.mlflow_experiment)
 
     with mlflow.start_run():
-        mlflow.log_params(
-            {
-                "imgshape": str(imgshape),
-                "imgshape_2": str(imgshape_2),
-                "imgshape_4": str(imgshape_4),
-                "range_flow": range_flow,
-                "lr": lr,
-                "start_channel": start_channel,
-                "antifold": antifold,
-                "smooth": smooth,
-                "freeze_step": freeze_step,
-                "w_ct": w_ct,
-                "w_pet": w_pet,
-                "iteration_lvl1": iteration_lvl1,
-                "iteration_lvl2": iteration_lvl2,
-                "iteration_lvl3": iteration_lvl3,
-            }
+        mlflow.log_params(config.to_mlflow_params())
+        mlflow.log_text(
+            json.dumps(config.to_mlflow_params(), indent=2),
+            artifact_file="config.json",
         )
 
-        train_lvl1(
-            training_generator=training_generator,
-            imgshape_4=imgshape_4,
-            imgshape=imgshape,
-            start_channel=start_channel,
-            range_flow=range_flow,
-            lr=lr,
-            antifold=antifold,
-            smooth=smooth,
-            iteration_lvl1=iteration_lvl1,
-            n_checkpoint=n_checkpoint,
-            model_dir=MODEL_DIR,
-            w_ct=w_ct,
-            w_pet=w_pet,
-        )
+        if config.train_lvl1:
+            train_lvl1(
+                training_generator=training_generator,
+                imgshape_4=config.imgshape_4,
+                imgshape=config.imgshape,
+                in_channel=config.in_channel,
+                n_classes=config.n_classes,
+                start_channel=config.start_channel,
+                range_flow=config.range_flow,
+                lr=config.lr,
+                antifold=config.antifold,
+                smooth=config.smooth,
+                iteration_lvl1=config.iteration_lvl1,
+                n_checkpoint=config.n_checkpoint,
+                model_dir=config.model_dir,
+                w_ct=config.w_ct,
+                w_pet=config.w_pet,
+                lvl1_ncc_win=config.lvl1_ncc_win,
+                lvl1_ncc_scale=config.lvl1_ncc_scale,
+            )
 
-        # train_lvl2(
-        #     training_generator=training_generator,
-        #     imgshape_4=imgshape_4,
-        #     imgshape_2=imgshape_2,
-        #     imgshape=imgshape,
-        #     start_channel=start_channel,
-        #     range_flow=range_flow,
-        #     lr=lr,
-        #     antifold=antifold,
-        #     smooth=smooth,
-        #     freeze_step=freeze_step,
-        #     iteration_lvl2=iteration_lvl2,
-        #     n_checkpoint=n_checkpoint,
-        #     model_dir=MODEL_DIR,
-        #     w_ct=w_ct,
-        #     w_pet=w_pet,
-        # )
+        if config.train_lvl2:
+            train_lvl2(
+                training_generator=training_generator,
+                imgshape_4=config.imgshape_4,
+                imgshape_2=config.imgshape_2,
+                imgshape=config.imgshape,
+                in_channel=config.in_channel,
+                n_classes=config.n_classes,
+                start_channel=config.start_channel,
+                range_flow=config.range_flow,
+                lr=config.lr,
+                antifold=config.antifold,
+                smooth=config.smooth,
+                freeze_step=config.freeze_step,
+                iteration_lvl2=config.iteration_lvl2,
+                n_checkpoint=config.n_checkpoint,
+                model_dir=config.model_dir,
+                w_ct=config.w_ct,
+                w_pet=config.w_pet,
+                lvl2_ncc_win=config.lvl2_ncc_win,
+                lvl2_ncc_scale=config.lvl2_ncc_scale,
+            )
 
-        # train_lvl3(
-        #     training_generator=training_generator,
-        #     imgshape_4=imgshape_4,
-        #     imgshape_2=imgshape_2,
-        #     imgshape=imgshape,
-        #     start_channel=start_channel,
-        #     range_flow=range_flow,
-        #     lr=lr,
-        #     antifold=antifold,
-        #     smooth=smooth,
-        #     freeze_step=freeze_step,
-        #     iteration_lvl3=iteration_lvl3,
-        #     n_checkpoint=n_checkpoint,
-        #     model_dir=MODEL_DIR,
-        #     ckpt_dir=CKPT_DIR,
-        #     w_ct=w_ct,
-        #     w_pet=w_pet,
-        # )
+        if config.train_lvl3:
+            train_lvl3(
+                training_generator=training_generator,
+                imgshape_4=config.imgshape_4,
+                imgshape_2=config.imgshape_2,
+                imgshape=config.imgshape,
+                in_channel=config.in_channel,
+                n_classes=config.n_classes,
+                start_channel=config.start_channel,
+                range_flow=config.range_flow,
+                lr=config.lr,
+                antifold=config.antifold,
+                smooth=config.smooth,
+                freeze_step=config.freeze_step,
+                iteration_lvl3=config.iteration_lvl3,
+                n_checkpoint=config.n_checkpoint,
+                model_dir=config.model_dir,
+                ckpt_dir=config.ckpt_dir,
+                fixed_ct_path=config.fixed_ct_path,
+                w_ct=config.w_ct,
+                w_pet=config.w_pet,
+                lvl3_ncc_win=config.lvl3_ncc_win,
+                lvl3_ncc_scale=config.lvl3_ncc_scale,
+            )
 
 
 if __name__ == "__main__":

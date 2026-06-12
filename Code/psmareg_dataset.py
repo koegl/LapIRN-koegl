@@ -26,7 +26,7 @@ class PSMARegPairDataset(Dataset):
         self.fixed_pet_path = fixed_pet_path
         self.moving_ct_path = moving_ct_path
         self.moving_pet_path = moving_pet_path
-        
+
         self.fixed_ct = self._load_volume(fixed_ct_path)
         self.fixed_pet = self._load_volume(fixed_pet_path)
         self.moving_ct = self._load_volume(moving_ct_path)
