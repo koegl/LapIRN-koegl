@@ -1,8 +1,9 @@
-import numpy as np
-import torch.utils.data as Data
-import nibabel as nib
-import torch
 import itertools
+
+import nibabel as nib
+import numpy as np
+import torch
+import torch.utils.data as Data
 
 
 def generate_grid(imgshape):
@@ -27,18 +28,18 @@ def generate_grid_unit(imgshape):
 
 def transform_unit_flow_to_flow(flow):
     x, y, z, _ = flow.shape
-    flow[:, :, :, 0] = flow[:, :, :, 0] * (z-1)/2
-    flow[:, :, :, 1] = flow[:, :, :, 1] * (y-1)/2
-    flow[:, :, :, 2] = flow[:, :, :, 2] * (x-1)/2
+    flow[:, :, :, 0] = flow[:, :, :, 0] * (z - 1) / 2
+    flow[:, :, :, 1] = flow[:, :, :, 1] * (y - 1) / 2
+    flow[:, :, :, 2] = flow[:, :, :, 2] * (x - 1) / 2
 
     return flow
 
 
 def transform_unit_flow_to_flow_cuda(flow):
     b, x, y, z, c = flow.shape
-    flow[:, :, :, :, 0] = flow[:, :, :, :, 0] * (z-1)/2
-    flow[:, :, :, :, 1] = flow[:, :, :, :, 1] * (y-1)/2
-    flow[:, :, :, :, 2] = flow[:, :, :, :, 2] * (x-1)/2
+    flow[:, :, :, :, 0] = flow[:, :, :, :, 0] * (z - 1) / 2
+    flow[:, :, :, :, 1] = flow[:, :, :, :, 1] * (y - 1) / 2
+    flow[:, :, :, :, 2] = flow[:, :, :, :, 2] * (x - 1) / 2
 
     return flow
 
@@ -65,7 +66,7 @@ def imgnorm(img):
     return norm_img
 
 
-def save_img(I_img,savename,header=None,affine=None):
+def save_img(I_img, savename, header=None, affine=None):
     if header is None or affine is None:
         affine = np.diag([1, 1, 1, 1])
         new_img = nib.nifti1.Nifti1Image(I_img, affine, header=None)
@@ -81,7 +82,7 @@ def save_img_nii(I_img, savename):
     nib.save(new_img, savename)
 
 
-def save_flow(I_img,savename,header=None,affine=None):
+def save_flow(I_img, savename, header=None, affine=None):
     if header is None or affine is None:
         affine = np.diag([1, 1, 1, 1])
         new_img = nib.nifti1.Nifti1Image(I_img, affine, header=None)
@@ -92,59 +93,64 @@ def save_flow(I_img,savename,header=None,affine=None):
 
 
 class Dataset(Data.Dataset):
-    'Characterizes a dataset for PyTorch'
+    "Characterizes a dataset for PyTorch"
 
     def __init__(self, names, iterations, norm=False):
-        'Initialization'
+        "Initialization"
         self.names = names
         self.norm = norm
         self.iterations = iterations
 
     def __len__(self):
-        'Denotes the total number of samples'
+        "Denotes the total number of samples"
         return self.iterations
 
     def __getitem__(self, step):
-        'Generates one sample of data'
+        "Generates one sample of data"
         # Select sample
         index_pair = np.random.permutation(len(self.names))[0:2]
         img_A = load_4D(self.names[index_pair[0]])
         img_B = load_4D(self.names[index_pair[1]])
         if self.norm:
-            return torch.from_numpy(imgnorm(img_A)).float(), torch.from_numpy(imgnorm(img_B)).float()
+            return torch.from_numpy(imgnorm(img_A)).float(), torch.from_numpy(
+                imgnorm(img_B)
+            ).float()
         else:
             return torch.from_numpy(img_A).float(), torch.from_numpy(img_B).float()
 
 
 class Dataset_epoch(Data.Dataset):
-    'Characterizes a dataset for PyTorch'
+    "Characterizes a dataset for PyTorch"
 
     def __init__(self, names, norm=False):
-        'Initialization'
+        "Initialization"
         self.names = names
         self.norm = norm
         self.index_pair = list(itertools.permutations(names, 2))
 
     def __len__(self):
-        'Denotes the total number of samples'
+        "Denotes the total number of samples"
         return len(self.index_pair)
 
     def __getitem__(self, step):
-        'Generates one sample of data'
+        "Generates one sample of data"
         # Select sample
         img_A = load_4D(self.index_pair[step][0])
         img_B = load_4D(self.index_pair[step][1])
 
         if self.norm:
-            return torch.from_numpy(imgnorm(img_A)).float(), torch.from_numpy(imgnorm(img_B)).float()
+            return torch.from_numpy(imgnorm(img_A)).float(), torch.from_numpy(
+                imgnorm(img_B)
+            ).float()
         else:
             return torch.from_numpy(img_A).float(), torch.from_numpy(img_B).float()
 
 
 class Dataset_epoch_validation(Data.Dataset):
-  'Characterizes a dataset for PyTorch'
-  def __init__(self, imgs, labels, norm=False):
-        'Initialization'
+    "Characterizes a dataset for PyTorch"
+
+    def __init__(self, imgs, labels, norm=False):
+        "Initialization"
         super(Dataset_epoch_validation, self).__init__()
 
         self.imgs = imgs
@@ -153,12 +159,12 @@ class Dataset_epoch_validation(Data.Dataset):
         self.imgs_pair = list(itertools.permutations(imgs, 2))
         self.labels_pair = list(itertools.permutations(labels, 2))
 
-  def __len__(self):
-        'Denotes the total number of samples'
+    def __len__(self):
+        "Denotes the total number of samples"
         return len(self.imgs_pair)
 
-  def __getitem__(self, step):
-        'Generates one sample of data'
+    def __getitem__(self, step):
+        "Generates one sample of data"
         # Select sample
         img_A = load_4D(self.imgs_pair[step][0])
         img_B = load_4D(self.imgs_pair[step][1])
@@ -170,13 +176,25 @@ class Dataset_epoch_validation(Data.Dataset):
         # print(self.index_pair[step][1])
 
         if self.norm:
-            return torch.from_numpy(imgnorm(img_A)).float(), torch.from_numpy(imgnorm(img_B)).float(), torch.from_numpy(label_A).float(), torch.from_numpy(label_B).float()
+            return (
+                torch.from_numpy(imgnorm(img_A)).float(),
+                torch.from_numpy(imgnorm(img_B)).float(),
+                torch.from_numpy(label_A).float(),
+                torch.from_numpy(label_B).float(),
+            )
         else:
-            return torch.from_numpy(img_A).float(), torch.from_numpy(img_B).float(), torch.from_numpy(label_A).float(), torch.from_numpy(label_B).float()
+            return (
+                torch.from_numpy(img_A).float(),
+                torch.from_numpy(img_B).float(),
+                torch.from_numpy(label_A).float(),
+                torch.from_numpy(label_B).float(),
+            )
 
 
 class Predict_dataset(Data.Dataset):
-    def __init__(self, fixed_list, move_list, fixed_label_list, move_label_list, norm=False):
+    def __init__(
+        self, fixed_list, move_list, fixed_label_list, move_label_list, norm=False
+    ):
         super(Predict_dataset, self).__init__()
         self.fixed_list = fixed_list
         self.move_list = move_list
@@ -185,7 +203,7 @@ class Predict_dataset(Data.Dataset):
         self.norm = norm
 
     def __len__(self):
-        'Denotes the total number of samples'
+        "Denotes the total number of samples"
         return len(self.move_list)
 
     def __getitem__(self, index):
@@ -204,10 +222,20 @@ class Predict_dataset(Data.Dataset):
         moved_label = torch.from_numpy(moved_label)
 
         if self.norm:
-            output = {'fixed': fixed_img.float(), 'move': moved_img.float(),
-                      'fixed_label': fixed_label.float(), 'move_label': moved_label.float(), 'index': index}
+            output = {
+                "fixed": fixed_img.float(),
+                "move": moved_img.float(),
+                "fixed_label": fixed_label.float(),
+                "move_label": moved_label.float(),
+                "index": index,
+            }
             return output
         else:
-            output = {'fixed': fixed_img.float(), 'move': moved_img.float(),
-                      'fixed_label': fixed_label.float(), 'move_label': moved_label.float(), 'index': index}
+            output = {
+                "fixed": fixed_img.float(),
+                "move": moved_img.float(),
+                "fixed_label": fixed_label.float(),
+                "move_label": moved_label.float(),
+                "index": index,
+            }
             return output
