@@ -1,8 +1,24 @@
+from pathlib import Path
+
+import nibabel as nib
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from Functions import generate_grid, generate_grid_unit
+
+
+def save_volume(
+    volume: torch.Tensor, out_dir: Path, step, reference_path: Path, name: str
+) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fixed_nib = nib.load(reference_path.as_posix())
+    affine = fixed_nib.affine
+
+    nib.save(
+        nib.Nifti1Image(volume.detach().squeeze().cpu().numpy(), affine),
+        str(out_dir / f"{name}_{step:05d}.nii.gz"),
+    )
 
 
 class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
@@ -76,6 +92,8 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
             padding=1,
             bias=False,
         )
+
+        self.saved = False
 
     def resblock_seq(self, in_channels, bias_opt=False):
         layer = nn.Sequential(
@@ -214,6 +232,28 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
         cat_input_lvl1 = self.down_avg(cat_input)
 
         down_y = cat_input_lvl1[:, 1:2, :, :, :]
+        down_x = cat_input_lvl1[:, 0:1, :, :, :]
+
+        if self.saved is False:
+            save_volume(
+                down_x,
+                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
+                step=0,
+                reference_path=Path(
+                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
+                ),
+                name="down_x_lvl1",
+            )
+            save_volume(
+                down_y,
+                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
+                step=0,
+                reference_path=Path(
+                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
+                ),
+                name="down_y_lvl1",
+            )
+            self.saved = True
 
         fea_e0 = self.input_encoder_lvl1(cat_input_lvl1)
         e0 = self.down_conv(fea_e0)
@@ -308,6 +348,8 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
             padding=1,
             bias=False,
         )
+
+        self.saved = False
 
     def unfreeze_modellvl1(self):
         # unFreeze model_lvl1 weight
@@ -452,6 +494,27 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
 
         x_down = self.down_avg(x)
         y_down = self.down_avg(y)
+
+        if self.saved is False:
+            save_volume(
+                x_down,
+                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
+                step=0,
+                reference_path=Path(
+                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
+                ),
+                name="down_x_lvl2",
+            )
+            save_volume(
+                y_down,
+                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
+                step=0,
+                reference_path=Path(
+                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
+                ),
+                name="down_y_lvl2",
+            )
+            self.saved = True
 
         warpped_x = self.transform(
             x_down, lvl1_disp_up.permute(0, 2, 3, 4, 1), self.grid_1
@@ -2444,9 +2507,13 @@ class NCC(torch.nn.Module):
         I_var = I2_sum - 2 * u_I * I_sum + u_I * u_I * win_size
         J_var = J2_sum - 2 * u_J * J_sum + u_J * u_J * win_size
 
-        cc = cross * cross / (I_var * J_var + self.eps)
+        # clamp variances to be non-negative (numerical error can make them slightly < 0)
+        I_var = torch.clamp(I_var, min=0.0)
+        J_var = torch.clamp(J_var, min=0.0)
 
-        # return negative cc.
+        cc = (cross * cross) / (I_var * J_var + self.eps)
+        cc = torch.clamp(cc, max=1.0)
+
         return -1.0 * torch.mean(cc)
 
 

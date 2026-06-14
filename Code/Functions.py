@@ -1,9 +1,23 @@
 import itertools
+from pathlib import Path
 
 import nibabel as nib
 import numpy as np
 import torch
 import torch.utils.data as Data
+
+
+def save_volume(
+    volume: torch.Tensor, out_dir: Path, step, reference_path: Path, name: str
+) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fixed_nib = nib.load(reference_path.as_posix())
+    affine = fixed_nib.affine
+
+    nib.save(
+        nib.Nifti1Image(volume.detach().squeeze().cpu().numpy(), affine),
+        str(out_dir / f"{name}_{step:05d}.nii.gz"),
+    )
 
 
 def generate_grid(imgshape):
@@ -126,24 +140,32 @@ class Dataset_epoch(Data.Dataset):
         "Initialization"
         self.names = names
         self.norm = norm
-        self.index_pair = list(itertools.permutations(names, 2))
+        # self.index_pair = list(itertools.permutations(names, 2))
+
+        self.img_A = load_4D(
+            "/home/iml/fryderyk.koegl/data/LungCT_preprocessed/imagesTr/LungCT_0003_0001.nii.gz"
+        )
+        self.img_B = load_4D(
+            "/home/iml/fryderyk.koegl/data/LungCT_preprocessed/imagesTr/LungCT_0002_0001.nii.gz"
+        )
 
     def __len__(self):
         "Denotes the total number of samples"
+        return 1
         return len(self.index_pair)
 
     def __getitem__(self, step):
         "Generates one sample of data"
         # Select sample
-        img_A = load_4D(self.index_pair[step][0])
-        img_B = load_4D(self.index_pair[step][1])
 
         if self.norm:
-            return torch.from_numpy(imgnorm(img_A)).float(), torch.from_numpy(
-                imgnorm(img_B)
+            return torch.from_numpy(imgnorm(self.img_A)).float(), torch.from_numpy(
+                imgnorm(self.img_B)
             ).float()
         else:
-            return torch.from_numpy(img_A).float(), torch.from_numpy(img_B).float()
+            return torch.from_numpy(self.img_A).float(), torch.from_numpy(
+                self.img_B
+            ).float()
 
 
 class Dataset_epoch_validation(Data.Dataset):
