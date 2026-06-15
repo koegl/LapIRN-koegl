@@ -31,9 +31,10 @@ def generate_grid(imgshape):
 
 
 def generate_grid_unit(imgshape):
-    x = (np.arange(imgshape[0]) - ((imgshape[0] - 1) / 2)) / (imgshape[0] - 1) * 2
-    y = (np.arange(imgshape[1]) - ((imgshape[1] - 1) / 2)) / (imgshape[1] - 1) * 2
-    z = (np.arange(imgshape[2]) - ((imgshape[2] - 1) / 2)) / (imgshape[2] - 1) * 2
+    # align_corners=False: pixel i maps to ((i + 0.5) / dim) * 2 - 1
+    x = (np.arange(imgshape[0]) + 0.5) / imgshape[0] * 2 - 1
+    y = (np.arange(imgshape[1]) + 0.5) / imgshape[1] * 2 - 1
+    z = (np.arange(imgshape[2]) + 0.5) / imgshape[2] * 2 - 1
     grid = np.rollaxis(np.array(np.meshgrid(z, y, x)), 0, 4)
     grid = np.swapaxes(grid, 0, 2)
     grid = np.swapaxes(grid, 1, 2)

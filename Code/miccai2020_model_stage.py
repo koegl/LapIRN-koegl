@@ -2345,7 +2345,7 @@ class SpatialTransform_unit(nn.Module):
     def forward(self, x, flow, sample_grid):
         sample_grid = sample_grid + flow
         flow = torch.nn.functional.grid_sample(
-            x, sample_grid, mode="bilinear", padding_mode="border", align_corners=True
+            x, sample_grid, mode="bilinear", padding_mode="border", align_corners=False
         )
         return flow
 
@@ -2357,7 +2357,7 @@ class SpatialTransformNearest_unit(nn.Module):
     def forward(self, x, flow, sample_grid):
         sample_grid = sample_grid + flow
         flow = torch.nn.functional.grid_sample(
-            x, sample_grid, mode="nearest", padding_mode="border", align_corners=True
+            x, sample_grid, mode="nearest", padding_mode="border", align_corners=False
         )
         return flow
 
@@ -2372,7 +2372,7 @@ class DiffeomorphicTransform_unit(nn.Module):
         for _ in range(self.time_step):
             grid = sample_grid + flow.permute(0, 2, 3, 4, 1)
             flow = flow + F.grid_sample(
-                flow, grid, mode="bilinear", padding_mode="border", align_corners=True
+                flow, grid, mode="bilinear", padding_mode="border", align_corners=False
             )
         return flow
 
@@ -2400,7 +2400,7 @@ class SpatialTransform(nn.Module):
             * 2
         )
         flow = torch.nn.functional.grid_sample(
-            x, sample_grid, mode="bilinear", align_corners=True
+            x, sample_grid, mode="bilinear", align_corners=False
         )
 
         return flow
@@ -2429,7 +2429,7 @@ class SpatialTransformNearest(nn.Module):
             * 2
         )
         flow = torch.nn.functional.grid_sample(
-            x, sample_grid, mode="nearest", align_corners=True
+            x, sample_grid, mode="nearest", align_corners=False
         )
 
         return flow
@@ -2461,7 +2461,9 @@ class DiffeomorphicTransform(nn.Module):
                 / (size_tensor[1] - 1)
                 * 2
             )
-            flow = flow + F.grid_sample(flow, grid, mode="bilinear", align_corners=True)
+            flow = flow + F.grid_sample(
+                flow, grid, mode="bilinear", align_corners=False
+            )
         return flow
 
 
