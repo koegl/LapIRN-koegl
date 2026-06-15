@@ -231,27 +231,49 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
         cat_input = self.down_avg(cat_input)
         cat_input_lvl1 = self.down_avg(cat_input)
 
-        down_y = cat_input_lvl1[:, 1:2, :, :, :]
-        down_x = cat_input_lvl1[:, 0:1, :, :, :]
+        down_y = cat_input_lvl1[:, 2:4, :, :, :]
+        down_x = cat_input_lvl1[:, 0:2, :, :, :]
 
         if self.saved is False:
+            ct_x = down_x[:, 0:1, :, :, :]
+            pet_x = down_x[:, 1:2, :, :, :]
+            ct_y = down_y[:, 0:1, :, :, :]
+            pet_y = down_y[:, 1:2, :, :, :]
             save_volume(
-                down_x,
+                ct_x,
                 Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
                 step=0,
                 reference_path=Path(
                     "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
                 ),
-                name="down_x_lvl1",
+                name="down_x_lvl1_ct",
             )
             save_volume(
-                down_y,
+                ct_y,
                 Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
                 step=0,
                 reference_path=Path(
                     "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
                 ),
-                name="down_y_lvl1",
+                name="down_y_lvl1_ct",
+            )
+            save_volume(
+                pet_x,
+                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
+                step=0,
+                reference_path=Path(
+                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
+                ),
+                name="down_x_lvl1_pet",
+            )
+            save_volume(
+                pet_y,
+                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
+                step=0,
+                reference_path=Path(
+                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
+                ),
+                name="down_y_lvl1_pet",
             )
             self.saved = True
 
@@ -496,23 +518,45 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
         y_down = self.down_avg(y)
 
         if self.saved is False:
+            ct_x = x_down[:, 0:1, :, :, :]
+            pet_x = x_down[:, 1:2, :, :, :]
+            ct_y = y_down[:, 0:1, :, :, :]
+            pet_y = y_down[:, 1:2, :, :, :]
             save_volume(
-                x_down,
+                ct_x,
                 Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
                 step=0,
                 reference_path=Path(
                     "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
                 ),
-                name="down_x_lvl2",
+                name="down_x_ct_lvl2",
             )
             save_volume(
-                y_down,
+                ct_y,
                 Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
                 step=0,
                 reference_path=Path(
                     "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
                 ),
-                name="down_y_lvl2",
+                name="down_y_ct_lvl2",
+            )
+            save_volume(
+                pet_x,
+                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
+                step=0,
+                reference_path=Path(
+                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
+                ),
+                name="down_x_pet_lvl2",
+            )
+            save_volume(
+                pet_y,
+                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
+                step=0,
+                reference_path=Path(
+                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
+                ),
+                name="down_y_pet_lvl2",
             )
             self.saved = True
 
