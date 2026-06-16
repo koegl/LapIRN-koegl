@@ -529,7 +529,7 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
                 reference_path=Path(
                     "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
                 ),
-                name="down_x_ct_lvl2",
+                name="down_x_lvl2_ct",
             )
             save_volume(
                 ct_y,
@@ -538,7 +538,7 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
                 reference_path=Path(
                     "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
                 ),
-                name="down_y_ct_lvl2",
+                name="down_y_lvl2_ct",
             )
             save_volume(
                 pet_x,
@@ -547,7 +547,7 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
                 reference_path=Path(
                     "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
                 ),
-                name="down_x_pet_lvl2",
+                name="down_x_lvl2_pet",
             )
             save_volume(
                 pet_y,
@@ -556,7 +556,7 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
                 reference_path=Path(
                     "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
                 ),
-                name="down_y_pet_lvl2",
+                name="down_y_lvl2_pet",
             )
             self.saved = True
 
@@ -2500,6 +2500,131 @@ def neg_Jdet_loss(y_pred, sample_grid):
     selected_neg_Jdet = F.relu(neg_Jdet)
 
     return torch.mean(selected_neg_Jdet)
+
+
+def mtv_bias_loss(
+    warped_pet_mask: torch.Tensor,
+    moving_pet_mask: torch.Tensor,
+    eps: float = 1e-5,
+) -> torch.Tensor:
+    """MTV bias: relative volume change of lesion mask after warping.
+
+    Args:
+        warped_pet_mask: (B, 1, D, H, W) float, warped moving lesion mask.
+        moving_pet_mask: (B, 1, D, H, W) float, original moving lesion mask.
+        eps: Smoothing term.
+
+    Returns:
+        Scalar absolute relative volume bias.
+    """
+    mtv_moving = moving_pet_mask.sum()
+    mtv_warped = warped_pet_mask.sum()
+    return torch.abs(mtv_warped - mtv_moving) / (mtv_moving + eps)
+
+
+def tlg_bias_loss(
+    warped_pet_image: torch.Tensor,
+    warped_pet_mask: torch.Tensor,
+    moving_pet_image: torch.Tensor,
+    moving_pet_mask: torch.Tensor,
+    eps: float = 1e-5,
+) -> torch.Tensor:
+    """TLG bias: relative change in lesion-weighted PET intensity after warping.
+
+    Args:
+        warped_pet_image: (B, 1, D, H, W) float, warped moving PET image.
+        warped_pet_mask: (B, 1, D, H, W) float, warped moving lesion mask.
+        moving_pet_image: (B, 1, D, H, W) float, original moving PET image.
+        moving_pet_mask: (B, 1, D, H, W) float, original moving lesion mask.
+        eps: Smoothing term.
+
+    Returns:
+        Scalar absolute relative TLG bias.
+    """
+    tlg_moving = (moving_pet_image * moving_pet_mask).sum()
+    tlg_warped = (warped_pet_image * warped_pet_mask).sum()
+    return torch.abs(tlg_warped - tlg_moving) / (tlg_moving + eps)
+
+
+def warp_binary_mask(
+    mask: torch.Tensor,
+    disp: torch.Tensor,
+    grid: torch.Tensor,
+    transform: SpatialTransform_unit,
+) -> torch.Tensor:
+    """Warp a binary mask with bilinear interpolation (differentiable).
+
+    Args:
+        mask: (B, 1, D, H, W) float binary mask.
+        disp: (B, 3, D, H, W) displacement field.
+        grid: level grid for SpatialTransform_unit.
+        transform: SpatialTransform_unit instance.
+
+    Returns:
+        (B, 1, D, H, W) warped mask, values in [0, 1].
+    """
+    flow = disp.permute(0, 2, 3, 4, 1)
+    return transform(mask.float(), flow, grid)
+
+
+def masked_jac_det_loss(
+    jac_det: torch.Tensor,
+    mask: torch.Tensor,
+    eps: float = 1e-5,
+) -> torch.Tensor:
+    """Penalise deviation of det(J) from 1 inside mask.
+
+    Args:
+        jac_det: (B, 1, D, H, W) Jacobian determinant field.
+        mask: (B, 1, D, H, W) binary float mask (tumor region).
+        eps: Smoothing term.
+
+    Returns:
+        Scalar mean squared deviation from 1 inside mask.
+    """
+    masked_det = jac_det * mask
+    target = mask  # det(J)=1 inside mask
+    return ((masked_det - target) ** 2).sum() / (mask.sum() + eps)
+
+
+def jacobian_determinant(flow: torch.Tensor) -> torch.Tensor:
+    """Differentiable per-voxel Jacobian determinant, matching challenge convention.
+
+    Uses central differences (kernel [-0.5, 0, 0.5]), matching calc_J_i with
+    '0x0y0z' in the challenge evaluation code. Boundary voxels are set to 1.0
+    (no deformation assumed) to match the challenge's boundary exclusion.
+
+    Args:
+        flow: (B, D, H, W, 3) displacement field in voxel units.
+
+    Returns:
+        (B, 1, D, H, W) Jacobian determinant field.
+    """
+    dx = flow[..., 0]
+    dy = flow[..., 1]
+    dz = flow[..., 2]
+
+    # central differences — identity contribution (+1) on diagonal
+    d00 = (dx[:, 2:, 1:-1, 1:-1] - dx[:, :-2, 1:-1, 1:-1]) / 2 + 1
+    d01 = (dx[:, 1:-1, 2:, 1:-1] - dx[:, 1:-1, :-2, 1:-1]) / 2
+    d02 = (dx[:, 1:-1, 1:-1, 2:] - dx[:, 1:-1, 1:-1, :-2]) / 2
+    d10 = (dy[:, 2:, 1:-1, 1:-1] - dy[:, :-2, 1:-1, 1:-1]) / 2
+    d11 = (dy[:, 1:-1, 2:, 1:-1] - dy[:, 1:-1, :-2, 1:-1]) / 2 + 1
+    d12 = (dy[:, 1:-1, 1:-1, 2:] - dy[:, 1:-1, 1:-1, :-2]) / 2
+    d20 = (dz[:, 2:, 1:-1, 1:-1] - dz[:, :-2, 1:-1, 1:-1]) / 2
+    d21 = (dz[:, 1:-1, 2:, 1:-1] - dz[:, 1:-1, :-2, 1:-1]) / 2
+    d22 = (dz[:, 1:-1, 1:-1, 2:] - dz[:, 1:-1, 1:-1, :-2]) / 2 + 1
+
+    det = (
+        d00 * (d11 * d22 - d12 * d21)
+        - d01 * (d10 * d22 - d12 * d20)
+        + d02 * (d10 * d21 - d11 * d20)
+    )  # (B, D-2, H-2, W-2)
+
+    # pad boundary with 1.0 (identity Jacobian) matching challenge's boundary exclusion
+    det = torch.nn.functional.pad(det, (1, 1, 1, 1, 1, 1), value=1.0)
+
+    return det.unsqueeze(1)  # (B, 1, D, H, W)
 
 
 class NCC(torch.nn.Module):
