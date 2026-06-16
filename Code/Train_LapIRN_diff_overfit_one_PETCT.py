@@ -34,13 +34,13 @@ def main() -> None:
             data_dir=config.data_dir,
             case_ids=train_ids,
             use_cache=config.use_cache_train,
-            overfit="0049",
+            # overfit="0049",
         )
         val_dataset = my_data.PSMARegDataset(
             data_dir=config.data_dir,
             case_ids=val_ids,
             use_cache=config.use_cache_valid,
-            overfit="0049",
+            # overfit="0049",
         )
 
         train_generator = torch_data.DataLoader(

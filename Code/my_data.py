@@ -302,6 +302,17 @@ class PSMARegDataset(torch_data.Dataset):
                 )
             pairs = build_registration_pairs(case_timepoints, case_ids=[overfit])
         else:
+            # print("WARNING")
+            # print("WARNING")
+            # print("WARNING")
+            # print("WARNING")
+
+            # temp = {}
+            # temp["0053"] = ["00", "01"]
+            # temp["0054"] = ["00", "01"]
+            # temp["0055"] = ["00", "01"]
+            # case_timepoints = temp
+            # case_ids = ["0053", "0054", "0055"]
             pairs = build_registration_pairs(case_timepoints, case_ids=case_ids)
 
         self.pairs = pairs

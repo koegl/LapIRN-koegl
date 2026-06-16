@@ -23,12 +23,13 @@ class TrainingConfig:
     start_channel: int = 2
 
     # train val
-    epochs_lvl1: int = 6
-    epochs_lvl2: int = 6
-    epochs_lvl3: int = 6
+    epochs_lvl1: int = 4
+    epochs_lvl2: int = 4
+    epochs_lvl3: int = 4
     unfreeze_epoch_in_lvl2: int = 2
-    unfreeze_epoch_in_lvl3: int = 3
-    val_interval = 2
+    unfreeze_epoch_in_lvl3: int = 1
+    val_interval: int = 2
+    checkpoint_interval: int = 2
 
     # sum to 10
     w_jacobian: float = 1.0

@@ -230,9 +230,16 @@ def train_lvl3(
         / f"{config.mlflow_experiment}_stagelvl3_{config.epochs_lvl3}.pth"
     )
 
+    steps_per_epoch = len(train_generator)
+    lossall = np.zeros((4, (config.epochs_lvl1 + 1) * steps_per_epoch))
+    global_step = 0
+
     epoch = 0
     pbar = tqdm.tqdm(total=config.epochs_lvl3 + 1, desc="lvl3 training")
     while epoch <= config.epochs_lvl3:
+        epoch_metrics: Dict[str, float] = {}
+        n_steps = 0
+
         for X, Y, X_lbl_ct, X_lbl_pet, Y_lbl_ct, Y_lbl_pet in train_generator:
             X = X.to(device).float()
             Y = Y.to(device).float()
@@ -324,7 +331,7 @@ def train_lvl3(
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()  # apply gradients
 
-            lossall[:, epoch] = np.array(
+            lossall[:, global_step] = np.array(
                 [
                     loss.item(),
                     loss_multiNCC.item(),
@@ -342,22 +349,29 @@ def train_lvl3(
                 Jdet=f"{loss_jacobian.item():.6f}",
                 smo=f"{loss_regulation.item():.4f}",
             )
-            mlflow.log_metrics(
-                {
-                    "train_lvl3/loss": loss.item(),
-                    "train_lvl3/ncc_ct": loss_ncc_ct.item(),
-                    "train_lvl3/ncc_pet": loss_ncc_pet.item(),
-                    "train_lvl3/smooth": loss_regulation.item(),
-                    "train_lvl3/dice_ct": loss_dice_ct.item(),
-                    "train_lvl3/dice_pet": loss_dice_pet.item(),
-                    "train_lvl3/mtv_bias": loss_mtv.item(),
-                    "train_lvl3/tlg_bias": loss_tlg.item(),
-                    "train_lvl3/masked_jac": loss_masked_jac.item(),
-                    "train_lvl3/jacob": loss_jacobian.item(),
-                    "train_lvl3/ndv": ndv,
-                },
-                step=epoch,
-            )
+            train_metrics = {
+                "train_lvl3/loss": loss.item(),
+                "train_lvl3/ncc_ct": loss_ncc_ct.item(),
+                "train_lvl3/ncc_pet": loss_ncc_pet.item(),
+                "train_lvl3/smooth": loss_regulation.item(),
+                "train_lvl3/dice_ct": loss_dice_ct.item(),
+                "train_lvl3/dice_pet": loss_dice_pet.item(),
+                "train_lvl3/mtv_bias": loss_mtv.item(),
+                "train_lvl3/tlg_bias": loss_tlg.item(),
+                "train_lvl3/masked_jac": loss_masked_jac.item(),
+                "train_lvl3/jacob": loss_jacobian.item(),
+                "train_lvl3/ndv": ndv,
+            }
+            mlflow.log_metrics(train_metrics, step=global_step)
+            for key, value in train_metrics.items():
+                epoch_metrics[key] = epoch_metrics.get(key, 0.0) + value
+            n_steps += 1
+            global_step += 1
+
+        mlflow.log_metrics(
+            {f"{key}_epoch": value / n_steps for key, value in epoch_metrics.items()},
+            step=global_step,
+        )
 
         if epoch % config.val_interval == 0 or epoch == config.epochs_lvl3:
             val_losses = evaluate_lvl3(
@@ -374,7 +388,7 @@ def train_lvl3(
             )
             mlflow.log_metrics(
                 {f"valid_lvl3/val_{key}": value for key, value in val_losses.items()},
-                step=epoch,
+                step=global_step,
             )
             tqdm.tqdm.write(
                 f"epoch {epoch} -> val loss {val_losses['loss']:.4f} "
@@ -396,6 +410,8 @@ def train_lvl3(
                 / f"loss_{config.mlflow_experiment}_stagelvl3_{config.epochs_lvl3}.npy",
                 lossall,
             )
+
+        utils.save_checkpoint(model, optimizer, epoch, "lvl3", config, lossall)
 
         epoch += 1
         pbar.update(1)

@@ -1,7 +1,51 @@
+import numpy as np
 import torch
+import tqdm
+from config import TrainingConfig
 from miccai2020_model_stage import (
     SpatialTransform_unit,
 )
+
+
+def save_checkpoint(
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    epoch: int,
+    stage: str,
+    config: TrainingConfig,
+    lossall: np.ndarray,
+) -> None:
+    """Save a rolling resume checkpoint every config.checkpoint_interval epochs.
+
+    Writes a single "latest" checkpoint per stage, overwritten each time, so
+    disk usage stays flat over a long run. It holds model weights, optimizer
+    state, current epoch and loss history -- everything needed to resume the
+    stage after a wall-time kill. The final per-stage weight file (used to
+    gate the next stage) is still saved separately by the train_lvlX function.
+
+    Args:
+        model: Model being trained.
+        optimizer: Optimizer whose state is saved for resuming.
+        epoch: Current epoch index.
+        stage: Stage tag, one of "lvl1", "lvl2", "lvl3".
+        config: Training configuration; must define checkpoint_interval.
+        lossall: Running loss-history array to persist alongside weights.
+    """
+    if epoch % config.checkpoint_interval != 0:
+        return
+
+    config.save_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = config.save_dir / f"{config.mlflow_experiment}_{stage}_latest.pth"
+    torch.save(
+        {
+            "epoch": epoch,
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "lossall": lossall,
+        },
+        latest_path,
+    )
+    tqdm.tqdm.write(f"[{stage}] checkpoint @ epoch {epoch} -> {latest_path.name}")
 
 
 def downsample_label(label: torch.Tensor, scale_factor: float) -> torch.Tensor:
