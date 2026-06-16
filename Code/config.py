@@ -11,7 +11,8 @@ class TrainingConfig:
     data_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg_dataset/")
     split_path = Path("/home/iml/fryderyk.koegl/data/PSMAReg_dataset/split.json")
     val_fraction: float = 0.15
-    use_cache: bool = True
+    use_cache_train: bool = True
+    use_cache_valid: bool = True
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
     range_flow: float = 0.4
@@ -22,10 +23,11 @@ class TrainingConfig:
     start_channel: int = 2
 
     # train val
-    epochs_lvl1: int = 5
-    iteration_lvl2: int = 5
-    iteration_lvl3: int = 5
-    freeze_step: int = 2
+    epochs_lvl1: int = 6
+    epochs_lvl2: int = 6
+    epochs_lvl3: int = 6
+    unfreeze_epoch_in_lvl2: int = 2
+    unfreeze_epoch_in_lvl3: int = 3
     val_interval = 2
 
     # sum to 10
@@ -54,17 +56,17 @@ class TrainingConfig:
     mlflow_experiment: str = "PSMAReg_LapIRN"
 
     @property
-    def imgshape_2(self) -> Tuple[int, int, int]:
+    def img_shape_2(self) -> Tuple[int, int, int]:
         return (self.img_shape[0] // 2, self.img_shape[1] // 2, self.img_shape[2] // 2)
 
     @property
-    def imgshape_4(self) -> Tuple[int, int, int]:
+    def img_shape_4(self) -> Tuple[int, int, int]:
         return (self.img_shape[0] // 4, self.img_shape[1] // 4, self.img_shape[2] // 4)
 
     def to_dict(self) -> Dict[str, Any]:
         config = asdict(self)
-        config["imgshape_2"] = self.imgshape_2
-        config["imgshape_4"] = self.imgshape_4
+        config["img_shape_2"] = self.img_shape_2
+        config["img_shape_4"] = self.img_shape_4
         return config
 
     def to_mlflow_params(self) -> Dict[str, Any]:

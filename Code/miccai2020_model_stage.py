@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import config
 import my_data
 import numpy as np
@@ -348,6 +346,7 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
             bias=False,
         )
 
+        self.config = config.TrainingConfig()
         self.saved = False
 
     def unfreeze_modellvl1(self):
@@ -491,57 +490,45 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
         lvl1_disp_up = self.up_tri(lvl1_disp)
         lvl1_v_up = self.up_tri(lvl1_v)
 
-        x_down = self.down_avg(x)
-        y_down = self.down_avg(y)
+        down_x = self.down_avg(x)
+        down_y = self.down_avg(y)
 
         if self.saved is False:
-            ct_x = x_down[:, 0:1, :, :, :]
-            pet_x = x_down[:, 1:2, :, :, :]
-            ct_y = y_down[:, 0:1, :, :, :]
-            pet_y = y_down[:, 1:2, :, :, :]
-            save_volume(
-                ct_x,
-                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
-                step=0,
-                reference_path=Path(
-                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
-                ),
+            ct_x = down_x[:, 0:1, :, :, :]
+            pet_x = down_x[:, 1:2, :, :, :]
+            ct_y = down_y[:, 0:1, :, :, :]
+            pet_y = down_y[:, 1:2, :, :, :]
+            my_data.save_volume(
+                volume=ct_x,
+                out_dir=self.config.save_dir / "intial",
+                epoch=0,
                 name="down_x_lvl2_ct",
             )
-            save_volume(
-                ct_y,
-                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
-                step=0,
-                reference_path=Path(
-                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
-                ),
+            my_data.save_volume(
+                volume=ct_y,
+                out_dir=self.config.save_dir / "intial",
+                epoch=0,
                 name="down_y_lvl2_ct",
             )
-            save_volume(
-                pet_x,
-                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
-                step=0,
-                reference_path=Path(
-                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
-                ),
+            my_data.save_volume(
+                volume=pet_x,
+                out_dir=self.config.save_dir / "intial",
+                epoch=0,
                 name="down_x_lvl2_pet",
             )
-            save_volume(
-                pet_y,
-                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
-                step=0,
-                reference_path=Path(
-                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
-                ),
+            my_data.save_volume(
+                volume=pet_y,
+                out_dir=self.config.save_dir / "intial",
+                epoch=0,
                 name="down_y_lvl2_pet",
             )
             self.saved = True
 
         warpped_x = self.transform(
-            x_down, lvl1_disp_up.permute(0, 2, 3, 4, 1), self.grid_1
+            down_x, lvl1_disp_up.permute(0, 2, 3, 4, 1), self.grid_1
         )
 
-        cat_input_lvl2 = torch.cat((warpped_x, y_down, lvl1_v_up), 1)
+        cat_input_lvl2 = torch.cat((warpped_x, down_y, lvl1_v_up), 1)
 
         fea_e0 = self.input_encoder_lvl1(cat_input_lvl2)
         e0 = self.down_conv(fea_e0)
@@ -563,7 +550,7 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
             return (
                 output_disp_e0,
                 warpped_inputx_lvl1_out,
-                y_down,
+                down_y,
                 compose_field_e0_lvl1v,
                 lvl1_v,
                 e0,
@@ -2477,91 +2464,6 @@ def neg_Jdet_loss(y_pred, sample_grid):
     selected_neg_Jdet = F.relu(neg_Jdet)
 
     return torch.mean(selected_neg_Jdet)
-
-
-def mtv_bias_loss(
-    warped_pet_mask: torch.Tensor,
-    moving_pet_mask: torch.Tensor,
-    eps: float = 1e-5,
-) -> torch.Tensor:
-    """MTV bias: relative volume change of lesion mask after warping.
-
-    Args:
-        warped_pet_mask: (B, 1, D, H, W) float, warped moving lesion mask.
-        moving_pet_mask: (B, 1, D, H, W) float, original moving lesion mask.
-        eps: Smoothing term.
-
-    Returns:
-        Scalar absolute relative volume bias.
-    """
-    mtv_moving = moving_pet_mask.sum()
-    mtv_warped = warped_pet_mask.sum()
-    return torch.abs(mtv_warped - mtv_moving) / (mtv_moving + eps)
-
-
-def tlg_bias_loss(
-    warped_pet_image: torch.Tensor,
-    warped_pet_mask: torch.Tensor,
-    moving_pet_image: torch.Tensor,
-    moving_pet_mask: torch.Tensor,
-    eps: float = 1e-5,
-) -> torch.Tensor:
-    """TLG bias: relative change in lesion-weighted PET intensity after warping.
-
-    Args:
-        warped_pet_image: (B, 1, D, H, W) float, warped moving PET image.
-        warped_pet_mask: (B, 1, D, H, W) float, warped moving lesion mask.
-        moving_pet_image: (B, 1, D, H, W) float, original moving PET image.
-        moving_pet_mask: (B, 1, D, H, W) float, original moving lesion mask.
-        eps: Smoothing term.
-
-    Returns:
-        Scalar absolute relative TLG bias.
-    """
-    tlg_moving = (moving_pet_image * moving_pet_mask).sum()
-    tlg_warped = (warped_pet_image * warped_pet_mask).sum()
-    return torch.abs(tlg_warped - tlg_moving) / (tlg_moving + eps)
-
-
-def warp_binary_mask(
-    mask: torch.Tensor,
-    disp: torch.Tensor,
-    grid: torch.Tensor,
-    transform: SpatialTransform_unit,
-) -> torch.Tensor:
-    """Warp a binary mask with bilinear interpolation (differentiable).
-
-    Args:
-        mask: (B, 1, D, H, W) float binary mask.
-        disp: (B, 3, D, H, W) displacement field.
-        grid: level grid for SpatialTransform_unit.
-        transform: SpatialTransform_unit instance.
-
-    Returns:
-        (B, 1, D, H, W) warped mask, values in [0, 1].
-    """
-    flow = disp.permute(0, 2, 3, 4, 1)
-    return transform(mask.float(), flow, grid)
-
-
-def masked_jac_det_loss(
-    jac_det: torch.Tensor,
-    mask: torch.Tensor,
-    eps: float = 1e-5,
-) -> torch.Tensor:
-    """Penalise deviation of det(J) from 1 inside mask.
-
-    Args:
-        jac_det: (B, 1, D, H, W) Jacobian determinant field.
-        mask: (B, 1, D, H, W) binary float mask (tumor region).
-        eps: Smoothing term.
-
-    Returns:
-        Scalar mean squared deviation from 1 inside mask.
-    """
-    masked_det = jac_det * mask
-    target = mask  # det(J)=1 inside mask
-    return ((masked_det - target) ** 2).sum() / (mask.sum() + eps)
 
 
 def jacobian_determinant(flow: torch.Tensor) -> torch.Tensor:

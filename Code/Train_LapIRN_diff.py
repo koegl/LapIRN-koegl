@@ -590,7 +590,7 @@ def main() -> None:
         if config.train_lvl1:
             train_lvl1(
                 training_generator=training_generator,
-                imgshape_4=config.imgshape_4,
+                imgshape_4=config.img_shape_4,
                 imgshape=config.img_shape,
                 in_channel=config.in_channel,
                 n_classes=config.n_classes,
@@ -611,8 +611,8 @@ def main() -> None:
         if config.train_lvl2:
             train_lvl2(
                 training_generator=training_generator,
-                imgshape_4=config.imgshape_4,
-                imgshape_2=config.imgshape_2,
+                imgshape_4=config.img_shape_4,
+                imgshape_2=config.img_shape_2,
                 imgshape=config.img_shape,
                 in_channel=config.in_channel,
                 n_classes=config.n_classes,
@@ -621,8 +621,8 @@ def main() -> None:
                 lr=config.lr,
                 antifold=config.w_jacobian,
                 smooth=config.w_smooth,
-                freeze_step=config.freeze_step * config.iteration_multiplier,
-                iteration_lvl2=config.iteration_lvl2 * config.iteration_multiplier,
+                freeze_step=config.unfreeze_epoch_in_lvl2: * config.iteration_multiplier,
+                iteration_lvl2=config.epochs_lvl2 * config.iteration_multiplier,
                 n_checkpoint=config.n_checkpoint * config.iteration_multiplier,
                 model_dir=config.model_dir,
                 w_ct=config.w_ct,
@@ -634,8 +634,8 @@ def main() -> None:
         if config.train_lvl3:
             train_lvl3(
                 training_generator=training_generator,
-                imgshape_4=config.imgshape_4,
-                imgshape_2=config.imgshape_2,
+                imgshape_4=config.img_shape_4,
+                imgshape_2=config.img_shape_2,
                 imgshape=config.img_shape,
                 in_channel=config.in_channel,
                 n_classes=config.n_classes,
@@ -644,8 +644,8 @@ def main() -> None:
                 lr=config.lr,
                 antifold=config.w_jacobian,
                 smooth=config.w_smooth,
-                freeze_step=config.freeze_step * config.iteration_multiplier,
-                iteration_lvl3=config.iteration_lvl3 * config.iteration_multiplier,
+                freeze_step=config.unfreeze_epoch_in_lvl2: * config.iteration_multiplier,
+                iteration_lvl3=config.epochs_lvl3 * config.iteration_multiplier,
                 n_checkpoint=config.n_checkpoint * config.iteration_multiplier,
                 model_dir=config.model_dir,
                 ckpt_dir=config.ckpt_dir,

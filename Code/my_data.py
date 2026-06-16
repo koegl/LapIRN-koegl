@@ -225,22 +225,22 @@ def load_pair(
     x_label_ct = (
         nib.load(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz")
         .get_fdata()
-        .astype(np.int64)
+        .astype(np.uint8)
     )
     x_label_pet = (
         nib.load(label_dir / f"PSMARegPSMA_{case_id}_0001_{tp_x}.nii.gz")
         .get_fdata()
-        .astype(np.int64)
+        .astype(np.uint8)
     )
     y_label_ct = (
         nib.load(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz")
         .get_fdata()
-        .astype(np.int64)
+        .astype(np.uint8)
     )
     y_label_pet = (
         nib.load(label_dir / f"PSMARegPSMA_{case_id}_0001_{tp_y}.nii.gz")
         .get_fdata()
-        .astype(np.int64)
+        .astype(np.uint8)
     )
 
     x_vol_ct = norm_ct(x_vol_ct)
