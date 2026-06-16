@@ -1,0 +1,391 @@
+from pathlib import Path
+from typing import Callable, Dict
+
+import mlflow
+import my_data
+import numpy as np
+import torch
+import tqdm
+import utils
+from config import TrainingConfig
+from Functions import generate_grid, transform_unit_flow_to_flow_cuda
+from miccai2020_model_stage import (
+    Miccai2020_LDR_laplacian_unit_add_lvl1,
+    Miccai2020_LDR_laplacian_unit_add_lvl2,
+    SpatialTransform_unit,
+    SpatialTransformNearest_unit,
+    jacobian_determinant,
+    multi_resolution_NCC,
+    neg_Jdet_loss,
+    smoothloss,
+)
+from torch.utils import data as torch_data
+
+
+def evaluate_lvl2(
+    model: Miccai2020_LDR_laplacian_unit_add_lvl2,
+    valid_generator: torch_data.DataLoader,
+    config: TrainingConfig,
+    device: torch.device,
+    loss_similarity_ct: multi_resolution_NCC,
+    loss_similarity_pet: multi_resolution_NCC,
+    loss_smooth: Callable,
+    loss_Jdet: Callable,
+    transform: SpatialTransform_unit,
+    grid_2: torch.Tensor,
+) -> Dict[str, float]:
+    """Run one validation pass over val_generator and return averaged losses.
+
+    Args:
+        model: The lvl2 registration model, switched to eval mode internally
+            and restored to train mode before returning.
+        val_generator: DataLoader yielding (X, Y, X_lbl_ct, X_lbl_pet,
+            Y_lbl_ct, Y_lbl_pet) batches.
+        config: Training configuration holding loss weights.
+        device: Device to run the forward pass on.
+        loss_similarity_ct: Multi-resolution NCC loss for the CT channel.
+        loss_similarity_pet: Multi-resolution NCC loss for the PET channel.
+        loss_smooth: Smoothness regularization loss function.
+        loss_Jdet: Negative Jacobian determinant loss function.
+        transform: Spatial transform module used by the dice loss.
+        grid_2: Precomputed sampling grid at the lvl2 resolution.
+
+    Returns:
+        Dict mapping loss name to its average value over val_generator.
+    """
+    model.eval()
+    val_losses: Dict[str, float] = {
+        "loss": 0.0,
+        "ncc_ct": 0.0,
+        "ncc_pet": 0.0,
+        "smooth": 0.0,
+        "dice_ct": 0.0,
+        "dice_pet": 0.0,
+        "jacobian": 0.0,
+        "ndv": 0.0,
+    }
+    n_batches = 0
+
+    with torch.no_grad():
+        for X, Y, X_lbl_ct, X_lbl_pet, Y_lbl_ct, Y_lbl_pet in valid_generator:
+            X = X.to(device).float()
+            Y = Y.to(device).float()
+
+            F_X_Y, X_Y, Y_4x, F_xy, _, _ = model(X, Y)
+
+            X_Y_ct = X_Y[:, 0:1, ...]
+            X_Y_pet = X_Y[:, 1:2, ...]
+            Y_4x_ct = Y_4x[:, 0:1, ...]
+            Y_4x_pet = Y_4x[:, 1:2, ...]
+
+            loss_ncc_ct = loss_similarity_ct(X_Y_ct, Y_4x_ct)
+            loss_ncc_pet = loss_similarity_pet(X_Y_pet, Y_4x_pet)
+            loss_multiNCC = config.w_ct * loss_ncc_ct + config.w_pet * loss_ncc_pet
+
+            F_X_Y_norm = transform_unit_flow_to_flow_cuda(
+                F_X_Y.permute(0, 2, 3, 4, 1).clone()
+            )
+            jac_det = jacobian_determinant(F_X_Y_norm)
+            ndv = utils.compute_ndv(jac_det)
+            loss_jacobian = loss_Jdet(F_X_Y_norm, grid_2)
+
+            _, _, x, y, z = F_xy.shape
+            F_xy[:, 0, :, :, :] = F_xy[:, 0, :, :, :] * (z - 1)
+            F_xy[:, 1, :, :, :] = F_xy[:, 1, :, :, :] * (y - 1)
+            F_xy[:, 2, :, :, :] = F_xy[:, 2, :, :, :] * (x - 1)
+            loss_regulation = loss_smooth(F_xy)
+
+            X_lbl_ct_down = utils.downsample_label(
+                X_lbl_ct.to(device), scale_factor=0.5
+            )
+            Y_lbl_ct_down = utils.downsample_label(
+                Y_lbl_ct.to(device), scale_factor=0.5
+            )
+            X_lbl_pet_down = utils.downsample_label(
+                X_lbl_pet.to(device), scale_factor=0.5
+            )
+            Y_lbl_pet_down = utils.downsample_label(
+                Y_lbl_pet.to(device), scale_factor=0.5
+            )
+
+            loss_dice_ct = utils.dice_loss_with_grad(
+                X_lbl_ct_down, Y_lbl_ct_down, F_X_Y, model.grid_1, transform
+            )
+            loss_dice_pet = utils.dice_loss_with_grad(
+                X_lbl_pet_down, Y_lbl_pet_down, F_X_Y, model.grid_1, transform
+            )
+
+            loss = (
+                loss_multiNCC
+                + config.w_jacobian * loss_jacobian
+                + config.w_smooth * loss_regulation
+                + config.w_dice_ct * loss_dice_ct
+                + config.w_dice_pet * loss_dice_pet
+            )
+
+            val_losses["loss"] += loss.item()
+            val_losses["ncc_ct"] += loss_ncc_ct.item()
+            val_losses["ncc_pet"] += loss_ncc_pet.item()
+            val_losses["smooth"] += loss_regulation.item()
+            val_losses["dice_ct"] += loss_dice_ct.item()
+            val_losses["dice_pet"] += loss_dice_pet.item()
+            val_losses["jacobian"] += loss_jacobian.item()
+            val_losses["ndv"] += ndv
+            n_batches += 1
+
+    model.train()
+    return {key: value / n_batches for key, value in val_losses.items()}
+
+
+def train_lvl2(
+    config: TrainingConfig,
+    path_model_level1: Path,
+    train_generator: torch_data.DataLoader,
+    valid_generator: torch_data.DataLoader,
+) -> Path:
+    """Train the lvl2 registration model on top of a frozen lvl1 model.
+
+    Args:
+        config: Training configuration (paths, hyperparameters, loss
+            weights, epoch count, validation interval, freeze epoch).
+        path_model_level1: Path to the trained lvl1 checkpoint to load and
+            embed as the frozen lvl1 sub-model.
+        train_generator: DataLoader yielding training batches.
+        val_generator: DataLoader yielding validation batches.
+
+    Returns:
+        Path to the final saved model checkpoint.
+    """
+    print("Training lvl2...")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    model_lvl1 = Miccai2020_LDR_laplacian_unit_add_lvl1(
+        in_channel=config.in_channel,
+        n_classes=config.n_classes,
+        start_channel=config.start_channel,
+        is_train=True,
+        imgshape=config.img_shape_4,
+        range_flow=config.range_flow,
+    ).to(device)
+
+    print("Loading weight for model_lvl1...", path_model_level1)
+    model_lvl1.load_state_dict(torch.load(path_model_level1))
+
+    for param in model_lvl1.parameters():
+        param.requires_grad = False
+
+    model = Miccai2020_LDR_laplacian_unit_add_lvl2(
+        in_channel=config.in_channel,
+        n_classes=config.n_classes,
+        start_channel=config.start_channel,
+        is_train=True,
+        imgshape=config.img_shape_2,
+        range_flow=config.range_flow,
+        model_lvl1=model_lvl1,
+    ).to(device)
+
+    loss_similarity_ct = multi_resolution_NCC(win=7, scale=2)
+    loss_similarity_pet = multi_resolution_NCC(win=7, scale=2)
+    loss_smooth = smoothloss
+    loss_Jdet = neg_Jdet_loss
+
+    transform = SpatialTransform_unit().to(device)
+
+    for param in transform.parameters():
+        param.requires_grad = False
+        param.volatile = True
+
+    grid_2 = generate_grid(config.img_shape_2)
+    grid_2 = (
+        torch.from_numpy(np.reshape(grid_2, (1,) + grid_2.shape)).to(device).float()
+    )
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
+
+    config.save_dir.mkdir(parents=True, exist_ok=True)
+
+    lossall = np.zeros((4, config.epochs_lvl2 + 1))
+    final_model_path = (
+        config.save_dir
+        / f"{config.mlflow_experiment}_stagelvl2_{config.epochs_lvl2}.pth"
+    )
+
+    epoch = 0
+    pbar = tqdm.tqdm(total=config.epochs_lvl2 + 1, desc="lvl2 training")
+    while epoch <= config.epochs_lvl2:
+        for X, Y, X_lbl_ct, X_lbl_pet, Y_lbl_ct, Y_lbl_pet in train_generator:
+            X = X.to(device).float()
+            Y = Y.to(device).float()
+
+            F_X_Y, X_Y, Y_4x, F_xy, _, _ = model(X, Y)
+
+            if epoch % 100 == 0 or epoch == config.epochs_lvl2:
+                ct = X_Y[:, 0:1, :, :, :]
+                pet = X_Y[:, 1:2, :, :, :]
+                my_data.save_volume(
+                    volume=ct,
+                    out_dir=config.save_dir / "warped",
+                    epoch=epoch,
+                    name="warped_ct_lvl2",
+                )
+                my_data.save_volume(
+                    volume=pet,
+                    out_dir=config.save_dir / "warped",
+                    epoch=epoch,
+                    name="warped_pet_lvl2",
+                )
+
+            X_Y_ct = X_Y[:, 0:1, ...]
+            X_Y_pet = X_Y[:, 1:2, ...]
+            Y_4x_ct = Y_4x[:, 0:1, ...]
+            Y_4x_pet = Y_4x[:, 1:2, ...]
+
+            loss_ncc_ct = loss_similarity_ct(X_Y_ct, Y_4x_ct)
+            loss_ncc_pet = loss_similarity_pet(X_Y_pet, Y_4x_pet)
+            loss_multiNCC = config.w_ct * loss_ncc_ct + config.w_pet * loss_ncc_pet
+
+            F_X_Y_norm = transform_unit_flow_to_flow_cuda(
+                F_X_Y.permute(0, 2, 3, 4, 1).clone()
+            )
+            jac_det = jacobian_determinant(F_X_Y_norm)
+            ndv = utils.compute_ndv(jac_det)
+
+            loss_jacobian = loss_Jdet(F_X_Y_norm, grid_2)
+
+            # reg2 - use velocity
+            _, _, x, y, z = F_xy.shape
+            F_xy[:, 0, :, :, :] = F_xy[:, 0, :, :, :] * (z - 1)
+            F_xy[:, 1, :, :, :] = F_xy[:, 1, :, :, :] * (y - 1)
+            F_xy[:, 2, :, :, :] = F_xy[:, 2, :, :, :] * (x - 1)
+            loss_regulation = loss_smooth(F_xy)
+
+            X_lbl_ct_down = utils.downsample_label(
+                X_lbl_ct.to(device), scale_factor=0.5
+            )
+            Y_lbl_ct_down = utils.downsample_label(
+                Y_lbl_ct.to(device), scale_factor=0.5
+            )
+            X_lbl_pet_down = utils.downsample_label(
+                X_lbl_pet.to(device), scale_factor=0.5
+            )
+            Y_lbl_pet_down = utils.downsample_label(
+                Y_lbl_pet.to(device), scale_factor=0.5
+            )
+
+            if epoch == config.epochs_lvl2 and False:
+                transform_nearest = SpatialTransformNearest_unit().to(device)
+
+                warped_seg_ct = transform_nearest(
+                    X_lbl_ct_down.float(),
+                    F_X_Y.permute(0, 2, 3, 4, 1),
+                    model.grid_1,
+                )
+
+                my_data.save_volume(
+                    volume=warped_seg_ct.to(torch.int16),
+                    out_dir=config.save_dir / "warped",
+                    epoch=epoch,
+                    name="x_warped_lvl2",
+                )
+                my_data.save_volume(
+                    volume=Y_lbl_ct_down.to(torch.int16),
+                    out_dir=config.save_dir / "warped",
+                    epoch=epoch,
+                    name="y_lvl2",
+                )
+
+            loss_dice_ct = utils.dice_loss_with_grad(
+                X_lbl_ct_down, Y_lbl_ct_down, F_X_Y, model.grid_1, transform
+            )
+            loss_dice_pet = utils.dice_loss_with_grad(
+                X_lbl_pet_down, Y_lbl_pet_down, F_X_Y, model.grid_1, transform
+            )
+
+            # update total loss
+            loss = (
+                loss_multiNCC
+                + config.w_jacobian * loss_jacobian
+                + config.w_smooth * loss_regulation
+                + config.w_dice_ct * loss_dice_ct
+                + config.w_dice_pet * loss_dice_pet
+            )
+
+            optimizer.zero_grad()  # clear gradients for this training step
+            loss.backward()  # backpropagation, compute gradients
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            optimizer.step()  # apply gradients
+
+            lossall[:, epoch] = np.array(
+                [
+                    loss.item(),
+                    loss_multiNCC.item(),
+                    loss_jacobian.item(),
+                    loss_regulation.item(),
+                ]
+            )
+            pbar.set_postfix(
+                loss=f"{loss.item():.4f}",
+                ncc=f"{loss_multiNCC.item():.4f}",
+                dice_ct=f"{loss_dice_ct.item():.4f}",
+                dice_pet=f"{loss_dice_pet.item():.4f}",
+                Jdet=f"{loss_jacobian.item():.6f}",
+                smo=f"{loss_regulation.item():.4f}",
+            )
+            mlflow.log_metrics(
+                {
+                    "train_lvl2/loss": loss.item(),
+                    "train_lvl2/ncc_ct": loss_ncc_ct.item(),
+                    "train_lvl2/ncc_pet": loss_ncc_pet.item(),
+                    "train_lvl2/smooth": loss_regulation.item(),
+                    "train_lvl2/dice_ct": loss_dice_ct.item(),
+                    "train_lvl2/dice_pet": loss_dice_pet.item(),
+                    "train_lvl2/jacob": loss_jacobian.item(),
+                    "train_lvl2/ndv": ndv,
+                },
+                step=epoch,
+            )
+
+        if epoch % config.val_interval == 0 or epoch == config.epochs_lvl2:
+            val_losses = evaluate_lvl2(
+                model=model,
+                valid_generator=valid_generator,
+                config=config,
+                device=device,
+                loss_similarity_ct=loss_similarity_ct,
+                loss_similarity_pet=loss_similarity_pet,
+                loss_smooth=loss_smooth,
+                loss_Jdet=loss_Jdet,
+                transform=transform,
+                grid_2=grid_2,
+            )
+            mlflow.log_metrics(
+                {f"valid_lvl2/val_{key}": value for key, value in val_losses.items()},
+                step=epoch,
+            )
+            tqdm.tqdm.write(
+                f"epoch {epoch} -> val loss {val_losses['loss']:.4f} "
+                f"- ncc_ct {val_losses['ncc_ct']:.4f} "
+                f"- ncc_pet {val_losses['ncc_pet']:.4f} "
+                f"- dice_ct {val_losses['dice_ct']:.4f} "
+                f"- dice_pet {val_losses['dice_pet']:.4f}"
+            )
+
+        if epoch == config.unfreeze_epoch_in_lvl2:
+            model.unfreeze_modellvl1()
+
+        if epoch == config.epochs_lvl2:
+            torch.save(model.state_dict(), final_model_path)
+            np.save(
+                config.save_dir
+                / f"loss_{config.mlflow_experiment}_stagelvl2_{config.epochs_lvl2}.npy",
+                lossall,
+            )
+
+        epoch += 1
+        pbar.update(1)
+
+        if epoch > config.epochs_lvl2:
+            break
+    pbar.close()
+
+    return final_model_path

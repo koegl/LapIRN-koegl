@@ -5,39 +5,41 @@ from typing import Any, Dict, Tuple
 
 @dataclass
 class TrainingConfig:
-    fixed_ct_path: Path = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006_0000_00.nii.gz"
-    )
-    fixed_pet_path: Path = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006_0001_00.nii.gz"
-    )
-    moving_ct_path: Path = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006_0000_01.nii.gz"
-    )
-    moving_pet_path: Path = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006_0001_01.nii.gz"
-    )
-    model_dir: Path = Path("./checkpoints/overfit/stages")
-    ckpt_dir: Path = Path("./checkpoints/overfit/warped")
+    save_dir: Path = Path("./saved")
 
-    imgshape: Tuple[int, int, int] = (192, 192, 288)
+    # Dataset
+    data_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg_dataset/")
+    split_path = Path("/home/iml/fryderyk.koegl/data/PSMAReg_dataset/split.json")
+    val_fraction: float = 0.15
+    use_cache_train: bool = True
+    use_cache_valid: bool = True
+    img_shape: Tuple[int, int, int] = (192, 192, 288)
 
     range_flow: float = 0.4
-    in_channel: int = 2
-    n_classes: int = 3
-    lr: float = 1e-2
-    start_channel: int = 7
-    antifold: float = 0.0
-    smooth: float = 1.0
-    w_ct: float = 1.0
-    w_pet: float = 0.1
 
-    iteration_multiplier: int = 100
-    iteration_lvl1: int = 10
-    iteration_lvl2: int = 10
-    iteration_lvl3: int = 20
-    freeze_step: int = 2
-    n_checkpoint: int = 1
+    in_channel: int = 4
+    n_classes: int = 3
+    lr: float = 1e-3
+    start_channel: int = 2
+
+    # train val
+    epochs_lvl1: int = 6
+    epochs_lvl2: int = 6
+    epochs_lvl3: int = 6
+    unfreeze_epoch_in_lvl2: int = 2
+    unfreeze_epoch_in_lvl3: int = 3
+    val_interval = 2
+
+    # sum to 10
+    w_jacobian: float = 1.0
+    w_smooth: float = 1.0
+    w_ct: float = 3.0
+    w_pet: float = 1.0
+    w_dice_ct: float = 1.0
+    w_dice_pet: float = 1.0
+    w_mtv: float = 0.7
+    w_tlg: float = 0.7
+    w_masked_jac: float = 0.6
 
     batch_size: int = 1
     shuffle: bool = False
@@ -51,36 +53,20 @@ class TrainingConfig:
     lvl3_ncc_scale: int = 3
 
     mlflow_tracking_uri: str = "sqlite:////home/iml/fryderyk.koegl/code/mlruns.db"
-    mlflow_experiment: str = "PSMAReg_LapIRN_overfit"
-
-    train_lvl1: bool = True
-    train_lvl2: bool = False
-    train_lvl3: bool = False
-
-    def __post_init__(self) -> None:
-        if self.iteration_lvl1 is None:
-            self.iteration_lvl1 = 1 * self.iteration_multiplier
-        if self.iteration_lvl2 is None:
-            self.iteration_lvl2 = 1 * self.iteration_multiplier
-        if self.iteration_lvl3 is None:
-            self.iteration_lvl3 = 2 * self.iteration_multiplier
-        if self.freeze_step is None:
-            self.freeze_step = int(self.iteration_lvl1 / 5)
-        if self.n_checkpoint is None:
-            self.n_checkpoint = int(self.iteration_lvl1 / 10)
+    mlflow_experiment: str = "PSMAReg_LapIRN"
 
     @property
-    def imgshape_2(self) -> Tuple[int, int, int]:
-        return tuple(dim // 2 for dim in self.imgshape)
+    def img_shape_2(self) -> Tuple[int, int, int]:
+        return (self.img_shape[0] // 2, self.img_shape[1] // 2, self.img_shape[2] // 2)
 
     @property
-    def imgshape_4(self) -> Tuple[int, int, int]:
-        return tuple(dim // 4 for dim in self.imgshape)
+    def img_shape_4(self) -> Tuple[int, int, int]:
+        return (self.img_shape[0] // 4, self.img_shape[1] // 4, self.img_shape[2] // 4)
 
     def to_dict(self) -> Dict[str, Any]:
         config = asdict(self)
-        config["imgshape_2"] = self.imgshape_2
-        config["imgshape_4"] = self.imgshape_4
+        config["img_shape_2"] = self.img_shape_2
+        config["img_shape_4"] = self.img_shape_4
         return config
 
     def to_mlflow_params(self) -> Dict[str, Any]:

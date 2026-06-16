@@ -1,24 +1,10 @@
-from pathlib import Path
-
-import nibabel as nib
+import config
+import my_data
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from Functions import generate_grid, generate_grid_unit
-
-
-def save_volume(
-    volume: torch.Tensor, out_dir: Path, step, reference_path: Path, name: str
-) -> None:
-    out_dir.mkdir(parents=True, exist_ok=True)
-    fixed_nib = nib.load(reference_path.as_posix())
-    affine = fixed_nib.affine
-
-    nib.save(
-        nib.Nifti1Image(volume.detach().squeeze().cpu().numpy(), affine),
-        str(out_dir / f"{name}_{step:05d}.nii.gz"),
-    )
 
 
 class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
@@ -93,6 +79,7 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
             bias=False,
         )
 
+        self.config = config.TrainingConfig()
         self.saved = False
 
     def resblock_seq(self, in_channels, bias_opt=False):
@@ -239,40 +226,28 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
             pet_x = down_x[:, 1:2, :, :, :]
             ct_y = down_y[:, 0:1, :, :, :]
             pet_y = down_y[:, 1:2, :, :, :]
-            save_volume(
-                ct_x,
-                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
-                step=0,
-                reference_path=Path(
-                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
-                ),
+            my_data.save_volume(
+                volume=ct_x,
+                out_dir=self.config.save_dir / "intial",
+                epoch=0,
                 name="down_x_lvl1_ct",
             )
-            save_volume(
-                ct_y,
-                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
-                step=0,
-                reference_path=Path(
-                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
-                ),
+            my_data.save_volume(
+                volume=ct_y,
+                out_dir=self.config.save_dir / "intial",
+                epoch=0,
                 name="down_y_lvl1_ct",
             )
-            save_volume(
-                pet_x,
-                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
-                step=0,
-                reference_path=Path(
-                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
-                ),
+            my_data.save_volume(
+                volume=pet_x,
+                out_dir=self.config.save_dir / "intial",
+                epoch=0,
                 name="down_x_lvl1_pet",
             )
-            save_volume(
-                pet_y,
-                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
-                step=0,
-                reference_path=Path(
-                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
-                ),
+            my_data.save_volume(
+                volume=pet_y,
+                out_dir=self.config.save_dir / "intial",
+                epoch=0,
                 name="down_y_lvl1_pet",
             )
             self.saved = True
@@ -371,6 +346,7 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
             bias=False,
         )
 
+        self.config = config.TrainingConfig()
         self.saved = False
 
     def unfreeze_modellvl1(self):
@@ -514,57 +490,45 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
         lvl1_disp_up = self.up_tri(lvl1_disp)
         lvl1_v_up = self.up_tri(lvl1_v)
 
-        x_down = self.down_avg(x)
-        y_down = self.down_avg(y)
+        down_x = self.down_avg(x)
+        down_y = self.down_avg(y)
 
         if self.saved is False:
-            ct_x = x_down[:, 0:1, :, :, :]
-            pet_x = x_down[:, 1:2, :, :, :]
-            ct_y = y_down[:, 0:1, :, :, :]
-            pet_y = y_down[:, 1:2, :, :, :]
-            save_volume(
-                ct_x,
-                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
-                step=0,
-                reference_path=Path(
-                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
-                ),
-                name="down_x_ct_lvl2",
+            ct_x = down_x[:, 0:1, :, :, :]
+            pet_x = down_x[:, 1:2, :, :, :]
+            ct_y = down_y[:, 0:1, :, :, :]
+            pet_y = down_y[:, 1:2, :, :, :]
+            my_data.save_volume(
+                volume=ct_x,
+                out_dir=self.config.save_dir / "intial",
+                epoch=0,
+                name="down_x_lvl2_ct",
             )
-            save_volume(
-                ct_y,
-                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
-                step=0,
-                reference_path=Path(
-                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
-                ),
-                name="down_y_ct_lvl2",
+            my_data.save_volume(
+                volume=ct_y,
+                out_dir=self.config.save_dir / "intial",
+                epoch=0,
+                name="down_y_lvl2_ct",
             )
-            save_volume(
-                pet_x,
-                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
-                step=0,
-                reference_path=Path(
-                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
-                ),
-                name="down_x_pet_lvl2",
+            my_data.save_volume(
+                volume=pet_x,
+                out_dir=self.config.save_dir / "intial",
+                epoch=0,
+                name="down_x_lvl2_pet",
             )
-            save_volume(
-                pet_y,
-                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
-                step=0,
-                reference_path=Path(
-                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
-                ),
-                name="down_y_pet_lvl2",
+            my_data.save_volume(
+                volume=pet_y,
+                out_dir=self.config.save_dir / "intial",
+                epoch=0,
+                name="down_y_lvl2_pet",
             )
             self.saved = True
 
         warpped_x = self.transform(
-            x_down, lvl1_disp_up.permute(0, 2, 3, 4, 1), self.grid_1
+            down_x, lvl1_disp_up.permute(0, 2, 3, 4, 1), self.grid_1
         )
 
-        cat_input_lvl2 = torch.cat((warpped_x, y_down, lvl1_v_up), 1)
+        cat_input_lvl2 = torch.cat((warpped_x, down_y, lvl1_v_up), 1)
 
         fea_e0 = self.input_encoder_lvl1(cat_input_lvl2)
         e0 = self.down_conv(fea_e0)
@@ -586,7 +550,7 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
             return (
                 output_disp_e0,
                 warpped_inputx_lvl1_out,
-                y_down,
+                down_y,
                 compose_field_e0_lvl1v,
                 lvl1_v,
                 e0,
@@ -2500,6 +2464,46 @@ def neg_Jdet_loss(y_pred, sample_grid):
     selected_neg_Jdet = F.relu(neg_Jdet)
 
     return torch.mean(selected_neg_Jdet)
+
+
+def jacobian_determinant(flow: torch.Tensor) -> torch.Tensor:
+    """Differentiable per-voxel Jacobian determinant, matching challenge convention.
+
+    Uses central differences (kernel [-0.5, 0, 0.5]), matching calc_J_i with
+    '0x0y0z' in the challenge evaluation code. Boundary voxels are set to 1.0
+    (no deformation assumed) to match the challenge's boundary exclusion.
+
+    Args:
+        flow: (B, D, H, W, 3) displacement field in voxel units.
+
+    Returns:
+        (B, 1, D, H, W) Jacobian determinant field.
+    """
+    dx = flow[..., 0]
+    dy = flow[..., 1]
+    dz = flow[..., 2]
+
+    # central differences — identity contribution (+1) on diagonal
+    d00 = (dx[:, 2:, 1:-1, 1:-1] - dx[:, :-2, 1:-1, 1:-1]) / 2 + 1
+    d01 = (dx[:, 1:-1, 2:, 1:-1] - dx[:, 1:-1, :-2, 1:-1]) / 2
+    d02 = (dx[:, 1:-1, 1:-1, 2:] - dx[:, 1:-1, 1:-1, :-2]) / 2
+    d10 = (dy[:, 2:, 1:-1, 1:-1] - dy[:, :-2, 1:-1, 1:-1]) / 2
+    d11 = (dy[:, 1:-1, 2:, 1:-1] - dy[:, 1:-1, :-2, 1:-1]) / 2 + 1
+    d12 = (dy[:, 1:-1, 1:-1, 2:] - dy[:, 1:-1, 1:-1, :-2]) / 2
+    d20 = (dz[:, 2:, 1:-1, 1:-1] - dz[:, :-2, 1:-1, 1:-1]) / 2
+    d21 = (dz[:, 1:-1, 2:, 1:-1] - dz[:, 1:-1, :-2, 1:-1]) / 2
+    d22 = (dz[:, 1:-1, 1:-1, 2:] - dz[:, 1:-1, 1:-1, :-2]) / 2 + 1
+
+    det = (
+        d00 * (d11 * d22 - d12 * d21)
+        - d01 * (d10 * d22 - d12 * d20)
+        + d02 * (d10 * d21 - d11 * d20)
+    )  # (B, D-2, H-2, W-2)
+
+    # pad boundary with 1.0 (identity Jacobian) matching challenge's boundary exclusion
+    det = torch.nn.functional.pad(det, (1, 1, 1, 1, 1, 1), value=1.0)
+
+    return det.unsqueeze(1)  # (B, 1, D, H, W)
 
 
 class NCC(torch.nn.Module):
