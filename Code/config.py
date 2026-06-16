@@ -5,28 +5,32 @@ from typing import Any, Dict, Tuple
 
 @dataclass
 class TrainingConfig:
-    data_path = (
-        "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006"
-    )
     save_dir: Path = Path("./saved")
 
-    imgshape: Tuple[int, int, int] = (192, 192, 288)
+    # Dataset
+    data_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg_dataset/")
+    split_path = Path("/home/iml/fryderyk.koegl/data/PSMAReg_dataset/split.json")
+    val_fraction: float = 0.15
+    use_cache: bool = True
+    img_shape: Tuple[int, int, int] = (192, 192, 288)
 
     range_flow: float = 0.4
 
-    in_channel: int = 2
+    in_channel: int = 4
     n_classes: int = 3
     lr: float = 1e-3
     start_channel: int = 2
 
-    iteration_lvl1: int = 10
-    iteration_lvl2: int = 10
-    iteration_lvl3: int = 20
-    freeze_step: int = 5
+    # train val
+    epochs_lvl1: int = 5
+    iteration_lvl2: int = 5
+    iteration_lvl3: int = 5
+    freeze_step: int = 2
+    val_interval = 2
 
     # sum to 10
-    antifold: float = 1.0
-    smooth: float = 1.0
+    w_jacobian: float = 1.0
+    w_smooth: float = 1.0
     w_ct: float = 3.0
     w_pet: float = 1.0
     w_dice_ct: float = 1.0
@@ -51,11 +55,11 @@ class TrainingConfig:
 
     @property
     def imgshape_2(self) -> Tuple[int, int, int]:
-        return (self.imgshape[0] // 2, self.imgshape[1] // 2, self.imgshape[2] // 2)
+        return (self.img_shape[0] // 2, self.img_shape[1] // 2, self.img_shape[2] // 2)
 
     @property
     def imgshape_4(self) -> Tuple[int, int, int]:
-        return (self.imgshape[0] // 4, self.imgshape[1] // 4, self.imgshape[2] // 4)
+        return (self.img_shape[0] // 4, self.img_shape[1] // 4, self.img_shape[2] // 4)
 
     def to_dict(self) -> Dict[str, Any]:
         config = asdict(self)

@@ -1,24 +1,12 @@
 from pathlib import Path
 
-import nibabel as nib
+import config
+import my_data
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from Functions import generate_grid, generate_grid_unit
-
-
-def save_volume(
-    volume: torch.Tensor, out_dir: Path, step, reference_path: Path, name: str
-) -> None:
-    out_dir.mkdir(parents=True, exist_ok=True)
-    fixed_nib = nib.load(reference_path.as_posix())
-    affine = fixed_nib.affine
-
-    nib.save(
-        nib.Nifti1Image(volume.detach().squeeze().cpu().numpy(), affine),
-        str(out_dir / f"{name}_{step:05d}.nii.gz"),
-    )
 
 
 class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
@@ -93,6 +81,7 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
             bias=False,
         )
 
+        self.config = config.TrainingConfig()
         self.saved = False
 
     def resblock_seq(self, in_channels, bias_opt=False):
@@ -239,40 +228,28 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
             pet_x = down_x[:, 1:2, :, :, :]
             ct_y = down_y[:, 0:1, :, :, :]
             pet_y = down_y[:, 1:2, :, :, :]
-            save_volume(
-                ct_x,
-                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
-                step=0,
-                reference_path=Path(
-                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
-                ),
+            my_data.save_volume(
+                volume=ct_x,
+                out_dir=self.config.save_dir / "intial",
+                epoch=0,
                 name="down_x_lvl1_ct",
             )
-            save_volume(
-                ct_y,
-                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
-                step=0,
-                reference_path=Path(
-                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
-                ),
+            my_data.save_volume(
+                volume=ct_y,
+                out_dir=self.config.save_dir / "intial",
+                epoch=0,
                 name="down_y_lvl1_ct",
             )
-            save_volume(
-                pet_x,
-                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
-                step=0,
-                reference_path=Path(
-                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
-                ),
+            my_data.save_volume(
+                volume=pet_x,
+                out_dir=self.config.save_dir / "intial",
+                epoch=0,
                 name="down_x_lvl1_pet",
             )
-            save_volume(
-                pet_y,
-                Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/Model"),
-                step=0,
-                reference_path=Path(
-                    "/home/iml/fryderyk.koegl/data/PSMAReg_dataset/imagesTr/PSMARegPSMA_0006/fixed_ct.nii.gz"
-                ),
+            my_data.save_volume(
+                volume=pet_y,
+                out_dir=self.config.save_dir / "intial",
+                epoch=0,
                 name="down_y_lvl1_pet",
             )
             self.saved = True
