@@ -24,7 +24,7 @@ class TrainingConfig:
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
     # augmentation
-    aug_use_flip: bool = True
+    aug_use_flip: bool = False
     aug_use_ct_intensity: bool = False
     aug_use_pet_intensity: bool = False
     aug_use_z_crop: bool = False
