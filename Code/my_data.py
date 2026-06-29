@@ -10,7 +10,6 @@ import torch
 from monai.transforms import (
     Compose,
     ConcatItemsd,
-    RandFlipd,
     RandScaleIntensityd,
     RandShiftIntensityd,
     Transform,
@@ -124,24 +123,6 @@ def get_train_val_split(
         json.dump({"train": train_ids, "val": val_ids}, f, indent=2)
 
     return train_ids, val_ids
-
-
-class LoadPairToDict(Transform):
-    """Load a registration pair into a dict of per-channel tensors.
-
-    Returns a dict with keys x_ct, x_pet, y_ct, y_pet, x_label_ct,
-    x_label_pet, y_label_ct, y_label_pet, each of shape (1, H, W, D).
-    Keeping CT and PET as separate keys allows MONAI intensity transforms
-    to be applied independently per modality.
-    """
-
-    def __init__(self, data_dir: Path) -> None:
-        self.data_dir = data_dir
-
-    def __call__(self, data: dict) -> dict:
-        return load_pair_to_dict(
-            self.data_dir, data["case_id"], data["tp_x"], data["tp_y"]
-        )
 
 
 def component_extent(coords):
@@ -297,6 +278,24 @@ def apply_body_mask(vol: np.ndarray, mask: np.ndarray, fill_value: float) -> np.
     return out
 
 
+class LoadPairToDict(Transform):
+    """Load a registration pair into a dict of per-channel tensors.
+
+    Returns a dict with keys x_ct, x_pet, y_ct, y_pet, x_label_ct,
+    x_label_pet, y_label_ct, y_label_pet, each of shape (1, H, W, D).
+    Keeping CT and PET as separate keys allows MONAI intensity transforms
+    to be applied independently per modality.
+    """
+
+    def __init__(self, data_dir: Path) -> None:
+        self.data_dir = data_dir
+
+    def __call__(self, data: dict) -> dict:
+        return load_pair_to_dict(
+            self.data_dir, data["case_id"], data["tp_x"], data["tp_y"]
+        )
+
+
 def load_pair_to_dict(data_dir: Path, case_id: str, tp_x: str, tp_y: str) -> dict:
     """Load and normalize one longitudinal CT/PET pair into a dict of tensors.
 
@@ -365,110 +364,35 @@ def load_pair_to_dict(data_dir: Path, case_id: str, tp_x: str, tp_y: str) -> dic
     }
 
 
-class ZAxisFOVCropd(Transform):
-    """Randomly remove z-slices from head/feet ends and pad back to original size.
-
-    Simulates FOV variation between longitudinal scans. Crop amounts are
-    sampled once per call and applied identically to all specified keys.
-    Removed slices are replaced with zeros (background).
-
-    Args:
-        keys: Dict keys to apply the transform to.
-        max_crop_head: Maximum slices to remove from the superior (head) end.
-        max_crop_feet: Maximum slices to remove from the inferior (feet) end.
-    """
-
-    def __init__(
-        self, keys: List[str], max_crop_head: int = 40, max_crop_feet: int = 40
-    ) -> None:
-        self.keys = keys
-        self.max_crop_head = max_crop_head
-        self.max_crop_feet = max_crop_feet
-
-    def __call__(self, data: dict) -> dict:
-        crop_head = int(np.random.randint(0, self.max_crop_head + 1))
-        crop_feet = int(np.random.randint(0, self.max_crop_feet + 1))
-
-        if crop_head == 0 and crop_feet == 0:
-            return data
-
-        d = data[self.keys[0]].shape[-1]
-        z_end = d - crop_feet if crop_feet > 0 else d
-
-        for key in self.keys:
-            t = data[key]
-            cropped = t[..., crop_head:z_end]
-            pad_head = torch.zeros(*t.shape[:-1], crop_head, dtype=t.dtype)
-            pad_feet = torch.zeros(*t.shape[:-1], crop_feet, dtype=t.dtype)
-            data[key] = torch.cat([pad_head, cropped, pad_feet], dim=-1)
-
-        return data
-
-
-def build_augmentation_transform(
-    flip_prob: float,
+def build_intensity_transform(
     ct_shift_range: Tuple[float, float],
     ct_scale_range: Tuple[float, float],
     pet_scale_range: Tuple[float, float],
-    max_crop_z_head: int,
-    max_crop_z_feet: int,
-    use_flip: bool = True,
-    use_ct_intensity: bool = True,
-    use_pet_intensity: bool = True,
-    use_z_crop: bool = True,
+    use_ct_intensity: bool,
+    use_pet_intensity: bool,
 ) -> Compose:
-    """Build the MONAI augmentation pipeline for training.
+    """Build MONAI intensity-only transform pipeline.
 
-    Spatial transforms (flip, z-crop) are applied to all keys consistently.
-    Intensity transforms are applied per modality:
-      - CT (x_ct, y_ct): independent shift + scale for x and y
-      - PET (x_pet, y_pet): independent scale only (no shift — SUV=0 must stay 0)
-
-    ConcatItemsd at the end stacks x_ct+x_pet -> x and y_ct+y_pet -> y,
-    giving back (2, H, W, D) tensors as expected by the model.
+    Spatial augmentation (flip, z-crop) is handled manually in __getitem__
+    so augmentation parameters can be tracked and applied to the DVF.
+    This pipeline handles only intensity augmentation.
 
     Args:
-        flip_prob: Probability of left-right flip.
         ct_shift_range: (min, max) additive CT shift in normalized [0,1] space.
         ct_scale_range: (min, max) CT multiplicative scale.
         pet_scale_range: (min, max) PET multiplicative scale.
-        max_crop_z_head: Max z-slices to remove from superior end.
-        max_crop_z_feet: Max z-slices to remove from inferior end.
+        use_ct_intensity: Whether to apply CT intensity augmentation.
+        use_pet_intensity: Whether to apply PET intensity augmentation.
 
     Returns:
         MONAI Compose transform pipeline.
     """
-    all_spatial_keys = [
-        "x_ct",
-        "x_pet",
-        "y_ct",
-        "y_pet",
-        "x_label_ct",
-        "x_label_pet",
-        "y_label_ct",
-        "y_label_pet",
-    ]
-
-    # RandScaleIntensityd applies output = input * (1 + factor)
-    # so to get scale in [a, b] we need factors in [a-1, b-1]
+    # RandScaleIntensityd: output = input * (1 + factor)
+    # so scale in [a, b] requires factors in [a-1, b-1]
     ct_scale_factors = (ct_scale_range[0] - 1.0, ct_scale_range[1] - 1.0)
     pet_scale_factors = (pet_scale_range[0] - 1.0, pet_scale_range[1] - 1.0)
 
     transforms = []
-
-    if use_flip:
-        transforms.append(
-            RandFlipd(keys=all_spatial_keys, prob=flip_prob, spatial_axis=0)
-        )
-
-    if use_z_crop:
-        transforms.append(
-            ZAxisFOVCropd(
-                keys=all_spatial_keys,
-                max_crop_head=max_crop_z_head,
-                max_crop_feet=max_crop_z_feet,
-            )
-        )
 
     if use_ct_intensity:
         transforms.append(
@@ -487,7 +411,7 @@ def build_augmentation_transform(
             )
         )
 
-    # Always stack at the end
+    # Always stack channels at the end
     transforms.append(ConcatItemsd(keys=["x_ct", "x_pet"], name="x", dim=0))
     transforms.append(ConcatItemsd(keys=["y_ct", "y_pet"], name="y", dim=0))
 
@@ -504,6 +428,53 @@ def build_val_transform() -> Compose:
     )
 
 
+def apply_flip(data: dict, keys: List[str]) -> dict:
+    """Apply left-right flip (spatial axis 0 = H dimension) to specified keys.
+
+    Args:
+        data: Dict of tensors.
+        keys: Keys to flip.
+
+    Returns:
+        Dict with flipped tensors.
+    """
+    for key in keys:
+        data[key] = torch.flip(data[key], dims=[1])
+    return data
+
+
+def apply_z_crop(
+    data: dict,
+    keys: List[str],
+    crop_head: int,
+    crop_feet: int,
+) -> dict:
+    """Crop z-slices from head/feet and pad back to original size with zeros.
+
+    Args:
+        data: Dict of tensors, each of shape (C, H, W, D).
+        keys: Keys to apply the crop to.
+        crop_head: Slices to remove from the superior (head) end.
+        crop_feet: Slices to remove from the inferior (feet) end.
+
+    Returns:
+        Dict with cropped-and-padded tensors.
+    """
+    if crop_head == 0 and crop_feet == 0:
+        return data
+
+    for key in keys:
+        t = data[key]
+        d = t.shape[-1]
+        z_end = d - crop_feet if crop_feet > 0 else d
+        cropped = t[..., crop_head:z_end]
+        pad_head = torch.zeros(*t.shape[:-1], crop_head, dtype=t.dtype)
+        pad_feet = torch.zeros(*t.shape[:-1], crop_feet, dtype=t.dtype)
+        data[key] = torch.cat([pad_head, cropped, pad_feet], dim=-1)
+
+    return data
+
+
 class PSMARegDataset(torch_data.Dataset):
     """Dataset of consecutive longitudinal CT/PET registration pairs.
 
@@ -513,16 +484,26 @@ class PSMARegDataset(torch_data.Dataset):
         x_label_pet        — (1, H, W, D)
         y_label_ct         — (1, H, W, D)
         y_label_pet        — (1, H, W, D)
+        aug_flipped        — bool, whether left-right flip was applied
+        aug_crop_head      — int, slices removed from superior end
+        aug_crop_feet      — int, slices removed from inferior end
+
+    The aug_* keys are always present. For validation (augment=False) they
+    are always False/0 so the training loop can use them unconditionally.
 
     Args:
         data_dir: Dataset root containing imagesTr and labelsTr.
-        case_ids: Optional subset of case ids. If None, all eligible cases are used.
-        overfit: If set, restricts to a single patient's pair for pipeline debugging.
+        case_ids: Optional subset of case ids. If None, all eligible cases used.
+        overfit: If set, restricts to a single patient's pair.
         use_cache: Cache all pairs in memory after first load.
         cache_rate: Fraction of dataset to cache.
         num_workers: Worker processes for cache building.
         augment: Apply random augmentation (True for train, False for val).
-        aug_flip_prob: Probability of left-right flip.
+        aug_use_flip: Enable left-right flip augmentation.
+        aug_flip_prob: Probability of applying the flip.
+        aug_use_ct_intensity: Enable CT intensity shift+scale.
+        aug_use_pet_intensity: Enable PET intensity scale.
+        aug_use_z_crop: Enable z-axis FOV crop augmentation.
         aug_ct_shift_range: (min, max) additive CT shift in [0,1] space.
         aug_ct_scale_range: (min, max) CT multiplicative scale.
         aug_pet_scale_range: (min, max) PET multiplicative scale.
@@ -540,6 +521,9 @@ class PSMARegDataset(torch_data.Dataset):
         augment: bool = False,
     ) -> None:
         self.data_dir = cfg.data_dir
+
+        self.cfg = cfg
+        self.augment = augment
 
         case_timepoints = list_case_timepoints(cfg.data_dir)
 
@@ -571,25 +555,64 @@ class PSMARegDataset(torch_data.Dataset):
         else:
             self.dataset = monai_data.Dataset(data=data_dicts, transform=load_transform)
 
-        self.post_transform = (
-            build_augmentation_transform(
-                flip_prob=cfg.aug_flip_prob,
+        # Intensity transform (MONAI) — spatial augmentation is done manually below
+        if augment:
+            self.intensity_transform = build_intensity_transform(
                 ct_shift_range=cfg.aug_ct_shift_range,
                 ct_scale_range=cfg.aug_ct_scale_range,
                 pet_scale_range=cfg.aug_pet_scale_range,
-                max_crop_z_head=cfg.aug_max_crop_z_head,
-                max_crop_z_feet=cfg.aug_max_crop_z_feet,
-                use_flip=cfg.aug_use_flip,
                 use_ct_intensity=cfg.aug_use_ct_intensity,
                 use_pet_intensity=cfg.aug_use_pet_intensity,
-                use_z_crop=cfg.aug_use_z_crop,
             )
-            if augment
-            else build_val_transform()
-        )
+        else:
+            self.intensity_transform = build_val_transform()
 
     def __len__(self) -> int:
         return len(self.pairs)
 
     def __getitem__(self, index: int) -> dict:
-        return self.post_transform(self.dataset[index])
+        data = self.dataset[index]
+
+        all_spatial_keys = [
+            "x_ct",
+            "x_pet",
+            "y_ct",
+            "y_pet",
+            "x_label_ct",
+            "x_label_pet",
+            "y_label_ct",
+            "y_label_pet",
+        ]
+
+        # Augmentation parameters — always initialised so training loop can
+        # use them unconditionally regardless of whether augment=True/False
+        flipped = False
+        crop_head = 0
+        crop_feet = 0
+
+        if self.augment:
+            # --- Left-right flip --------------------------------------------
+            if self.cfg.aug_use_flip and np.random.random() < self.cfg.aug_flip_prob:
+                data = apply_flip(data, all_spatial_keys)
+                flipped = True
+
+            # --- Z-axis FOV crop --------------------------------------------
+            if self.cfg.aug_use_z_crop:
+                crop_head = int(np.random.randint(0, self.cfg.aug_max_crop_z_head + 1))
+                crop_feet = int(np.random.randint(0, self.cfg.aug_max_crop_z_feet + 1))
+                data = apply_z_crop(data, all_spatial_keys, crop_head, crop_feet)
+
+        # Intensity augmentation (MONAI) + channel stacking
+        data = self.intensity_transform(data)
+
+        # Attach augmentation parameters for DVF consistency in training loop
+        data["aug_flipped"] = flipped
+        data["aug_crop_head"] = crop_head
+        data["aug_crop_feet"] = crop_feet
+
+        case_id, tp_x, tp_y = self.pairs[index]
+        data["case_id"] = case_id
+        data["tp_x"] = tp_x
+        data["tp_y"] = tp_y
+
+        return data
