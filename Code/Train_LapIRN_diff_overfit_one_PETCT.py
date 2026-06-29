@@ -34,11 +34,13 @@ def main() -> None:
         train_dataset = my_data.PSMARegDataset(
             case_ids=train_ids,
             cfg=config,
+            augment=True,
             # overfit="0049",
         )
         val_dataset = my_data.PSMARegDataset(
             case_ids=val_ids,
             cfg=config,
+            augment=False,
             # overfit="0049",
         )
 

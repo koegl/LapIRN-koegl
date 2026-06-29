@@ -32,6 +32,8 @@ def evaluate_lvl1(
     loss_Jdet: Callable,
     transform: SpatialTransform_unit,
     grid_4: torch.Tensor,
+    epoch: int,
+    saved_initial: bool = False,
 ) -> Dict[str, float]:
     """Run one validation pass over val_generator and return averaged losses.
 
@@ -66,6 +68,7 @@ def evaluate_lvl1(
     n_batches = 0
 
     with torch.no_grad():
+        saved = False
         for batch in val_generator:
             X = batch["x"].to(device).float()
             Y = batch["y"].to(device).float()
@@ -75,6 +78,39 @@ def evaluate_lvl1(
             Y_lbl_pet = batch["y_label_pet"].to(device)
 
             F_X_Y, X_Y, Y_4x, F_xy, _ = model(X, Y)
+
+            if epoch % (config.use_cache_valid * 5) == 0 or epoch == config.epochs_lvl1:
+                if not saved_initial:
+                    zero_disp = torch.zeros_like(F_X_Y)
+                    x_ref = model.transform(
+                        X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
+                    )
+                    y_ref = model.transform(
+                        Y, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
+                    )
+                    my_data.save_volume(
+                        volume=x_ref[:, 0:1, ...],
+                        out_dir=config.save_dir / "initial",
+                        epoch=epoch,
+                        name="x_ref_ct_lvl1",
+                    )
+                    my_data.save_volume(
+                        volume=y_ref[:, 0:1, ...],
+                        out_dir=config.save_dir / "initial",
+                        epoch=epoch,
+                        name="y_ref_ct_lvl1",
+                    )
+                    saved_initial = True
+
+                if saved is False:
+                    ct = X_Y[:, 0:1, :, :, :]
+                    my_data.save_volume(
+                        volume=ct,
+                        out_dir=config.save_dir / "warped",
+                        epoch=epoch,
+                        name="warped_ct_lvl1",
+                    )
+                    saved = True
 
             X_Y_ct = X_Y[:, 0:1, ...]
             X_Y_pet = X_Y[:, 1:2, ...]
@@ -200,11 +236,12 @@ def train_lvl1(
 
     epoch = 0
     pbar = tqdm.tqdm(total=config.epochs_lvl1 + 1, desc="lvl1 training")
+
+    saved_initial: bool = False
+
     while epoch <= config.epochs_lvl1:
         epoch_metrics: Dict[str, float] = {}
         n_steps = 0
-
-        saved: bool = False
 
         for batch in train_generator:
             X = batch["x"].to(device).float()
@@ -215,25 +252,6 @@ def train_lvl1(
             Y_lbl_pet = batch["y_label_pet"].to(device)
 
             F_X_Y, X_Y, Y_4x, F_xy, _ = model(X, Y)
-
-            if epoch % 10 == 0 or epoch == config.epochs_lvl1:
-                # if epoch % config.val_interval == 0 or epoch == config.epochs_lvl1:
-                if saved is False:
-                    ct = X_Y[:, 0:1, :, :, :]
-                    pet = X_Y[:, 1:2, :, :, :]
-                    my_data.save_volume(
-                        volume=ct,
-                        out_dir=config.save_dir / "warped",
-                        epoch=epoch,
-                        name="warped_ct_lvl1",
-                    )
-                    my_data.save_volume(
-                        volume=pet,
-                        out_dir=config.save_dir / "warped",
-                        epoch=epoch,
-                        name="warped_pet_lvl1",
-                    )
-                    saved = True
 
             # 3 level deep supervision NCC
             X_Y_ct = X_Y[:, 0:1, ...]
@@ -380,7 +398,10 @@ def train_lvl1(
                 loss_Jdet=loss_Jdet,
                 transform=transform,
                 grid_4=grid_4,
+                epoch=epoch,
+                saved_initial=saved_initial,
             )
+            saved_initial = False
             mlflow.log_metrics(
                 {f"valid_lvl1/val_{key}": value for key, value in val_losses.items()},
                 step=global_step,

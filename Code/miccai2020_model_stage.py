@@ -80,7 +80,6 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
         )
 
         self.config = config.TrainingConfig()
-        self.saved = False
 
     def resblock_seq(self, in_channels, bias_opt=False):
         layer = nn.Sequential(
@@ -220,37 +219,6 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
 
         down_y = cat_input_lvl1[:, 2:4, :, :, :]
         down_x = cat_input_lvl1[:, 0:2, :, :, :]
-
-        if self.saved is False:
-            ct_x = down_x[:, 0:1, :, :, :]
-            pet_x = down_x[:, 1:2, :, :, :]
-            ct_y = down_y[:, 0:1, :, :, :]
-            pet_y = down_y[:, 1:2, :, :, :]
-            my_data.save_volume(
-                volume=ct_x,
-                out_dir=self.config.save_dir / "intial",
-                epoch=0,
-                name="down_x_lvl1_ct",
-            )
-            my_data.save_volume(
-                volume=ct_y,
-                out_dir=self.config.save_dir / "intial",
-                epoch=0,
-                name="down_y_lvl1_ct",
-            )
-            my_data.save_volume(
-                volume=pet_x,
-                out_dir=self.config.save_dir / "intial",
-                epoch=0,
-                name="down_x_lvl1_pet",
-            )
-            my_data.save_volume(
-                volume=pet_y,
-                out_dir=self.config.save_dir / "intial",
-                epoch=0,
-                name="down_y_lvl1_pet",
-            )
-            self.saved = True
 
         fea_e0 = self.input_encoder_lvl1(cat_input_lvl1)
         e0 = self.down_conv(fea_e0)
