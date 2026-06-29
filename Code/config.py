@@ -1,17 +1,14 @@
+import socket
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
-import socket
-
 COMPUTER_NAME = socket.gethostname()
 
-if COMPUTER_NAME == 'janus':
+if COMPUTER_NAME == "janus":
     DATA_PATH = Path("/home/iml/fryderyk.koegl/data")
 else:
     DATA_PATH = Path("/lustre/groups/iml/data")
-
-
 
 
 @dataclass
@@ -30,7 +27,7 @@ class TrainingConfig:
 
     in_channel: int = 4
     n_classes: int = 3
-    lr_lvl1: float = 1e-3
+    lr_lvl1: float = 1e-4
     lr_lvl2: float = 1e-3 * 0.5
     lr_lvl3: float = 1e-3 * 0.5
     start_channel: int = 7
@@ -43,7 +40,7 @@ class TrainingConfig:
     unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
     checkpoint_interval: int = 10
-    
+
     # sum to 10
     w_jacobian: float = 1.0
     w_smooth: float = 1.0
