@@ -23,6 +23,22 @@ class TrainingConfig:
     use_cache_valid: bool = False
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
+    # augmentation
+    aug_use_flip: bool = True
+    aug_use_ct_intensity: bool = False
+    aug_use_pet_intensity: bool = False
+    aug_use_z_crop: bool = False
+    aug_flip_prob: float = 0.5
+    aug_ct_shift_range: Tuple[float, float] = (
+        -0.010,
+        0.010,
+    )  # in normalized [0,1] CT space (~±50 HU)
+    aug_ct_scale_range: Tuple[float, float] = (0.9, 1.1)
+    aug_pet_scale_range: Tuple[float, float] = (0.85, 1.15)
+    aug_max_crop_z_head: int = 40  # max z-slices removed from superior (head) end
+    aug_max_crop_z_feet: int = 40  # max z-slices removed from inferior (feet) end
+    aug_seed: int = 42
+
     range_flow: float = 0.4
 
     in_channel: int = 4

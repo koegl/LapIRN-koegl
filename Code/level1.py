@@ -66,9 +66,13 @@ def evaluate_lvl1(
     n_batches = 0
 
     with torch.no_grad():
-        for X, Y, X_lbl_ct, X_lbl_pet, Y_lbl_ct, Y_lbl_pet in val_generator:
-            X = X.to(device).float()
-            Y = Y.to(device).float()
+        for batch in val_generator:
+            X = batch["x"].to(device).float()
+            Y = batch["y"].to(device).float()
+            X_lbl_ct = batch["x_label_ct"].to(device)
+            X_lbl_pet = batch["x_label_pet"].to(device)
+            Y_lbl_ct = batch["y_label_ct"].to(device)
+            Y_lbl_pet = batch["y_label_pet"].to(device)
 
             F_X_Y, X_Y, Y_4x, F_xy, _ = model(X, Y)
 
@@ -202,9 +206,13 @@ def train_lvl1(
 
         saved: bool = False
 
-        for X, Y, X_lbl_ct, X_lbl_pet, Y_lbl_ct, Y_lbl_pet in train_generator:
-            X = X.to(device).float()
-            Y = Y.to(device).float()
+        for batch in train_generator:
+            X = batch["x"].to(device).float()
+            Y = batch["y"].to(device).float()
+            X_lbl_ct = batch["x_label_ct"].to(device)
+            X_lbl_pet = batch["x_label_pet"].to(device)
+            Y_lbl_ct = batch["y_label_ct"].to(device)
+            Y_lbl_pet = batch["y_label_pet"].to(device)
 
             F_X_Y, X_Y, Y_4x, F_xy, _ = model(X, Y)
 

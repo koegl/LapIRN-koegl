@@ -2,11 +2,19 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+import config
 import monai.data as monai_data
 import nibabel as nib
 import numpy as np
 import torch
-from monai.transforms import Compose, Transform
+from monai.transforms import (
+    Compose,
+    ConcatItemsd,
+    RandFlipd,
+    RandScaleIntensityd,
+    RandShiftIntensityd,
+    Transform,
+)
 from torch.utils import data as torch_data
 
 
@@ -71,31 +79,14 @@ def build_registration_pairs(
     case_ids: Optional[List[str]] = None,
     min_timepoints: int = 2,
 ) -> List[Tuple[str, str, str]]:
-    """Build consecutive (case_id, tp_x, tp_y) registration pairs.
-
-    Patients with fewer than min_timepoints timepoints are skipped. A
-    patient with timepoints (a, b, c) contributes two pairs: (a, b) and
-    (b, c).
-
-    Args:
-        case_timepoints: Mapping of case id to sorted timepoint list, as
-            returned by list_case_timepoints.
-        case_ids: Optional subset of case ids to restrict pair generation
-            to. If None, all case ids in case_timepoints are considered.
-        min_timepoints: Minimum number of timepoints required for a patient
-            to contribute any pairs.
-
-    Returns:
-        List of (case_id, tp_x, tp_y) tuples, tp_x being the earlier and
-        tp_y the later timepoint of each consecutive pair.
-    """
+    """Build consecutive (case_id, tp_x, tp_y) registration pairs."""
     selected_ids = sorted(case_ids) if case_ids is not None else sorted(case_timepoints)
     pairs: List[Tuple[str, str, str]] = []
     for case_id in selected_ids:
-        timepoints = case_timepoints[case_id]
-        if len(timepoints) < min_timepoints:
+        tps = case_timepoints[case_id]
+        if len(tps) < min_timepoints:
             continue
-        for tp_x, tp_y in zip(timepoints[:-1], timepoints[1:]):
+        for tp_x, tp_y in zip(tps[:-1], tps[1:]):
             pairs.append((case_id, tp_x, tp_y))
     return pairs
 
@@ -107,27 +98,7 @@ def get_train_val_split(
     seed: int = 0,
     min_timepoints: int = 2,
 ) -> Tuple[List[str], List[str]]:
-    """Get or create a patient-level train/val split.
-
-    Splitting is done per patient, not per registration pair, so that all
-    pairs derived from the same patient stay on the same side of the
-    split. Only patients with at least min_timepoints timepoints are
-    eligible. If split_path exists, the stored split is loaded as-is and
-    the other arguments are ignored.
-
-    Args:
-        data_dir: Dataset root containing imagesTr and labelsTr.
-        split_path: Path to a JSON file storing {"train": [...], "val": [...]}
-            case ids. Created if it does not exist.
-        val_fraction: Fraction of eligible patients assigned to validation
-            when creating a new split.
-        seed: Random seed used when creating a new split.
-        min_timepoints: Minimum number of timepoints required for a patient
-            to be eligible for the split.
-
-    Returns:
-        Tuple of (train_case_ids, val_case_ids).
-    """
+    """Get or create a patient-level train/val split."""
     if split_path.exists():
         with open(split_path, "r") as f:
             split = json.load(f)
@@ -154,178 +125,274 @@ def get_train_val_split(
     return train_ids, val_ids
 
 
-class LoadPair(Transform):
-    """Wrap load_pair as a MONAI Transform so CacheDataset can cache its output."""
+class LoadPairToDict(Transform):
+    """Load a registration pair into a dict of per-channel tensors.
+
+    Returns a dict with keys x_ct, x_pet, y_ct, y_pet, x_label_ct,
+    x_label_pet, y_label_ct, y_label_pet, each of shape (1, H, W, D).
+    Keeping CT and PET as separate keys allows MONAI intensity transforms
+    to be applied independently per modality.
+    """
 
     def __init__(self, data_dir: Path) -> None:
         self.data_dir = data_dir
 
-    def __call__(
-        self, data: dict
-    ) -> Tuple[
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-    ]:
-        return load_pair(self.data_dir, data["case_id"], data["tp_x"], data["tp_y"])
+    def __call__(self, data: dict) -> dict:
+        return load_pair_to_dict(
+            self.data_dir, data["case_id"], data["tp_x"], data["tp_y"]
+        )
 
 
-def load_pair(
-    data_dir: Path,
-    case_id: str,
-    tp_x: str,
-    tp_y: str,
-) -> Tuple[
-    torch.Tensor,
-    torch.Tensor,
-    torch.Tensor,
-    torch.Tensor,
-    torch.Tensor,
-    torch.Tensor,
-]:
-    """Load and normalize one longitudinal CT/PET registration pair.
+def load_pair_to_dict(data_dir: Path, case_id: str, tp_x: str, tp_y: str) -> dict:
+    """Load and normalize one longitudinal CT/PET pair into a dict of tensors.
 
     Args:
         data_dir: Dataset root containing imagesTr and labelsTr.
         case_id: Case identifier, e.g. "0006".
-        tp_x: Timepoint suffix of the earlier scan, e.g. "00".
-        tp_y: Timepoint suffix of the later scan, e.g. "01".
+        tp_x: Timepoint suffix of the moving scan, e.g. "00".
+        tp_y: Timepoint suffix of the fixed scan, e.g. "01".
 
     Returns:
-        Tuple of (x, y, x_label_ct, x_label_pet, y_label_ct, y_label_pet).
-        x/y have shape (2, H, W, D), labels have shape (1, H, W, D).
+        Dict with keys x_ct, x_pet, y_ct, y_pet (float32, shape 1,H,W,D)
+        and x_label_ct, x_label_pet, y_label_ct, y_label_pet (uint8, shape 1,H,W,D).
     """
     image_dir = data_dir / "imagesTr"
     label_dir = data_dir / "labelsTr"
 
-    x_vol_ct = (
-        nib.load(image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz")
-        .get_fdata()
-        .astype(np.float32)
-    )
-    x_vol_pet = (
-        nib.load(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp_x}.nii.gz")
-        .get_fdata()
-        .astype(np.float32)
-    )
-    y_vol_ct = (
-        nib.load(image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz")
-        .get_fdata()
-        .astype(np.float32)
-    )
-    y_vol_pet = (
-        nib.load(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp_y}.nii.gz")
-        .get_fdata()
-        .astype(np.float32)
-    )
+    def load_vol(path: Path) -> np.ndarray:
+        return nib.load(path).get_fdata().astype(np.float32)
 
-    x_label_ct = (
-        nib.load(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz")
-        .get_fdata()
-        .astype(np.uint8)
-    )
-    x_label_pet = (
-        nib.load(label_dir / f"PSMARegPSMA_{case_id}_0001_{tp_x}.nii.gz")
-        .get_fdata()
-        .astype(np.uint8)
-    )
-    y_label_ct = (
-        nib.load(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz")
-        .get_fdata()
-        .astype(np.uint8)
-    )
-    y_label_pet = (
-        nib.load(label_dir / f"PSMARegPSMA_{case_id}_0001_{tp_y}.nii.gz")
-        .get_fdata()
-        .astype(np.uint8)
-    )
+    def load_lbl(path: Path) -> np.ndarray:
+        return nib.load(path).get_fdata().astype(np.uint8)
 
-    x_vol_ct = norm_ct(x_vol_ct)
-    x_vol_pet = norm_pet(x_vol_pet)
-    y_vol_ct = norm_ct(y_vol_ct)
-    y_vol_pet = norm_pet(y_vol_pet)
+    def t(arr: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(arr).unsqueeze(0)
 
-    x = torch.from_numpy(np.stack([x_vol_ct, x_vol_pet], axis=0))
-    y = torch.from_numpy(np.stack([y_vol_ct, y_vol_pet], axis=0))
+    return {
+        "x_ct": t(
+            norm_ct(load_vol(image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz"))
+        ).float(),
+        "x_pet": t(
+            norm_pet(load_vol(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp_x}.nii.gz"))
+        ).float(),
+        "y_ct": t(
+            norm_ct(load_vol(image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz"))
+        ).float(),
+        "y_pet": t(
+            norm_pet(load_vol(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp_y}.nii.gz"))
+        ).float(),
+        "x_label_ct": t(
+            load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz")
+        ),
+        "x_label_pet": t(
+            load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0001_{tp_x}.nii.gz")
+        ),
+        "y_label_ct": t(
+            load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz")
+        ),
+        "y_label_pet": t(
+            load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0001_{tp_y}.nii.gz")
+        ),
+    }
 
-    x_label_ct_t = torch.from_numpy(x_label_ct).unsqueeze(0)
-    x_label_pet_t = torch.from_numpy(x_label_pet).unsqueeze(0)
-    y_label_ct_t = torch.from_numpy(y_label_ct).unsqueeze(0)
-    y_label_pet_t = torch.from_numpy(y_label_pet).unsqueeze(0)
 
-    return x, y, x_label_ct_t, x_label_pet_t, y_label_ct_t, y_label_pet_t
+class ZAxisFOVCropd(Transform):
+    """Randomly remove z-slices from head/feet ends and pad back to original size.
+
+    Simulates FOV variation between longitudinal scans. Crop amounts are
+    sampled once per call and applied identically to all specified keys.
+    Removed slices are replaced with zeros (background).
+
+    Args:
+        keys: Dict keys to apply the transform to.
+        max_crop_head: Maximum slices to remove from the superior (head) end.
+        max_crop_feet: Maximum slices to remove from the inferior (feet) end.
+    """
+
+    def __init__(
+        self, keys: List[str], max_crop_head: int = 40, max_crop_feet: int = 40
+    ) -> None:
+        self.keys = keys
+        self.max_crop_head = max_crop_head
+        self.max_crop_feet = max_crop_feet
+
+    def __call__(self, data: dict) -> dict:
+        crop_head = int(np.random.randint(0, self.max_crop_head + 1))
+        crop_feet = int(np.random.randint(0, self.max_crop_feet + 1))
+
+        if crop_head == 0 and crop_feet == 0:
+            return data
+
+        d = data[self.keys[0]].shape[-1]
+        z_end = d - crop_feet if crop_feet > 0 else d
+
+        for key in self.keys:
+            t = data[key]
+            cropped = t[..., crop_head:z_end]
+            pad_head = torch.zeros(*t.shape[:-1], crop_head, dtype=t.dtype)
+            pad_feet = torch.zeros(*t.shape[:-1], crop_feet, dtype=t.dtype)
+            data[key] = torch.cat([pad_head, cropped, pad_feet], dim=-1)
+
+        return data
+
+
+def build_augmentation_transform(
+    flip_prob: float,
+    ct_shift_range: Tuple[float, float],
+    ct_scale_range: Tuple[float, float],
+    pet_scale_range: Tuple[float, float],
+    max_crop_z_head: int,
+    max_crop_z_feet: int,
+    use_flip: bool = True,
+    use_ct_intensity: bool = True,
+    use_pet_intensity: bool = True,
+    use_z_crop: bool = True,
+) -> Compose:
+    """Build the MONAI augmentation pipeline for training.
+
+    Spatial transforms (flip, z-crop) are applied to all keys consistently.
+    Intensity transforms are applied per modality:
+      - CT (x_ct, y_ct): independent shift + scale for x and y
+      - PET (x_pet, y_pet): independent scale only (no shift — SUV=0 must stay 0)
+
+    ConcatItemsd at the end stacks x_ct+x_pet -> x and y_ct+y_pet -> y,
+    giving back (2, H, W, D) tensors as expected by the model.
+
+    Args:
+        flip_prob: Probability of left-right flip.
+        ct_shift_range: (min, max) additive CT shift in normalized [0,1] space.
+        ct_scale_range: (min, max) CT multiplicative scale.
+        pet_scale_range: (min, max) PET multiplicative scale.
+        max_crop_z_head: Max z-slices to remove from superior end.
+        max_crop_z_feet: Max z-slices to remove from inferior end.
+
+    Returns:
+        MONAI Compose transform pipeline.
+    """
+    all_spatial_keys = [
+        "x_ct",
+        "x_pet",
+        "y_ct",
+        "y_pet",
+        "x_label_ct",
+        "x_label_pet",
+        "y_label_ct",
+        "y_label_pet",
+    ]
+
+    # RandScaleIntensityd applies output = input * (1 + factor)
+    # so to get scale in [a, b] we need factors in [a-1, b-1]
+    ct_scale_factors = (ct_scale_range[0] - 1.0, ct_scale_range[1] - 1.0)
+    pet_scale_factors = (pet_scale_range[0] - 1.0, pet_scale_range[1] - 1.0)
+
+    transforms = []
+
+    if use_flip:
+        transforms.append(
+            RandFlipd(keys=all_spatial_keys, prob=flip_prob, spatial_axis=0)
+        )
+
+    if use_z_crop:
+        transforms.append(
+            ZAxisFOVCropd(
+                keys=all_spatial_keys,
+                max_crop_head=max_crop_z_head,
+                max_crop_feet=max_crop_z_feet,
+            )
+        )
+
+    if use_ct_intensity:
+        transforms.append(
+            RandShiftIntensityd(keys=["x_ct", "y_ct"], offsets=ct_shift_range, prob=1.0)
+        )
+        transforms.append(
+            RandScaleIntensityd(
+                keys=["x_ct", "y_ct"], factors=ct_scale_factors, prob=1.0
+            )
+        )
+
+    if use_pet_intensity:
+        transforms.append(
+            RandScaleIntensityd(
+                keys=["x_pet", "y_pet"], factors=pet_scale_factors, prob=1.0
+            )
+        )
+
+    # Always stack at the end
+    transforms.append(ConcatItemsd(keys=["x_ct", "x_pet"], name="x", dim=0))
+    transforms.append(ConcatItemsd(keys=["y_ct", "y_pet"], name="y", dim=0))
+
+    return Compose(transforms)
+
+
+def build_val_transform() -> Compose:
+    """Build the validation transform (stack only, no augmentation)."""
+    return Compose(
+        [
+            ConcatItemsd(keys=["x_ct", "x_pet"], name="x", dim=0),
+            ConcatItemsd(keys=["y_ct", "y_pet"], name="y", dim=0),
+        ]
+    )
 
 
 class PSMARegDataset(torch_data.Dataset):
     """Dataset of consecutive longitudinal CT/PET registration pairs.
 
-    Each item is one (x, y) pair derived from two consecutive timepoints of
-    a single patient. A patient with timepoints (a, b, c) contributes two
-    pairs: (a, b) and (b, c). Patients with fewer than two timepoints are
-    excluded automatically.
+    Each item is a dict with keys:
+        x, y               — (2, H, W, D) float32 (CT+PET stacked)
+        x_label_ct         — (1, H, W, D)
+        x_label_pet        — (1, H, W, D)
+        y_label_ct         — (1, H, W, D)
+        y_label_pet        — (1, H, W, D)
 
     Args:
         data_dir: Dataset root containing imagesTr and labelsTr.
-        case_ids: Optional subset of case ids to restrict the dataset to,
-            e.g. the train or val ids from get_train_val_split. If None,
-            all eligible case ids found in data_dir are used.
-        overfit: If set, holds the case id of a single patient assumed to
-            have exactly two timepoints. The dataset is then restricted to
-            that patient's single pair only, ignoring case_ids, useful for
-            overfitting the training pipeline on one example.
-        use_cache: If True, wrap loading in a MONAI CacheDataset so every
-            pair is loaded and normalized once and kept in memory.
-        cache_rate: Fraction of the dataset to cache when use_cache is True.
-        num_workers: Number of worker processes used to build the cache.
+        case_ids: Optional subset of case ids. If None, all eligible cases are used.
+        overfit: If set, restricts to a single patient's pair for pipeline debugging.
+        use_cache: Cache all pairs in memory after first load.
+        cache_rate: Fraction of dataset to cache.
+        num_workers: Worker processes for cache building.
+        augment: Apply random augmentation (True for train, False for val).
+        aug_flip_prob: Probability of left-right flip.
+        aug_ct_shift_range: (min, max) additive CT shift in [0,1] space.
+        aug_ct_scale_range: (min, max) CT multiplicative scale.
+        aug_pet_scale_range: (min, max) PET multiplicative scale.
+        aug_max_crop_z_head: Max z-slices removed from superior end.
+        aug_max_crop_z_feet: Max z-slices removed from inferior end.
     """
 
     def __init__(
         self,
-        data_dir: Path,
+        cfg: config.TrainingConfig,
         case_ids: Optional[List[str]] = None,
         overfit: Optional[str] = None,
-        use_cache: bool = False,
         cache_rate: float = 1.0,
         num_workers: int = 4,
+        augment: bool = False,
     ) -> None:
-        self.data_dir = data_dir
+        self.data_dir = cfg.data_dir
 
-        case_timepoints = list_case_timepoints(data_dir)
+        case_timepoints = list_case_timepoints(cfg.data_dir)
 
         if overfit is not None:
-            if overfit not in case_timepoints or len(case_timepoints[overfit]) != 2:
+            if overfit not in case_timepoints or len(case_timepoints[overfit]) < 2:
                 raise ValueError(
-                    f"Patient {overfit!r} must have exactly two timepoints for overfit mode."
+                    f"Patient {overfit!r} must have at least two timepoints."
                 )
             pairs = build_registration_pairs(case_timepoints, case_ids=[overfit])
         else:
-            # print("WARNING")
-            # print("WARNING")
-            # print("WARNING")
-            # print("WARNING")
-
-            # temp = {}
-            # temp["0053"] = ["00", "01"]
-            # temp["0054"] = ["00", "01"]
-            # temp["0055"] = ["00", "01"]
-            # case_timepoints = temp
-            # case_ids = ["0053", "0054", "0055"]
             pairs = build_registration_pairs(case_timepoints, case_ids=case_ids)
 
         self.pairs = pairs
-        self.use_cache = use_cache
 
         data_dicts = [
             {"case_id": case_id, "tp_x": tp_x, "tp_y": tp_y}
-            for case_id, tp_x, tp_y in self.pairs
+            for case_id, tp_x, tp_y in pairs
         ]
 
-        load_transform = Compose([LoadPair(self.data_dir)])
+        load_transform = Compose([LoadPairToDict(self.data_dir)])
 
-        if self.use_cache:
+        if cfg.use_cache_train:
             self.dataset = monai_data.CacheDataset(
                 data=data_dicts,
                 transform=load_transform,
@@ -335,17 +402,25 @@ class PSMARegDataset(torch_data.Dataset):
         else:
             self.dataset = monai_data.Dataset(data=data_dicts, transform=load_transform)
 
+        self.post_transform = (
+            build_augmentation_transform(
+                flip_prob=cfg.aug_flip_prob,
+                ct_shift_range=cfg.aug_ct_shift_range,
+                ct_scale_range=cfg.aug_ct_scale_range,
+                pet_scale_range=cfg.aug_pet_scale_range,
+                max_crop_z_head=cfg.aug_max_crop_z_head,
+                max_crop_z_feet=cfg.aug_max_crop_z_feet,
+                use_flip=cfg.aug_use_flip,
+                use_ct_intensity=cfg.aug_use_ct_intensity,
+                use_pet_intensity=cfg.aug_use_pet_intensity,
+                use_z_crop=cfg.aug_use_z_crop,
+            )
+            if augment
+            else build_val_transform()
+        )
+
     def __len__(self) -> int:
         return len(self.pairs)
 
-    def __getitem__(
-        self, index: int
-    ) -> Tuple[
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-        torch.Tensor,
-    ]:
-        return self.dataset[index]
+    def __getitem__(self, index: int) -> dict:
+        return self.post_transform(self.dataset[index])

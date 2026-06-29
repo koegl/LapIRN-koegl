@@ -1,8 +1,9 @@
 import json
+import os
+
+os.environ["MLFLOW_ALLOW_FILE_STORE"] = "true"
 
 import level1
-import level2
-import level3
 import mlflow
 import my_data
 from config import TrainingConfig
@@ -31,15 +32,13 @@ def main() -> None:
         )
 
         train_dataset = my_data.PSMARegDataset(
-            data_dir=config.data_dir,
             case_ids=train_ids,
-            use_cache=config.use_cache_train,
+            cfg=config,
             # overfit="0049",
         )
         val_dataset = my_data.PSMARegDataset(
-            data_dir=config.data_dir,
             case_ids=val_ids,
-            use_cache=config.use_cache_valid,
+            cfg=config,
             # overfit="0049",
         )
 
