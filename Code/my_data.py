@@ -15,6 +15,7 @@ from monai.transforms import (
     RandShiftIntensityd,
     Transform,
 )
+from scipy import ndimage
 from torch.utils import data as torch_data
 
 
@@ -143,6 +144,159 @@ class LoadPairToDict(Transform):
         )
 
 
+def component_extent(coords):
+    return coords.max(axis=0) - coords.min(axis=0) + 1
+
+
+def slice_border_hits(component):
+    return int(
+        component[0, :].sum()
+        + component[-1, :].sum()
+        + component[:, 0].sum()
+        + component[:, -1].sum()
+    )
+
+
+def select_body_components(mask2d, center_mask, prev_support):
+    labels, num_labels = ndimage.label(mask2d)
+    if num_labels == 0:
+        return np.zeros_like(mask2d, dtype=bool)
+    selected = np.zeros_like(mask2d, dtype=bool)
+    support = (
+        None
+        if prev_support is None
+        else ndimage.binary_dilation(
+            prev_support, structure=np.ones((9, 9), dtype=bool)
+        )
+    )
+    fallback_component = np.zeros_like(mask2d, dtype=bool)
+    fallback_score = -np.inf
+    for label_idx in range(1, num_labels + 1):
+        component = labels == label_idx
+        coords = np.argwhere(component)
+        area = int(coords.shape[0])
+        if area < 64:
+            continue
+        extent = component_extent(coords)
+        if int(extent.min()) < 6:
+            continue
+        center_hits = int(np.logical_and(component, center_mask).sum())
+        border_hits = slice_border_hits(component)
+        overlap_hits = (
+            0 if support is None else int(np.logical_and(component, support).sum())
+        )
+        score = float(
+            area
+            + 4 * center_hits
+            + 8 * extent.min()
+            + 6 * overlap_hits
+            - 3 * border_hits
+        )
+        if support is not None and overlap_hits > 0:
+            selected |= component
+            continue
+        if center_hits > 0 and border_hits < int(0.35 * max(area, 1)):
+            selected |= component
+            continue
+        if score > fallback_score:
+            fallback_score = score
+            fallback_component = component
+    if selected.sum() == 0:
+        selected = fallback_component
+    return selected
+
+
+def get_largest_cc(segmentation):
+    labels, num_labels = ndimage.label(segmentation)
+    if num_labels == 0:
+        return np.zeros_like(segmentation, dtype=bool)
+    counts = np.bincount(labels.ravel())
+    counts[0] = 0
+    return labels == int(np.argmax(counts))
+
+
+def slice_center_mask(shape):
+    center_mask = np.zeros(shape, dtype=bool)
+    x0 = int(round(shape[0] * 0.2))
+    x1 = int(round(shape[0] * 0.8))
+    y0 = int(round(shape[1] * 0.2))
+    y1 = int(round(shape[1] * 0.8))
+    center_mask[x0:x1, y0:y1] = True
+    return center_mask
+
+
+def get_body_mask(ct_hu: np.ndarray) -> np.ndarray:
+    """Compute a body mask from a raw HU CT volume.
+
+    Identifies the patient body by thresholding at -700 HU, removing small
+    components, and filling holes. The scanner bed and air outside the body
+    are excluded.
+
+    Args:
+        ct_hu: Raw CT volume in HU values, shape (H, W, D).
+
+    Returns:
+        Boolean mask of shape (H, W, D), True inside the body.
+    """
+    body_candidate = ct_hu >= -700
+    body_candidate = ndimage.binary_opening(
+        body_candidate, structure=np.ones((3, 3, 3), dtype=bool)
+    )
+    tracked_mask = np.zeros_like(body_candidate, dtype=bool)
+    center_mask = slice_center_mask(body_candidate.shape[:2])
+    mid_slice = body_candidate.shape[2] // 2
+
+    prev_support = None
+    for z_idx in range(mid_slice, -1, -1):
+        current = select_body_components(
+            body_candidate[:, :, z_idx], center_mask, prev_support
+        )
+        tracked_mask[:, :, z_idx] = current
+        if current.any():
+            prev_support = current
+
+    prev_support = None
+    for z_idx in range(mid_slice + 1, body_candidate.shape[2]):
+        current = select_body_components(
+            body_candidate[:, :, z_idx], center_mask, prev_support
+        )
+        tracked_mask[:, :, z_idx] = current
+        if current.any():
+            prev_support = current
+
+    if tracked_mask.sum() == 0:
+        tracked_mask = get_largest_cc(body_candidate)
+    else:
+        tracked_mask = ndimage.binary_fill_holes(tracked_mask)
+        tracked_mask = get_largest_cc(tracked_mask)
+
+    tracked_mask = ndimage.binary_closing(
+        tracked_mask, structure=np.ones((5, 5, 3), dtype=bool)
+    )
+    tracked_mask = ndimage.binary_fill_holes(tracked_mask)
+    tracked_mask = ndimage.binary_dilation(
+        tracked_mask, structure=np.ones((3, 3, 3), dtype=bool)
+    )
+
+    return tracked_mask.astype(bool)
+
+
+def apply_body_mask(vol: np.ndarray, mask: np.ndarray, fill_value: float) -> np.ndarray:
+    """Zero out voxels outside the body mask.
+
+    Args:
+        vol: Volume array of shape (H, W, D).
+        mask: Boolean body mask of shape (H, W, D), True inside body.
+        fill_value: Value to assign to voxels outside the mask.
+
+    Returns:
+        Masked volume of same shape as vol.
+    """
+    out = vol.copy()
+    out[~mask] = fill_value
+    return out
+
+
 def load_pair_to_dict(data_dir: Path, case_id: str, tp_x: str, tp_y: str) -> dict:
     """Load and normalize one longitudinal CT/PET pair into a dict of tensors.
 
@@ -168,19 +322,34 @@ def load_pair_to_dict(data_dir: Path, case_id: str, tp_x: str, tp_y: str) -> dic
     def t(arr: np.ndarray) -> torch.Tensor:
         return torch.from_numpy(arr).unsqueeze(0)
 
+    # Load raw CT in HU (before normalization) to compute body masks
+    x_ct_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz")
+    y_ct_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz")
+
+    x_mask = get_body_mask(x_ct_raw)
+    y_mask = get_body_mask(y_ct_raw)
+
+    # Apply mask before normalization:
+    #   CT: fill outside with 0.5th percentile of raw HU (original remove_bed behaviour)
+    #   PET: fill outside with 0.0 (SUV=0 is correct background)
+    x_ct_raw = apply_body_mask(
+        x_ct_raw, x_mask, fill_value=float(np.percentile(x_ct_raw, 0.5))
+    )
+    y_ct_raw = apply_body_mask(
+        y_ct_raw, y_mask, fill_value=float(np.percentile(y_ct_raw, 0.5))
+    )
+
+    x_pet_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp_x}.nii.gz")
+    y_pet_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp_y}.nii.gz")
+
+    x_pet_raw = apply_body_mask(x_pet_raw, x_mask, fill_value=0.0)
+    y_pet_raw = apply_body_mask(y_pet_raw, y_mask, fill_value=0.0)
+
     return {
-        "x_ct": t(
-            norm_ct(load_vol(image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz"))
-        ).float(),
-        "x_pet": t(
-            norm_pet(load_vol(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp_x}.nii.gz"))
-        ).float(),
-        "y_ct": t(
-            norm_ct(load_vol(image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz"))
-        ).float(),
-        "y_pet": t(
-            norm_pet(load_vol(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp_y}.nii.gz"))
-        ).float(),
+        "x_ct": t(norm_ct(x_ct_raw)).float(),
+        "x_pet": t(norm_pet(x_pet_raw)).float(),
+        "y_ct": t(norm_ct(y_ct_raw)).float(),
+        "y_pet": t(norm_pet(y_pet_raw)).float(),
         "x_label_ct": t(
             load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz")
         ),
