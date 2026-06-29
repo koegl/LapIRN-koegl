@@ -79,7 +79,7 @@ def evaluate_lvl1(
 
             F_X_Y, X_Y, Y_4x, F_xy, _ = model(X, Y)
 
-            if epoch % (config.use_cache_valid * 5) == 0 or epoch == config.epochs_lvl1:
+            if epoch % (config.val_interval * 5) == 0 or epoch == config.epochs_lvl1:
                 if not saved_initial:
                     zero_disp = torch.zeros_like(F_X_Y)
                     x_ref = model.transform(
