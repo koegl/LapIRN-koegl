@@ -13,7 +13,7 @@ def main() -> None:
 
     config = TrainingConfig()
 
-    mlflow.set_tracking_uri("sqlite:////home/iml/fryderyk.koegl/code/mlruns.db")
+    mlflow.set_tracking_uri("file:///home/iml/fryderyk.koegl/code/mlruns")
     mlflow.set_experiment("PSMAReg_LapIRN")
     with mlflow.start_run():
         train_ids, val_ids = my_data.get_train_val_split(
