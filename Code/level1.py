@@ -216,7 +216,8 @@ def train_lvl1(
 
             F_X_Y, X_Y, Y_4x, F_xy, _ = model(X, Y)
 
-            if epoch % config.val_interval == 0 or epoch == config.epochs_lvl1:
+            if epoch % 10 == 0 or epoch == config.epochs_lvl1:
+                # if epoch % config.val_interval == 0 or epoch == config.epochs_lvl1:
                 if saved is False:
                     ct = X_Y[:, 0:1, :, :, :]
                     pet = X_Y[:, 1:2, :, :, :]
