@@ -57,10 +57,10 @@ def main() -> None:
         )
 
         path_model_level1 = level1.train_lvl1(config, train_generator, valid_generator)
-        path_model_level2 = level2.train_lvl2(
-            config, path_model_level1, train_generator, valid_generator
-        )
-        level3.train_lvl3(config, path_model_level2, train_generator, valid_generator)
+        # path_model_level2 = level2.train_lvl2(
+        #     config, path_model_level1, train_generator, valid_generator
+        # )
+        # level3.train_lvl3(config, path_model_level2, train_generator, valid_generator)
 
 
 if __name__ == "__main__":
