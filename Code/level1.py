@@ -401,7 +401,7 @@ def train_lvl1(
                 epoch=epoch,
                 saved_initial=saved_initial,
             )
-            saved_initial = False
+            saved_initial = True
             mlflow.log_metrics(
                 {f"valid_lvl1/val_{key}": value for key, value in val_losses.items()},
                 step=global_step,
