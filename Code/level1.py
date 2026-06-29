@@ -308,7 +308,7 @@ def train_lvl1(
                 total_norm = torch.nn.utils.clip_grad_norm_(
                     model.parameters(), max_norm=1.0
                 )
-                if not torch.isfinite(total_norm) or total_norm > 100.0:
+                if not torch.isfinite(total_norm) or total_norm > 10.0:
                     tqdm.tqdm.write(
                         f"[lvl1] step {global_step}: grad_norm={total_norm.item():.2f} "
                         f"loss={loss.item():.4f} (skipped)"
