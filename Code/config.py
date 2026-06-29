@@ -2,35 +2,48 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
+import socket
+
+COMPUTER_NAME = socket.gethostname()
+
+if COMPUTER_NAME == 'janus':
+    DATA_PATH = Path("/home/iml/fryderyk.koegl/data")
+else:
+    DATA_PATH = Path("/lustre/groups/iml/data")
+
+
+
 
 @dataclass
 class TrainingConfig:
-    save_dir: Path = Path("./saved")
+    save_dir: Path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/saved")
 
     # Dataset
-    data_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg_dataset/")
-    split_path = Path("/home/iml/fryderyk.koegl/data/PSMAReg_dataset/split.json")
+    data_dir = DATA_PATH / "/PSMAReg/PSMAReg_dataset"
+    split_path = DATA_PATH / "/PSMAReg/PSMAReg_dataset/split.json"
     val_fraction: float = 0.15
     use_cache_train: bool = True
-    use_cache_valid: bool = True
+    use_cache_valid: bool = False
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
     range_flow: float = 0.4
 
     in_channel: int = 4
     n_classes: int = 3
-    lr: float = 1e-3
-    start_channel: int = 2
+    lr_lvl1: float = 1e-3
+    lr_lvl2: float = 1e-3 * 0.5
+    lr_lvl3: float = 1e-3 * 0.5
+    start_channel: int = 7
 
     # train val
-    epochs_lvl1: int = 4
-    epochs_lvl2: int = 4
-    epochs_lvl3: int = 4
-    unfreeze_epoch_in_lvl2: int = 2
-    unfreeze_epoch_in_lvl3: int = 1
+    epochs_lvl1: int = 61
+    epochs_lvl2: int = 61
+    epochs_lvl3: int = 121
+    unfreeze_epoch_in_lvl2: int = 10
+    unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
-    checkpoint_interval: int = 2
-
+    checkpoint_interval: int = 10
+    
     # sum to 10
     w_jacobian: float = 1.0
     w_smooth: float = 1.0

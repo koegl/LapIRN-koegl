@@ -220,7 +220,7 @@ def train_lvl3(
     grid = generate_grid(config.img_shape)
     grid = torch.from_numpy(np.reshape(grid, (1,) + grid.shape)).to(device).float()
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr_lvl3)
 
     config.save_dir.mkdir(parents=True, exist_ok=True)
 
@@ -240,27 +240,31 @@ def train_lvl3(
         epoch_metrics: Dict[str, float] = {}
         n_steps = 0
 
+        saved: bool = False
+
         for X, Y, X_lbl_ct, X_lbl_pet, Y_lbl_ct, Y_lbl_pet in train_generator:
             X = X.to(device).float()
             Y = Y.to(device).float()
 
             F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X, Y)
 
-            if epoch % 100 == 0 or epoch == config.epochs_lvl3:
-                ct = X_Y[:, 0:1, :, :, :]
-                pet = X_Y[:, 1:2, :, :, :]
-                my_data.save_volume(
-                    volume=ct,
-                    out_dir=config.save_dir / "warped",
-                    epoch=epoch,
-                    name="warped_ct_lvl3",
-                )
-                my_data.save_volume(
-                    volume=pet,
-                    out_dir=config.save_dir / "warped",
-                    epoch=epoch,
-                    name="warped_pet_lvl3",
-                )
+            if epoch % config.val_interval == 0 or epoch == config.epochs_lvl3:
+                if saved is False:
+                    ct = X_Y[:, 0:1, :, :, :]
+                    pet = X_Y[:, 1:2, :, :, :]
+                    my_data.save_volume(
+                        volume=ct,
+                        out_dir=config.save_dir / "warped",
+                        epoch=epoch,
+                        name="warped_ct_lvl3",
+                    )
+                    my_data.save_volume(
+                        volume=pet,
+                        out_dir=config.save_dir / "warped",
+                        epoch=epoch,
+                        name="warped_pet_lvl3",
+                    )
+                    saved = True
 
             X_Y_ct = X_Y[:, 0:1, ...]
             X_Y_pet = X_Y[:, 1:2, ...]
@@ -326,10 +330,22 @@ def train_lvl3(
                 + config.w_masked_jac * loss_masked_jac
             )
 
-            optimizer.zero_grad()  # clear gradients for this training step
-            loss.backward()  # backpropagation, compute gradients
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            optimizer.step()  # apply gradients
+            optimizer.zero_grad()
+            if torch.isfinite(loss):
+                loss.backward()
+                total_norm = torch.nn.utils.clip_grad_norm_(
+                    model.parameters(), max_norm=1.0
+                )
+                if not torch.isfinite(total_norm) or total_norm > 100.0:
+                    tqdm.tqdm.write(
+                        f"[lvl3] step {global_step}: grad_norm={total_norm.item():.2f} "
+                        f"loss={loss.item():.4f} (skipped)"
+                    )
+                    optimizer.zero_grad()
+                else:
+                    optimizer.step()
+            else:
+                tqdm.tqdm.write(f"[lvl3] step {global_step}: non-finite loss (skipped)")
 
             lossall[:, global_step] = np.array(
                 [
