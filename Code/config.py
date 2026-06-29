@@ -19,8 +19,8 @@ class TrainingConfig:
     save_dir: Path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/saved")
 
     # Dataset
-    data_dir = DATA_PATH / "/PSMAReg/PSMAReg_dataset"
-    split_path = DATA_PATH / "/PSMAReg/PSMAReg_dataset/split.json"
+    data_dir = DATA_PATH / "PSMAReg/PSMAReg_dataset"
+    split_path = DATA_PATH / "PSMAReg/PSMAReg_dataset/split.json"
     val_fraction: float = 0.15
     use_cache_train: bool = True
     use_cache_valid: bool = False
