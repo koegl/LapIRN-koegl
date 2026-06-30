@@ -2,9 +2,75 @@ import os
 
 os.environ["MLFLOW_ALLOW_FILE_STORE"] = "true"
 
+import affine_reg
+import Functions
+import miccai2020_model_stage
 import my_data
+import numpy as np
 import torch
 from config import TrainingConfig
+
+
+def debug_asym_crop() -> None:
+    config = TrainingConfig()
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    train_ids, _ = my_data.get_train_val_split(
+        data_dir=config.data_dir,
+        split_path=config.split_path,
+        val_fraction=config.val_fraction,
+    )
+
+    # unaugmented pair -> no flip, no symmetric crop (clean baseline)
+    ds = my_data.PSMARegDataset(case_ids=train_ids, cfg=config, augment=False)
+    batch = ds[0]
+
+    # force a deterministic moving-only crop (distinct head/feet so they're tellable)
+    crop_head_moving = 00
+    crop_feet_moving = 100
+
+    moving = {"x": batch["x"].clone()}
+    moving = my_data.apply_z_crop(moving, ["x"], crop_head_moving, crop_feet_moving)
+
+    X = moving["x"].unsqueeze(0).to(device).float()
+    Y = batch["y"].unsqueeze(0).to(device).float()
+
+    grid_full = Functions.generate_grid_unit(config.img_shape)
+    grid_full = (
+        torch.from_numpy(np.reshape(grid_full, (1,) + grid_full.shape))
+        .to(device)
+        .float()
+    )
+
+    transform = miccai2020_model_stage.SpatialTransform_unit().to(device)
+
+    # affine flow for the *uncropped* pair: aug params neutral here because the
+    # asymmetric moving crop must NOT be reflected in the DVF
+    flow_affine = affine_reg.create_affine_flow(
+        config=config,
+        device=device,
+        case_id=batch["case_id"],
+        tp_x=batch["tp_x"],
+        tp_y=batch["tp_y"],
+        aug_flipped=False,
+        aug_crop_head=0,
+        aug_crop_feet=0,
+    )
+
+    X_affine = transform(X, flow_affine, grid_full)
+
+    out_dir = config.save_dir / "debug_asym"
+    my_data.save_volume(
+        volume=X[:, 0:1], out_dir=out_dir, epoch=0, name="x_moving_cropped_ct"
+    )
+    my_data.save_volume(
+        volume=X_affine[:, 0:1], out_dir=out_dir, epoch=0, name="x_affine_ct"
+    )
+    my_data.save_volume(volume=Y[:, 0:1], out_dir=out_dir, epoch=0, name="y_ct")
+
+    print(f"crop_head_moving={crop_head_moving}, crop_feet_moving={crop_feet_moving}")
+    print(f"X shape: {tuple(X.shape)}")
+    print(f"saved to: {out_dir}")
 
 
 def main() -> None:
@@ -48,4 +114,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    debug_asym_crop()
