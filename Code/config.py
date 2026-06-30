@@ -54,7 +54,7 @@ class TrainingConfig:
     start_channel: int = 7
 
     # train val
-    epochs_lvl1: int = 200
+    epochs_lvl1: int = 100
     epochs_lvl2: int = 4
     epochs_lvl3: int = 121
     unfreeze_epoch_in_lvl2: int = 10
@@ -67,8 +67,8 @@ class TrainingConfig:
     w_smooth: float = 1.0
     w_ct: float = 3.0
     w_pet: float = 1.0
-    w_dice_ct: float = 1.0
-    w_dice_pet: float = 1.0
+    w_dice_ct: float = 5.0
+    w_dice_pet: float = 5.0
     w_mtv: float = 0.7
     w_tlg: float = 0.7
     w_masked_jac: float = 0.6
