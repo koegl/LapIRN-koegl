@@ -7,8 +7,13 @@ import numpy as np
 import torch
 import tqdm
 import utils
+from affine_reg import create_affine_flow
 from config import TrainingConfig
-from Functions import generate_grid, transform_unit_flow_to_flow_cuda
+from Functions import (
+    generate_grid,
+    generate_grid_unit,
+    transform_unit_flow_to_flow_cuda,
+)
 from miccai2020_model_stage import (
     Miccai2020_LDR_laplacian_unit_add_lvl1,
     Miccai2020_LDR_laplacian_unit_add_lvl2,
@@ -33,14 +38,17 @@ def evaluate_lvl2(
     loss_Jdet: Callable,
     transform: SpatialTransform_unit,
     grid_2: torch.Tensor,
+    epoch: int,
+    saved_initial: bool,
 ) -> Dict[str, float]:
     """Run one validation pass over val_generator and return averaged losses.
 
     Args:
         model: The lvl2 registration model, switched to eval mode internally
             and restored to train mode before returning.
-        val_generator: DataLoader yielding (X, Y, X_lbl_ct, X_lbl_pet,
-            Y_lbl_ct, Y_lbl_pet) batches.
+        valid_generator: DataLoader yielding dict batches with keys
+            x, y, x_label_ct, x_label_pet, y_label_ct, y_label_pet,
+            case_id, tp_x, tp_y, aug_flipped, aug_crop_head, aug_crop_feet.
         config: Training configuration holding loss weights.
         device: Device to run the forward pass on.
         loss_similarity_ct: Multi-resolution NCC loss for the CT channel.
@@ -66,12 +74,74 @@ def evaluate_lvl2(
     }
     n_batches = 0
 
-    with torch.no_grad():
-        for X, Y, X_lbl_ct, X_lbl_pet, Y_lbl_ct, Y_lbl_pet in valid_generator:
-            X = X.to(device).float()
-            Y = Y.to(device).float()
+    transform_nearest = SpatialTransformNearest_unit().to(device)
+    for param in transform_nearest.parameters():
+        param.requires_grad = False
 
-            F_X_Y, X_Y, Y_4x, F_xy, _, _ = model(X, Y)
+    grid_full = generate_grid_unit(config.img_shape)
+    grid_full = (
+        torch.from_numpy(np.reshape(grid_full, (1,) + grid_full.shape))
+        .to(device)
+        .float()
+    )
+
+    with torch.no_grad():
+        saved = False
+        for batch in valid_generator:
+            X = batch["x"].to(device).float()
+            Y = batch["y"].to(device).float()
+            X_lbl_ct = batch["x_label_ct"].to(device)
+            X_lbl_pet = batch["x_label_pet"].to(device)
+            Y_lbl_ct = batch["y_label_ct"].to(device)
+            Y_lbl_pet = batch["y_label_pet"].to(device)
+
+            flow_affine = create_affine_flow(
+                config=config,
+                device=device,
+                case_id=batch["case_id"][0],
+                tp_x=batch["tp_x"][0],
+                tp_y=batch["tp_y"][0],
+                aug_flipped=batch["aug_flipped"],
+                aug_crop_head=batch["aug_crop_head"],
+                aug_crop_feet=batch["aug_crop_feet"],
+                grid_full=grid_full,
+            )
+
+            X_affine = transform(X, flow_affine, grid_full)
+
+            F_X_Y, X_Y, Y_4x, F_xy, _, _ = model(X_affine, Y)
+            if epoch % (config.val_interval * 5) == 0 or epoch == config.epochs_lvl1:
+                if not saved_initial:
+                    zero_disp = torch.zeros_like(F_X_Y)
+                    x_ref = model.transform(
+                        X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
+                    )
+                    y_ref = model.transform(
+                        Y, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
+                    )
+                    my_data.save_volume(
+                        volume=x_ref[:, 0:1, ...],
+                        out_dir=config.save_dir / "initial",
+                        epoch=epoch,
+                        name="x_ref_ct_lvl2",
+                    )
+                    my_data.save_volume(
+                        volume=y_ref[:, 0:1, ...],
+                        out_dir=config.save_dir / "initial",
+                        epoch=epoch,
+                        name="y_ref_ct_lvl2",
+                    )
+                    saved_initial = True
+
+                if saved is False:
+                    ct = X_Y[:, 0:1, :, :, :]
+                    my_data.save_volume(
+                        volume=ct,
+                        out_dir=config.save_dir / "warped",
+                        epoch=epoch,
+                        name="warped_ct_lvl2",
+                    )
+                    saved = True
 
             X_Y_ct = X_Y[:, 0:1, ...]
             X_Y_pet = X_Y[:, 1:2, ...]
@@ -94,6 +164,9 @@ def evaluate_lvl2(
             F_xy[:, 1, :, :, :] = F_xy[:, 1, :, :, :] * (y - 1)
             F_xy[:, 2, :, :, :] = F_xy[:, 2, :, :, :] * (x - 1)
             loss_regulation = loss_smooth(F_xy)
+
+            X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_affine, grid_full)
+            X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_affine, grid_full)
 
             X_lbl_ct_down = utils.downsample_label(
                 X_lbl_ct.to(device), scale_factor=0.5
@@ -150,8 +223,8 @@ def train_lvl2(
             weights, epoch count, validation interval, freeze epoch).
         path_model_level1: Path to the trained lvl1 checkpoint to load and
             embed as the frozen lvl1 sub-model.
-        train_generator: DataLoader yielding training batches.
-        val_generator: DataLoader yielding validation batches.
+        train_generator: DataLoader yielding dict batches.
+        valid_generator: DataLoader yielding dict batches.
 
     Returns:
         Path to the final saved model checkpoint.
@@ -190,14 +263,24 @@ def train_lvl2(
     loss_Jdet = neg_Jdet_loss
 
     transform = SpatialTransform_unit().to(device)
+    transform_nearest = SpatialTransformNearest_unit().to(device)
 
     for param in transform.parameters():
         param.requires_grad = False
         param.volatile = True
+    for param in transform_nearest.parameters():
+        param.requires_grad = False
 
     grid_2 = generate_grid(config.img_shape_2)
     grid_2 = (
         torch.from_numpy(np.reshape(grid_2, (1,) + grid_2.shape)).to(device).float()
+    )
+
+    grid_full = generate_grid_unit(config.img_shape)
+    grid_full = (
+        torch.from_numpy(np.reshape(grid_full, (1,) + grid_full.shape))
+        .to(device)
+        .float()
     )
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr_lvl2)
@@ -216,35 +299,36 @@ def train_lvl2(
 
     epoch = 0
     pbar = tqdm.tqdm(total=config.epochs_lvl2 + 1, desc="lvl2 training")
+
+    saved_initial: bool = False
+
     while epoch <= config.epochs_lvl2:
         epoch_metrics: Dict[str, float] = {}
         n_steps = 0
 
-        saved: bool = False
+        for batch in train_generator:
+            X = batch["x"].to(device).float()
+            Y = batch["y"].to(device).float()
+            X_lbl_ct = batch["x_label_ct"].to(device)
+            X_lbl_pet = batch["x_label_pet"].to(device)
+            Y_lbl_ct = batch["y_label_ct"].to(device)
+            Y_lbl_pet = batch["y_label_pet"].to(device)
 
-        for X, Y, X_lbl_ct, X_lbl_pet, Y_lbl_ct, Y_lbl_pet in train_generator:
-            X = X.to(device).float()
-            Y = Y.to(device).float()
+            flow_affine = create_affine_flow(
+                config=config,
+                device=device,
+                case_id=batch["case_id"][0],
+                tp_x=batch["tp_x"][0],
+                tp_y=batch["tp_y"][0],
+                aug_flipped=batch["aug_flipped"],
+                aug_crop_head=batch["aug_crop_head"],
+                aug_crop_feet=batch["aug_crop_feet"],
+                grid_full=grid_full,
+            )
 
-            F_X_Y, X_Y, Y_4x, F_xy, _, _ = model(X, Y)
+            X_affine = transform(X, flow_affine, grid_full)
 
-            if epoch % config.val_interval == 0 or epoch == config.epochs_lvl2:
-                if saved is False:
-                    ct = X_Y[:, 0:1, :, :, :]
-                    pet = X_Y[:, 1:2, :, :, :]
-                    my_data.save_volume(
-                        volume=ct,
-                        out_dir=config.save_dir / "warped",
-                        epoch=epoch,
-                        name="warped_ct_lvl2",
-                    )
-                    my_data.save_volume(
-                        volume=pet,
-                        out_dir=config.save_dir / "warped",
-                        epoch=epoch,
-                        name="warped_pet_lvl2",
-                    )
-                    saved = True
+            F_X_Y, X_Y, Y_4x, F_xy, _, _ = model(X_affine, Y)
 
             X_Y_ct = X_Y[:, 0:1, ...]
             X_Y_pet = X_Y[:, 1:2, ...]
@@ -270,6 +354,9 @@ def train_lvl2(
             F_xy[:, 2, :, :, :] = F_xy[:, 2, :, :, :] * (x - 1)
             loss_regulation = loss_smooth(F_xy)
 
+            X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_affine, grid_full)
+            X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_affine, grid_full)
+
             X_lbl_ct_down = utils.downsample_label(
                 X_lbl_ct.to(device), scale_factor=0.5
             )
@@ -284,8 +371,6 @@ def train_lvl2(
             )
 
             if epoch == config.epochs_lvl2 and False:
-                transform_nearest = SpatialTransformNearest_unit().to(device)
-
                 warped_seg_ct = transform_nearest(
                     X_lbl_ct_down.float(),
                     F_X_Y.permute(0, 2, 3, 4, 1),
@@ -326,6 +411,9 @@ def train_lvl2(
                 loss.backward()
                 total_norm = torch.nn.utils.clip_grad_norm_(
                     model.parameters(), max_norm=1.0
+                )
+                mlflow.log_metrics(
+                    {"lvl2/grad_norm": total_norm.item()}, step=global_step
                 )
                 if not torch.isfinite(total_norm) or total_norm > 100.0:
                     tqdm.tqdm.write(
@@ -387,7 +475,10 @@ def train_lvl2(
                 loss_Jdet=loss_Jdet,
                 transform=transform,
                 grid_2=grid_2,
+                epoch=epoch,
+                saved_initial=saved_initial,
             )
+            saved_initial = True
             mlflow.log_metrics(
                 {f"valid_lvl2/val_{key}": value for key, value in val_losses.items()},
                 step=global_step,

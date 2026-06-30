@@ -1,9 +1,7 @@
-import json
 import os
 
 os.environ["MLFLOW_ALLOW_FILE_STORE"] = "true"
 
-import mlflow
 import my_data
 import torch
 from config import TrainingConfig
@@ -11,33 +9,23 @@ from config import TrainingConfig
 
 def main() -> None:
 
-    from Functions import generate_grid, generate_grid_unit
+    # from Functions import generate_grid, generate_grid_unit
 
-    g1 = generate_grid((4, 4, 4))
-    g2 = generate_grid_unit((4, 4, 4))
-    print("generate_grid range:", g1.min(), g1.max())
-    print("generate_grid_unit range:", g2.min(), g2.max())
+    # g1 = generate_grid((4, 4, 4))
+    # g2 = generate_grid_unit((4, 4, 4))
+    # print("generate_grid range:", g1.min(), g1.max())
+    # print("generate_grid_unit range:", g2.min(), g2.max())
 
-    return
+    # return
 
     config = TrainingConfig()
 
-    mlflow.set_tracking_uri("file:///home/iml/fryderyk.koegl/code/mlruns")
-    mlflow.set_experiment("PSMAReg_LapIRN")
-    with mlflow.start_run():
-        train_ids, val_ids = my_data.get_train_val_split(
-            data_dir=config.data_dir,
-            split_path=config.split_path,
-            val_fraction=config.val_fraction,
-        )
-        config_to_log = config.to_mlflow_params()
-        config_to_log["train_indices"] = train_ids
-        config_to_log["val_indices"] = val_ids
-        mlflow.log_params(config.to_mlflow_params())
-        mlflow.log_text(
-            json.dumps(config.to_mlflow_params(), indent=2),
-            artifact_file="config.json",
-        )
+    train_ids, val_ids = my_data.get_train_val_split(
+        data_dir=config.data_dir,
+        split_path=config.split_path,
+        val_fraction=config.val_fraction,
+    )
+
     ds_no_flip = my_data.PSMARegDataset(case_ids=train_ids, cfg=config, augment=False)
 
     ds_flip = my_data.PSMARegDataset(case_ids=train_ids, cfg=config, augment=True)

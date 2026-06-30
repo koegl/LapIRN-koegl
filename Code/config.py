@@ -49,10 +49,10 @@ class TrainingConfig:
     start_channel: int = 7
 
     # train val
-    epochs_lvl1: int = 121
-    epochs_lvl2: int = 61
+    epochs_lvl1: int = 5
+    epochs_lvl2: int = 5
     epochs_lvl3: int = 121
-    unfreeze_epoch_in_lvl2: int = 10
+    unfreeze_epoch_in_lvl2: int = 2
     unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
     checkpoint_interval: int = 10

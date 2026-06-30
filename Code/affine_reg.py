@@ -17,6 +17,7 @@ import my_data
 import nibabel as nib
 import numpy as np
 import torch
+from config import TrainingConfig
 from scipy.ndimage import zoom
 
 CACHE_DIR = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/affine_cache")
@@ -338,3 +339,71 @@ def dvf_to_tensor(dvf: np.ndarray, device: torch.device) -> torch.Tensor:
     # (H, W, D, 3) -> (3, H, W, D) -> (1, 3, H, W, D)
     dvf_tensor = torch.from_numpy(dvf).permute(3, 0, 1, 2).unsqueeze(0).float()
     return dvf_tensor.to(device)
+
+
+def create_affine_flow(
+    config: TrainingConfig,
+    device: torch.device,
+    case_id: str,
+    tp_x: str,
+    tp_y: str,
+    aug_flipped: bool,
+    aug_crop_head: int,
+    aug_crop_feet: int,
+) -> torch.Tensor:
+    """Load images/labels from a batch and apply the cached affine DVF.
+
+    Computes (or loads) the ANTs affine DVF for the (case_id, tp_x, tp_y)
+    pair, applies the same augmentation that was applied to the images,
+    converts it to a grid_sample-compatible flow (reversed channel order,
+    per-component normalization for align_corners=False), and warps the
+    moving image X plus its labels into the affine-aligned space.
+
+    Args:
+        batch: Dict batch from the dataloader.
+        config: Training configuration.
+        device: Target device.
+        transform: Bilinear spatial transform for the image.
+        transform_nearest: Nearest spatial transform for the labels.
+        grid_full: Full-resolution unit sampling grid.
+
+    Returns:
+        Tuple (X_affine, Y, X_lbl_ct, X_lbl_pet, Y_lbl_ct, Y_lbl_pet),
+        all on device, with X and its labels affine-warped.
+    """
+
+    dvf = get_affine_dvf(
+        case_id=case_id,
+        tp_x=tp_x,
+        tp_y=tp_y,
+        fixed_ct_path=config.data_dir
+        / "imagesTr"
+        / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
+        moving_ct_path=config.data_dir
+        / "imagesTr"
+        / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
+        make_lowres_ants_image_fn=make_lowres_ants_image,
+        preprocess_ct_fn=preprocess_ct,
+        ants_affine_to_fullres_voxel_disp_fn=ants_affine_to_fullres_voxel_disp,
+    )
+
+    dvf = apply_augmentation_to_dvf(
+        dvf=dvf,
+        flipped=aug_flipped,
+        crop_head=aug_crop_head,
+        crop_feet=aug_crop_feet,
+    )
+
+    dvf_tensor = dvf_to_tensor(dvf, device)
+
+    # grid_sample flow last-axis order is (along D, along W, along H) — reversed
+    # vs numpy axes. align_corners=False -> normalize each component by size/2.
+    H, W, D = config.img_shape
+    d_h = dvf_tensor[:, 0] / (H / 2.0)
+    d_w = dvf_tensor[:, 1] / (W / 2.0)
+    d_d = dvf_tensor[:, 2] / (D / 2.0)
+    flow_affine = torch.stack([d_d, d_w, d_h], dim=1)  # (1, 3, H, W, D)
+
+    flow_perm = flow_affine.permute(0, 2, 3, 4, 1)
+
+    return flow_perm

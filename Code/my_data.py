@@ -538,6 +538,9 @@ class PSMARegDataset(torch_data.Dataset):
 
         self.pairs = pairs
 
+        # print("warning temp reduce size")
+        # self.pairs = [self.pairs[0]]
+
         data_dicts = [
             {"case_id": case_id, "tp_x": tp_x, "tp_y": tp_y}
             for case_id, tp_x, tp_y in pairs

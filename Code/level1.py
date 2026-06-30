@@ -1,13 +1,13 @@
 from pathlib import Path
 from typing import Callable, Dict
 
-import affine_reg
 import mlflow
 import my_data
 import numpy as np
 import torch
 import tqdm
 import utils
+from affine_reg import create_affine_flow
 from config import TrainingConfig
 from Functions import (
     generate_grid,
@@ -38,7 +38,7 @@ def evaluate_lvl1(
     transform: SpatialTransform_unit,
     grid_4: torch.Tensor,
     epoch: int,
-    saved_initial: bool = False,
+    saved_initial: bool,
 ) -> Dict[str, float]:
     """Run one validation pass over val_generator and return averaged losses.
 
@@ -93,43 +93,19 @@ def evaluate_lvl1(
             Y_lbl_ct = batch["y_label_ct"].to(device)
             Y_lbl_pet = batch["y_label_pet"].to(device)
 
-            case_id = batch["case_id"][0]  # [0] because DataLoader adds batch dim
-            tp_x = batch["tp_x"][0]
-            tp_y = batch["tp_y"][0]
-
-            dvf = affine_reg.get_affine_dvf(
-                case_id=case_id,
-                tp_x=tp_x,
-                tp_y=tp_y,
-                fixed_ct_path=config.data_dir
-                / "imagesTr"
-                / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
-                moving_ct_path=config.data_dir
-                / "imagesTr"
-                / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
-                make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
-                preprocess_ct_fn=affine_reg.preprocess_ct,
-                ants_affine_to_fullres_voxel_disp_fn=affine_reg.ants_affine_to_fullres_voxel_disp,
+            flow_affine = create_affine_flow(
+                config=config,
+                device=device,
+                case_id=batch["case_id"][0],
+                tp_x=batch["tp_x"][0],
+                tp_y=batch["tp_y"][0],
+                aug_flipped=batch["aug_flipped"],
+                aug_crop_head=batch["aug_crop_head"],
+                aug_crop_feet=batch["aug_crop_feet"],
+                grid_full=grid_full,
             )
 
-            dvf = affine_reg.apply_augmentation_to_dvf(
-                dvf=dvf,
-                flipped=batch["aug_flipped"],
-                crop_head=batch["aug_crop_head"],
-                crop_feet=batch["aug_crop_feet"],
-            )
-
-            dvf_tensor = affine_reg.dvf_to_tensor(dvf, device)
-
-            # grid_sample flow last-axis order is (along D, along W, along H) — reversed vs numpy axes.
-            # align_corners=False -> normalize each component by its own size/2.
-            H, W, D = config.img_shape
-            d_h = dvf_tensor[:, 0] / (H / 2.0)
-            d_w = dvf_tensor[:, 1] / (W / 2.0)
-            d_d = dvf_tensor[:, 2] / (D / 2.0)
-            flow_affine = torch.stack([d_d, d_w, d_h], dim=1)  # (1, 3, H, W, D)
-
-            X_affine = model.transform(X, flow_affine.permute(0, 2, 3, 4, 1), grid_full)
+            X_affine = transform(X, flow_affine, grid_full)
 
             F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_affine, Y)
 
@@ -139,6 +115,9 @@ def evaluate_lvl1(
                     x_ref = model.transform(
                         X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
                     )
+                    x_affine = model.transform(
+                        X_affine, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
+                    )
                     y_ref = model.transform(
                         Y, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
                     )
@@ -147,6 +126,12 @@ def evaluate_lvl1(
                         out_dir=config.save_dir / "initial",
                         epoch=epoch,
                         name="x_ref_ct_lvl1",
+                    )
+                    my_data.save_volume(
+                        volume=x_affine[:, 0:1, ...],
+                        out_dir=config.save_dir / "initial",
+                        epoch=epoch,
+                        name="x_affine_ct_lvl1",
                     )
                     my_data.save_volume(
                         volume=y_ref[:, 0:1, ...],
@@ -188,12 +173,8 @@ def evaluate_lvl1(
             F_xy[:, 2, :, :, :] = F_xy[:, 2, :, :, :] * (x - 1)
             loss_regulation = loss_smooth(F_xy)
 
-            X_lbl_ct = transform_nearest(
-                X_lbl_ct.float(), flow_affine.permute(0, 2, 3, 4, 1), grid_full
-            )
-            X_lbl_pet = transform_nearest(
-                X_lbl_pet.float(), flow_affine.permute(0, 2, 3, 4, 1), grid_full
-            )
+            X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_affine, grid_full)
+            X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_affine, grid_full)
 
             X_lbl_ct_down = utils.downsample_label(
                 X_lbl_ct.to(device), scale_factor=0.25
@@ -322,43 +303,19 @@ def train_lvl1(
             Y_lbl_ct = batch["y_label_ct"].to(device)
             Y_lbl_pet = batch["y_label_pet"].to(device)
 
-            case_id = batch["case_id"][0]  # [0] because DataLoader adds batch dim
-            tp_x = batch["tp_x"][0]
-            tp_y = batch["tp_y"][0]
-
-            dvf = affine_reg.get_affine_dvf(
-                case_id=case_id,
-                tp_x=tp_x,
-                tp_y=tp_y,
-                fixed_ct_path=config.data_dir
-                / "imagesTr"
-                / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
-                moving_ct_path=config.data_dir
-                / "imagesTr"
-                / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
-                make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
-                preprocess_ct_fn=affine_reg.preprocess_ct,
-                ants_affine_to_fullres_voxel_disp_fn=affine_reg.ants_affine_to_fullres_voxel_disp,
+            flow_affine = create_affine_flow(
+                config=config,
+                device=device,
+                case_id=batch["case_id"][0],
+                tp_x=batch["tp_x"][0],
+                tp_y=batch["tp_y"][0],
+                aug_flipped=batch["aug_flipped"],
+                aug_crop_head=batch["aug_crop_head"],
+                aug_crop_feet=batch["aug_crop_feet"],
+                grid_full=grid_full,
             )
 
-            dvf = affine_reg.apply_augmentation_to_dvf(
-                dvf=dvf,
-                flipped=batch["aug_flipped"],
-                crop_head=batch["aug_crop_head"],
-                crop_feet=batch["aug_crop_feet"],
-            )
-
-            dvf_tensor = affine_reg.dvf_to_tensor(dvf, device)
-
-            # grid_sample flow last-axis order is (along D, along W, along H) — reversed vs numpy axes.
-            # align_corners=False -> normalize each component by its own size/2.
-            H, W, D = config.img_shape
-            d_h = dvf_tensor[:, 0] / (H / 2.0)
-            d_w = dvf_tensor[:, 1] / (W / 2.0)
-            d_d = dvf_tensor[:, 2] / (D / 2.0)
-            flow_affine = torch.stack([d_d, d_w, d_h], dim=1)  # (1, 3, H, W, D)
-
-            X_affine = model.transform(X, flow_affine.permute(0, 2, 3, 4, 1), grid_full)
+            X_affine = transform(X, flow_affine, grid_full)
 
             F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_affine, Y)
 
@@ -387,12 +344,8 @@ def train_lvl1(
             F_xy[:, 2, :, :, :] = F_xy[:, 2, :, :, :] * (x - 1)
             loss_regulation = loss_smooth(F_xy)
 
-            X_lbl_ct = transform_nearest(
-                X_lbl_ct.float(), flow_affine.permute(0, 2, 3, 4, 1), grid_full
-            )
-            X_lbl_pet = transform_nearest(
-                X_lbl_pet.float(), flow_affine.permute(0, 2, 3, 4, 1), grid_full
-            )
+            X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_affine, grid_full)
+            X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_affine, grid_full)
 
             X_lbl_ct_down = utils.downsample_label(
                 X_lbl_ct.to(device), scale_factor=0.25

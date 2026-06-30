@@ -8,3 +8,4 @@ mlruns/*
 Model/*
 saved/*
 *.nii.gz
+*.npy
