@@ -34,8 +34,10 @@ def save_checkpoint(
     if epoch % config.checkpoint_interval != 0:
         return
 
-    config.save_dir.mkdir(parents=True, exist_ok=True)
-    latest_path = config.save_dir / f"{config.mlflow_experiment}_{stage}_latest.pth"
+    config.model_save_dir.mkdir(parents=True, exist_ok=True)
+    latest_path = (
+        config.model_save_dir / f"{config.mlflow_experiment}_{stage}_latest.pth"
+    )
     torch.save(
         {
             "epoch": epoch,

@@ -14,6 +14,7 @@ else:
 @dataclass
 class TrainingConfig:
     save_dir: Path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/saved")
+    model_save_dir: Path = DATA_PATH / "models"
 
     # Dataset
     data_dir = DATA_PATH / "PSMAReg/PSMAReg_dataset"

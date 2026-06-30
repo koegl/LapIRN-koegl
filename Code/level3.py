@@ -229,6 +229,13 @@ def train_lvl3(
     val_generator: torch_data.DataLoader,
 ) -> Path:
     print("Training lvl3...")
+
+    best_dice_ct = float("inf")
+    config.model_save_dir.mkdir(parents=True, exist_ok=True)
+    best_model_path = (
+        config.model_save_dir / f"{config.mlflow_experiment}_stagelvl3_best.pth"
+    )
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     model_lvl1 = Miccai2020_LDR_laplacian_unit_add_lvl1(
@@ -493,6 +500,13 @@ def train_lvl3(
                 f"- mtv {val_losses['mtv_bias']:.4f} "
                 f"- tlg {val_losses['tlg_bias']:.4f}"
             )
+
+            if val_losses["dice_ct"] < best_dice_ct:
+                best_dice_ct = val_losses["dice_ct"]
+                torch.save(model.state_dict(), best_model_path)
+                tqdm.tqdm.write(
+                    f"epoch {epoch}: new best dice_ct {best_dice_ct:.4f} -> saved best"
+                )
 
         if epoch == config.unfreeze_epoch_in_lvl3:
             model.unfreeze_modellvl2()
