@@ -78,16 +78,18 @@ def build_registration_pairs(
     case_timepoints: Dict[str, List[str]],
     case_ids: Optional[List[str]] = None,
     min_timepoints: int = 2,
+    baseline_tp: str = "00",
 ) -> List[Tuple[str, str, str]]:
-    """Build consecutive (case_id, tp_x, tp_y) registration pairs."""
     selected_ids = sorted(case_ids) if case_ids is not None else sorted(case_timepoints)
     pairs: List[Tuple[str, str, str]] = []
     for case_id in selected_ids:
         tps = case_timepoints[case_id]
-        if len(tps) < min_timepoints:
+        if len(tps) < min_timepoints or baseline_tp not in tps:
             continue
-        for tp_x, tp_y in zip(tps[:-1], tps[1:]):
-            pairs.append((case_id, tp_x, tp_y))
+        for tp in tps:
+            if tp == baseline_tp:
+                continue
+            pairs.append((case_id, tp, baseline_tp))
     return pairs
 
 
