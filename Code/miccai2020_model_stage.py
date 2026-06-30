@@ -1,5 +1,4 @@
 import config
-import my_data
 import numpy as np
 import torch
 import torch.nn as nn
@@ -315,7 +314,6 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
         )
 
         self.config = config.TrainingConfig()
-        self.saved = False
 
     def unfreeze_modellvl1(self):
         # unFreeze model_lvl1 weight
@@ -458,39 +456,8 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
         lvl1_disp_up = self.up_tri(lvl1_disp)
         lvl1_v_up = self.up_tri(lvl1_v)
 
-        down_x = self.down_avg(x)
         down_y = self.down_avg(y)
-
-        if self.saved is False:
-            ct_x = down_x[:, 0:1, :, :, :]
-            pet_x = down_x[:, 1:2, :, :, :]
-            ct_y = down_y[:, 0:1, :, :, :]
-            pet_y = down_y[:, 1:2, :, :, :]
-            my_data.save_volume(
-                volume=ct_x,
-                out_dir=self.config.save_dir / "intial",
-                epoch=0,
-                name="down_x_lvl2_ct",
-            )
-            my_data.save_volume(
-                volume=ct_y,
-                out_dir=self.config.save_dir / "intial",
-                epoch=0,
-                name="down_y_lvl2_ct",
-            )
-            my_data.save_volume(
-                volume=pet_x,
-                out_dir=self.config.save_dir / "intial",
-                epoch=0,
-                name="down_x_lvl2_pet",
-            )
-            my_data.save_volume(
-                volume=pet_y,
-                out_dir=self.config.save_dir / "intial",
-                epoch=0,
-                name="down_y_lvl2_pet",
-            )
-            self.saved = True
+        down_x = self.down_avg(x)
 
         warpped_x = self.transform(
             down_x, lvl1_disp_up.permute(0, 2, 3, 4, 1), self.grid_1
