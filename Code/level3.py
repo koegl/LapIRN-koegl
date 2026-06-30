@@ -237,7 +237,7 @@ def train_lvl3(
         / f"{config.mlflow_experiment}_{mlflow.active_run().info.run_name}_stagelvl3_best.pth"
     )
     final_model_path = (
-        config.save_dir
+        config.model_save_dir
         / f"{config.mlflow_experiment}_{mlflow.active_run().info.run_name}_stagelvl3_{config.epochs_lvl1}.pth"
     )
 
