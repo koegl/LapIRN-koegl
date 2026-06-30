@@ -55,8 +55,8 @@ class TrainingConfig:
 
     # train val
     epochs_lvl1: int = 121
-    epochs_lvl2: int = 4
-    epochs_lvl3: int = 121
+    epochs_lvl2: int = 121
+    epochs_lvl3: int = 1
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
