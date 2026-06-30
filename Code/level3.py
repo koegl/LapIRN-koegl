@@ -7,13 +7,19 @@ import numpy as np
 import torch
 import tqdm
 import utils
+from affine_reg import create_affine_flow
 from config import TrainingConfig
-from Functions import generate_grid, transform_unit_flow_to_flow_cuda
+from Functions import (
+    generate_grid,
+    generate_grid_unit,
+    transform_unit_flow_to_flow_cuda,
+)
 from miccai2020_model_stage import (
     Miccai2020_LDR_laplacian_unit_add_lvl1,
     Miccai2020_LDR_laplacian_unit_add_lvl2,
     Miccai2020_LDR_laplacian_unit_add_lvl3,
     SpatialTransform_unit,
+    SpatialTransformNearest_unit,
     jacobian_determinant,
     multi_resolution_NCC,
     neg_Jdet_loss,
@@ -33,26 +39,10 @@ def evaluate_lvl3(
     loss_Jdet: Callable,
     transform: SpatialTransform_unit,
     grid: torch.Tensor,
+    epoch: int,
+    saved_initial: bool,
 ) -> Dict[str, float]:
-    """Run one validation pass over val_generator and return averaged losses.
 
-    Args:
-        model: The lvl3 registration model, switched to eval mode internally
-            and restored to train mode before returning.
-        val_generator: DataLoader yielding (X, Y, X_lbl_ct, X_lbl_pet,
-            Y_lbl_ct, Y_lbl_pet) batches.
-        config: Training configuration holding loss weights.
-        device: Device to run the forward pass on.
-        loss_similarity_ct: Multi-resolution NCC loss for the CT channel.
-        loss_similarity_pet: Multi-resolution NCC loss for the PET channel.
-        loss_smooth: Smoothness regularization loss function.
-        loss_Jdet: Negative Jacobian determinant loss function.
-        transform: Spatial transform module used by the dice loss.
-        grid: Precomputed sampling grid at full resolution.
-
-    Returns:
-        Dict mapping loss name to its average value over val_generator.
-    """
     model.eval()
     val_losses: Dict[str, float] = {
         "loss": 0.0,
@@ -69,12 +59,76 @@ def evaluate_lvl3(
     }
     n_batches = 0
 
-    with torch.no_grad():
-        for X, Y, X_lbl_ct, X_lbl_pet, Y_lbl_ct, Y_lbl_pet in val_generator:
-            X = X.to(device).float()
-            Y = Y.to(device).float()
+    transform_nearest = SpatialTransformNearest_unit().to(device)
+    for param in transform_nearest.parameters():
+        param.requires_grad = False
 
-            F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X, Y)
+    grid_full = generate_grid_unit(config.img_shape)
+    grid_full = (
+        torch.from_numpy(np.reshape(grid_full, (1,) + grid_full.shape))
+        .to(device)
+        .float()
+    )
+
+    n_dice_ct = 0
+    n_dice_pet = 0
+
+    with torch.no_grad():
+        saved = False
+        for batch in val_generator:
+            X = batch["x"].to(device).float()
+            Y = batch["y"].to(device).float()
+            X_lbl_ct = batch["x_label_ct"].to(device)
+            X_lbl_pet = batch["x_label_pet"].to(device)
+            Y_lbl_ct = batch["y_label_ct"].to(device)
+            Y_lbl_pet = batch["y_label_pet"].to(device)
+
+            flow_affine = create_affine_flow(
+                config=config,
+                device=device,
+                case_id=batch["case_id"][0],
+                tp_x=batch["tp_x"][0],
+                tp_y=batch["tp_y"][0],
+                aug_flipped=batch["aug_flipped"],
+                aug_crop_head=batch["aug_crop_head"],
+                aug_crop_feet=batch["aug_crop_feet"],
+            )
+
+            X_affine = transform(X, flow_affine, grid_full)
+
+            F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X_affine, Y)
+            if epoch % (config.val_interval * 5) == 0 or epoch == config.epochs_lvl3:
+                if not saved_initial:
+                    zero_disp = torch.zeros_like(F_X_Y)
+                    x_ref = model.transform(
+                        X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
+                    )
+                    y_ref = model.transform(
+                        Y, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
+                    )
+                    my_data.save_volume(
+                        volume=x_ref[:, 0:1, ...],
+                        out_dir=config.save_dir / "initial",
+                        epoch=epoch,
+                        name="x_ref_ct_lvl3",
+                    )
+                    my_data.save_volume(
+                        volume=y_ref[:, 0:1, ...],
+                        out_dir=config.save_dir / "initial",
+                        epoch=epoch,
+                        name="y_ref_ct_lvl3",
+                    )
+                    saved_initial = True
+
+                if saved is False:
+                    ct = X_Y[:, 0:1, :, :, :]
+                    my_data.save_volume(
+                        volume=ct,
+                        out_dir=config.save_dir / "warped",
+                        epoch=epoch,
+                        name="warped_ct_lvl3",
+                    )
+                    saved = True
 
             X_Y_ct = X_Y[:, 0:1, ...]
             X_Y_pet = X_Y[:, 1:2, ...]
@@ -98,23 +152,22 @@ def evaluate_lvl3(
             F_xy[:, 2, :, :, :] = F_xy[:, 2, :, :, :] * (x - 1)
             loss_regulation = loss_smooth(F_xy)
 
+            X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_affine, grid_full)
+            X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_affine, grid_full)
+
             loss_dice_ct = utils.dice_loss_with_grad(
-                X_lbl_ct.to(device), Y_lbl_ct.to(device), F_X_Y, model.grid_1, transform
+                X_lbl_ct, Y_lbl_ct, F_X_Y, model.grid_1, transform
             )
             loss_dice_pet = utils.dice_loss_with_grad(
-                X_lbl_pet.to(device),
-                Y_lbl_pet.to(device),
-                F_X_Y,
-                model.grid_1,
-                transform,
+                X_lbl_pet, Y_lbl_pet, F_X_Y, model.grid_1, transform
             )
 
-            moving_pet_mask = (X_lbl_pet.to(device) == 1).float()
+            moving_pet_mask = (X_lbl_pet == 1).float()
             warped_pet_mask = utils.warp_binary_mask(
                 moving_pet_mask, F_X_Y, model.grid_1, transform
             )
             warped_pet_image = X_Y[:, 1:2]
-            moving_pet_image = X[:, 1:2]
+            moving_pet_image = X_affine[:, 1:2]
 
             loss_mtv = utils.mtv_bias_loss(warped_pet_mask, moving_pet_mask)
             loss_tlg = utils.tlg_bias_loss(
@@ -126,28 +179,47 @@ def evaluate_lvl3(
                 loss_multiNCC
                 + config.w_jacobian * loss_jacobian
                 + config.w_smooth * loss_regulation
-                + config.w_dice_ct * loss_dice_ct
-                + config.w_dice_pet * loss_dice_pet
                 + config.w_mtv * loss_mtv
                 + config.w_tlg * loss_tlg
                 + config.w_masked_jac * loss_masked_jac
             )
+            if loss_dice_ct is not None:
+                loss = loss + config.w_dice_ct * loss_dice_ct
+            if loss_dice_pet is not None:
+                loss = loss + config.w_dice_pet * loss_dice_pet
 
             val_losses["loss"] += loss.item()
             val_losses["ncc_ct"] += loss_ncc_ct.item()
             val_losses["ncc_pet"] += loss_ncc_pet.item()
             val_losses["smooth"] += loss_regulation.item()
-            val_losses["dice_ct"] += loss_dice_ct.item()
-            val_losses["dice_pet"] += loss_dice_pet.item()
             val_losses["jacobian"] += loss_jacobian.item()
             val_losses["mtv_bias"] += loss_mtv.item()
             val_losses["tlg_bias"] += loss_tlg.item()
             val_losses["masked_jac"] += loss_masked_jac.item()
             val_losses["ndv"] += ndv
+
+            if loss_dice_ct is not None:
+                val_losses["dice_ct"] += loss_dice_ct.item()
+                n_dice_ct += 1
+            if loss_dice_pet is not None:
+                val_losses["dice_pet"] += loss_dice_pet.item()
+                n_dice_pet += 1
             n_batches += 1
 
     model.train()
-    return {key: value / n_batches for key, value in val_losses.items()}
+
+    averaged = {
+        key: value / n_batches
+        for key, value in val_losses.items()
+        if key not in ("dice_ct", "dice_pet")
+    }
+    averaged["dice_ct"] = (
+        val_losses["dice_ct"] / n_dice_ct if n_dice_ct > 0 else float("nan")
+    )
+    averaged["dice_pet"] = (
+        val_losses["dice_pet"] / n_dice_pet if n_dice_pet > 0 else float("nan")
+    )
+    return averaged
 
 
 def train_lvl3(
@@ -156,19 +228,6 @@ def train_lvl3(
     train_generator: torch_data.DataLoader,
     val_generator: torch_data.DataLoader,
 ) -> Path:
-    """Train the full-resolution lvl3 model on top of a frozen lvl1+lvl2 stack.
-
-    Args:
-        config: Training configuration (paths, hyperparameters, loss
-            weights, epoch count, validation interval, freeze epoch).
-        path_model_level2: Path to the trained lvl2 checkpoint to load and
-            embed as the frozen lvl2 sub-model (which itself wraps lvl1).
-        train_generator: DataLoader yielding training batches.
-        val_generator: DataLoader yielding validation batches.
-
-    Returns:
-        Path to the final saved model checkpoint.
-    """
     print("Training lvl3...")
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -212,13 +271,23 @@ def train_lvl3(
     loss_Jdet = neg_Jdet_loss
 
     transform = SpatialTransform_unit().to(device)
+    transform_nearest = SpatialTransformNearest_unit().to(device)
 
     for param in transform.parameters():
         param.requires_grad = False
         param.volatile = True
+    for param in transform_nearest.parameters():
+        param.requires_grad = False
 
     grid = generate_grid(config.img_shape)
     grid = torch.from_numpy(np.reshape(grid, (1,) + grid.shape)).to(device).float()
+
+    grid_full = generate_grid_unit(config.img_shape)
+    grid_full = (
+        torch.from_numpy(np.reshape(grid_full, (1,) + grid_full.shape))
+        .to(device)
+        .float()
+    )
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr_lvl3)
 
@@ -231,40 +300,40 @@ def train_lvl3(
     )
 
     steps_per_epoch = len(train_generator)
-    lossall = np.zeros((4, (config.epochs_lvl1 + 1) * steps_per_epoch))
+    lossall = np.zeros((4, (config.epochs_lvl3 + 1) * steps_per_epoch))
     global_step = 0
 
     epoch = 0
     pbar = tqdm.tqdm(total=config.epochs_lvl3 + 1, desc="lvl3 training")
+
+    saved_initial: bool = False
+
     while epoch <= config.epochs_lvl3:
         epoch_metrics: Dict[str, float] = {}
         n_steps = 0
 
-        saved: bool = False
+        for batch in train_generator:
+            X = batch["x"].to(device).float()
+            Y = batch["y"].to(device).float()
+            X_lbl_ct = batch["x_label_ct"].to(device)
+            X_lbl_pet = batch["x_label_pet"].to(device)
+            Y_lbl_ct = batch["y_label_ct"].to(device)
+            Y_lbl_pet = batch["y_label_pet"].to(device)
 
-        for X, Y, X_lbl_ct, X_lbl_pet, Y_lbl_ct, Y_lbl_pet in train_generator:
-            X = X.to(device).float()
-            Y = Y.to(device).float()
+            flow_affine = create_affine_flow(
+                config=config,
+                device=device,
+                case_id=batch["case_id"][0],
+                tp_x=batch["tp_x"][0],
+                tp_y=batch["tp_y"][0],
+                aug_flipped=batch["aug_flipped"],
+                aug_crop_head=batch["aug_crop_head"],
+                aug_crop_feet=batch["aug_crop_feet"],
+            )
 
-            F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X, Y)
+            X_affine = transform(X, flow_affine, grid_full)
 
-            if epoch % config.val_interval == 0 or epoch == config.epochs_lvl3:
-                if saved is False:
-                    ct = X_Y[:, 0:1, :, :, :]
-                    pet = X_Y[:, 1:2, :, :, :]
-                    my_data.save_volume(
-                        volume=ct,
-                        out_dir=config.save_dir / "warped",
-                        epoch=epoch,
-                        name="warped_ct_lvl3",
-                    )
-                    my_data.save_volume(
-                        volume=pet,
-                        out_dir=config.save_dir / "warped",
-                        epoch=epoch,
-                        name="warped_pet_lvl3",
-                    )
-                    saved = True
+            F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X_affine, Y)
 
             X_Y_ct = X_Y[:, 0:1, ...]
             X_Y_pet = X_Y[:, 1:2, ...]
@@ -290,51 +359,50 @@ def train_lvl3(
             F_xy[:, 2, :, :, :] = F_xy[:, 2, :, :, :] * (x - 1)
             loss_regulation = loss_smooth(F_xy)
 
-            # full-resolution labels (no downsampling at lvl3)
+            X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_affine, grid_full)
+            X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_affine, grid_full)
+
             loss_dice_ct = utils.dice_loss_with_grad(
-                X_lbl_ct.to(device), Y_lbl_ct.to(device), F_X_Y, model.grid_1, transform
+                X_lbl_ct, Y_lbl_ct, F_X_Y, model.grid_1, transform
             )
             loss_dice_pet = utils.dice_loss_with_grad(
-                X_lbl_pet.to(device),
-                Y_lbl_pet.to(device),
-                F_X_Y,
-                model.grid_1,
-                transform,
+                X_lbl_pet, Y_lbl_pet, F_X_Y, model.grid_1, transform
             )
 
-            # --- MTV / TLG / masked Jacobian losses (lvl3 only) ---
-            moving_pet_mask = (X_lbl_pet.to(device) == 1).float()
+            moving_pet_mask = (X_lbl_pet == 1).float()
             warped_pet_mask = utils.warp_binary_mask(
                 moving_pet_mask, F_X_Y, model.grid_1, transform
             )
-            # X_Y channel 1 is already the warped moving PET image
             warped_pet_image = X_Y[:, 1:2]
-            moving_pet_image = X[:, 1:2]
+            moving_pet_image = X_affine[:, 1:2]
 
             loss_mtv = utils.mtv_bias_loss(warped_pet_mask, moving_pet_mask)
             loss_tlg = utils.tlg_bias_loss(
                 warped_pet_image, warped_pet_mask, moving_pet_image, moving_pet_mask
             )
-            # enforce det(J)=1 inside tumor
             loss_masked_jac = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
 
-            # update total loss
             loss = (
                 loss_multiNCC
                 + config.w_jacobian * loss_jacobian
                 + config.w_smooth * loss_regulation
-                + config.w_dice_ct * loss_dice_ct
-                + config.w_dice_pet * loss_dice_pet
                 + config.w_mtv * loss_mtv
                 + config.w_tlg * loss_tlg
                 + config.w_masked_jac * loss_masked_jac
             )
+            if loss_dice_ct is not None:
+                loss = loss + config.w_dice_ct * loss_dice_ct
+            if loss_dice_pet is not None:
+                loss = loss + config.w_dice_pet * loss_dice_pet
 
             optimizer.zero_grad()
             if torch.isfinite(loss):
                 loss.backward()
                 total_norm = torch.nn.utils.clip_grad_norm_(
                     model.parameters(), max_norm=1.0
+                )
+                mlflow.log_metrics(
+                    {"lvl3/grad_norm": total_norm.item()}, step=global_step
                 )
                 if not torch.isfinite(total_norm) or total_norm > 100.0:
                     tqdm.tqdm.write(
@@ -358,8 +426,12 @@ def train_lvl3(
             pbar.set_postfix(
                 loss=f"{loss.item():.4f}",
                 ncc=f"{loss_multiNCC.item():.4f}",
-                dice_ct=f"{loss_dice_ct.item():.4f}",
-                dice_pet=f"{loss_dice_pet.item():.4f}",
+                dice_ct=f"{loss_dice_ct.item():.4f}"
+                if loss_dice_ct is not None
+                else "n/a",
+                dice_pet=f"{loss_dice_pet.item():.4f}"
+                if loss_dice_pet is not None
+                else "n/a",
                 mtv=f"{loss_mtv.item():.4f}",
                 tlg=f"{loss_tlg.item():.4f}",
                 Jdet=f"{loss_jacobian.item():.6f}",
@@ -370,15 +442,18 @@ def train_lvl3(
                 "train_lvl3/ncc_ct": loss_ncc_ct.item(),
                 "train_lvl3/ncc_pet": loss_ncc_pet.item(),
                 "train_lvl3/smooth": loss_regulation.item(),
-                "train_lvl3/dice_ct": loss_dice_ct.item(),
-                "train_lvl3/dice_pet": loss_dice_pet.item(),
                 "train_lvl3/mtv_bias": loss_mtv.item(),
                 "train_lvl3/tlg_bias": loss_tlg.item(),
                 "train_lvl3/masked_jac": loss_masked_jac.item(),
                 "train_lvl3/jacob": loss_jacobian.item(),
                 "train_lvl3/ndv": ndv,
             }
+            if loss_dice_ct is not None:
+                train_metrics["train_lvl3/dice_ct"] = loss_dice_ct.item()
+            if loss_dice_pet is not None:
+                train_metrics["train_lvl3/dice_pet"] = loss_dice_pet.item()
             mlflow.log_metrics(train_metrics, step=global_step)
+
             for key, value in train_metrics.items():
                 epoch_metrics[key] = epoch_metrics.get(key, 0.0) + value
             n_steps += 1
@@ -401,7 +476,10 @@ def train_lvl3(
                 loss_Jdet=loss_Jdet,
                 transform=transform,
                 grid=grid,
+                epoch=epoch,
+                saved_initial=saved_initial,
             )
+            saved_initial = True
             mlflow.log_metrics(
                 {f"valid_lvl3/val_{key}": value for key, value in val_losses.items()},
                 step=global_step,
