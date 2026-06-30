@@ -223,7 +223,12 @@ def train_lvl2(
     best_dice_ct = float("inf")
     config.model_save_dir.mkdir(parents=True, exist_ok=True)
     best_model_path = (
-        config.model_save_dir / f"{config.mlflow_experiment}_stagelvl2_best.pth"
+        config.model_save_dir
+        / f"{config.mlflow_experiment}_{mlflow.active_run().info.run_name}_stagelvl2_best.pth"
+    )
+    final_model_path = (
+        config.save_dir
+        / f"{config.mlflow_experiment}_{mlflow.active_run().info.run_name}_stagelvl2_{config.epochs_lvl1}.pth"
     )
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -284,10 +289,6 @@ def train_lvl2(
     config.save_dir.mkdir(parents=True, exist_ok=True)
 
     lossall = np.zeros((4, config.epochs_lvl2 + 1))
-    final_model_path = (
-        config.save_dir
-        / f"{config.mlflow_experiment}_stagelvl2_{config.epochs_lvl2}.pth"
-    )
 
     steps_per_epoch = len(train_generator)
     lossall = np.zeros((4, (config.epochs_lvl2 + 1) * steps_per_epoch))
@@ -512,7 +513,7 @@ def train_lvl2(
                 / f"loss_{config.mlflow_experiment}_stagelvl2_{config.epochs_lvl2}.npy",
                 lossall,
             )
-        utils.save_checkpoint(model, optimizer, epoch, "lvl2", config, lossall)
+        # utils.save_checkpoint(model, optimizer, epoch, "lvl2", config, lossall)
 
         epoch += 1
         pbar.update(1)
