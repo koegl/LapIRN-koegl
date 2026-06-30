@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Tuple
 
 import ants
+import config
 import my_data
 import nibabel as nib
 import numpy as np
@@ -114,7 +115,10 @@ def _cache_path(case_id: str, tp_x: str, tp_y: str) -> Path:
     Returns:
         Absolute path to the cached DVF file.
     """
-    return CACHE_DIR / f"affine_{case_id}_{tp_x}_{tp_y}.npy"
+
+    cfg = config.TrainingConfig()
+
+    return cfg.cache_dir / f"affine_{case_id}_{tp_x}_{tp_y}.npy"
 
 
 def compute_affine_dvf(
