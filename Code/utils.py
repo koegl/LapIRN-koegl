@@ -126,7 +126,7 @@ def dice_loss_with_grad(
     grid: torch.Tensor,
     transform: SpatialTransform_unit,
     eps: float = 1e-5,
-) -> torch.Tensor:
+) -> torch.Tensor | None:
     """Per-class soft dice loss with gradients flowing through disp.
 
     Builds one-hot only for classes present in fixed_label, warps each
@@ -149,7 +149,7 @@ def dice_loss_with_grad(
     classes = classes[classes != 0]  # exclude background
 
     if classes.numel() == 0:
-        return torch.tensor(0.0, device=disp.device)
+        return None
 
     flow = disp.permute(0, 2, 3, 4, 1)  # (B, D, H, W, 3)
 

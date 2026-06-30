@@ -41,26 +41,7 @@ def evaluate_lvl2(
     epoch: int,
     saved_initial: bool,
 ) -> Dict[str, float]:
-    """Run one validation pass over val_generator and return averaged losses.
 
-    Args:
-        model: The lvl2 registration model, switched to eval mode internally
-            and restored to train mode before returning.
-        valid_generator: DataLoader yielding dict batches with keys
-            x, y, x_label_ct, x_label_pet, y_label_ct, y_label_pet,
-            case_id, tp_x, tp_y, aug_flipped, aug_crop_head, aug_crop_feet.
-        config: Training configuration holding loss weights.
-        device: Device to run the forward pass on.
-        loss_similarity_ct: Multi-resolution NCC loss for the CT channel.
-        loss_similarity_pet: Multi-resolution NCC loss for the PET channel.
-        loss_smooth: Smoothness regularization loss function.
-        loss_Jdet: Negative Jacobian determinant loss function.
-        transform: Spatial transform module used by the dice loss.
-        grid_2: Precomputed sampling grid at the lvl2 resolution.
-
-    Returns:
-        Dict mapping loss name to its average value over val_generator.
-    """
     model.eval()
     val_losses: Dict[str, float] = {
         "loss": 0.0,
@@ -84,6 +65,9 @@ def evaluate_lvl2(
         .to(device)
         .float()
     )
+
+    n_dice_ct = 0
+    n_dice_pet = 0
 
     with torch.no_grad():
         saved = False
@@ -109,7 +93,7 @@ def evaluate_lvl2(
             X_affine = transform(X, flow_affine, grid_full)
 
             F_X_Y, X_Y, Y_4x, F_xy, _, _ = model(X_affine, Y)
-            if epoch % (config.val_interval * 5) == 0 or epoch == config.epochs_lvl1:
+            if epoch % (config.val_interval * 5) == 0 or epoch == config.epochs_lvl2:
                 if not saved_initial:
                     zero_disp = torch.zeros_like(F_X_Y)
                     x_ref = model.transform(
@@ -191,22 +175,41 @@ def evaluate_lvl2(
                 loss_multiNCC
                 + config.w_jacobian * loss_jacobian
                 + config.w_smooth * loss_regulation
-                + config.w_dice_ct * loss_dice_ct
-                + config.w_dice_pet * loss_dice_pet
             )
+            if loss_dice_ct is not None:
+                loss = loss + config.w_dice_ct * loss_dice_ct
+            if loss_dice_pet is not None:
+                loss = loss + config.w_dice_pet * loss_dice_pet
 
             val_losses["loss"] += loss.item()
             val_losses["ncc_ct"] += loss_ncc_ct.item()
             val_losses["ncc_pet"] += loss_ncc_pet.item()
             val_losses["smooth"] += loss_regulation.item()
-            val_losses["dice_ct"] += loss_dice_ct.item()
-            val_losses["dice_pet"] += loss_dice_pet.item()
             val_losses["jacobian"] += loss_jacobian.item()
             val_losses["ndv"] += ndv
+
+            if loss_dice_ct is not None:
+                val_losses["dice_ct"] += loss_dice_ct.item()
+                n_dice_ct += 1
+            if loss_dice_pet is not None:
+                val_losses["dice_pet"] += loss_dice_pet.item()
+                n_dice_pet += 1
             n_batches += 1
 
     model.train()
-    return {key: value / n_batches for key, value in val_losses.items()}
+
+    averaged = {
+        key: value / n_batches
+        for key, value in val_losses.items()
+        if key not in ("dice_ct", "dice_pet")
+    }
+    averaged["dice_ct"] = (
+        val_losses["dice_ct"] / n_dice_ct if n_dice_ct > 0 else float("nan")
+    )
+    averaged["dice_pet"] = (
+        val_losses["dice_pet"] / n_dice_pet if n_dice_pet > 0 else float("nan")
+    )
+    return averaged
 
 
 def train_lvl2(
@@ -215,19 +218,6 @@ def train_lvl2(
     train_generator: torch_data.DataLoader,
     valid_generator: torch_data.DataLoader,
 ) -> Path:
-    """Train the lvl2 registration model on top of a frozen lvl1 model.
-
-    Args:
-        config: Training configuration (paths, hyperparameters, loss
-            weights, epoch count, validation interval, freeze epoch).
-        path_model_level1: Path to the trained lvl1 checkpoint to load and
-            embed as the frozen lvl1 sub-model.
-        train_generator: DataLoader yielding dict batches.
-        valid_generator: DataLoader yielding dict batches.
-
-    Returns:
-        Path to the final saved model checkpoint.
-    """
     print("Training lvl2...")
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -293,7 +283,7 @@ def train_lvl2(
     )
 
     steps_per_epoch = len(train_generator)
-    lossall = np.zeros((4, (config.epochs_lvl1 + 1) * steps_per_epoch))
+    lossall = np.zeros((4, (config.epochs_lvl2 + 1) * steps_per_epoch))
     global_step = 0
 
     epoch = 0
@@ -400,9 +390,11 @@ def train_lvl2(
                 loss_multiNCC
                 + config.w_jacobian * loss_jacobian
                 + config.w_smooth * loss_regulation
-                + config.w_dice_ct * loss_dice_ct
-                + config.w_dice_pet * loss_dice_pet
             )
+            if loss_dice_ct is not None:
+                loss = loss + config.w_dice_ct * loss_dice_ct
+            if loss_dice_pet is not None:
+                loss = loss + config.w_dice_pet * loss_dice_pet
 
             optimizer.zero_grad()
             if torch.isfinite(loss):
@@ -435,8 +427,12 @@ def train_lvl2(
             pbar.set_postfix(
                 loss=f"{loss.item():.4f}",
                 ncc=f"{loss_multiNCC.item():.4f}",
-                dice_ct=f"{loss_dice_ct.item():.4f}",
-                dice_pet=f"{loss_dice_pet.item():.4f}",
+                dice_ct=f"{loss_dice_ct.item():.4f}"
+                if loss_dice_ct is not None
+                else "n/a",
+                dice_pet=f"{loss_dice_pet.item():.4f}"
+                if loss_dice_pet is not None
+                else "n/a",
                 Jdet=f"{loss_jacobian.item():.6f}",
                 smo=f"{loss_regulation.item():.4f}",
             )
@@ -445,12 +441,15 @@ def train_lvl2(
                 "train_lvl2/ncc_ct": loss_ncc_ct.item(),
                 "train_lvl2/ncc_pet": loss_ncc_pet.item(),
                 "train_lvl2/smooth": loss_regulation.item(),
-                "train_lvl2/dice_ct": loss_dice_ct.item(),
-                "train_lvl2/dice_pet": loss_dice_pet.item(),
                 "train_lvl2/jacob": loss_jacobian.item(),
                 "train_lvl2/ndv": ndv,
             }
+            if loss_dice_ct is not None:
+                train_metrics["train_lvl2/dice_ct"] = loss_dice_ct.item()
+            if loss_dice_pet is not None:
+                train_metrics["train_lvl2/dice_pet"] = loss_dice_pet.item()
             mlflow.log_metrics(train_metrics, step=global_step)
+
             for key, value in train_metrics.items():
                 epoch_metrics[key] = epoch_metrics.get(key, 0.0) + value
             n_steps += 1

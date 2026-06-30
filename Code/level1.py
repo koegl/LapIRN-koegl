@@ -40,25 +40,6 @@ def evaluate_lvl1(
     epoch: int,
     saved_initial: bool,
 ) -> Dict[str, float]:
-    """Run one validation pass over val_generator and return averaged losses.
-
-    Args:
-        model: The lvl1 registration model, switched to eval mode internally
-            and restored to train mode before returning.
-        val_generator: DataLoader yielding (X, Y, X_lbl_ct, X_lbl_pet,
-            Y_lbl_ct, Y_lbl_pet) batches.
-        config: Training configuration holding loss weights.
-        device: Device to run the forward pass on.
-        loss_similarity_ct: NCC loss for the CT channel.
-        loss_similarity_pet: NCC loss for the PET channel.
-        loss_smooth: Smoothness regularization loss function.
-        loss_Jdet: Negative Jacobian determinant loss function.
-        transform: Spatial transform module used by the dice loss.
-        grid_4: Precomputed sampling grid at the lvl1 resolution.
-
-    Returns:
-        Dict mapping loss name to its average value over val_generator.
-    """
     model.eval()
     val_losses: Dict[str, float] = {
         "loss": 0.0,
@@ -82,6 +63,9 @@ def evaluate_lvl1(
         .to(device)
         .float()
     )
+
+    n_dice_ct = 0
+    n_dice_pet = 0
 
     with torch.no_grad():
         saved = False
@@ -199,22 +183,40 @@ def evaluate_lvl1(
                 loss_multiNCC
                 + config.w_jacobian * loss_jacobian
                 + config.w_smooth * loss_regulation
-                + config.w_dice_ct * loss_dice_ct
-                + config.w_dice_pet * loss_dice_pet
             )
+            if loss_dice_ct is not None:
+                loss = loss + config.w_dice_ct * loss_dice_ct
+            if loss_dice_pet is not None:
+                loss = loss + config.w_dice_pet * loss_dice_pet
 
             val_losses["loss"] += loss.item()
             val_losses["ncc_ct"] += loss_ncc_ct.item()
             val_losses["ncc_pet"] += loss_ncc_pet.item()
             val_losses["smooth"] += loss_regulation.item()
-            val_losses["dice_ct"] += loss_dice_ct.item()
-            val_losses["dice_pet"] += loss_dice_pet.item()
             val_losses["jacobian"] += loss_jacobian.item()
             val_losses["ndv"] += ndv
+
+            if loss_dice_ct is not None:
+                val_losses["dice_ct"] += loss_dice_ct.item()
+                n_dice_ct += 1
+            if loss_dice_pet is not None:
+                val_losses["dice_pet"] += loss_dice_pet.item()
+                n_dice_pet += 1
             n_batches += 1
 
     model.train()
-    return {key: value / n_batches for key, value in val_losses.items()}
+    averaged = {
+        key: value / n_batches
+        for key, value in val_losses.items()
+        if key not in ("dice_ct", "dice_pet")
+    }
+    averaged["dice_ct"] = (
+        val_losses["dice_ct"] / n_dice_ct if n_dice_ct > 0 else float("nan")
+    )
+    averaged["dice_pet"] = (
+        val_losses["dice_pet"] / n_dice_pet if n_dice_pet > 0 else float("nan")
+    )
+    return averaged
 
 
 def train_lvl1(
@@ -222,17 +224,6 @@ def train_lvl1(
     train_generator: torch_data.DataLoader,
     val_generator: torch_data.DataLoader,
 ) -> Path:
-    """Train the lvl1 registration model, with periodic validation.
-
-    Args:
-        config: Training configuration (paths, hyperparameters, loss
-            weights, iteration count, validation interval).
-        train_generator: DataLoader yielding training batches.
-        val_generator: DataLoader yielding validation batches.
-
-    Returns:
-        Path to the final saved model checkpoint.
-    """
     print("Training lvl1...")
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -392,9 +383,11 @@ def train_lvl1(
                 loss_multiNCC
                 + config.w_jacobian * loss_jacobian
                 + config.w_smooth * loss_regulation
-                + config.w_dice_ct * loss_dice_ct
-                + config.w_dice_pet * loss_dice_pet
             )
+            if loss_dice_ct is not None:
+                loss = loss + config.w_dice_ct * loss_dice_ct
+            if loss_dice_pet is not None:
+                loss = loss + config.w_dice_pet * loss_dice_pet
 
             optimizer.zero_grad()
             if torch.isfinite(loss):
@@ -427,8 +420,12 @@ def train_lvl1(
             pbar.set_postfix(
                 loss=f"{loss.item():.4f}",
                 ncc=f"{loss_multiNCC.item():.4f}",
-                dice_ct=f"{loss_dice_ct.item():.4f}",
-                dice_pet=f"{loss_dice_pet.item():.4f}",
+                dice_ct=f"{loss_dice_ct.item():.4f}"
+                if loss_dice_ct is not None
+                else "n/a",
+                dice_pet=f"{loss_dice_pet.item():.4f}"
+                if loss_dice_pet is not None
+                else "n/a",
                 Jdet=f"{loss_jacobian.item():.6f}",
                 smo=f"{loss_regulation.item():.4f}",
             )
@@ -437,12 +434,15 @@ def train_lvl1(
                 "train_lvl1/ncc_ct": loss_ncc_ct.item(),
                 "train_lvl1/ncc_pet": loss_ncc_pet.item(),
                 "train_lvl1/smooth": loss_regulation.item(),
-                "train_lvl1/dice_ct": loss_dice_ct.item(),
-                "train_lvl1/dice_pet": loss_dice_pet.item(),
                 "train_lvl1/jacob": loss_jacobian.item(),
                 "train_lvl1/ndv": ndv,
             }
+            if loss_dice_ct is not None:
+                train_metrics["train_lvl1/dice_ct"] = loss_dice_ct.item()
+            if loss_dice_pet is not None:
+                train_metrics["train_lvl1/dice_pet"] = loss_dice_pet.item()
             mlflow.log_metrics(train_metrics, step=global_step)
+
             for key, value in train_metrics.items():
                 epoch_metrics[key] = epoch_metrics.get(key, 0.0) + value
             n_steps += 1
@@ -470,7 +470,11 @@ def train_lvl1(
             )
             saved_initial = True
             mlflow.log_metrics(
-                {f"valid_lvl1/val_{key}": value for key, value in val_losses.items()},
+                {
+                    f"valid_lvl1/val_{key}": value
+                    for key, value in val_losses.items()
+                    if not (isinstance(value, float) and np.isnan(value))
+                },
                 step=global_step,
             )
             tqdm.tqdm.write(
