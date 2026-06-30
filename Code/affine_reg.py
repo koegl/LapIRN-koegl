@@ -228,7 +228,8 @@ def get_affine_dvf(
     if cache_path.exists():
         return np.load(str(cache_path))
 
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cfg = config.TrainingConfig()
+    cfg.cache_dir.mkdir(parents=True, exist_ok=True)
     dvf = compute_affine_dvf(
         fixed_ct_path=fixed_ct_path,
         moving_ct_path=moving_ct_path,
