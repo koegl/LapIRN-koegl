@@ -592,6 +592,10 @@ class PSMARegDataset(torch_data.Dataset):
         flipped = False
         crop_head = 0
         crop_feet = 0
+        crop_head_moving = 0
+        crop_feet_moving = 0
+        crop_head_fixed = 0
+        crop_feet_fixed = 0
 
         if self.augment:
             # --- Left-right flip --------------------------------------------
@@ -605,13 +609,40 @@ class PSMARegDataset(torch_data.Dataset):
                 crop_feet = int(np.random.randint(0, self.cfg.aug_max_crop_z_feet + 1))
                 data = apply_z_crop(data, all_spatial_keys, crop_head, crop_feet)
 
+                # --- Asymmetric Z-axis FOV crop (independent fixed/moving) ----
+            if self.cfg.aug_use_z_crop_asym:
+                crop_head_moving = int(
+                    np.random.randint(0, self.cfg.aug_max_crop_z_head_asym + 1)
+                )
+                crop_feet_moving = int(
+                    np.random.randint(0, self.cfg.aug_max_crop_z_feet_asym + 1)
+                )
+                crop_head_fixed = int(
+                    np.random.randint(0, self.cfg.aug_max_crop_z_head_asym + 1)
+                )
+                crop_feet_fixed = int(
+                    np.random.randint(0, self.cfg.aug_max_crop_z_feet_asym + 1)
+                )
+                moving_keys = ["x_ct", "x_pet", "x_label_ct", "x_label_pet"]
+                fixed_keys = ["y_ct", "y_pet", "y_label_ct", "y_label_pet"]
+                data = apply_z_crop(
+                    data, moving_keys, crop_head_moving, crop_feet_moving
+                )
+                data = apply_z_crop(data, fixed_keys, crop_head_fixed, crop_feet_fixed)
+
         # Intensity augmentation (MONAI) + channel stacking
         data = self.intensity_transform(data)
 
         # Attach augmentation parameters for DVF consistency in training loop
         data["aug_flipped"] = flipped
+
         data["aug_crop_head"] = crop_head
         data["aug_crop_feet"] = crop_feet
+
+        data["aug_crop_head_moving"] = crop_head_moving
+        data["aug_crop_feet_moving"] = crop_feet_moving
+        data["aug_crop_head_fixed"] = crop_head_fixed
+        data["aug_crop_feet_fixed"] = crop_feet_fixed
 
         case_id, tp_x, tp_y = self.pairs[index]
         data["case_id"] = case_id

@@ -30,6 +30,7 @@ class TrainingConfig:
     aug_use_ct_intensity: bool = False
     aug_use_pet_intensity: bool = False
     aug_use_z_crop: bool = False
+    aug_use_z_crop_asym: bool = True
     aug_flip_prob: float = 0.5
     aug_ct_shift_range: Tuple[float, float] = (
         -0.010,
@@ -39,6 +40,8 @@ class TrainingConfig:
     aug_pet_scale_range: Tuple[float, float] = (0.85, 1.15)
     aug_max_crop_z_head: int = 40  # max z-slices removed from superior (head) end
     aug_max_crop_z_feet: int = 40  # max z-slices removed from inferior (feet) end
+    aug_max_crop_z_head_asym: int = 50  # smaller than symmetric (40)
+    aug_max_crop_z_feet_asym: int = 50
     aug_seed: int = 42
 
     range_flow: float = 0.4
