@@ -3,9 +3,8 @@ import os
 
 os.environ["MLFLOW_ALLOW_FILE_STORE"] = "true"
 
-from pathlib import Path
 
-import level2
+import level1
 import mlflow
 import my_data
 from config import TrainingConfig
@@ -59,14 +58,14 @@ def main() -> None:
             num_workers=config.num_workers,
         )
 
-        # path_model_level1 = level1.train_lvl1(config, train_generator, valid_generator)
-        print("skipping level 1, already trained")
-        path_model_level1 = Path(
-            "/home/iml/fryderyk.koegl/code/LapIRN-koegl/saved/PSMAReg_LapIRN_stagelvl1_121.pth"
-        )
-        path_model_level2 = level2.train_lvl2(
-            config, path_model_level1, train_generator, valid_generator
-        )
+        path_model_level1 = level1.train_lvl1(config, train_generator, valid_generator)
+        # print("skipping level 1, already trained")
+        # path_model_level1 = Path(
+        #     "/home/iml/fryderyk.koegl/code/LapIRN-koegl/saved/PSMAReg_LapIRN_stagelvl1_121.pth"
+        # )
+        # path_model_level2 = level2.train_lvl2(
+        #     config, path_model_level1, train_generator, valid_generator
+        # )
         # level3.train_lvl3(config, path_model_level2, train_generator, valid_generator)
 
 
