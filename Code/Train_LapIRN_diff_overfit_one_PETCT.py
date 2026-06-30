@@ -4,6 +4,7 @@ import os
 os.environ["MLFLOW_ALLOW_FILE_STORE"] = "true"
 
 import level1
+import level2
 import mlflow
 import my_data
 from config import TrainingConfig
@@ -58,9 +59,9 @@ def main() -> None:
         )
 
         path_model_level1 = level1.train_lvl1(config, train_generator, valid_generator)
-        # path_model_level2 = level2.train_lvl2(
-        #     config, path_model_level1, train_generator, valid_generator
-        # )
+        path_model_level2 = level2.train_lvl2(
+            config, path_model_level1, train_generator, valid_generator
+        )
         # level3.train_lvl3(config, path_model_level2, train_generator, valid_generator)
 
 
