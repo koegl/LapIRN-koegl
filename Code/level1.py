@@ -102,7 +102,6 @@ def evaluate_lvl1(
                 aug_flipped=batch["aug_flipped"],
                 aug_crop_head=batch["aug_crop_head"],
                 aug_crop_feet=batch["aug_crop_feet"],
-                grid_full=grid_full,
             )
 
             X_affine = transform(X, flow_affine, grid_full)
@@ -312,7 +311,6 @@ def train_lvl1(
                 aug_flipped=batch["aug_flipped"],
                 aug_crop_head=batch["aug_crop_head"],
                 aug_crop_feet=batch["aug_crop_feet"],
-                grid_full=grid_full,
             )
 
             X_affine = transform(X, flow_affine, grid_full)
