@@ -56,11 +56,11 @@ class TrainingConfig:
     # train val
     epochs_lvl1: int = 121
     epochs_lvl2: int = 121
-    epochs_lvl3: int = 1
+    epochs_lvl3: int = 121
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
-    checkpoint_interval: int = 10
+    checkpoint_interval: int = 50
 
     # sum to 10
     w_jacobian: float = 1.0
