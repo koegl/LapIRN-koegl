@@ -40,8 +40,8 @@ class TrainingConfig:
     aug_pet_scale_range: Tuple[float, float] = (0.85, 1.15)
     aug_max_crop_z_head: int = 40  # max z-slices removed from superior (head) end
     aug_max_crop_z_feet: int = 40  # max z-slices removed from inferior (feet) end
-    aug_max_crop_z_head_asym: int = 50  # smaller than symmetric (40)
-    aug_max_crop_z_feet_asym: int = 50
+    aug_max_crop_z_head_asym: int = 10  # smaller than symmetric (40)
+    aug_max_crop_z_feet_asym: int = 10
     aug_seed: int = 42
 
     range_flow: float = 0.4
