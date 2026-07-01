@@ -1,3 +1,5 @@
+import contextlib
+
 import numpy as np
 import torch
 import tqdm
@@ -5,6 +7,20 @@ from config import TrainingConfig
 from miccai2020_model_stage import (
     SpatialTransform_unit,
 )
+
+
+@contextlib.contextmanager
+def track_peak_memory(label: str = ""):
+    torch.cuda.reset_peak_memory_stats()
+    try:
+        yield
+    finally:
+        allocated = torch.cuda.max_memory_allocated() / 1024**3
+        reserved = torch.cuda.max_memory_reserved() / 1024**3
+        tag = f"[{label}] " if label else ""
+        print(
+            f"{tag}Peak allocated: {allocated:.2f} GiB | Peak reserved: {reserved:.2f} GiB"
+        )
 
 
 def save_checkpoint(
