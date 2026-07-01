@@ -518,6 +518,7 @@ class PSMARegDataset(torch_data.Dataset):
         cfg: config.TrainingConfig,
         case_ids: Optional[List[str]] = None,
         overfit: Optional[str] = None,
+        use_cache: bool = False,
         cache_rate: float = 1.0,
         num_workers: int = 4,
         augment: bool = False,
@@ -550,7 +551,7 @@ class PSMARegDataset(torch_data.Dataset):
 
         load_transform = Compose([LoadPairToDict(self.data_dir)])
 
-        if cfg.use_cache_train:
+        if use_cache:
             self.dataset = monai_data.CacheDataset(
                 data=data_dicts,
                 transform=load_transform,

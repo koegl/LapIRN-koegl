@@ -41,12 +41,14 @@ def main() -> None:
             case_ids=train_ids,
             cfg=config,
             augment=True,
+            use_cache=config.use_cache_train,
             # overfit="0049",
         )
         val_dataset = my_data.PSMARegDataset(
             case_ids=val_ids,
             cfg=config,
             augment=False,
+            use_cache=config.use_cache_valid,
             # overfit="0049",
         )
 
