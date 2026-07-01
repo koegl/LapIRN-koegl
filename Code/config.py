@@ -62,6 +62,8 @@ class TrainingConfig:
     val_interval: int = 2
     checkpoint_interval: int = 50
 
+    accumulation_steps: int = 4
+
     # sum to 10
     w_jacobian: float = 3.0
     w_smooth: float = 3.0
@@ -74,7 +76,7 @@ class TrainingConfig:
     w_masked_jac: float = 0.6
 
     batch_size: int = 1
-    shuffle: bool = False
+    shuffle: bool = True
     num_workers: int = 0
 
     lvl1_ncc_win: int = 7

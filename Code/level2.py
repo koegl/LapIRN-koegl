@@ -93,7 +93,7 @@ def evaluate_lvl2(
             X_affine = transform(X, flow_affine, grid_full)
 
             F_X_Y, X_Y, Y_4x, F_xy, _, _ = model(X_affine, Y)
-            if epoch % (config.val_interval * 5) == 0 or epoch == config.epochs_lvl2:
+            if epoch % (config.val_interval * 50) == 0 or epoch == config.epochs_lvl2:
                 if not saved_initial:
                     zero_disp = torch.zeros_like(F_X_Y)
                     x_ref = model.transform(
@@ -404,25 +404,34 @@ def train_lvl2(
             if loss_dice_pet is not None:
                 loss = loss + config.w_dice_pet * loss_dice_pet
 
-            optimizer.zero_grad()
+            loss_scaled = loss / config.accumulation_steps
+            is_step = (global_step + 1) % config.accumulation_steps == 0
+            is_last_in_epoch = (
+                n_steps + 1
+            ) == steps_per_epoch  # trailing-partial flush
+
             if torch.isfinite(loss):
-                loss.backward()
-                total_norm = torch.nn.utils.clip_grad_norm_(
-                    model.parameters(), max_norm=1.0
-                )
-                mlflow.log_metrics(
-                    {"lvl2/grad_norm": total_norm.item()}, step=global_step
-                )
-                if not torch.isfinite(total_norm) or total_norm > 100.0:
-                    tqdm.tqdm.write(
-                        f"[lvl2] step {global_step}: grad_norm={total_norm.item():.2f} "
-                        f"loss={loss.item():.4f} (skipped)"
+                loss_scaled.backward()
+
+                if is_step or is_last_in_epoch:
+                    total_norm = torch.nn.utils.clip_grad_norm_(
+                        model.parameters(), max_norm=1.0
                     )
-                    optimizer.zero_grad()
-                else:
-                    optimizer.step()
+                    mlflow.log_metrics(
+                        {"lvl2/grad_norm": total_norm.item()}, step=global_step
+                    )
+                    if not torch.isfinite(total_norm) or total_norm > 100.0:
+                        tqdm.tqdm.write(
+                            f"[lvl2] step {global_step}: grad_norm={total_norm.item():.2f} "
+                            f"loss={loss.item():.4f} (skipped)"
+                        )
+                        optimizer.zero_grad()
+                    else:
+                        optimizer.step()
+                        optimizer.zero_grad()
             else:
                 tqdm.tqdm.write(f"[lvl2] step {global_step}: non-finite loss (skipped)")
+                optimizer.zero_grad()  # drop any partial accumulation from this bad micro-step
 
             lossall[:, global_step] = np.array(
                 [
