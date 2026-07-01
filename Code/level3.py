@@ -467,6 +467,9 @@ def train_lvl3(
             n_steps += 1
             global_step += 1
 
+            print("warning breaking early batch for debug")
+            break
+
         mlflow.log_metrics(
             {f"{key}_epoch": value / n_steps for key, value in epoch_metrics.items()},
             step=global_step,
