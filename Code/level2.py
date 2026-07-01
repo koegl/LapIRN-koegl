@@ -258,8 +258,8 @@ def train_lvl2(
         model_lvl1=model_lvl1,
     ).to(device)
 
-    loss_similarity_ct = multi_resolution_NCC(win=7, scale=2)
-    loss_similarity_pet = multi_resolution_NCC(win=7, scale=2)
+    loss_similarity_ct = multi_resolution_NCC(win=config.lvl2_ncc_win, scale=2)
+    loss_similarity_pet = multi_resolution_NCC(win=config.lvl2_ncc_win, scale=2)
     loss_smooth = smoothloss
     loss_Jdet = neg_Jdet_loss
 
@@ -471,8 +471,7 @@ def train_lvl2(
                 epoch_metrics[key] = epoch_metrics.get(key, 0.0) + value
             n_steps += 1
             global_step += 1
-            print("warning breaking early batch for debug")
-            break
+
         mlflow.log_metrics(
             {f"{key}_epoch": value / n_steps for key, value in epoch_metrics.items()},
             step=global_step,

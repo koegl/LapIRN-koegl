@@ -21,7 +21,7 @@ class TrainingConfig:
     cache_dir = DATA_PATH / "PSMAReg/affine_cache"
     split_path = DATA_PATH / "PSMAReg/PSMAReg_dataset/split.json"
     val_fraction: float = 0.15
-    use_cache_train: bool = False
+    use_cache_train: bool = True
     use_cache_valid: bool = False
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
@@ -54,11 +54,11 @@ class TrainingConfig:
     start_channel: int = 13
 
     # train val
-    epochs_lvl1: int = 1
-    epochs_lvl2: int = 1
-    epochs_lvl3: int = 1
-    unfreeze_epoch_in_lvl2: int = 0
-    unfreeze_epoch_in_lvl3: int = 0
+    epochs_lvl1: int = 121
+    epochs_lvl2: int = 121
+    epochs_lvl3: int = 121
+    unfreeze_epoch_in_lvl2: int = 10
+    unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
     checkpoint_interval: int = 50
 
@@ -79,12 +79,9 @@ class TrainingConfig:
     shuffle: bool = True
     num_workers: int = 0
 
-    lvl1_ncc_win: int = 7
-    lvl1_ncc_scale: int = 1
-    lvl2_ncc_win: int = 5
-    lvl2_ncc_scale: int = 2
+    lvl1_ncc_win: int = 5
+    lvl2_ncc_win: int = 7
     lvl3_ncc_win: int = 7
-    lvl3_ncc_scale: int = 3
 
     mlflow_tracking_uri: str = "sqlite:////home/iml/fryderyk.koegl/code/mlruns.db"
     mlflow_experiment: str = "PSMAReg_LapIRN"

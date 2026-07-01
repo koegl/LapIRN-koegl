@@ -248,8 +248,8 @@ def train_lvl1(
         range_flow=config.range_flow,
     ).to(device)
 
-    loss_similarity_ct = NCC(win=5)
-    loss_similarity_pet = NCC(win=5)
+    loss_similarity_ct = NCC(win=config.lvl1_ncc_win)
+    loss_similarity_pet = NCC(win=config.lvl1_ncc_win)
     loss_smooth = smoothloss
     loss_Jdet = neg_Jdet_loss
 
@@ -464,8 +464,6 @@ def train_lvl1(
                 epoch_metrics[key] = epoch_metrics.get(key, 0.0) + value
             n_steps += 1
             global_step += 1
-            print("warning breaking early batch for debug")
-            break
 
         mlflow.log_metrics(
             {f"{key}_epoch": value / n_steps for key, value in epoch_metrics.items()},
