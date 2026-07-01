@@ -227,7 +227,7 @@ def train_lvl3(
     path_model_level2: Path,
     train_generator: torch_data.DataLoader,
     val_generator: torch_data.DataLoader,
-) -> Path:
+) -> Dict[str, Path]:
     print("Training lvl3...")
 
     best_dice_ct = float("inf")
@@ -534,11 +534,8 @@ def train_lvl3(
         epoch += 1
         pbar.update(1)
 
-        print("warning breaking early epoch for debug")
-        break
-
         if epoch > config.epochs_lvl3:
             break
     pbar.close()
 
-    return final_model_path
+    return {"final": final_model_path, "best": best_model_path}

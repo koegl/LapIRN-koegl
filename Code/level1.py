@@ -223,7 +223,7 @@ def train_lvl1(
     config: TrainingConfig,
     train_generator: torch_data.DataLoader,
     val_generator: torch_data.DataLoader,
-) -> Path:
+) -> Dict[str, Path]:
     print("Training lvl1...")
 
     best_dice_ct = float("inf")
@@ -522,4 +522,4 @@ def train_lvl1(
             break
     pbar.close()
 
-    return final_model_path
+    return {"final": final_model_path, "best": best_model_path}
