@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 import affine_reg
@@ -75,8 +76,7 @@ def load_val_pair(val_image_dir: Path, case_id: str) -> torch.Tensor:
 
 def create_model(device, cfg: TrainingConfig):
     model_path = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/models/"
-        "PSMAReg_LapIRN_thundering-trout-866_stagelvl3_1.pth"
+        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_nimble-perch-653_stagelvl3_best.pth"
     )
 
     model_lvl1 = miccai2020_model_stage.Miccai2020_LDR_laplacian_unit_add_lvl1(
@@ -100,7 +100,7 @@ def create_model(device, cfg: TrainingConfig):
         in_channel=cfg.in_channel,
         n_classes=cfg.n_classes,
         start_channel=cfg.start_channel,
-        is_train=False,
+        is_train=True,
         imgshape=cfg.img_shape,
         range_flow=cfg.range_flow,
         model_lvl2=model_lvl2,
@@ -124,7 +124,7 @@ def main() -> None:
 
     # point affine cache at a val-only dir to avoid train collisions
     cfg.cache_dir = val_cache_dir
-    out_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/submission")
+    out_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/submission_and_debug")
 
     model = create_model(device, cfg)
 
@@ -150,12 +150,12 @@ def main() -> None:
                 device,
             )
 
+    shutil.make_archive(str(out_dir / "submission"), "zip", root_dir=out_dir)
+
 
 def process_subject(
     case_id, val_image_dir, out_dir, model, transform, grid_full, cfg, device
 ):
-    # --- single subject test for steps 1-3 ---
-    case_id = val_subjects[0]
     pair = load_val_pair(val_image_dir, case_id)
     X = pair["x"].unsqueeze(0).to(device).float()
     Y = pair["y"].unsqueeze(0).to(device).float()
@@ -183,7 +183,33 @@ def process_subject(
     X_affine = transform(X, flow_affine, grid_full)
 
     with torch.no_grad():
-        F_X_Y = model(X_affine, Y)
+        F_X_Y, warped, _, _, _, _, _ = model(X_affine, Y)
+
+    if False:
+        my_data.save_volume(
+            volume=X[:, 0:1, ...],
+            out_dir=out_dir / "images",
+            epoch=0,
+            name=f"{case_id}_01",
+        )
+        my_data.save_volume(
+            volume=Y[:, 0:1, ...],
+            out_dir=out_dir / "images",
+            epoch=0,
+            name=f"{case_id}_00",
+        )
+        my_data.save_volume(
+            volume=X_affine[:, 0:1, ...],
+            out_dir=out_dir / "warped",
+            epoch=0,
+            name=f"{case_id}_affine",
+        )
+        my_data.save_volume(
+            volume=warped[:, 0:1, ...],
+            out_dir=out_dir / "warped",
+            epoch=0,
+            name=f"{case_id}_warped",
+        )
 
     deform_grid = grid_full + F_X_Y.permute(0, 2, 3, 4, 1)  # (1, H, W, D, 3)
     affine_grid = grid_full + flow_affine  # (1, H, W, D, 3)
@@ -202,6 +228,30 @@ def process_subject(
 
     total_unit_flow = (composed_grid - grid_full).permute(0, 4, 1, 2, 3)  # (1,3,H,W,D)
 
+    if False:
+        # --- DEBUG: verify composition order ---
+        debug_dir = out_dir / "debug_compose"
+        X_moving = X[:, 0:1]  # original moving
+        X_affine_only = transform(X, flow_affine, grid_full)[:, 0:1]  # affine only
+        X_composed = transform(X, total_unit_flow.permute(0, 2, 3, 4, 1), grid_full)[
+            :, 0:1
+        ]  # full composed
+        Y_fixed = Y[:, 0:1]  # target
+
+        my_data.save_volume(
+            X_moving, out_dir=debug_dir, epoch=0, name=f"{case_id}_0_moving"
+        )
+        my_data.save_volume(
+            X_affine_only, out_dir=debug_dir, epoch=0, name=f"{case_id}_1_affine"
+        )
+        my_data.save_volume(
+            X_composed, out_dir=debug_dir, epoch=0, name=f"{case_id}_2_composed"
+        )
+        my_data.save_volume(
+            Y_fixed, out_dir=debug_dir, epoch=0, name=f"{case_id}_3_fixed"
+        )
+        # --- END DEBUG ---
+
     total_voxel = Functions.transform_unit_flow_to_flow_cuda(
         total_unit_flow.permute(0, 2, 3, 4, 1).clone()
     ).permute(0, 4, 1, 2, 3)  # (1, 3, H, W, D)
@@ -210,7 +260,7 @@ def process_subject(
         total_voxel, scale_factor=0.5, mode="trilinear", align_corners=False
     )  # (1, 3, 96, 96, 144)
 
-    save_disp(disp_half, out_dir, case_id)
+    save_disp(disp_half, out_dir / "submission", case_id)
 
 
 if __name__ == "__main__":
