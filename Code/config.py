@@ -56,7 +56,7 @@ class TrainingConfig:
     # train val
     epochs_lvl1: int = 121
     epochs_lvl2: int = 121
-    epochs_lvl3: int = 121
+    epochs_lvl3: int = 201
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
@@ -71,8 +71,8 @@ class TrainingConfig:
     w_pet: float = 1.0
     w_dice_ct: float = 3.0
     w_dice_pet: float = 3.0
-    w_mtv: float = 0.7
-    w_tlg: float = 0.7
+    w_mtv: float = 1.5
+    w_tlg: float = 1.5
     w_masked_jac: float = 0.6
 
     batch_size: int = 1
