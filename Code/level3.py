@@ -476,9 +476,6 @@ def train_lvl3(
             n_steps += 1
             global_step += 1
 
-            if n_steps == config.accumulation_steps:
-                print("warning breaking early batch for debug")
-                break
             print("warning breaking early batch for debug")
             break
 

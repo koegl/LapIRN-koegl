@@ -6,6 +6,8 @@ os.environ["MLFLOW_ALLOW_FILE_STORE"] = "true"
 
 from pathlib import Path
 
+import level1
+import level2
 import level3
 import mlflow
 import my_data
@@ -62,17 +64,24 @@ def main() -> None:
         )
 
         with utils.track_peak_memory("training"):
-            # path_model_level1 = level1.train_lvl1(config, train_generator, valid_generator)
+            Path()
+            level1.train_lvl1
+            level2.train_lvl2
+            level3.train_lvl3
+
+            path_model_level1 = level1.train_lvl1(
+                config, train_generator, valid_generator
+            )
             # # print("skipping level 1, already trained")
             # # path_model_level1 = Path(
             # #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_stagelvl1_best.pth"
             # # )
-            # path_model_level2 = level2.train_lvl2(
-            #     config, path_model_level1, train_generator, valid_generator
-            # )
-            path_model_level2 = Path(
-                "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_nimble-perch-653_stagelvl2_best.pth"
+            path_model_level2 = level2.train_lvl2(
+                config, path_model_level1, train_generator, valid_generator
             )
+            # path_model_level2 = Path(
+            #     "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_thundering-trout-866_stagelvl2_best.pth"
+            # )
             path_model_level3 = level3.train_lvl3(
                 config, path_model_level2, train_generator, valid_generator
             )
