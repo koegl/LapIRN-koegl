@@ -50,7 +50,7 @@ class TrainingConfig:
     n_classes: int = 3
     lr_lvl1: float = 1e-4
     lr_lvl2: float = 1e-3 * 0.5
-    lr_lvl3: float = 1e-3 * 0.5
+    lr_lvl3: float = 1e-3 * 0.25
     start_channel: int = 7
 
     # train val
@@ -63,8 +63,8 @@ class TrainingConfig:
     checkpoint_interval: int = 50
 
     # sum to 10
-    w_jacobian: float = 1.0
-    w_smooth: float = 1.0
+    w_jacobian: float = 3.0
+    w_smooth: float = 3.0
     w_ct: float = 3.0
     w_pet: float = 1.0
     w_dice_ct: float = 3.0
