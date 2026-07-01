@@ -22,7 +22,7 @@ val_subjects = [
     "0009",
     "0013",
     "0021",
-    "0024",
+    # "0024",
     "0029",
     "0031",
     "0033",
@@ -137,7 +137,7 @@ def load_val_pair(val_image_dir: Path, case_id: str) -> torch.Tensor:
 
 def create_model(device, cfg: TrainingConfig):
     model_path = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_nimble-perch-653_stagelvl3_best.pth"
+        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_masked-midge-298_stagelvl3_best.pth"
     )
 
     model_lvl1 = miccai2020_model_stage.Miccai2020_LDR_laplacian_unit_add_lvl1(
@@ -201,6 +201,8 @@ def main() -> None:
     cfg = TrainingConfig()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+    cfg.start_channel = 7
+
     # point affine cache at a val-only dir to avoid train collisions
     cfg.cache_dir = val_cache_dir
     out_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/submission_and_debug")
@@ -220,9 +222,10 @@ def main() -> None:
     transform = miccai2020_model_stage.SpatialTransform_unit().to(device)
     transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
 
+    dices = {}
     for case_id in tqdm.tqdm(val_subjects, desc="inference"):
         with torch.no_grad():
-            process_subject(
+            dices[case_id] = process_subject(
                 case_id,
                 val_image_dir,
                 out_dir,
@@ -234,6 +237,8 @@ def main() -> None:
                 transform_nearest,
                 seg_dir,
             )
+    avg = sum(v for v in dices.values()) / len(val_subjects)
+    tqdm.tqdm.write(f"average dice: {avg:.4f}")
 
     # shutil.make_archive(str(out_dir / "submission"), "zip", root_dir=out_dir)
 
@@ -336,10 +341,6 @@ def process_subject(
         dice_before = multilabel_dice(seg_moving_i, seg_fixed_i)
         dice_internal = multilabel_dice(seg_internal_i, seg_fixed_i)
         dice_submitted = multilabel_dice(seg_submitted_i, seg_fixed_i)
-        tqdm.tqdm.write(
-            f"{case_id}: before={dice_before:.4f}  "
-            f"internal={dice_internal:.4f}  submitted={dice_submitted:.4f}"
-        )
 
         their_st = SpatialTransformer(size=cfg.img_shape, mode="nearest").to(device)
 
@@ -352,9 +353,7 @@ def process_subject(
         seg_their_wrong = their_st(seg_moving, disp_up)  # un-reversed
         dice_wrong = multilabel_dice(seg_their_wrong[0, 0].round().long(), seg_fixed_i)
 
-        tqdm.tqdm.write(
-            f"{case_id}: their_reversed={dice_their:.4f}  their_asis={dice_wrong:.4f}"
-        )
+        tqdm.tqdm.write(f"{case_id}: before={dice_before:.4f};\tafter={dice_their:.4f}")
 
         # my_data.save_volume(
         #     seg_warped_submitted.to(torch.int16),
@@ -388,7 +387,9 @@ def process_subject(
         )
         # --- END DEBUG ---
 
-    save_disp(disp_half, out_dir / "submission", case_id)
+    # save_disp(disp_half, out_dir / "submission", case_id)
+
+    return dice_their
 
 
 if __name__ == "__main__":
