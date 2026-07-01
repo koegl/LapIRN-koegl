@@ -42,6 +42,7 @@ def main() -> None:
             cfg=config,
             augment=True,
             use_cache=config.use_cache_train,
+            include_intermediate_pairs=True,
             # overfit="0049",
         )
         val_dataset = my_data.PSMARegDataset(
@@ -49,6 +50,7 @@ def main() -> None:
             cfg=config,
             augment=False,
             use_cache=config.use_cache_valid,
+            include_intermediate_pairs=False,
             # overfit="0049",
         )
 

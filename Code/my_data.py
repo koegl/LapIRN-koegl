@@ -79,6 +79,7 @@ def build_registration_pairs(
     case_ids: Optional[List[str]] = None,
     min_timepoints: int = 2,
     baseline_tp: str = "00",
+    include_intermediate_pairs: bool = False,
 ) -> List[Tuple[str, str, str]]:
     selected_ids = sorted(case_ids) if case_ids is not None else sorted(case_timepoints)
     pairs: List[Tuple[str, str, str]] = []
@@ -86,10 +87,21 @@ def build_registration_pairs(
         tps = case_timepoints[case_id]
         if len(tps) < min_timepoints or baseline_tp not in tps:
             continue
-        for tp in tps:
-            if tp == baseline_tp:
-                continue
-            pairs.append((case_id, tp, baseline_tp))
+
+        if include_intermediate_pairs:
+            # tps is sorted, so j > i means tps[j] is temporally later.
+            # moving = later scan, fixed = earlier scan.
+            for i in range(len(tps)):
+                for j in range(i + 1, len(tps)):
+                    moving_tp = tps[j]
+                    fixed_tp = tps[i]
+                    pairs.append((case_id, moving_tp, fixed_tp))
+        else:
+            for tp in tps:
+                if tp == baseline_tp:
+                    continue
+                pairs.append((case_id, tp, baseline_tp))
+
     return pairs
 
 
@@ -522,6 +534,7 @@ class PSMARegDataset(torch_data.Dataset):
         cache_rate: float = 1.0,
         num_workers: int = 4,
         augment: bool = False,
+        include_intermediate_pairs: bool = False,
     ) -> None:
         self.data_dir = cfg.data_dir
 
@@ -535,9 +548,17 @@ class PSMARegDataset(torch_data.Dataset):
                 raise ValueError(
                     f"Patient {overfit!r} must have at least two timepoints."
                 )
-            pairs = build_registration_pairs(case_timepoints, case_ids=[overfit])
+            pairs = build_registration_pairs(
+                case_timepoints,
+                case_ids=[overfit],
+                include_intermediate_pairs=include_intermediate_pairs,
+            )
         else:
-            pairs = build_registration_pairs(case_timepoints, case_ids=case_ids)
+            pairs = build_registration_pairs(
+                case_timepoints,
+                case_ids=case_ids,
+                include_intermediate_pairs=include_intermediate_pairs,
+            )
 
         self.pairs = pairs
 
