@@ -1,3 +1,4 @@
+import zipfile
 from pathlib import Path
 from typing import Dict
 
@@ -24,7 +25,7 @@ val_subjects = [
     "0009",
     "0013",
     "0021",
-    # "0024",
+    "0024",
     "0029",
     "0031",
     "0033",
@@ -38,6 +39,19 @@ val_subjects = [
     "0048",
 ]
 results_csv = Path("/home/iml/fryderyk.koegl/data/PSMAReg/results.csv")
+
+
+def compress_to_zip(source_dir: Path, output_zip: Path) -> None:
+    files = list(source_dir.rglob("*"))
+    files = [f for f in files if f.is_file()]
+
+    with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zf:
+        for file in files:
+            arcname = file.relative_to(source_dir)
+            zf.write(file, arcname)
+            print(f"Added: {arcname}")
+
+    print(f"\nDone! Zip saved to: {output_zip}")
 
 
 class SpatialTransformer(torch.nn.Module):
@@ -205,6 +219,8 @@ def main() -> None:
         "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/segmentations"
     )
 
+    compress_to_zip(out_dir / "submission", out_dir / "submission.zip")
+
     model = create_model(device, cfg)
 
     grid_full = Functions.generate_grid_unit(cfg.img_shape)
@@ -305,28 +321,32 @@ def process_subject(
     disp_up = torch.nn.functional.interpolate(
         disp_half, scale_factor=2, mode="trilinear", align_corners=False
     )
-    _, _, hh, ww, dd = disp_up.shape
-    disp_up_unit = disp_up.clone()
-    disp_up_unit[:, 0] = disp_up_unit[:, 0] / ((dd - 1) / 2.0)
-    disp_up_unit[:, 1] = disp_up_unit[:, 1] / ((ww - 1) / 2.0)
-    disp_up_unit[:, 2] = disp_up_unit[:, 2] / ((hh - 1) / 2.0)
 
-    def load_seg(tp: str) -> torch.Tensor:
-        path = seg_dir / f"{case_id}_{tp}.nii"
-        arr = my_data.nib.load(str(path)).get_fdata().astype(np.int16)
-        return torch.from_numpy(arr)[None, None].to(device).float()
+    dice_their = np.nan
 
-    seg_moving = load_seg("01")
-    seg_fixed = load_seg("00")
-    seg_fixed_i = seg_fixed[0, 0].round().long()
+    if case_id != "0024":
+        _, _, hh, ww, dd = disp_up.shape
+        disp_up_unit = disp_up.clone()
+        disp_up_unit[:, 0] = disp_up_unit[:, 0] / ((dd - 1) / 2.0)
+        disp_up_unit[:, 1] = disp_up_unit[:, 1] / ((ww - 1) / 2.0)
+        disp_up_unit[:, 2] = disp_up_unit[:, 2] / ((hh - 1) / 2.0)
 
-    their_st = SpatialTransformer(size=cfg.img_shape, mode="nearest").to(device)
-    disp_their = disp_up.flip(1)
-    seg_their = their_st(seg_moving, disp_their)
-    dice_their = multilabel_dice(seg_their[0, 0].round().long(), seg_fixed_i)
+        def load_seg(tp: str) -> torch.Tensor:
+            path = seg_dir / f"{case_id}_{tp}.nii"
+            arr = my_data.nib.load(str(path)).get_fdata().astype(np.int16)
+            return torch.from_numpy(arr)[None, None].to(device).float()
 
-    dice_before = multilabel_dice(seg_moving[0, 0].round().long(), seg_fixed_i)
-    tqdm.tqdm.write(f"{case_id}: before={dice_before:.4f};\tafter={dice_their:.4f}")
+        seg_moving = load_seg("01")
+        seg_fixed = load_seg("00")
+        seg_fixed_i = seg_fixed[0, 0].round().long()
+
+        their_st = SpatialTransformer(size=cfg.img_shape, mode="nearest").to(device)
+        disp_their = disp_up.flip(1)
+        seg_their = their_st(seg_moving, disp_their)
+        dice_their = multilabel_dice(seg_their[0, 0].round().long(), seg_fixed_i)
+
+        dice_before = multilabel_dice(seg_moving[0, 0].round().long(), seg_fixed_i)
+        tqdm.tqdm.write(f"{case_id}: before={dice_before:.4f};\tafter={dice_their:.4f}")
 
     if False:
         # --- DEBUG: verify submitted field via evaluator pipeline ---
