@@ -47,7 +47,7 @@ def main() -> None:
             cfg=config,
             augment=True,
             use_cache=config.use_cache_train,
-            include_intermediate_pairs=False,
+            include_intermediate_pairs=True,
             num_workers=config.num_workers,
             # overfit="0049",
         )
@@ -66,18 +66,12 @@ def main() -> None:
             batch_size=config.batch_size,
             shuffle=config.shuffle,
             num_workers=config.num_workers,
-            pin_memory=True,
-            persistent_workers=True,
-            prefetch_factor=2,
         )
         valid_generator = torch_data.DataLoader(
             val_dataset,
             batch_size=config.batch_size,
             shuffle=False,
             num_workers=config.num_workers,
-            pin_memory=True,
-            persistent_workers=True,
-            prefetch_factor=2,
         )
 
         with utils.track_peak_memory("training"):
@@ -86,9 +80,9 @@ def main() -> None:
             level2.train_lvl2
             level3.train_lvl3
 
-            # paths_model_level1 = level1.train_lvl1(
-            #     config, train_generator, valid_generator
-            # )
+            paths_model_level1 = level1.train_lvl1(
+                config, train_generator, valid_generator
+            )
             # # print("skipping level 1, already trained")
             # # path_model_level1 = Path(
             # #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_stagelvl1_best.pth"
@@ -99,15 +93,15 @@ def main() -> None:
             # path_model_level2 = Path(
             #     "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_thundering-trout-866_stagelvl2_best.pth"
             # )
-            path_model_level_2 = Path(
-                "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_luminous-colt-866_stagelvl2_best.pth"
-            )
+            # path_model_level_2 = Path(
+            #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_luminous-colt-866_stagelvl2_best.pth"
+            # )
             # path_model_level_2 = paths_model_level2["best"]
-            path_model_level3 = level3.train_lvl3(
-                config, path_model_level_2, train_generator, valid_generator
-            )
+            # path_model_level3 = level3.train_lvl3(
+            #     config, path_model_level_2, train_generator, valid_generator
+            # )
 
-        print(f"Final model path: {path_model_level3}")
+        # print(f"Final model path: {path_model_level3}")
 
 
 if __name__ == "__main__":

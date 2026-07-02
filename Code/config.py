@@ -51,10 +51,12 @@ class TrainingConfig:
     lr_lvl1: float = 1e-4
     lr_lvl2: float = 1e-3 * 0.5
     lr_lvl3: float = 1e-3 * 0.25
-    start_channel: int = 13
+    start_channel_lvl1: int = 7
+    start_channel_lvl2: int = 7
+    start_channel_lvl3: int = 7
 
     # train val
-    epochs_lvl1: int = 121
+    epochs_lvl1: int = 131
     epochs_lvl2: int = 121
     epochs_lvl3: int = 201
     unfreeze_epoch_in_lvl2: int = 10
@@ -79,9 +81,9 @@ class TrainingConfig:
     shuffle: bool = True
     num_workers: int = 4
 
-    lvl1_ncc_win: int = 5
+    lvl1_ncc_win: int = 3
     lvl2_ncc_win: int = 7
-    lvl3_ncc_win: int = 7
+    lvl3_ncc_win: int = 9
 
     mlflow_tracking_uri: str = "sqlite:////home/iml/fryderyk.koegl/code/mlruns.db"
     mlflow_experiment: str = "PSMAReg_LapIRN"
