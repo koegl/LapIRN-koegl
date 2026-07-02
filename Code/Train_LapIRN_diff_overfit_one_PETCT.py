@@ -37,12 +37,14 @@ def main() -> None:
             artifact_file="config.json",
         )
 
+        print("warning: enable inttermeidate pairs later")
+
         train_dataset = my_data.PSMARegDataset(
             case_ids=train_ids,
             cfg=config,
             augment=True,
             use_cache=config.use_cache_train,
-            include_intermediate_pairs=True,
+            include_intermediate_pairs=False,
             # overfit="0049",
         )
         val_dataset = my_data.PSMARegDataset(
