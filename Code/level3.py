@@ -436,6 +436,7 @@ def train_lvl3(
                     else:
                         scaler.step(optimizer)
                         optimizer.zero_grad()
+                    scaler.update()
             else:
                 tqdm.tqdm.write(f"[lvl3] step {global_step}: non-finite loss (skipped)")
                 optimizer.zero_grad()  # drop any partial accumulation from this bad micro-step
