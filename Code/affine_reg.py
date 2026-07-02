@@ -225,6 +225,8 @@ def get_affine_dvf(
     Returns:
         DVF of shape (H, W, D, 3), float32, voxel displacements.
     """
+
+    """
     mem_key = f"{case_id}_{tp_x}_{tp_y}"
     if mem_key in _DVF_CACHE:
         return _DVF_CACHE[mem_key].astype(np.float32)
@@ -247,6 +249,24 @@ def get_affine_dvf(
     )
     np.save(str(cache_path), dvf)
     _DVF_CACHE[mem_key] = dvf
+    return dvf
+    """
+    cache_path = _cache_path(case_id, tp_x, tp_y)
+
+    if cache_path.exists():
+        return np.load(str(cache_path))
+
+    cfg = config.TrainingConfig()
+    cfg.cache_dir.mkdir(parents=True, exist_ok=True)
+    dvf = compute_affine_dvf(
+        fixed_ct_path=fixed_ct_path,
+        moving_ct_path=moving_ct_path,
+        make_lowres_ants_image_fn=make_lowres_ants_image_fn,
+        preprocess_ct_fn=preprocess_ct_fn,
+        ants_affine_to_fullres_voxel_disp_fn=ants_affine_to_fullres_voxel_disp_fn,
+        ct_window=ct_window,
+    )
+    np.save(str(cache_path), dvf)
     return dvf
 
 
