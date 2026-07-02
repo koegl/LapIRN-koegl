@@ -81,7 +81,7 @@ class TrainingConfig:
     shuffle: bool = True
     num_workers: int = 8
 
-    lvl1_ncc_win: int = 9
+    lvl1_ncc_win: int = 7
     lvl2_ncc_win: int = 7
     lvl3_ncc_win: int = 9
 
