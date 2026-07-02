@@ -508,6 +508,9 @@ def train_lvl1(
                 tqdm.tqdm.write(
                     f"epoch {epoch}: new best dice_ct {best_dice_ct:.4f} -> saved best"
                 )
+                print(
+                    f"epoch {epoch}: new best dice_ct {best_dice_ct:.4f} -> saved best"
+                )
 
         # save final model
         if epoch == config.epochs_lvl1:

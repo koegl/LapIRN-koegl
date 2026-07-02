@@ -511,6 +511,9 @@ def train_lvl2(
                 tqdm.tqdm.write(
                     f"epoch {epoch}: new best dice_ct {best_dice_ct:.4f} -> saved best"
                 )
+                print(
+                    f"epoch {epoch}: new best dice_ct {best_dice_ct:.4f} -> saved best"
+                )
 
         if epoch == config.unfreeze_epoch_in_lvl2:
             model.unfreeze_modellvl1()
