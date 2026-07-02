@@ -302,6 +302,7 @@ def train_lvl3(
     )
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr_lvl3)
+    scaler = torch.amp.GradScaler()
 
     config.save_dir.mkdir(parents=True, exist_ok=True)
 
@@ -341,7 +342,13 @@ def train_lvl3(
 
             X_affine = transform(X, flow_affine, grid_full)
 
-            F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X_affine, Y)
+            with torch.amp.autocast(device_type="cuda"):
+                F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X_affine, Y)
+
+            F_X_Y = F_X_Y.float()
+            X_Y = X_Y.float()
+            Y_4x = Y_4x.float()
+            F_xy = F_xy.float()
 
             X_Y_ct = X_Y[:, 0:1, ...]
             X_Y_pet = X_Y[:, 1:2, ...]
@@ -410,9 +417,10 @@ def train_lvl3(
             ) == steps_per_epoch  # trailing-partial flush
 
             if torch.isfinite(loss):
-                loss_scaled.backward()
+                scaler.scale(loss_scaled).backward()
 
                 if is_step or is_last_in_epoch:
+                    scaler.unscale_(optimizer)
                     total_norm = torch.nn.utils.clip_grad_norm_(
                         model.parameters(), max_norm=1.0
                     )
@@ -426,7 +434,7 @@ def train_lvl3(
                         )
                         optimizer.zero_grad()
                     else:
-                        optimizer.step()
+                        scaler.step(optimizer)
                         optimizer.zero_grad()
             else:
                 tqdm.tqdm.write(f"[lvl3] step {global_step}: non-finite loss (skipped)")
