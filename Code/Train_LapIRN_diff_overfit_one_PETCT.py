@@ -65,13 +65,11 @@ def main() -> None:
             train_dataset,
             batch_size=config.batch_size,
             shuffle=config.shuffle,
-            num_workers=config.num_workers,
         )
         valid_generator = torch_data.DataLoader(
             val_dataset,
             batch_size=config.batch_size,
             shuffle=False,
-            num_workers=config.num_workers,
         )
 
         with utils.track_peak_memory("training"):
