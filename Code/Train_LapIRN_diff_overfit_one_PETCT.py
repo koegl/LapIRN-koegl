@@ -48,6 +48,7 @@ def main() -> None:
             augment=True,
             use_cache=config.use_cache_train,
             include_intermediate_pairs=False,
+            num_workers=config.num_workers,
             # overfit="0049",
         )
         val_dataset = my_data.PSMARegDataset(
@@ -56,6 +57,7 @@ def main() -> None:
             augment=False,
             use_cache=config.use_cache_valid,
             include_intermediate_pairs=False,
+            num_workers=config.num_workers,
             # overfit="0049",
         )
 
@@ -64,12 +66,18 @@ def main() -> None:
             batch_size=config.batch_size,
             shuffle=config.shuffle,
             num_workers=config.num_workers,
+            pin_memory=True,
+            persistent_workers=True,
+            prefetch_factor=2,
         )
         valid_generator = torch_data.DataLoader(
             val_dataset,
             batch_size=config.batch_size,
             shuffle=False,
             num_workers=config.num_workers,
+            pin_memory=True,
+            persistent_workers=True,
+            prefetch_factor=2,
         )
 
         with utils.track_peak_memory("training"):
