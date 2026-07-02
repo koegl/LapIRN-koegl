@@ -8,6 +8,70 @@ import torch.nn.functional as F
 import tqdm
 from scipy import ndimage
 
+BONE_LABEL_VALUES: Sequence[int] = (
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    97,
+    98,
+    99,
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    109,
+    110,
+    111,
+    112,
+    113,
+    114,
+    115,
+    116,
+)
+
 
 def build_identity_grid(
     shape: Tuple[int, int, int], device: torch.device
@@ -41,14 +105,16 @@ def voxel_coords_to_sample_grid(
 
 
 def warp(
-    volume: torch.Tensor, disp: torch.Tensor, identity_vox: torch.Tensor
+    volume: torch.Tensor,
+    disp: torch.Tensor,
+    identity_vox: torch.Tensor,
+    mode: str = "bilinear",
 ) -> torch.Tensor:
-    """Warp `volume` (1, C, D0, D1, D2) by voxel displacement `disp` (1, 3, D0, D1, D2)."""
     shape = (volume.shape[2], volume.shape[3], volume.shape[4])
     coords = identity_vox + disp
     grid = voxel_coords_to_sample_grid(coords, shape)
     warped = F.grid_sample(
-        volume, grid, mode="bilinear", padding_mode="border", align_corners=True
+        volume, grid, mode=mode, padding_mode="border", align_corners=True
     )
     return warped
 
@@ -281,6 +347,117 @@ def generate_synthetic_pair(
         nib.Nifti1Image(bone_weight.squeeze().cpu().numpy(), affine),
         (out_dir / f"{stem}_boneweight.nii.gz").as_posix(),
     )
+
+    return fixed, moving, disp_inv, shape
+
+
+def bodies_from_label(
+    label_ct: torch.Tensor, bone_label_values: Sequence[int], min_voxels: int
+) -> List[np.ndarray]:
+    """Boolean bone-body masks from an organizer CT label tensor (1,1,D0,D1,D2)."""
+    lbl = label_ct.squeeze().cpu().numpy().astype(np.int32)
+    bodies: List[np.ndarray] = []
+    for value in bone_label_values:
+        body = lbl == value
+        if int(body.sum()) >= min_voxels:
+            bodies.append(body)
+    return bodies
+
+
+def decorrelate_intensity(
+    img: torch.Tensor, bias_strength: float, noise_std: float, device: torch.device
+) -> torch.Tensor:
+    """Break the perfect intensity match: smooth multiplicative bias + noise, clip [0,1]."""
+    shape = (img.shape[2], img.shape[3], img.shape[4])
+    coarse = torch.randn(1, 1, 4, 4, 4, device=device)
+    bias = F.interpolate(coarse, size=shape, mode="trilinear", align_corners=True)
+    bias = 1.0 + bias_strength * bias
+    out = img * bias + noise_std * torch.randn_like(img)
+    return out.clamp(0.0, 1.0)
+
+
+def unit_flow_from_voxel_disp(
+    disp_vox: torch.Tensor, shape: Tuple[int, int, int]
+) -> torch.Tensor:
+    """Voxel disp (1, 3, D0, D1, D2), order (d0, d1, d2) -> unit-flow."""
+    d0, d1, d2 = shape
+    unit = torch.empty_like(disp_vox)
+    unit[:, 0] = disp_vox[:, 0] * 2.0 / (d0 - 1)
+    unit[:, 1] = disp_vox[:, 1] * 2.0 / (d1 - 1)
+    unit[:, 2] = disp_vox[:, 2] * 2.0 / (d2 - 1)
+    return unit
+
+
+def generate_synthetic_moving(
+    source: torch.Tensor,
+    source_label_ct: torch.Tensor,
+    source_label_pet: torch.Tensor,
+    bone_label_values: Sequence[int],
+    max_displacement: float = 15.0,
+    coarse_downsample: int = 32,
+    smoothing_sigma: float = 5.0,
+    num_integration_steps: int = 7,
+    move_bones: bool = True,
+    bone_translation: float = 4.0,
+    bone_rotation_deg: float = 3.0,
+    bone_transition_sigma: float = 6.0,
+    min_component_voxels: int = 200,
+    bias_strength: float = 0.08,
+    noise_std: float = 0.005,
+    device: torch.device = torch.device("cuda"),
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Build a synthetic moving pair from one source (the fixed image).
+
+    Returns:
+        moving        (1, 2, D0,D1,D2) warped + intensity-decorrelated
+        moving_lbl_ct (1, 1, ...)
+        moving_lbl_pet(1, 1, ...)
+        gt_unit       (1, 3, ...) unit-flow DVF for X->Y, matching F_X_Y
+    """
+    shape = (source.shape[2], source.shape[3], source.shape[4])
+    identity_vox = build_identity_grid(shape, device)
+
+    coarse_shape = tuple(max(2, s // coarse_downsample) for s in shape)
+    v_coarse = torch.randn(1, 3, *coarse_shape, device=device)
+    v_soft = F.interpolate(v_coarse, size=shape, mode="trilinear", align_corners=True)
+    v_soft = gaussian_blur_3d(v_soft, smoothing_sigma)
+
+    if move_bones:
+        bodies = bodies_from_label(
+            source_label_ct, bone_label_values, min_component_voxels
+        )
+        v_rigid, bone_mask = build_rigid_velocity(
+            bodies, identity_vox, device, bone_translation, bone_rotation_deg
+        )
+        v_rigid_s = gaussian_blur_3d(v_rigid * bone_mask, bone_transition_sigma)
+        w = gaussian_blur_3d(bone_mask, bone_transition_sigma)
+        v_rigid_s = v_rigid_s / (w + 1e-6)
+        bone_weight = w.clamp(0.0, 1.0)
+        soft_weight = 1.0 - bone_weight
+        norm = torch.sqrt((v_soft**2).sum(dim=1, keepdim=True))
+        max_norm = norm.max()
+        if max_norm > 0:
+            v_soft = v_soft * (max_displacement / max_norm)
+        velocity = soft_weight * v_soft + bone_weight * v_rigid_s
+    else:
+        norm = torch.sqrt((v_soft**2).sum(dim=1, keepdim=True))
+        max_norm = norm.max()
+        if max_norm > 0:
+            v_soft = v_soft * (max_displacement / max_norm)
+        velocity = v_soft
+
+    disp = integrate_svf(velocity, identity_vox, num_integration_steps)
+    disp_inv = integrate_svf(-velocity, identity_vox, num_integration_steps)
+
+    moving = warp(source, disp, identity_vox, mode="bilinear")
+    moving = decorrelate_intensity(moving, bias_strength, noise_std, device)
+    moving_lbl_ct = warp(source_label_ct.float(), disp, identity_vox, mode="nearest")
+    moving_lbl_pet = warp(source_label_pet.float(), disp, identity_vox, mode="nearest")
+
+    gt_unit = unit_flow_from_voxel_disp(disp_inv, shape).flip(1)
+
+    result = (moving, moving_lbl_ct, moving_lbl_pet, gt_unit)
+    return result
 
 
 def main() -> None:

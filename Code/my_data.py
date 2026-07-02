@@ -139,6 +139,57 @@ def get_train_val_split(
     return train_ids, val_ids
 
 
+def list_single_session_sources(
+    data_dir: Path,
+    exclude_case_ids: Optional[List[str]] = None,
+) -> List[Tuple[str, str]]:
+    """(case_id, tp) for every case with < 2 timepoints (the unpaired singletons)."""
+    case_timepoints = list_case_timepoints(data_dir)
+    exclude = set(exclude_case_ids or [])
+    sources: List[Tuple[str, str]] = []
+    for case_id, tps in case_timepoints.items():
+        if case_id in exclude:
+            continue
+        if len(tps) < 2:
+            for tp in tps:
+                sources.append((case_id, tp))
+    return sources
+
+
+def load_single_session(data_dir: Path, case_id: str, tp: str) -> dict:
+    """Load + body-mask + normalize one session. Keys mirror the fixed side."""
+    image_dir = data_dir / "imagesTr"
+    label_dir = data_dir / "labelsTr"
+
+    def load_vol(path: Path) -> np.ndarray:
+        return nib.load(path).get_fdata().astype(np.float32)
+
+    def load_lbl(path: Path) -> np.ndarray:
+        return nib.load(path).get_fdata().astype(np.uint8)
+
+    def to_t(arr: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(arr).unsqueeze(0)
+
+    ct_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id}_0000_{tp}.nii.gz")
+    mask = get_body_mask(ct_raw)
+    ct_raw = apply_body_mask(ct_raw, mask, fill_value=float(np.percentile(ct_raw, 0.5)))
+
+    pet_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp}.nii.gz")
+    pet_raw = apply_body_mask(pet_raw, mask, fill_value=0.0)
+
+    out = {
+        "ct": to_t(norm_ct(ct_raw)).float(),
+        "pet": to_t(norm_pet(pet_raw)).float(),
+        "label_ct": to_t(
+            load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp}.nii.gz")
+        ),
+        "label_pet": to_t(
+            load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0001_{tp}.nii.gz")
+        ),
+    }
+    return out
+
+
 def component_extent(coords):
     return coords.max(axis=0) - coords.min(axis=0) + 1
 
@@ -489,6 +540,82 @@ def apply_z_crop(
     return data
 
 
+class LoadSingleToDict(Transform):
+    def __init__(self, data_dir: Path) -> None:
+        self.data_dir = data_dir
+
+    def __call__(self, data: dict) -> dict:
+        return load_single_session(self.data_dir, data["case_id"], data["tp"])
+
+
+class SyntheticSourceDataset(torch_data.Dataset):
+    """Single-session sources for on-the-fly synthetic pair generation.
+
+    Each item carries the source as the FIXED image (y + y_label_*). The
+    training loop generates the moving image (x) and gt DVF on GPU. x and
+    x_label_* are placeholders (copies of the source) so collate keys match
+    the real dataset; the loop overwrites them.
+    """
+
+    def __init__(
+        self,
+        cfg: config.TrainingConfig,
+        source_ids: List[str],
+        use_cache: bool = False,
+        cache_rate: float = 1.0,
+        num_workers: int = 4,
+        repeat: int = 1,
+    ) -> None:
+        self.data_dir = cfg.data_dir
+        self.cfg = cfg
+
+        all_sources = list_single_session_sources(cfg.data_dir)
+        wanted = set(source_ids)
+        sources = [(c, tp) for (c, tp) in all_sources if c in wanted]
+        self.sources = sources * repeat
+
+        data_dicts = [{"case_id": c, "tp": tp} for c, tp in self.sources]
+        load_transform = Compose([LoadSingleToDict(self.data_dir)])
+
+        if use_cache:
+            self.dataset = monai_data.CacheDataset(
+                data=data_dicts,
+                transform=load_transform,
+                cache_rate=cache_rate,
+                num_workers=num_workers,
+            )
+        else:
+            self.dataset = monai_data.Dataset(data=data_dicts, transform=load_transform)
+
+    def __len__(self) -> int:
+        return len(self.sources)
+
+    def __getitem__(self, index: int) -> dict:
+        s = self.dataset[index]
+        y = torch.cat([s["ct"], s["pet"]], dim=0)
+        case_id, tp = self.sources[index]
+        item = {
+            "x": y.clone(),
+            "y": y,
+            "x_label_ct": s["label_ct"].clone(),
+            "x_label_pet": s["label_pet"].clone(),
+            "y_label_ct": s["label_ct"],
+            "y_label_pet": s["label_pet"],
+            "aug_flipped": False,
+            "aug_crop_head": 0,
+            "aug_crop_feet": 0,
+            "aug_crop_head_moving": 0,
+            "aug_crop_feet_moving": 0,
+            "aug_crop_head_fixed": 0,
+            "aug_crop_feet_fixed": 0,
+            "is_synthetic": True,
+            "case_id": case_id,
+            "tp_x": tp,
+            "tp_y": tp,
+        }
+        return item
+
+
 class PSMARegDataset(torch_data.Dataset):
     """Dataset of consecutive longitudinal CT/PET registration pairs.
 
@@ -562,8 +689,8 @@ class PSMARegDataset(torch_data.Dataset):
 
         self.pairs = pairs
 
-        # print("warning temp reduce size")
-        # self.pairs = [self.pairs[0]]
+        print("warning temp reduce size")
+        self.pairs = [self.pairs[0]]
 
         data_dicts = [
             {"case_id": case_id, "tp_x": tp_x, "tp_y": tp_y}
@@ -672,5 +799,7 @@ class PSMARegDataset(torch_data.Dataset):
         data["case_id"] = case_id
         data["tp_x"] = tp_x
         data["tp_y"] = tp_y
+
+        data["is_synthetic"] = False
 
         return data
