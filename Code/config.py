@@ -79,7 +79,7 @@ class TrainingConfig:
 
     batch_size: int = 1
     shuffle: bool = True
-    num_workers: int = 4
+    num_workers: int = 0
 
     lvl1_ncc_win: int = 9
     lvl2_ncc_win: int = 7
