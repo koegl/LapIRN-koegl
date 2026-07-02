@@ -10,7 +10,7 @@ DVF convention: (H, W, D, 3), float32, voxel displacements at full resolution.
 """
 
 from pathlib import Path
-from typing import Tuple
+from typing import Dict, Tuple
 
 import ants
 import config
@@ -26,6 +26,8 @@ DOWNSAMPLE_FACTOR = 2
 ANTS_TRANSFORM = "Affine"
 AFF_METRIC = "mattes"
 AFF_SAMPLING = 32
+
+_DVF_CACHE: Dict[str, np.ndarray] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -223,10 +225,15 @@ def get_affine_dvf(
     Returns:
         DVF of shape (H, W, D, 3), float32, voxel displacements.
     """
-    cache_path = _cache_path(case_id, tp_x, tp_y)
+    mem_key = f"{case_id}_{tp_x}_{tp_y}"
+    if mem_key in _DVF_CACHE:
+        return _DVF_CACHE[mem_key].astype(np.float32)
 
+    cache_path = _cache_path(case_id, tp_x, tp_y)
     if cache_path.exists():
-        return np.load(str(cache_path))
+        dvf = np.load(str(cache_path))
+        _DVF_CACHE[mem_key] = dvf.astype(np.float16)
+        return dvf.astype(np.float32)
 
     cfg = config.TrainingConfig()
     cfg.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -239,6 +246,7 @@ def get_affine_dvf(
         ct_window=ct_window,
     )
     np.save(str(cache_path), dvf)
+    _DVF_CACHE[mem_key] = dvf
     return dvf
 
 
