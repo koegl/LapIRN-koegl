@@ -11,12 +11,16 @@ import level2
 import level3
 import mlflow
 import my_data
+import torch
 import utils
 from config import TrainingConfig
 from torch.utils import data as torch_data
 
 
 def main() -> None:
+
+    # input shapes are fixed → cuDNN picks optimal 3D-conv kernels. Nearly free, often 10–30%
+    torch.backends.cudnn.benchmark = True
 
     config = TrainingConfig()
 
