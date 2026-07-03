@@ -43,6 +43,8 @@ class TrainingConfig:
     aug_max_crop_z_head_asym: int = 10  # smaller than symmetric (40)
     aug_max_crop_z_feet_asym: int = 10
     aug_seed: int = 42
+    use_synthetic: bool = True
+    synthetic_repeat: int = 1
 
     range_flow: float = 0.4
 
