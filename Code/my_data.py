@@ -574,6 +574,9 @@ class SyntheticSourceDataset(torch_data.Dataset):
         sources = [(c, tp) for (c, tp) in all_sources if c in wanted]
         self.sources = sources * repeat
 
+        print("warning temp reduce size")
+        self.sources = [self.sources[0]]
+
         data_dicts = [{"case_id": c, "tp": tp} for c, tp in self.sources]
         load_transform = Compose([LoadSingleToDict(self.data_dir)])
 
