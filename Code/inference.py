@@ -120,11 +120,9 @@ def load_val_pair(val_image_dir: Path, case_id: str) -> Dict[str, torch.Tensor]:
     return pair
 
 
-def create_model(device: torch.device, cfg: TrainingConfig) -> torch.nn.Module:
-    model_path = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_masked-midge-298_stagelvl3_best.pth"
-    )
-
+def create_model(
+    device: torch.device, cfg: TrainingConfig, model_path: Path
+) -> torch.nn.Module:
     model_lvl1 = miccai2020_model_stage.Miccai2020_LDR_laplacian_unit_add_lvl1(
         in_channel=cfg.in_channel,
         n_classes=cfg.n_classes,
@@ -206,11 +204,11 @@ def main() -> None:
     cfg = TrainingConfig()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    cfg.start_channel = 7
+    # cfg.start_channel = 7
     cfg.cache_dir = val_cache_dir
 
     model_path = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_masked-midge-298_stagelvl3_best.pth"
+        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_intelligent-bug-730_stagelvl3_best.pth"
     )
     model_name = model_path.stem
 
@@ -219,9 +217,7 @@ def main() -> None:
         "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/segmentations"
     )
 
-    compress_to_zip(out_dir / "submission", out_dir / "submission.zip")
-
-    model = create_model(device, cfg)
+    model = create_model(device, cfg, model_path)
 
     grid_full = Functions.generate_grid_unit(cfg.img_shape)
     grid_full = (
@@ -253,6 +249,8 @@ def main() -> None:
     tqdm.tqdm.write(f"average dice: {avg:.4f}")
 
     append_results_to_csv(results_csv, model_name, dices)
+
+    # compress_to_zip(out_dir / "submission", out_dir / "submission.zip")
 
 
 def process_subject(
