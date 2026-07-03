@@ -4,7 +4,9 @@ from typing import Callable, Dict
 import mlflow
 import my_data
 import numpy as np
+import synthetic
 import torch
+import torch.nn.functional as F
 import tqdm
 import utils
 from affine_reg import create_affine_flow
@@ -92,7 +94,7 @@ def evaluate_lvl1(
 
             F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_affine, Y)
 
-            if epoch % (config.val_interval * 50) == 0 or epoch == config.epochs_lvl1:
+            if epoch % (config.val_interval * 25) == 0 or epoch == config.epochs_lvl1:
                 if not saved_initial:
                     zero_disp = torch.zeros_like(F_X_Y)
                     x_ref = model.transform(
@@ -242,7 +244,7 @@ def train_lvl1(
     model = Miccai2020_LDR_laplacian_unit_add_lvl1(
         in_channel=config.in_channel,
         n_classes=config.n_classes,
-        start_channel=config.start_channel_lvl1,
+        start_channel=config.start_channel,
         is_train=True,
         imgshape=config.img_shape_4,
         range_flow=config.range_flow,
@@ -295,28 +297,86 @@ def train_lvl1(
         n_steps = 0
 
         for batch in train_generator:
-            X = batch["x"].to(device).float()
+            is_synthetic = bool(batch["is_synthetic"][0])
+
             Y = batch["y"].to(device).float()
-            X_lbl_ct = batch["x_label_ct"].to(device)
-            X_lbl_pet = batch["x_label_pet"].to(device)
             Y_lbl_ct = batch["y_label_ct"].to(device)
             Y_lbl_pet = batch["y_label_pet"].to(device)
 
-            flow_affine = create_affine_flow(
-                config=config,
-                device=device,
-                case_id=batch["case_id"][0],
-                tp_x=batch["tp_x"][0],
-                tp_y=batch["tp_y"][0],
-                aug_flipped=batch["aug_flipped"],
-                aug_crop_head=batch["aug_crop_head"],
-                aug_crop_feet=batch["aug_crop_feet"],
-            )
+            if is_synthetic:
+                # moving (X) generated on GPU from the source (Y = fixed)
+                X_full, X_lbl_ct, X_lbl_pet, gt_unit = (
+                    synthetic.generate_synthetic_moving(
+                        source=Y,
+                        source_label_ct=Y_lbl_ct,
+                        source_label_pet=Y_lbl_pet,
+                        bone_label_values=synthetic.BONE_LABEL_VALUES,
+                        device=device,
+                    )
+                )
+                # synthetic pair shares the grid; no ANTs affine
+                X_affine = X_full
+                X = X_affine
+            else:
+                X = batch["x"].to(device).float()
+                X_lbl_ct = batch["x_label_ct"].to(device)
+                X_lbl_pet = batch["x_label_pet"].to(device)
+                gt_unit = None
 
-            X_affine = transform(X, flow_affine, grid_full)
+                flow_affine = create_affine_flow(
+                    config=config,
+                    device=device,
+                    case_id=batch["case_id"][0],
+                    tp_x=batch["tp_x"][0],
+                    tp_y=batch["tp_y"][0],
+                    aug_flipped=batch["aug_flipped"],
+                    aug_crop_head=batch["aug_crop_head"],
+                    aug_crop_feet=batch["aug_crop_feet"],
+                )
+                X_affine = transform(X, flow_affine, grid_full)
 
             with torch.amp.autocast(device_type="cuda"):
                 F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_affine, Y)
+
+            if not saved_initial:
+                zero_disp = torch.zeros_like(F_X_Y)
+                x_ref = model.transform(
+                    X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
+                )
+                x_affine = model.transform(
+                    X_affine, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
+                )
+                y_ref = model.transform(
+                    Y, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
+                )
+                my_data.save_volume(
+                    volume=x_ref[:, 0:1, ...],
+                    out_dir=config.save_dir / "initial",
+                    epoch=epoch,
+                    name="x_ref_ct_lvl1",
+                )
+                my_data.save_volume(
+                    volume=x_affine[:, 0:1, ...],
+                    out_dir=config.save_dir / "initial",
+                    epoch=epoch,
+                    name="x_affine_ct_lvl1",
+                )
+                my_data.save_volume(
+                    volume=y_ref[:, 0:1, ...],
+                    out_dir=config.save_dir / "initial",
+                    epoch=epoch,
+                    name="y_ref_ct_lvl1",
+                )
+                saved_initial = True
+
+            if epoch % 10 == 0 or epoch == config.epochs_lvl1:
+                ct = X_Y[:, 0:1, :, :, :]
+                my_data.save_volume(
+                    volume=ct,
+                    out_dir=config.save_dir / "warped",
+                    epoch=epoch,
+                    name="warped_ct_lvl1",
+                )
 
             F_X_Y = F_X_Y.float()
             X_Y = X_Y.float()
@@ -348,8 +408,11 @@ def train_lvl1(
             F_xy[:, 2, :, :, :] = F_xy[:, 2, :, :, :] * (x - 1)
             loss_regulation = loss_smooth(F_xy)
 
-            X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_affine, grid_full)
-            X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_affine, grid_full)
+            # synthetic labels are already in the (deformed) moving frame; the
+            # real branch needs the affine applied first
+            if not is_synthetic:
+                X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_affine, grid_full)
+                X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_affine, grid_full)
 
             X_lbl_ct_down = utils.downsample_label(
                 X_lbl_ct.to(device), scale_factor=0.25
@@ -404,6 +467,18 @@ def train_lvl1(
             if loss_dice_pet is not None:
                 loss = loss + config.w_dice_pet * loss_dice_pet
 
+            if is_synthetic:
+                gt_unit_ds = F.interpolate(
+                    gt_unit,
+                    size=F_X_Y.shape[2:],
+                    mode="trilinear",
+                    align_corners=True,
+                )
+                loss_dvf = ((F_X_Y - gt_unit_ds) ** 2).mean()
+            else:
+                loss_dvf = torch.zeros((), device=device)
+            loss = loss + config.w_dvf * loss_dvf
+
             loss_scaled = loss / config.accumulation_steps
             is_step = (global_step + 1) % config.accumulation_steps == 0
             is_last_in_epoch = (
@@ -454,6 +529,7 @@ def train_lvl1(
                 else "n/a",
                 Jdet=f"{loss_jacobian.item():.6f}",
                 smo=f"{loss_regulation.item():.4f}",
+                dvf=f"{loss_dvf.item():.8f}",
             )
             train_metrics = {
                 "train_lvl1/loss": loss.item(),
@@ -462,6 +538,7 @@ def train_lvl1(
                 "train_lvl1/smooth": loss_regulation.item(),
                 "train_lvl1/jacob": loss_jacobian.item(),
                 "train_lvl1/ndv": ndv,
+                "train_lvl3/dvf": loss_dvf.item(),
             }
             if loss_dice_ct is not None:
                 train_metrics["train_lvl1/dice_ct"] = loss_dice_ct.item()

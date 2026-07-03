@@ -31,6 +31,12 @@ def main() -> None:
             split_path=config.split_path,
             val_fraction=config.val_fraction,
         )
+        synth_ids = [
+            c
+            for c, _ in my_data.list_single_session_sources(
+                config.data_dir, exclude_case_ids=train_ids + val_ids
+            )
+        ]
         config_to_log = config.to_mlflow_params()
         config_to_log["train_indices"] = train_ids
         config_to_log["val_indices"] = val_ids
@@ -45,12 +51,27 @@ def main() -> None:
         train_dataset = my_data.PSMARegDataset(
             case_ids=train_ids,
             cfg=config,
-            augment=True,
+            augment=False,
             use_cache=config.use_cache_train,
-            include_intermediate_pairs=True,
+            include_intermediate_pairs=False,
             num_workers=config.num_workers,
             # overfit="0049",
         )
+        print("warning tuned off agumentation")
+        print("warning tuned intermediate pairs")
+        synth_dataset = my_data.SyntheticSourceDataset(
+            cfg=config,
+            source_ids=synth_ids,
+            repeat=config.synthetic_repeat,
+        )
+        if config.use_synthetic:
+            train_combined = torch_data.ConcatDataset([train_dataset, synth_dataset])
+        else:
+            train_combined = torch_data.ConcatDataset([train_dataset])
+
+        print("warnign using only synthetic to overfit test")
+        train_combined = train_dataset
+
         val_dataset = my_data.PSMARegDataset(
             case_ids=val_ids,
             cfg=config,
@@ -62,7 +83,7 @@ def main() -> None:
         )
 
         train_generator = torch_data.DataLoader(
-            train_dataset,
+            train_combined,
             batch_size=config.batch_size,
             shuffle=config.shuffle,
         )
@@ -85,19 +106,19 @@ def main() -> None:
             # # path_model_level1 = Path(
             # #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_stagelvl1_best.pth"
             # # )
-            # paths_model_level2 = level2.train_lvl2(
-            #     config, paths_model_level1["best"], train_generator, valid_generator
-            # )
-            # path_model_level2 = Path(
-            #     "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_thundering-trout-866_stagelvl2_best.pth"
+            paths_model_level2 = level2.train_lvl2(
+                config, paths_model_level1["best"], train_generator, valid_generator
+            )
+            # path_model_level_2 = Path(
+            #     "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_nosy-shrike-707_stagelvl2_best.pth"
             # )
             # path_model_level_2 = Path(
             #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_luminous-colt-866_stagelvl2_best.pth"
             # )
-            # path_model_level_2 = paths_model_level2["best"]
-            # path_model_level3 = level3.train_lvl3(
-            #     config, path_model_level_2, train_generator, valid_generator
-            # )
+            path_model_level_2 = paths_model_level2["best"]
+            path_model_level3 = level3.train_lvl3(
+                config, path_model_level_2, train_generator, valid_generator
+            )
 
         # print(f"Final model path: {path_model_level3}")
 

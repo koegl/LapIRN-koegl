@@ -76,6 +76,7 @@ class TrainingConfig:
     w_mtv: float = 1.5
     w_tlg: float = 1.5
     w_masked_jac: float = 0.6
+    w_dvf: float = 1000.0
 
     batch_size: int = 1
     shuffle: bool = True
