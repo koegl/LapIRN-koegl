@@ -53,9 +53,7 @@ class TrainingConfig:
     lr_lvl1: float = 1e-4
     lr_lvl2: float = 1e-3 * 0.5
     lr_lvl3: float = 1e-3 * 0.25
-    start_channel_lvl1: int = 3
-    start_channel_lvl2: int = 7
-    start_channel_lvl3: int = 7
+    start_channel: int = 7
 
     # train val
     epochs_lvl1: int = 131
