@@ -236,7 +236,7 @@ def train_lvl2(
     model_lvl1 = Miccai2020_LDR_laplacian_unit_add_lvl1(
         in_channel=config.in_channel,
         n_classes=config.n_classes,
-        start_channel=config.start_channel_lvl1,
+        start_channel=config.start_channel,
         is_train=True,
         imgshape=config.img_shape_4,
         range_flow=config.range_flow,
@@ -251,7 +251,7 @@ def train_lvl2(
     model = Miccai2020_LDR_laplacian_unit_add_lvl2(
         in_channel=config.in_channel,
         n_classes=config.n_classes,
-        start_channel=config.start_channel_lvl2,
+        start_channel=config.start_channel,
         is_train=True,
         imgshape=config.img_shape_2,
         range_flow=config.range_flow,
