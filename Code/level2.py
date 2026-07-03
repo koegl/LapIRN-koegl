@@ -296,7 +296,7 @@ def train_lvl2(
     global_step = 0
 
     epoch = 0
-    pbar = tqdm.tqdm(total=config.epochs_lvl2 + 1, desc="lvl2 training")
+    # pbar = tqdm.tqdm(total=config.epochs_lvl2 + 1, desc="lvl2 training")
 
     saved_initial: bool = False
 
@@ -372,6 +372,46 @@ def train_lvl2(
             Y_lbl_pet_down = utils.downsample_label(
                 Y_lbl_pet.to(device), scale_factor=0.5
             )
+
+            if epoch == 0 or epoch == config.epochs_lvl2:
+                if not saved_initial:
+                    zero_disp = torch.zeros_like(F_X_Y)
+                    x_ref = model.transform(
+                        X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
+                    )
+                    x_affine = model.transform(
+                        X_affine, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
+                    )
+                    y_ref = model.transform(
+                        Y, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
+                    )
+                    my_data.save_volume(
+                        volume=x_ref[:, 0:1, ...],
+                        out_dir=config.save_dir / "initial",
+                        epoch=epoch,
+                        name="x_ref_ct_lvl2",
+                    )
+                    my_data.save_volume(
+                        volume=x_affine[:, 0:1, ...],
+                        out_dir=config.save_dir / "initial",
+                        epoch=epoch,
+                        name="x_affine_ct_lvl2",
+                    )
+                    my_data.save_volume(
+                        volume=y_ref[:, 0:1, ...],
+                        out_dir=config.save_dir / "initial",
+                        epoch=epoch,
+                        name="y_ref_ct_lvl2",
+                    )
+                    saved_initial = True
+
+                my_data.save_volume(
+                    volume=X_Y[:, 0:1, :, :, :],
+                    out_dir=config.save_dir / "warped",
+                    epoch=epoch,
+                    name="warped_ct_lvl2",
+                )
+                x = 0
 
             if epoch == config.epochs_lvl2 and False:
                 warped_seg_ct = transform_nearest(
@@ -450,17 +490,23 @@ def train_lvl2(
                     loss_regulation.item(),
                 ]
             )
-            pbar.set_postfix(
-                loss=f"{loss.item():.4f}",
-                ncc=f"{loss_multiNCC.item():.4f}",
-                dice_ct=f"{loss_dice_ct.item():.4f}"
-                if loss_dice_ct is not None
-                else "n/a",
-                dice_pet=f"{loss_dice_pet.item():.4f}"
-                if loss_dice_pet is not None
-                else "n/a",
-                Jdet=f"{loss_jacobian.item():.6f}",
-                smo=f"{loss_regulation.item():.4f}",
+            # pbar.set_postfix(
+            #     loss=f"{loss.item():.4f}",
+            #     ncc=f"{loss_multiNCC.item():.4f}",
+            #     dice_ct=f"{loss_dice_ct.item():.4f}"
+            #     if loss_dice_ct is not None
+            #     else "n/a",
+            #     dice_pet=f"{loss_dice_pet.item():.4f}"
+            #     if loss_dice_pet is not None
+            #     else "n/a",
+            #     Jdet=f"{loss_jacobian.item():.6f}",
+            #     smo=f"{loss_regulation.item():.4f}",
+            # )
+            loss_dice_ct_value = (
+                loss_dice_ct.item() if loss_dice_ct is not None else 0.0
+            )
+            print(
+                f"ep: {epoch}\tncc: {loss_multiNCC.item():.4f}\tdice_ct: {loss_dice_ct_value:.4f}"
             )
             train_metrics = {
                 "train_lvl2/loss": loss.item(),
@@ -537,10 +583,10 @@ def train_lvl2(
         # utils.save_checkpoint(model, optimizer, epoch, "lvl2", config, lossall)
 
         epoch += 1
-        pbar.update(1)
+        # pbar.update(1)
 
         if epoch > config.epochs_lvl2:
             break
-    pbar.close()
+    # pbar.close()
 
     return {"final": final_model_path, "best": best_model_path}

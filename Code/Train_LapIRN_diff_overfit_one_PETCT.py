@@ -41,13 +41,14 @@ def main() -> None:
         )
 
         print("warning: enable inttermeidate pairs later")
+        print("warning: augment turned off")
 
         train_dataset = my_data.PSMARegDataset(
             case_ids=train_ids,
             cfg=config,
-            augment=True,
+            augment=False,
             use_cache=config.use_cache_train,
-            include_intermediate_pairs=True,
+            include_intermediate_pairs=False,
             num_workers=config.num_workers,
             # overfit="0049",
         )
@@ -85,9 +86,9 @@ def main() -> None:
             # # path_model_level1 = Path(
             # #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_stagelvl1_best.pth"
             # # )
-            # paths_model_level2 = level2.train_lvl2(
-            #     config, paths_model_level1["best"], train_generator, valid_generator
-            # )
+            paths_model_level2 = level2.train_lvl2(
+                config, paths_model_level1["best"], train_generator, valid_generator
+            )
             # path_model_level2 = Path(
             #     "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_thundering-trout-866_stagelvl2_best.pth"
             # )

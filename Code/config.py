@@ -22,7 +22,7 @@ class TrainingConfig:
     split_path = DATA_PATH / "PSMAReg/PSMAReg_dataset/split.json"
     val_fraction: float = 0.15
     use_cache_train: bool = True
-    use_cache_valid: bool = True
+    use_cache_valid: bool = False
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
     # augmentation
@@ -54,12 +54,12 @@ class TrainingConfig:
     start_channel: int = 7
 
     # train val
-    epochs_lvl1: int = 131
-    epochs_lvl2: int = 121
+    epochs_lvl1: int = 30
+    epochs_lvl2: int = 100
     epochs_lvl3: int = 201
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
-    val_interval: int = 2
+    val_interval: int = 200
     checkpoint_interval: int = 50
 
     accumulation_steps: int = 4

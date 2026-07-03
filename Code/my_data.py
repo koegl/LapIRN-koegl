@@ -562,12 +562,12 @@ class PSMARegDataset(torch_data.Dataset):
 
         self.pairs = pairs
 
-        # print("warning temp reduce size")
-        # self.pairs = [self.pairs[0]]
+        print("warning temp reduce size")
+        self.pairs = [self.pairs[0]]
 
         data_dicts = [
             {"case_id": case_id, "tp_x": tp_x, "tp_y": tp_y}
-            for case_id, tp_x, tp_y in pairs
+            for case_id, tp_x, tp_y in self.pairs
         ]
 
         load_transform = Compose([LoadPairToDict(self.data_dir)])
