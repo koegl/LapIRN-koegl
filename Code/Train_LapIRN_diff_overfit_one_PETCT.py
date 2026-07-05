@@ -50,7 +50,7 @@ def main() -> None:
             case_ids=train_ids,
             cfg=config,
             augment=config.augment,
-            use_cache=config.use_cache_train,
+            use_cache=config.use_cache_train_real,
             include_intermediate_pairs=True,
             num_workers=config.num_workers,
             # overfit="0049",
@@ -59,7 +59,7 @@ def main() -> None:
             cfg=config,
             source_ids=synth_ids,
             repeat=config.synthetic_repeat,
-            use_cache=config.use_cache_train,
+            use_cache=config.use_cache_train_synthetic,
             num_workers=config.num_workers,
             augment=config.augment,
         )

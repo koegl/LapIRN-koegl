@@ -21,7 +21,8 @@ class TrainingConfig:
     cache_dir = DATA_PATH / "PSMAReg/affine_cache"
     split_path = DATA_PATH / "PSMAReg/PSMAReg_dataset/split.json"
     val_fraction: float = 0.15
-    use_cache_train: bool = True
+    use_cache_train_real: bool = True
+    use_cache_train_synthetic: bool = False
     use_cache_valid: bool = False
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
@@ -54,7 +55,7 @@ class TrainingConfig:
     lr_lvl1: float = 5e-4
     lr_lvl2: float = 1e-3 * 0.5
     lr_lvl3: float = 1e-3 * 0.25
-    start_channel: int = 7
+    start_channel: int = 11
 
     # train val
     epochs_lvl1: int = 151
