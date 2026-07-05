@@ -19,7 +19,7 @@ from torch.utils import data as torch_data
 
 def main() -> None:
     # input shapes are fixed → cuDNN picks optimal 3D-conv kernels. Nearly free, often 10–30%
-    torch.backends.cudnn.benchmark = True
+    torch.backends.cudnn.benchmark = False
 
     config = TrainingConfig()
 

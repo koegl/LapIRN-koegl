@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import nibabel as nib
 import numpy as np
@@ -71,6 +71,17 @@ BONE_LABEL_VALUES: Sequence[int] = (
     115,
     116,
 )
+
+
+def save_frozen_pair(frozen: Dict[str, torch.Tensor], path: Path) -> None:
+    cpu_frozen = {key: value.detach().cpu() for key, value in frozen.items()}
+    torch.save(cpu_frozen, path)
+
+
+def load_frozen_pair(path: Path, device: torch.device) -> Dict[str, torch.Tensor]:
+    cpu_frozen = torch.load(path, map_location="cpu")
+    frozen = {key: value.to(device) for key, value in cpu_frozen.items()}
+    return frozen
 
 
 def build_identity_grid(

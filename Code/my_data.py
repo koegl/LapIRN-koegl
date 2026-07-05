@@ -565,9 +565,11 @@ class SyntheticSourceDataset(torch_data.Dataset):
         cache_rate: float = 1.0,
         num_workers: int = 4,
         repeat: int = 1,
+        augment: bool = False,
     ) -> None:
         self.data_dir = cfg.data_dir
         self.cfg = cfg
+        self.augment = augment
 
         all_sources = list_single_session_sources(cfg.data_dir)
         wanted = set(source_ids)
@@ -576,6 +578,8 @@ class SyntheticSourceDataset(torch_data.Dataset):
 
         print("warning temp reduce size")
         self.sources = [self.sources[0]]
+
+        print(f"{self.sources=}")
 
         data_dicts = [{"case_id": c, "tp": tp} for c, tp in self.sources]
         load_transform = Compose([LoadSingleToDict(self.data_dir)])
@@ -595,6 +599,23 @@ class SyntheticSourceDataset(torch_data.Dataset):
 
     def __getitem__(self, index: int) -> dict:
         s = self.dataset[index]
+
+        spatial_keys = ["ct", "pet", "label_ct", "label_pet"]
+
+        flipped = False
+        crop_head = 0
+        crop_feet = 0
+
+        if self.augment:
+            if self.cfg.aug_use_flip and np.random.random() < self.cfg.aug_flip_prob:
+                s = apply_flip(s, spatial_keys)
+                flipped = True
+
+            if self.cfg.aug_use_z_crop:
+                crop_head = int(np.random.randint(0, self.cfg.aug_max_crop_z_head + 1))
+                crop_feet = int(np.random.randint(0, self.cfg.aug_max_crop_z_feet + 1))
+                s = apply_z_crop(s, spatial_keys, crop_head, crop_feet)
+
         y = torch.cat([s["ct"], s["pet"]], dim=0)
         case_id, tp = self.sources[index]
         item = {
@@ -604,9 +625,9 @@ class SyntheticSourceDataset(torch_data.Dataset):
             "x_label_pet": s["label_pet"].clone(),
             "y_label_ct": s["label_ct"],
             "y_label_pet": s["label_pet"],
-            "aug_flipped": False,
-            "aug_crop_head": 0,
-            "aug_crop_feet": 0,
+            "aug_flipped": flipped,
+            "aug_crop_head": crop_head,
+            "aug_crop_feet": crop_feet,
             "aug_crop_head_moving": 0,
             "aug_crop_feet_moving": 0,
             "aug_crop_head_fixed": 0,
@@ -693,11 +714,12 @@ class PSMARegDataset(torch_data.Dataset):
         self.pairs = pairs
 
         print("warning temp reduce size")
+        # self.pairs = [self.pairs[0], self.pairs[2]]
         self.pairs = [self.pairs[0]]
 
         data_dicts = [
             {"case_id": case_id, "tp_x": tp_x, "tp_y": tp_y}
-            for case_id, tp_x, tp_y in pairs
+            for case_id, tp_x, tp_y in self.pairs
         ]
 
         load_transform = Compose([LoadPairToDict(self.data_dir)])

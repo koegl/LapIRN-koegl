@@ -277,7 +277,6 @@ def train_lvl1(
     )
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr_lvl1)
-    scaler = torch.amp.GradScaler()
 
     config.save_dir.mkdir(parents=True, exist_ok=True)
 
@@ -288,9 +287,12 @@ def train_lvl1(
     global_step = 0
 
     epoch = 0
-    pbar = tqdm.tqdm(total=config.epochs_lvl1 + 1, desc="lvl1 training")
+    # pbar = tqdm.tqdm(total=config.epochs_lvl1 + 1, desc="lvl1 training")
 
-    saved_initial: bool = False
+    saved_initial: int = 0
+    run_name = mlflow.active_run().info.run_name
+
+    print("warning frozen one synthetic pair")
 
     while epoch <= config.epochs_lvl1:
         epoch_metrics: Dict[str, float] = {}
@@ -304,17 +306,42 @@ def train_lvl1(
             Y_lbl_pet = batch["y_label_pet"].to(device)
 
             if is_synthetic:
-                # moving (X) generated on GPU from the source (Y = fixed)
-                X_full, X_lbl_ct, X_lbl_pet, gt_unit = (
-                    synthetic.generate_synthetic_moving(
-                        source=Y,
-                        source_label_ct=Y_lbl_ct,
-                        source_label_pet=Y_lbl_pet,
-                        bone_label_values=synthetic.BONE_LABEL_VALUES,
-                        device=device,
+                if config.overfit_synthetic:
+                    if config.frozen_synthetic_path.exists():
+                        frozen = synthetic.load_frozen_pair(
+                            config.frozen_synthetic_path, device
+                        )
+                    else:
+                        X_full, X_lbl_ct, X_lbl_pet, gt_unit = (
+                            synthetic.generate_synthetic_moving(
+                                source=Y,
+                                source_label_ct=Y_lbl_ct,
+                                source_label_pet=Y_lbl_pet,
+                                bone_label_values=synthetic.BONE_LABEL_VALUES,
+                                device=device,
+                            )
+                        )
+                        frozen = {
+                            "x": X_full,
+                            "x_label_ct": X_lbl_ct,
+                            "x_label_pet": X_lbl_pet,
+                            "gt_unit": gt_unit,
+                        }
+                        synthetic.save_frozen_pair(frozen, config.frozen_synthetic_path)
+                    X_full = frozen["x"]
+                    X_lbl_ct = frozen["x_label_ct"]
+                    X_lbl_pet = frozen["x_label_pet"]
+                    gt_unit = frozen["gt_unit"]
+                else:
+                    X_full, X_lbl_ct, X_lbl_pet, gt_unit = (
+                        synthetic.generate_synthetic_moving(
+                            source=Y,
+                            source_label_ct=Y_lbl_ct,
+                            source_label_pet=Y_lbl_pet,
+                            bone_label_values=synthetic.BONE_LABEL_VALUES,
+                            device=device,
+                        )
                     )
-                )
-                # synthetic pair shares the grid; no ANTs affine
                 X_affine = X_full
                 X = X_affine
             else:
@@ -335,10 +362,10 @@ def train_lvl1(
                 )
                 X_affine = transform(X, flow_affine, grid_full)
 
-            with torch.amp.autocast(device_type="cuda"):
-                F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_affine, Y)
+            # with torch.amp.autocast(device_type="cuda"):
+            F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_affine, Y)
 
-            if not saved_initial:
+            if saved_initial < len(train_generator):
                 zero_disp = torch.zeros_like(F_X_Y)
                 x_ref = model.transform(
                     X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
@@ -353,29 +380,30 @@ def train_lvl1(
                     volume=x_ref[:, 0:1, ...],
                     out_dir=config.save_dir / "initial",
                     epoch=epoch,
-                    name="x_ref_ct_lvl1",
+                    name=f"x_ref_ct_lvl1_{run_name}_{batch['case_id'][0]}",
                 )
                 my_data.save_volume(
                     volume=x_affine[:, 0:1, ...],
                     out_dir=config.save_dir / "initial",
                     epoch=epoch,
-                    name="x_affine_ct_lvl1",
+                    name=f"x_affine_ct_lvl1_{run_name}_{batch['case_id'][0]}",
                 )
                 my_data.save_volume(
-                    volume=y_ref[:, 0:1, ...],
+                    volume=Y_4x[:, 0:1, ...],
                     out_dir=config.save_dir / "initial",
                     epoch=epoch,
-                    name="y_ref_ct_lvl1",
+                    name=f"y_ref_ct_lvl1_{run_name}_{batch['case_id'][0]}",
                 )
-                saved_initial = True
+                saved_initial += 1
 
-            if epoch % 10 == 0 or epoch == config.epochs_lvl1:
+            if epoch == 0 or epoch == config.epochs_lvl1:
+                print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
                 ct = X_Y[:, 0:1, :, :, :]
                 my_data.save_volume(
                     volume=ct,
                     out_dir=config.save_dir / "warped",
                     epoch=epoch,
-                    name="warped_ct_lvl1",
+                    name=f"warped_ct_lvl1_{run_name}_{batch['case_id'][0]}",
                 )
 
             F_X_Y = F_X_Y.float()
@@ -486,10 +514,9 @@ def train_lvl1(
             ) == steps_per_epoch  # trailing-partial flush
 
             if torch.isfinite(loss):
-                scaler.scale(loss_scaled).backward()
+                loss_scaled.backward()
 
                 if is_step or is_last_in_epoch:
-                    scaler.unscale_(optimizer)
                     total_norm = torch.nn.utils.clip_grad_norm_(
                         model.parameters(), max_norm=1.0
                     )
@@ -503,9 +530,8 @@ def train_lvl1(
                         )
                         optimizer.zero_grad()
                     else:
-                        scaler.step(optimizer)
+                        optimizer.step()
                         optimizer.zero_grad()
-                    scaler.update()
             else:
                 tqdm.tqdm.write(f"[lvl1] step {global_step}: non-finite loss (skipped)")
                 optimizer.zero_grad()
@@ -518,19 +544,25 @@ def train_lvl1(
                     loss_regulation.item(),
                 ]
             )
-            pbar.set_postfix(
-                loss=f"{loss.item():.4f}",
-                ncc=f"{loss_multiNCC.item():.4f}",
-                dice_ct=f"{loss_dice_ct.item():.4f}"
-                if loss_dice_ct is not None
-                else "n/a",
-                dice_pet=f"{loss_dice_pet.item():.4f}"
-                if loss_dice_pet is not None
-                else "n/a",
-                Jdet=f"{loss_jacobian.item():.6f}",
-                smo=f"{loss_regulation.item():.4f}",
-                dvf=f"{loss_dvf.item():.8f}",
+            # pbar.set_postfix(
+            #     loss=f"{loss.item():.4f}",
+            #     ncc=f"{loss_multiNCC.item():.4f}",
+            #     dice_ct=f"{loss_dice_ct.item():.4f}"
+            #     if loss_dice_ct is not None
+            #     else "n/a",
+            #     dice_pet=f"{loss_dice_pet.item():.4f}"
+            #     if loss_dice_pet is not None
+            #     else "n/a",
+            #     Jdet=f"{loss_jacobian.item():.6f}",
+            #     smo=f"{loss_regulation.item():.4f}",
+            #     dvf=f"{loss_dvf.item():.8f}",
+            # )
+            loss_dice_ct_value = (
+                loss_dice_ct.item() if loss_dice_ct is not None else 0.0
             )
+            # print(
+            #     f"ep: {epoch}\tncc: {loss_multiNCC.item():.4f}\tdice_ct: {loss_dice_ct_value:.4f}"
+            # )
             train_metrics = {
                 "train_lvl1/loss": loss.item(),
                 "train_lvl1/ncc_ct": loss_ncc_ct.item(),
@@ -556,7 +588,13 @@ def train_lvl1(
             step=global_step,
         )
 
-        if epoch % config.val_interval == 0 or epoch == config.epochs_lvl1:
+        print(
+            f"ep: {epoch} "
+            f"ncc={epoch_metrics['train_lvl1/ncc_ct'] / len(train_generator):.4f} "
+            f"dice={epoch_metrics['train_lvl1/dice_ct'] / len(train_generator):.4f}"
+        )
+
+        if (epoch % config.val_interval == 0 or epoch == config.epochs_lvl1) and False:
             val_losses = evaluate_lvl1(
                 model=model,
                 val_generator=val_generator,
@@ -599,16 +637,18 @@ def train_lvl1(
                 )
 
         # save final model
-        if epoch == config.epochs_lvl1:
-            torch.save(model.state_dict(), final_model_path)
+        if epoch == config.epochs_lvl1 and False:
+            pass
 
         # utils.save_checkpoint(model, optimizer, epoch, "lvl1", config, lossall)
 
         epoch += 1
-        pbar.update(1)
+        # pbar.update(1)
 
         if epoch > config.epochs_lvl1:
+            # print("Warn not saving final model")
+            torch.save(model.state_dict(), final_model_path)
             break
-    pbar.close()
+    # pbar.close()
 
     return {"final": final_model_path, "best": best_model_path}
