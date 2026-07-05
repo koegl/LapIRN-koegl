@@ -226,7 +226,6 @@ def get_affine_dvf(
         DVF of shape (H, W, D, 3), float32, voxel displacements.
     """
 
-    """
     mem_key = f"{case_id}_{tp_x}_{tp_y}"
     if mem_key in _DVF_CACHE:
         return _DVF_CACHE[mem_key].astype(np.float32)
@@ -267,6 +266,7 @@ def get_affine_dvf(
         ct_window=ct_window,
     )
     np.save(str(cache_path), dvf)
+    """
     return dvf
 
 
