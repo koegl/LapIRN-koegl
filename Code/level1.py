@@ -287,12 +287,10 @@ def train_lvl1(
     global_step = 0
 
     epoch = 0
-    # pbar = tqdm.tqdm(total=config.epochs_lvl1 + 1, desc="lvl1 training")
+    pbar = tqdm.tqdm(total=config.epochs_lvl1 + 1, desc="lvl1 training")
 
-    saved_initial: int = 0
+    saved_initial: bool = False
     run_name = mlflow.active_run().info.run_name
-
-    print("warning frozen one synthetic pair")
 
     while epoch <= config.epochs_lvl1:
         epoch_metrics: Dict[str, float] = {}
@@ -365,7 +363,7 @@ def train_lvl1(
             # with torch.amp.autocast(device_type="cuda"):
             F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_affine, Y)
 
-            if saved_initial < len(train_generator):
+            if False and saved_initial is False:
                 zero_disp = torch.zeros_like(F_X_Y)
                 x_ref = model.transform(
                     X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
@@ -394,9 +392,9 @@ def train_lvl1(
                     epoch=epoch,
                     name=f"y_ref_ct_lvl1_{run_name}_{batch['case_id'][0]}",
                 )
-                saved_initial += 1
+                saved_initial = True
 
-            if epoch == 0 or epoch == config.epochs_lvl1:
+            if False and (epoch == 0 or epoch == config.epochs_lvl1):
                 print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
                 ct = X_Y[:, 0:1, :, :, :]
                 my_data.save_volume(
@@ -544,19 +542,19 @@ def train_lvl1(
                     loss_regulation.item(),
                 ]
             )
-            # pbar.set_postfix(
-            #     loss=f"{loss.item():.4f}",
-            #     ncc=f"{loss_multiNCC.item():.4f}",
-            #     dice_ct=f"{loss_dice_ct.item():.4f}"
-            #     if loss_dice_ct is not None
-            #     else "n/a",
-            #     dice_pet=f"{loss_dice_pet.item():.4f}"
-            #     if loss_dice_pet is not None
-            #     else "n/a",
-            #     Jdet=f"{loss_jacobian.item():.6f}",
-            #     smo=f"{loss_regulation.item():.4f}",
-            #     dvf=f"{loss_dvf.item():.8f}",
-            # )
+            pbar.set_postfix(
+                loss=f"{loss.item():.4f}",
+                ncc=f"{loss_multiNCC.item():.4f}",
+                dice_ct=f"{loss_dice_ct.item():.4f}"
+                if loss_dice_ct is not None
+                else "n/a",
+                dice_pet=f"{loss_dice_pet.item():.4f}"
+                if loss_dice_pet is not None
+                else "n/a",
+                Jdet=f"{loss_jacobian.item():.6f}",
+                smo=f"{loss_regulation.item():.4f}",
+                dvf=f"{loss_dvf.item():.8f}",
+            )
             loss_dice_ct_value = (
                 loss_dice_ct.item() if loss_dice_ct is not None else 0.0
             )
@@ -588,13 +586,13 @@ def train_lvl1(
             step=global_step,
         )
 
-        print(
-            f"ep: {epoch} "
-            f"ncc={epoch_metrics['train_lvl1/ncc_ct'] / len(train_generator):.4f} "
-            f"dice={epoch_metrics['train_lvl1/dice_ct'] / len(train_generator):.4f}"
-        )
+        # print(
+        #     f"ep: {epoch} "
+        #     f"ncc={epoch_metrics['train_lvl1/ncc_ct'] / len(train_generator):.4f} "
+        #     f"dice={epoch_metrics['train_lvl1/dice_ct'] / len(train_generator):.4f}"
+        # )
 
-        if (epoch % config.val_interval == 0 or epoch == config.epochs_lvl1) and False:
+        if epoch % config.val_interval == 0 or epoch == config.epochs_lvl1:
             val_losses = evaluate_lvl1(
                 model=model,
                 val_generator=val_generator,
@@ -636,19 +634,15 @@ def train_lvl1(
                     f"epoch {epoch}: new best dice_ct {best_dice_ct:.4f} -> saved best"
                 )
 
-        # save final model
-        if epoch == config.epochs_lvl1 and False:
-            pass
-
         # utils.save_checkpoint(model, optimizer, epoch, "lvl1", config, lossall)
 
         epoch += 1
-        # pbar.update(1)
+        pbar.update(1)
 
         if epoch > config.epochs_lvl1:
             # print("Warn not saving final model")
             torch.save(model.state_dict(), final_model_path)
             break
-    # pbar.close()
+    pbar.close()
 
     return {"final": final_model_path, "best": best_model_path}

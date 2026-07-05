@@ -313,7 +313,7 @@ def train_lvl3(
     global_step = 0
 
     epoch = 0
-    # pbar = tqdm.tqdm(total=config.epochs_lvl3 + 1, desc="lvl3 training")
+    pbar = tqdm.tqdm(total=config.epochs_lvl3 + 1, desc="lvl3 training")
 
     saved_initial: bool = False
     run_name = mlflow.active_run().info.run_name
@@ -388,7 +388,7 @@ def train_lvl3(
 
             F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X_affine, Y)
 
-            if not saved_initial:
+            if False and not saved_initial:
                 zero_disp = torch.zeros_like(F_X_Y)
                 x_ref = model.transform(
                     X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
@@ -419,7 +419,7 @@ def train_lvl3(
                 )
                 saved_initial = True
 
-            if epoch == 0 or epoch == config.epochs_lvl3:
+            if False and (epoch == 0 or epoch == config.epochs_lvl3):
                 # in the epoch==0 warped block:
                 print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
                 ct = X_Y[:, 0:1, :, :, :]
@@ -537,21 +537,21 @@ def train_lvl3(
                     loss_regulation.item(),
                 ]
             )
-            # pbar.set_postfix(
-            #     loss=f"{loss.item():.4f}",
-            #     ncc=f"{loss_multiNCC.item():.4f}",
-            #     dice_ct=f"{loss_dice_ct.item():.4f}"
-            #     if loss_dice_ct is not None
-            #     else "n/a",
-            #     dice_pet=f"{loss_dice_pet.item():.4f}"
-            #     if loss_dice_pet is not None
-            #     else "n/a",
-            #     mtv=f"{loss_mtv.item():.4f}",
-            #     tlg=f"{loss_tlg.item():.4f}",
-            #     Jdet=f"{loss_jacobian.item():.6f}",
-            #     smo=f"{loss_regulation.item():.4f}",
-            #     dvf=f"{loss_dvf.item():.8f}",
-            # )
+            pbar.set_postfix(
+                loss=f"{loss.item():.4f}",
+                ncc=f"{loss_multiNCC.item():.4f}",
+                dice_ct=f"{loss_dice_ct.item():.4f}"
+                if loss_dice_ct is not None
+                else "n/a",
+                dice_pet=f"{loss_dice_pet.item():.4f}"
+                if loss_dice_pet is not None
+                else "n/a",
+                mtv=f"{loss_mtv.item():.4f}",
+                tlg=f"{loss_tlg.item():.4f}",
+                Jdet=f"{loss_jacobian.item():.6f}",
+                smo=f"{loss_regulation.item():.4f}",
+                dvf=f"{loss_dvf.item():.8f}",
+            )
             train_metrics = {
                 "train_lvl3/loss": loss.item(),
                 "train_lvl3/ncc_ct": loss_ncc_ct.item(),
@@ -580,13 +580,13 @@ def train_lvl3(
             step=global_step,
         )
 
-        print(
-            f"ep: {epoch} "
-            f"ncc={epoch_metrics['train_lvl3/ncc_ct'] / len(train_generator):.4f} "
-            f"dice={epoch_metrics['train_lvl3/dice_ct'] / len(train_generator):.4f}"
-        )
+        # print(
+        #     f"ep: {epoch} "
+        #     f"ncc={epoch_metrics['train_lvl3/ncc_ct'] / len(train_generator):.4f} "
+        #     f"dice={epoch_metrics['train_lvl3/dice_ct'] / len(train_generator):.4f}"
+        # )
 
-        if False and (epoch % config.val_interval == 0 or epoch == config.epochs_lvl3):
+        if epoch % config.val_interval == 0 or epoch == config.epochs_lvl3:
             val_losses = evaluate_lvl3(
                 model=model,
                 val_generator=val_generator,
@@ -640,10 +640,10 @@ def train_lvl3(
         # utils.save_checkpoint(model, optimizer, epoch, "lvl3", config, lossall)
 
         epoch += 1
-        # pbar.update(1)
+        pbar.update(1)
 
         if epoch > config.epochs_lvl3:
             break
-    # pbar.close()
+    pbar.close()
 
     return {"final": final_model_path, "best": best_model_path}

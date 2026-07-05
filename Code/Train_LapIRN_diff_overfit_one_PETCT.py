@@ -46,31 +46,27 @@ def main() -> None:
             artifact_file="config.json",
         )
 
-        print("warning: enable inttermeidate pairs later")
-
         train_dataset = my_data.PSMARegDataset(
             case_ids=train_ids,
             cfg=config,
-            augment=False,
+            augment=config.augment,
             use_cache=config.use_cache_train,
-            include_intermediate_pairs=False,
+            include_intermediate_pairs=True,
             num_workers=config.num_workers,
             # overfit="0049",
         )
-        print("warning tuned off agumentation")
-        print("warning tuned intermediate pairs")
         synth_dataset = my_data.SyntheticSourceDataset(
             cfg=config,
             source_ids=synth_ids,
             repeat=config.synthetic_repeat,
+            use_cache=config.use_cache_train,
+            num_workers=config.num_workers,
+            augment=config.augment,
         )
         if config.use_synthetic:
             train_combined = torch_data.ConcatDataset([train_dataset, synth_dataset])
         else:
             train_combined = torch_data.ConcatDataset([train_dataset])
-
-        print("warnign using only synthetic to overfit test")
-        train_combined = train_dataset
 
         val_dataset = my_data.PSMARegDataset(
             case_ids=val_ids,
@@ -106,6 +102,14 @@ def main() -> None:
             # # path_model_level1 = Path(
             # #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_stagelvl1_best.pth"
             # # )
+            # paths_model_level2 = level2.train_lvl2(
+            #     config,
+            #     Path(
+            #         "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_secretive-crane-465_stagelvl1_300.pth"
+            #     ),
+            #     train_generator,
+            #     valid_generator,
+            # )
             paths_model_level2 = level2.train_lvl2(
                 config, paths_model_level1["best"], train_generator, valid_generator
             )

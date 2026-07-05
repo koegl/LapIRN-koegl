@@ -298,9 +298,9 @@ def train_lvl2(
     global_step = 0
 
     epoch = 0
-    # pbar = tqdm.tqdm(total=config.epochs_lvl2 + 1, desc="lvl2 training")
+    pbar = tqdm.tqdm(total=config.epochs_lvl2 + 1, desc="lvl2 training")
 
-    saved_initial: int = 0
+    saved_initial: bool = False
     run_name = mlflow.active_run().info.run_name
 
     while epoch <= config.epochs_lvl2:
@@ -373,7 +373,7 @@ def train_lvl2(
 
             F_X_Y, X_Y, Y_4x, F_xy, _, _ = model(X_affine, Y)
 
-            if saved_initial < len(train_generator):
+            if False and saved_initial is False:
                 zero_disp = torch.zeros_like(F_X_Y)
                 x_ref = model.transform(
                     X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
@@ -402,9 +402,9 @@ def train_lvl2(
                     epoch=epoch,
                     name=f"y_ref_ct_lvl2_{run_name}_{batch['case_id'][0]}",
                 )
-                saved_initial += 1
+                saved_initial = True
 
-            if epoch == 0 or epoch == config.epochs_lvl2:
+            if False and (epoch == 0 or epoch == config.epochs_lvl2):
                 # in the epoch==0 warped block:
                 print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
                 ct = X_Y[:, 0:1, :, :, :]
@@ -549,19 +549,19 @@ def train_lvl2(
                     loss_regulation.item(),
                 ]
             )
-            # pbar.set_postfix(
-            #     loss=f"{loss.item():.4f}",
-            #     ncc=f"{loss_multiNCC.item():.4f}",
-            #     dice_ct=f"{loss_dice_ct.item():.4f}"
-            #     if loss_dice_ct is not None
-            #     else "n/a",
-            #     dice_pet=f"{loss_dice_pet.item():.4f}"
-            #     if loss_dice_pet is not None
-            #     else "n/a",
-            #     Jdet=f"{loss_jacobian.item():.6f}",
-            #     smo=f"{loss_regulation.item():.4f}",
-            #     dvf=f"{loss_dvf.item():.8f}",
-            # )
+            pbar.set_postfix(
+                loss=f"{loss.item():.4f}",
+                ncc=f"{loss_multiNCC.item():.4f}",
+                dice_ct=f"{loss_dice_ct.item():.4f}"
+                if loss_dice_ct is not None
+                else "n/a",
+                dice_pet=f"{loss_dice_pet.item():.4f}"
+                if loss_dice_pet is not None
+                else "n/a",
+                Jdet=f"{loss_jacobian.item():.6f}",
+                smo=f"{loss_regulation.item():.4f}",
+                dvf=f"{loss_dvf.item():.8f}",
+            )
             train_metrics = {
                 "train_lvl2/loss": loss.item(),
                 "train_lvl2/ncc_ct": loss_ncc_ct.item(),
@@ -587,13 +587,13 @@ def train_lvl2(
             step=global_step,
         )
 
-        print(
-            f"ep: {epoch} "
-            f"ncc={epoch_metrics['train_lvl2/ncc_ct'] / len(train_generator):.4f} "
-            f"dice={epoch_metrics['train_lvl2/dice_ct'] / len(train_generator):.4f}"
-        )
+        # print(
+        #     f"ep: {epoch} "
+        #     f"ncc={epoch_metrics['train_lvl2/ncc_ct'] / len(train_generator):.4f} "
+        #     f"dice={epoch_metrics['train_lvl2/dice_ct'] / len(train_generator):.4f}"
+        # )
 
-        if False and (epoch % config.val_interval == 0 or epoch == config.epochs_lvl2):
+        if epoch % config.val_interval == 0 or epoch == config.epochs_lvl2:
             val_losses = evaluate_lvl2(
                 model=model,
                 valid_generator=valid_generator,
@@ -644,10 +644,10 @@ def train_lvl2(
         # utils.save_checkpoint(model, optimizer, epoch, "lvl2", config, lossall)
 
         epoch += 1
-        # pbar.update(1)
+        pbar.update(1)
 
         if epoch > config.epochs_lvl2:
             break
-    # pbar.close()
+    pbar.close()
 
     return {"final": final_model_path, "best": best_model_path}

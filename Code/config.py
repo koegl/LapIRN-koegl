@@ -22,10 +22,11 @@ class TrainingConfig:
     split_path = DATA_PATH / "PSMAReg/PSMAReg_dataset/split.json"
     val_fraction: float = 0.15
     use_cache_train: bool = True
-    use_cache_valid: bool = True
+    use_cache_valid: bool = False
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
     # augmentation
+    augment: bool = True
     aug_use_flip: bool = True
     aug_use_ct_intensity: bool = True
     aug_use_pet_intensity: bool = True
@@ -50,15 +51,15 @@ class TrainingConfig:
 
     in_channel: int = 4
     n_classes: int = 3
-    lr_lvl1: float = 1e-4
+    lr_lvl1: float = 5e-4
     lr_lvl2: float = 1e-3 * 0.5
     lr_lvl3: float = 1e-3 * 0.25
-    start_channel: int = 7
+    start_channel: int = 11
 
     # train val
-    epochs_lvl1: int = 131
-    epochs_lvl2: int = 121
-    epochs_lvl3: int = 201
+    epochs_lvl1: int = 151
+    epochs_lvl2: int = 151
+    epochs_lvl3: int = 251
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
@@ -112,4 +113,4 @@ class TrainingConfig:
     frozen_synthetic_path: Path = Path(
         "/home/iml/fryderyk.koegl/code/LapIRN-koegl/saved/synthetic_examle.pth"
     )
-    overfit_synthetic: bool = True
+    overfit_synthetic: bool = False
