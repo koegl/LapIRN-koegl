@@ -54,7 +54,7 @@ class TrainingConfig:
     lr_lvl1: float = 5e-4
     lr_lvl2: float = 1e-3 * 0.5
     lr_lvl3: float = 1e-3 * 0.25
-    start_channel: int = 11
+    start_channel: int = 7
 
     # train val
     epochs_lvl1: int = 151
@@ -62,7 +62,7 @@ class TrainingConfig:
     epochs_lvl3: int = 251
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
-    val_interval: int = 2
+    val_interval: int = 4
     checkpoint_interval: int = 50
 
     accumulation_steps: int = 4
