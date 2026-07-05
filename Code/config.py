@@ -67,14 +67,14 @@ class TrainingConfig:
     accumulation_steps: int = 4
 
     # sum to 10
-    w_jacobian: float = 3.0
-    w_smooth: float = 3.0
-    w_ct: float = 3.0
+    w_jacobian: float = 1.0
+    w_smooth: float = 1.0
+    w_ct: float = 10.0
     w_pet: float = 1.0
-    w_dice_ct: float = 3.0
+    w_dice_ct: float = 6.0
     w_dice_pet: float = 3.0
-    w_mtv: float = 1.5
-    w_tlg: float = 1.5
+    w_mtv: float = 3.0
+    w_tlg: float = 3.0
     w_masked_jac: float = 0.6
     w_dvf: float = 1000.0
 
@@ -82,7 +82,7 @@ class TrainingConfig:
     shuffle: bool = True
     num_workers: int = 8
 
-    lvl1_ncc_win: int = 3
+    lvl1_ncc_win: int = 5
     lvl2_ncc_win: int = 7
     lvl3_ncc_win: int = 9
 
@@ -108,3 +108,8 @@ class TrainingConfig:
             key: str(value) if isinstance(value, (Path, tuple)) else value
             for key, value in self.to_dict().items()
         }
+
+    frozen_synthetic_path: Path = Path(
+        "/home/iml/fryderyk.koegl/code/LapIRN-koegl/saved/synthetic_examle.pth"
+    )
+    overfit_synthetic: bool = True
