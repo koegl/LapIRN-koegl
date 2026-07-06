@@ -68,17 +68,19 @@ class TrainingConfig:
 
     accumulation_steps: int = 4
 
-    # sum to 10
-    w_jacobian: float = 1.0
-    w_smooth: float = 1.0
-    w_ct: float = 10.0
+    # loss weights
+    w_jacobian: float = 2.0
+    w_smooth: float = 2.0
+    w_ct: float = 15.0
     w_pet: float = 1.0
     w_dice_ct: float = 6.0
-    w_dice_pet: float = 3.0
+    w_dice_pet: float = 0.4
     w_mtv: float = 3.0
     w_tlg: float = 3.0
     w_masked_jac: float = 0.6
     w_dvf: float = 1000.0
+
+    dice_pet_iou_threshold: float = 0.1
 
     batch_size: int = 1
     shuffle: bool = True
