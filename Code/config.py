@@ -75,8 +75,8 @@ class TrainingConfig:
     w_pet: float = 1.0
     w_dice_ct: float = 6.0
     w_dice_pet: float = 0.4
-    w_mtv: float = 3.0
-    w_tlg: float = 3.0
+    w_mtv: float = 5.0
+    w_tlg: float = 5.0
     w_masked_jac: float = 0.6
     w_dvf: float = 1000.0
 
