@@ -84,6 +84,28 @@ def load_frozen_pair(path: Path, device: torch.device) -> Dict[str, torch.Tensor
     return frozen
 
 
+def build_body_index_map(
+    label_ct: torch.Tensor,
+    bone_label_values: Sequence[int],
+    min_voxels: int,
+) -> torch.Tensor:
+    """Integer body-index map (1, 1, D0, D1, D2): 0 = not bone, k = body k.
+
+    Computed once per source (static geometry). Each listed bone label that
+    has at least min_voxels becomes one rigid body with a distinct index.
+    """
+    lbl = label_ct.squeeze().cpu().numpy().astype(np.int32)
+    body_map = np.zeros_like(lbl, dtype=np.int16)
+    next_index = 1
+    for value in bone_label_values:
+        body = lbl == value
+        if int(body.sum()) >= min_voxels:
+            body_map[body] = next_index
+            next_index += 1
+    body_map_t = torch.from_numpy(body_map).unsqueeze(0).unsqueeze(0)
+    return body_map_t
+
+
 def build_identity_grid(
     shape: Tuple[int, int, int], device: torch.device
 ) -> torch.Tensor:
@@ -360,6 +382,129 @@ def generate_synthetic_pair(
     )
 
     return fixed, moving, disp_inv, shape
+
+
+def build_rigid_velocity_from_map(
+    body_map: torch.Tensor,
+    identity_vox: torch.Tensor,
+    device: torch.device,
+    bone_translation: float,
+    bone_rotation_deg: float,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Rigid velocity per body from a cached body-index map, GPU-only.
+
+    Fresh random translation + rotation per body on every call (per-epoch
+    diversity). Returns (v_rigid, bone_mask).
+    """
+    print(f"{body_map.shape=} {identity_vox.shape=}")
+
+    v_rigid = torch.zeros_like(identity_vox)
+
+    num_bodies = int(body_map.max().item())
+    body_map_3d = body_map.view(
+        body_map.shape[-3], body_map.shape[-2], body_map.shape[-1]
+    ).to(device)
+    bone_mask = (body_map_3d > 0).float().unsqueeze(0).unsqueeze(0)
+
+    g0 = identity_vox[0, 0]
+    g1 = identity_vox[0, 1]
+    g2 = identity_vox[0, 2]
+
+    for body_index in range(1, num_bodies + 1):
+        sel = body_map_3d == body_index
+        n_vox = int(sel.sum().item())
+        if n_vox == 0:
+            continue
+
+        c0 = g0[sel]
+        c1 = g1[sel]
+        c2 = g2[sel]
+        coords_body = torch.stack([c0, c1, c2], dim=1)  # (N, 3)
+        centroid = coords_body.mean(dim=0)
+        rel = coords_body - centroid
+
+        t = torch.randn(3, device=device)
+        t = t / (t.norm() + 1e-8) * (bone_translation * torch.rand(1, device=device))
+
+        axis = torch.randn(3, device=device)
+        axis = axis / (axis.norm() + 1e-8)
+        angle = np.deg2rad(bone_rotation_deg) * float(torch.rand(1).item())
+        w = axis * angle
+
+        disp = t[None, :] + torch.cross(w[None, :].expand_as(rel), rel, dim=1)
+
+        v_rigid[0, 0][sel] = disp[:, 0]
+        v_rigid[0, 1][sel] = disp[:, 1]
+        v_rigid[0, 2][sel] = disp[:, 2]
+
+    result = (v_rigid, bone_mask)
+    return result
+
+
+def generate_synthetic_moving_cached(
+    source: torch.Tensor,
+    source_label_ct: torch.Tensor,
+    source_label_pet: torch.Tensor,
+    body_map: torch.Tensor,
+    max_displacement: float = 15.0,
+    coarse_downsample: int = 32,
+    smoothing_sigma: float = 5.0,
+    num_integration_steps: int = 7,
+    move_bones: bool = True,
+    bone_translation: float = 4.0,
+    bone_rotation_deg: float = 3.0,
+    bone_transition_sigma: float = 6.0,
+    bias_strength: float = 0.08,
+    noise_std: float = 0.005,
+    device: torch.device = torch.device("cuda"),
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Like generate_synthetic_moving but takes a precomputed body_map.
+
+    Bone geometry is cached (body_map); random motion + SVF are fresh each
+    call. All heavy work is GPU-only.
+    """
+    shape = (source.shape[2], source.shape[3], source.shape[4])
+    identity_vox = build_identity_grid(shape, device)
+
+    coarse_shape = tuple(max(2, s // coarse_downsample) for s in shape)
+    v_coarse = torch.randn(1, 3, *coarse_shape, device=device)
+    v_soft = F.interpolate(v_coarse, size=shape, mode="trilinear", align_corners=True)
+    v_soft = gaussian_blur_3d(v_soft, smoothing_sigma)
+
+    if move_bones and int(body_map.max().item()) > 0:
+        v_rigid, bone_mask = build_rigid_velocity_from_map(
+            body_map, identity_vox, device, bone_translation, bone_rotation_deg
+        )
+        v_rigid_s = gaussian_blur_3d(v_rigid * bone_mask, bone_transition_sigma)
+        w = gaussian_blur_3d(bone_mask, bone_transition_sigma)
+        v_rigid_s = v_rigid_s / (w + 1e-6)
+        bone_weight = w.clamp(0.0, 1.0)
+        soft_weight = 1.0 - bone_weight
+
+        norm = torch.sqrt((v_soft**2).sum(dim=1, keepdim=True))
+        max_norm = norm.max()
+        if max_norm > 0:
+            v_soft = v_soft * (max_displacement / max_norm)
+        velocity = soft_weight * v_soft + bone_weight * v_rigid_s
+    else:
+        norm = torch.sqrt((v_soft**2).sum(dim=1, keepdim=True))
+        max_norm = norm.max()
+        if max_norm > 0:
+            v_soft = v_soft * (max_displacement / max_norm)
+        velocity = v_soft
+
+    disp = integrate_svf(velocity, identity_vox, num_integration_steps)
+    disp_inv = integrate_svf(-velocity, identity_vox, num_integration_steps)
+
+    moving = warp(source, disp, identity_vox, mode="bilinear")
+    moving = decorrelate_intensity(moving, bias_strength, noise_std, device)
+    moving_lbl_ct = warp(source_label_ct.float(), disp, identity_vox, mode="nearest")
+    moving_lbl_pet = warp(source_label_pet.float(), disp, identity_vox, mode="nearest")
+
+    gt_unit = unit_flow_from_voxel_disp(disp_inv, shape).flip(1)
+
+    result = (moving, moving_lbl_ct, moving_lbl_pet, gt_unit)
+    return result
 
 
 def bodies_from_label(

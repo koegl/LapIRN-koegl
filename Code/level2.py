@@ -322,11 +322,11 @@ def train_lvl2(
                         )
                     else:
                         X_full, X_lbl_ct, X_lbl_pet, gt_unit = (
-                            synthetic.generate_synthetic_moving(
+                            synthetic.generate_synthetic_moving_cached(
                                 source=Y,
                                 source_label_ct=Y_lbl_ct,
                                 source_label_pet=Y_lbl_pet,
-                                bone_label_values=synthetic.BONE_LABEL_VALUES,
+                                body_map=batch["body_map"].to(device),
                                 device=device,
                             )
                         )
@@ -343,11 +343,11 @@ def train_lvl2(
                     gt_unit = frozen["gt_unit"]
                 else:
                     X_full, X_lbl_ct, X_lbl_pet, gt_unit = (
-                        synthetic.generate_synthetic_moving(
+                        synthetic.generate_synthetic_moving_cached(
                             source=Y,
                             source_label_ct=Y_lbl_ct,
                             source_label_pet=Y_lbl_pet,
-                            bone_label_values=synthetic.BONE_LABEL_VALUES,
+                            body_map=batch["body_map"].to(device),
                             device=device,
                         )
                     )

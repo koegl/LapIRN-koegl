@@ -177,6 +177,11 @@ def load_single_session(data_dir: Path, case_id: str, tp: str) -> dict:
     pet_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp}.nii.gz")
     pet_raw = apply_body_mask(pet_raw, mask, fill_value=0.0)
 
+    body_map = synthetic.build_body_index_map(
+        to_t(load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp}.nii.gz")),
+        synthetic.BONE_LABEL_VALUES,
+        min_voxels=200,
+    )
     out = {
         "ct": to_t(norm_ct(ct_raw)).float(),
         "pet": to_t(norm_pet(pet_raw)).float(),
@@ -186,6 +191,7 @@ def load_single_session(data_dir: Path, case_id: str, tp: str) -> dict:
         "label_pet": to_t(
             load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0001_{tp}.nii.gz")
         ),
+        "body_map": body_map,
     }
     return out
 
@@ -598,7 +604,7 @@ class SyntheticSourceDataset(torch_data.Dataset):
     def __getitem__(self, index: int) -> dict:
         s = self.dataset[index]
 
-        spatial_keys = ["ct", "pet", "label_ct", "label_pet"]
+        spatial_keys = ["ct", "pet", "label_ct", "label_pet", "body_map"]
 
         flipped = False
         crop_head = 0
@@ -634,6 +640,7 @@ class SyntheticSourceDataset(torch_data.Dataset):
             "case_id": case_id,
             "tp_x": tp,
             "tp_y": tp,
+            "body_map": s["body_map"],
         }
         return item
 
