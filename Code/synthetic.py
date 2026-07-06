@@ -396,8 +396,6 @@ def build_rigid_velocity_from_map(
     Fresh random translation + rotation per body on every call (per-epoch
     diversity). Returns (v_rigid, bone_mask).
     """
-    print(f"{body_map.shape=} {identity_vox.shape=}")
-
     v_rigid = torch.zeros_like(identity_vox)
 
     num_bodies = int(body_map.max().item())

@@ -21,9 +21,9 @@ class TrainingConfig:
     cache_dir = DATA_PATH / "PSMAReg/affine_cache"
     split_path = DATA_PATH / "PSMAReg/PSMAReg_dataset/split.json"
     val_fraction: float = 0.15
-    use_cache_train_real: bool = True
-    use_cache_train_synthetic: bool = True
-    use_cache_valid: bool = True
+    use_cache_train_real: bool = False
+    use_cache_train_synthetic: bool = False
+    use_cache_valid: bool = False
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
     # augmentation
@@ -58,7 +58,7 @@ class TrainingConfig:
     start_channel: int = 11
 
     # train val
-    epochs_lvl1: int = 151
+    epochs_lvl1: int = 100
     epochs_lvl2: int = 151
     epochs_lvl3: int = 251
     unfreeze_epoch_in_lvl2: int = 10
@@ -68,17 +68,19 @@ class TrainingConfig:
 
     accumulation_steps: int = 4
 
-    # sum to 10
-    w_jacobian: float = 1.0
-    w_smooth: float = 1.0
-    w_ct: float = 10.0
+    # loss weights
+    w_jacobian: float = 2.0
+    w_smooth: float = 2.0
+    w_ct: float = 15.0
     w_pet: float = 1.0
     w_dice_ct: float = 6.0
-    w_dice_pet: float = 3.0
-    w_mtv: float = 3.0
-    w_tlg: float = 3.0
+    w_dice_pet: float = 0.4
+    w_mtv: float = 5.0
+    w_tlg: float = 5.0
     w_masked_jac: float = 0.6
     w_dvf: float = 1000.0
+
+    dice_pet_iou_threshold: float = 0.1
 
     batch_size: int = 1
     shuffle: bool = True

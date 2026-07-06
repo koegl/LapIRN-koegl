@@ -321,6 +321,7 @@ def train_lvl3(
     while epoch <= config.epochs_lvl3:
         epoch_metrics: Dict[str, float] = {}
         n_steps = 0
+        n_gated = 0
 
         for batch in train_generator:
             is_synthetic = bool(batch["is_synthetic"][0])
@@ -435,10 +436,6 @@ def train_lvl3(
             Y_4x_ct = Y_4x[:, 0:1, ...]
             Y_4x_pet = Y_4x[:, 1:2, ...]
 
-            loss_ncc_ct = loss_similarity_ct(X_Y_ct, Y_4x_ct)
-            loss_ncc_pet = loss_similarity_pet(X_Y_pet, Y_4x_pet)
-            loss_multiNCC = config.w_ct * loss_ncc_ct + config.w_pet * loss_ncc_pet
-
             F_X_Y_norm = transform_unit_flow_to_flow_cuda(
                 F_X_Y.permute(0, 2, 3, 4, 1).clone()
             )
@@ -458,6 +455,29 @@ def train_lvl3(
                 X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_affine, grid_full)
                 X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_affine, grid_full)
 
+            if is_synthetic:
+                use_dice_pet = True
+                use_ncc_pet = True
+            else:
+                pet_iou = utils.affine_pet_iou(
+                    batch["x_label_pet"].to(device),
+                    Y_lbl_pet,
+                    flow_affine,
+                    grid_full,
+                    transform_nearest,
+                )
+                use_dice_pet = pet_iou >= config.dice_pet_iou_threshold
+                use_ncc_pet = pet_iou >= config.dice_pet_iou_threshold
+            if not use_dice_pet:
+                n_gated += 1
+
+            loss_ncc_ct = loss_similarity_ct(X_Y_ct, Y_4x_ct)
+            loss_ncc_pet = loss_similarity_pet(X_Y_pet, Y_4x_pet)
+            if use_ncc_pet:
+                loss_multiNCC = config.w_ct * loss_ncc_ct + config.w_pet * loss_ncc_pet
+            else:
+                loss_multiNCC = config.w_ct * loss_ncc_ct
+
             loss_dice_ct = utils.dice_loss_with_grad(
                 X_lbl_ct, Y_lbl_ct, F_X_Y, model.grid_1, transform
             )
@@ -476,7 +496,7 @@ def train_lvl3(
             )
             if loss_dice_ct is not None:
                 loss = loss + config.w_dice_ct * loss_dice_ct
-            if loss_dice_pet is not None:
+            if loss_dice_pet is not None and use_dice_pet:
                 loss = loss + config.w_dice_pet * loss_dice_pet
 
             if is_synthetic:
@@ -579,6 +599,7 @@ def train_lvl3(
             {f"{key}_epoch": value / n_steps for key, value in epoch_metrics.items()},
             step=global_step,
         )
+        tqdm.tqdm.write(f"ep {epoch}: gated dice_pet on {n_gated} pairs")
 
         # print(
         #     f"ep: {epoch} "

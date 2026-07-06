@@ -1,4 +1,5 @@
 import contextlib
+from typing import Callable
 
 import numpy as np
 import torch
@@ -278,3 +279,23 @@ def warp_binary_mask(
     """
     flow = disp.permute(0, 2, 3, 4, 1)
     return transform(mask.float(), flow, grid)
+
+
+def affine_pet_iou(
+    x_lbl_pet: torch.Tensor,
+    y_lbl_pet: torch.Tensor,
+    flow_affine: torch.Tensor,
+    grid_full: torch.Tensor,
+    transform_nearest: Callable,
+    tumour_label: int = 1,
+) -> float:
+    """IoU of the affine-aligned moving PET mask vs fixed PET mask."""
+    x_mask = (x_lbl_pet == tumour_label).float()
+    x_mask_aff = transform_nearest(x_mask, flow_affine, grid_full)
+    x_bin = x_mask_aff > 0.5
+    y_bin = y_lbl_pet == tumour_label
+
+    intersection = (x_bin & y_bin).sum().float()
+    union = (x_bin | y_bin).sum().float()
+    iou = (intersection / (union + 1e-8)).item()
+    return iou
