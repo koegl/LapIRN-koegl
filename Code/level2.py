@@ -230,7 +230,7 @@ def train_lvl2(
     )
     final_model_path = (
         config.model_save_dir
-        / f"{config.mlflow_experiment}_{mlflow.active_run().info.run_name}_stagelvl2_{config.epochs_lvl1}.pth"
+        / f"{config.mlflow_experiment}_{mlflow.active_run().info.run_name}_stagelvl2_{config.epochs_lvl2}.pth"
     )
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -590,7 +590,7 @@ def train_lvl2(
                 "train_lvl2/smooth": loss_regulation.item(),
                 "train_lvl2/jacob": loss_jacobian.item(),
                 "train_lvl2/ndv": ndv,
-                "train_lvl3/dvf": loss_dvf.item(),
+                "train_lvl2/dvf": loss_dvf.item(),
             }
             if loss_dice_ct is not None:
                 train_metrics["train_lvl2/dice_ct"] = loss_dice_ct.item()

@@ -588,7 +588,7 @@ def train_lvl1(
                 "train_lvl1/smooth": loss_regulation.item(),
                 "train_lvl1/jacob": loss_jacobian.item(),
                 "train_lvl1/ndv": ndv,
-                "train_lvl3/dvf": loss_dvf.item(),
+                "train_lvl1/dvf": loss_dvf.item(),
             }
             if loss_dice_ct is not None:
                 train_metrics["train_lvl1/dice_ct"] = loss_dice_ct.item()

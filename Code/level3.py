@@ -239,7 +239,7 @@ def train_lvl3(
     )
     final_model_path = (
         config.model_save_dir
-        / f"{config.mlflow_experiment}_{mlflow.active_run().info.run_name}_stagelvl3_{config.epochs_lvl1}.pth"
+        / f"{config.mlflow_experiment}_{mlflow.active_run().info.run_name}_stagelvl3_{config.epochs_lvl3}.pth"
     )
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
