@@ -9,3 +9,5 @@ Model/*
 saved/*
 *.nii.gz
 *.npy
+*.png
+*.csv
