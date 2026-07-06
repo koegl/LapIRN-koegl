@@ -95,11 +95,11 @@ def main() -> None:
             level2.train_lvl2
             level3.train_lvl3
 
-            paths_model_level1 = level1.train_lvl1(
-                config, train_generator, valid_generator
-            )
+            # paths_model_level1 = level1.train_lvl1(
+            #     config, train_generator, valid_generator
+            # )
             # # print("skipping level 1, already trained")
-            # # path_model_level1 = Path(
+            # # path_model_l    evel1 = Path(
             # #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_stagelvl1_best.pth"
             # # )
             # paths_model_level2 = level2.train_lvl2(
@@ -110,8 +110,12 @@ def main() -> None:
             #     train_generator,
             #     valid_generator,
             # )
+            # path_model_level_1 = paths_model_level1["best"]
+            path_model_level_1 = Path(
+                "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_shivering-midge-864_stagelvl1_best.pth"
+            )
             paths_model_level2 = level2.train_lvl2(
-                config, paths_model_level1["best"], train_generator, valid_generator
+                config, path_model_level_1, train_generator, valid_generator
             )
             # path_model_level_2 = Path(
             #     "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_nosy-shrike-707_stagelvl2_best.pth"

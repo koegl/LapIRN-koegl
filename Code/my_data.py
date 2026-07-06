@@ -6,6 +6,7 @@ import config
 import monai.data as monai_data
 import nibabel as nib
 import numpy as np
+import synthetic
 import torch
 from monai.transforms import (
     Compose,
