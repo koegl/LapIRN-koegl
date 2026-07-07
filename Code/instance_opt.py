@@ -102,7 +102,7 @@ def run_io(
     cfg: config.TrainingConfig,
     device: torch.device,
     n_steps: int = 100,
-    lr: float = 1e-2,
+    lr: float = 1e-1,
     n_integration: int = 7,
 ) -> torch.Tensor:
     identity_vox = synthetic.build_identity_grid(cfg.img_shape, device)
@@ -110,6 +110,9 @@ def run_io(
     optimizer = torch.optim.Adam([velocity], lr=lr)
 
     base = f_x_y.detach()
+    best_loss = float("inf")
+    best_disp = base.clone()
+    best_disp_i = 0
     pbar = tqdm.tqdm(range(n_steps), desc="IO optimization")
     for i in pbar:
         start_time = time.time()
@@ -131,11 +134,20 @@ def run_io(
         )
         loss.backward()
         optimizer.step()
+
+        if loss.item() < best_loss:
+            best_loss = loss.item()
+            best_disp = disp_unit.detach().clone()
+            best_disp_i = i
+
         pbar.set_postfix(
-            loss=f"{loss.item():.4f}", time=f"{time.time() - start_time:.2f}s"
+            loss=f"{loss.item():.4f}",
+            best=f"{best_loss:.4f}",
+            best_i=best_disp_i,
+            time=f"{time.time() - start_time:.2f}s",
         )
 
-    disp_res = synthetic.integrate_svf(velocity.detach(), identity_vox, n_integration)
-    disp_res_unit = synthetic.unit_flow_from_voxel_disp(disp_res, cfg.img_shape).flip(1)
-    refined = (base + disp_res_unit).detach()
+    print(f"Best loss: {best_loss:.4f} at step {best_disp_i}")
+
+    refined = best_disp
     return refined

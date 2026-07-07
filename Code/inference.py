@@ -318,8 +318,9 @@ def main() -> None:
     use_io: bool = True
     if use_io:
         model_name += "_IO"
+        io_lr: float = 1e-1
         # add all weights to model_name for reproducibility
-        model_name += f"_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wMTV{cfg.w_mtv:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_masked_jac:.2f}_wDVF{cfg.w_dvf:.2f}"
+        model_name += f"lr{io_lr:.1e}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wMTV{cfg.w_mtv:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_masked_jac:.2f}_wDVF{cfg.w_dvf:.2f}"
         print("warning using IO")
 
     # pet_predictor = build_pet_predictor(device) if use_io else None
@@ -343,6 +344,7 @@ def main() -> None:
             use_io=use_io,
             ct_label_dir=ct_label_dir,
             pet_label_dir=pet_label_dir,
+            io_lr=io_lr,
         )
         dices[case_id] = dice_after
         dices_before[case_id] = dice_before
@@ -369,6 +371,7 @@ def process_subject(
     use_io: bool = False,
     ct_label_dir: Optional[Path] = None,
     pet_label_dir: Optional[Path] = None,
+    io_lr: float = 1e-1,
 ) -> Tuple[float, float]:
     pair = load_val_pair(val_image_dir, case_id)
     X = pair["x"].unsqueeze(0).to(device).float()
@@ -416,6 +419,7 @@ def process_subject(
             grid_full,
             cfg,
             device,
+            lr=io_lr,
         )
 
     deform_grid = grid_full + F_X_Y.permute(0, 2, 3, 4, 1)
