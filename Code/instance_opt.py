@@ -72,11 +72,22 @@ def compute_io_loss(
 
     logs = {
         "dice_ct": loss_dice_ct.item() if loss_dice_ct is not None else float("nan"),
-        "mtv": loss_mtv.item(),
-        "tlg": loss_tlg.item(),
+        "smooth": loss_smooth.item(),
         "jac": loss_jac.item(),
         "masked_jac": loss_masked_jac.item(),
+        "mtv": loss_mtv.item(),
+        "tlg": loss_tlg.item(),
     }
+
+    # print each los and next to it each loss multiplied by its weights
+    # print(
+    #     f"dice_ct: {logs['dice_ct']:.4f} ({cfg.w_dice_ct * logs['dice_ct']:.4f})\n"
+    #     f"smooth: {logs['smooth']:.4f} ({cfg.w_smooth * logs['smooth']:.4f})\n"
+    #     f"jac: {logs['jac']:.4f} ({cfg.w_jacobian * logs['jac']:.4f})\n"
+    #     f"masked_jac: {logs['masked_jac']:.4f} ({cfg.w_masked_jac * logs['masked_jac']:.4f})\n"
+    #     f"mtv: {logs['mtv']:.4f} ({cfg.w_mtv * logs['mtv']:.4f})\n"
+    #     f"tlg: {logs['tlg']:.4f} ({cfg.w_tlg * logs['tlg']:.4f})"
+    # )
     return loss, logs
 
 
@@ -91,7 +102,7 @@ def run_io(
     cfg: config.TrainingConfig,
     device: torch.device,
     n_steps: int = 100,
-    lr: float = 1e-1,
+    lr: float = 1e-2,
     n_integration: int = 7,
 ) -> torch.Tensor:
     identity_vox = synthetic.build_identity_grid(cfg.img_shape, device)
