@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 import mlflow
 import my_data
@@ -225,6 +225,8 @@ def train_lvl1(
     config: TrainingConfig,
     train_generator: torch_data.DataLoader,
     val_generator: torch_data.DataLoader,
+    resume_model_path: Optional[Path] = None,
+    resume_optimizer_path: Optional[Path] = None,
 ) -> Dict[str, Path]:
     print("Training lvl1...")
 
@@ -237,6 +239,15 @@ def train_lvl1(
     final_model_path = (
         config.model_save_dir
         / f"{config.mlflow_experiment}_{mlflow.active_run().info.run_name}_stagelvl1_{config.epochs_lvl1}.pth"
+    )
+    if (resume_model_path is None) != (resume_optimizer_path is None):
+        raise ValueError(
+            "For resuming, provide both resume_model_path and "
+            "resume_optimizer_path (or neither)."
+        )
+    best_optimizer_path = (
+        config.model_save_dir
+        / f"{config.mlflow_experiment}_{mlflow.active_run().info.run_name}_stagelvl1_best_optimizer.pth"
     )
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -284,10 +295,22 @@ def train_lvl1(
 
     steps_per_epoch = len(train_generator)
     lossall = np.zeros((4, (config.epochs_lvl1 + 1) * steps_per_epoch))
-    global_step = 0
 
-    epoch = 0
-    pbar = tqdm.tqdm(total=config.epochs_lvl1 + 1, desc="lvl1 training")
+    start_epoch = 0
+    global_step = 0
+    if resume_model_path is not None:
+        print("Resuming lvl1 from...", resume_model_path)
+        model.load_state_dict(torch.load(resume_model_path, map_location=device))
+        opt_ckpt = torch.load(resume_optimizer_path, map_location=device)
+        optimizer.load_state_dict(opt_ckpt["optimizer"])
+        start_epoch = opt_ckpt["epoch"] + 1
+        global_step = opt_ckpt["global_step"]
+        best_dice_ct = opt_ckpt["best_dice_ct"]
+
+    epoch = start_epoch
+    pbar = tqdm.tqdm(
+        total=config.epochs_lvl1 + 1, initial=start_epoch, desc="lvl1 training"
+    )
 
     saved_initial: bool = False
     run_name = mlflow.active_run().info.run_name
@@ -648,6 +671,13 @@ def train_lvl1(
             if val_losses["dice_ct"] < best_dice_ct:
                 best_dice_ct = val_losses["dice_ct"]
                 torch.save(model.state_dict(), best_model_path)
+                opt_ckpt = {
+                    "optimizer": optimizer.state_dict(),
+                    "epoch": epoch,
+                    "global_step": global_step,
+                    "best_dice_ct": best_dice_ct,
+                }
+                torch.save(opt_ckpt, best_optimizer_path)
                 tqdm.tqdm.write(
                     f"epoch {epoch}: new best dice_ct {best_dice_ct:.4f} -> saved best"
                 )
@@ -666,4 +696,9 @@ def train_lvl1(
             break
     pbar.close()
 
-    return {"final": final_model_path, "best": best_model_path}
+    result = {
+        "final": final_model_path,
+        "best": best_model_path,
+        "best_optimizer": best_optimizer_path,
+    }
+    return result
