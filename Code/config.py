@@ -58,7 +58,7 @@ class TrainingConfig:
     start_channel: int = 11
 
     # train val
-    epochs_lvl1: int = 100
+    epochs_lvl1: int = 110
     epochs_lvl2: int = 70
     epochs_lvl3: int = 251
     unfreeze_epoch_in_lvl2: int = 10
@@ -69,7 +69,7 @@ class TrainingConfig:
     accumulation_steps: int = 4
 
     # loss weights
-    w_jacobian: float = 20.0
+    w_jacobian: float = 2.0
     w_smooth: float = 2.0
     w_ct: float = 15.0
     w_pet: float = 0.0
