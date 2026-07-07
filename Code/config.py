@@ -69,15 +69,15 @@ class TrainingConfig:
     accumulation_steps: int = 4
 
     # loss weights
-    w_jacobian: float = 2.0
+    w_jacobian: float = 20.0
     w_smooth: float = 2.0
     w_ct: float = 15.0
     w_pet: float = 0.0
     w_dice_ct: float = 6.0
     w_dice_pet: float = 0.0
-    w_mtv: float = 8.0
-    w_tlg: float = 8.0
-    w_masked_jac: float = 2.0
+    w_mtv: float = 20.0
+    w_tlg: float = 20.0
+    w_masked_jac: float = 20.0
     w_dvf: float = 1000.0
 
     dice_pet_iou_threshold: float = 0.1
