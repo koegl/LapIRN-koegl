@@ -11,3 +11,4 @@ saved/*
 *.npy
 *.png
 *.csv
+totalsegmentator_weights/*
