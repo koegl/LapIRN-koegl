@@ -1,17 +1,72 @@
+import os
+import sys
 import zipfile
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional, Tuple
 
 import affine_reg
 import Functions
+import instance_opt
 import miccai2020_model_stage
 import my_data
+import nibabel as nib
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
 import tqdm
 from config import TrainingConfig
+
+os.environ["TOTALSEG_WEIGHTS_PATH"] = (
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/totalsegmentator_weights/nnunet/results"
+)
+sys.path.insert(0, "/home/iml/fryderyk.koegl/code/autopet-3-submission")
+import totalsegmentator.python_api as totalseg
+
+import main as autopet
+
+
+def load_io_labels(
+    ct_label_dir: Path,
+    pet_label_dir: Path,
+    case_id: str,
+    device: torch.device,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def load(path: Path) -> torch.Tensor:
+        arr = my_data.nib.load(str(path)).get_fdata().astype(np.int16)
+        label = torch.from_numpy(arr)[None, None].to(device).float()
+        return label
+
+    x_lbl_ct = load(ct_label_dir / f"ct_{case_id}_01.nii.gz")
+    y_lbl_ct = load(ct_label_dir / f"ct_{case_id}_00.nii.gz")
+    x_lbl_pet = load(pet_label_dir / f"pet_{case_id}_01.nii.gz")
+    y_lbl_pet = load(pet_label_dir / f"pet_{case_id}_00.nii.gz")
+
+    labels = (x_lbl_ct, x_lbl_pet, y_lbl_ct, y_lbl_pet)
+    return labels
+
+
+def build_pet_predictor(device: torch.device):
+    model_folder = (
+        "/home/iml/fryderyk.koegl/code/autopet-3-submission/"
+        "autoPET-3-LesionTracer/Dataset222_AutoPETIII_2024/"
+        "autoPET3_Trainer__nnUNetResEncUNetLPlansMultiTalent__3d_fullres_bs3"
+    )
+    folds = (0, 1, 2, 3, 4)
+    predictor = autopet.build_predictor(model_folder, folds, device)
+    return predictor
+
+
+def predict_pet_labels(
+    predictor,
+    ct_path: Path,
+    pet_path: Path,
+    device: torch.device,
+) -> torch.Tensor:
+    seg = autopet.run_inference_in_memory(predictor, str(ct_path), str(pet_path))
+    label = torch.from_numpy(seg.astype("int16"))[None, None].to(device).float()
+    return label
+
 
 # --- variables (define here, no argparse) ---
 val_image_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesVal")
@@ -39,6 +94,23 @@ val_subjects = [
     "0048",
 ]
 results_csv = Path("/home/iml/fryderyk.koegl/data/PSMAReg/results.csv")
+
+
+def predict_ct_labels(
+    ct_path: Path,
+    device: torch.device,
+) -> torch.Tensor:
+    ct_img = nib.load(str(ct_path))
+    seg_img = totalseg.totalsegmentator(
+        ct_img,
+        task="total",
+        fast=False,
+        device="gpu" if device.type == "cuda" else "cpu",
+        quiet=True,
+    )
+    arr = seg_img.get_fdata().astype("int16")
+    label = torch.from_numpy(arr)[None, None].to(device).float()
+    return label
 
 
 def compress_to_zip(source_dir: Path, output_zip: Path) -> None:
@@ -182,19 +254,33 @@ def append_results_to_csv(
     csv_path: Path,
     model_name: str,
     dices: Dict[str, float],
+    dices_before: Dict[str, float],
 ) -> None:
-    """Append one experiment row to the results CSV, creating it if needed."""
+    """Append one experiment row, writing a 'before_registration' row first
+    if the CSV does not yet exist."""
+    rows = []
+
+    if not csv_path.exists():
+        avg_before = float(np.nanmean(list(dices_before.values())))
+        before_row: Dict[str, object] = {
+            "model": "before_registration",
+            "avg_dice": avg_before,
+        }
+        before_row.update({f"dice_{k}": v for k, v in dices_before.items()})
+        rows.append(before_row)
+
     avg_dice = float(np.nanmean(list(dices.values())))
     row: Dict[str, object] = {"model": model_name, "avg_dice": avg_dice}
     row.update({f"dice_{k}": v for k, v in dices.items()})
+    rows.append(row)
 
-    new_row_df = pd.DataFrame([row])
+    new_df = pd.DataFrame(rows)
 
     if csv_path.exists():
         existing_df = pd.read_csv(csv_path)
-        combined_df = pd.concat([existing_df, new_row_df], ignore_index=True)
+        combined_df = pd.concat([existing_df, new_df], ignore_index=True)
     else:
-        combined_df = new_row_df
+        combined_df = new_df
 
     combined_df.to_csv(csv_path, index=False)
     tqdm.tqdm.write(f"results saved → {csv_path}")
@@ -208,7 +294,7 @@ def main() -> None:
     cfg.cache_dir = val_cache_dir
 
     model_path = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_intelligent-bug-730_stagelvl3_best.pth"
+        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_upset-tern-26_stagelvl3_best.pth"
     )
     model_name = model_path.stem
 
@@ -229,28 +315,44 @@ def main() -> None:
     transform = miccai2020_model_stage.SpatialTransform_unit().to(device)
     transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
 
+    use_io: bool = True
+    if use_io:
+        model_name += "_IO"
+        # add all weights to model_name for reproducibility
+        model_name += f"_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wMTV{cfg.w_mtv:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_masked_jac:.2f}_wDVF{cfg.w_dvf:.2f}"
+        print("warning using IO")
+
+    # pet_predictor = build_pet_predictor(device) if use_io else None
+    ct_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_ct")
+    pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
+
     dices: Dict[str, float] = {}
+    dices_before: Dict[str, float] = {}
     for case_id in tqdm.tqdm(val_subjects, desc="inference"):
-        with torch.no_grad():
-            dices[case_id] = process_subject(
-                case_id,
-                val_image_dir,
-                out_dir,
-                model,
-                transform,
-                grid_full,
-                cfg,
-                device,
-                transform_nearest,
-                seg_dir,
-            )
+        dice_after, dice_before = process_subject(
+            case_id,
+            val_image_dir,
+            out_dir,
+            model,
+            transform,
+            grid_full,
+            cfg,
+            device,
+            transform_nearest,
+            seg_dir,
+            use_io=use_io,
+            ct_label_dir=ct_label_dir,
+            pet_label_dir=pet_label_dir,
+        )
+        dices[case_id] = dice_after
+        dices_before[case_id] = dice_before
 
     avg = float(np.nanmean(list(dices.values())))
     tqdm.tqdm.write(f"average dice: {avg:.4f}")
 
-    append_results_to_csv(results_csv, model_name, dices)
+    append_results_to_csv(results_csv, model_name, dices, dices_before=dices_before)
 
-    # compress_to_zip(out_dir / "submission", out_dir / "submission.zip")
+    compress_to_zip(out_dir / "submission", out_dir / "submission.zip")
 
 
 def process_subject(
@@ -264,7 +366,10 @@ def process_subject(
     device: torch.device,
     transform_nearest: torch.nn.Module,
     seg_dir: Path,
-) -> float:
+    use_io: bool = False,
+    ct_label_dir: Optional[Path] = None,
+    pet_label_dir: Optional[Path] = None,
+) -> Tuple[float, float]:
     pair = load_val_pair(val_image_dir, case_id)
     X = pair["x"].unsqueeze(0).to(device).float()
     Y = pair["y"].unsqueeze(0).to(device).float()
@@ -294,6 +399,25 @@ def process_subject(
     with torch.no_grad():
         F_X_Y, warped, _, _, _, _, _ = model(X_affine, Y)
 
+    if use_io:
+        x_lbl_ct, x_lbl_pet, y_lbl_ct, y_lbl_pet = load_io_labels(
+            ct_label_dir, pet_label_dir, case_id, device
+        )
+        x_lbl_ct = transform_nearest(x_lbl_ct, flow_affine, grid_full)
+        x_lbl_pet = transform_nearest(x_lbl_pet, flow_affine, grid_full)
+
+        F_X_Y = instance_opt.run_io(
+            F_X_Y,
+            X_affine,
+            x_lbl_ct,
+            x_lbl_pet,
+            y_lbl_ct,
+            transform,
+            grid_full,
+            cfg,
+            device,
+        )
+
     deform_grid = grid_full + F_X_Y.permute(0, 2, 3, 4, 1)
     affine_grid = grid_full + flow_affine
 
@@ -322,29 +446,32 @@ def process_subject(
 
     dice_their = np.nan
 
-    if case_id != "0024":
-        _, _, hh, ww, dd = disp_up.shape
-        disp_up_unit = disp_up.clone()
-        disp_up_unit[:, 0] = disp_up_unit[:, 0] / ((dd - 1) / 2.0)
-        disp_up_unit[:, 1] = disp_up_unit[:, 1] / ((ww - 1) / 2.0)
-        disp_up_unit[:, 2] = disp_up_unit[:, 2] / ((hh - 1) / 2.0)
+    _, _, hh, ww, dd = disp_up.shape
+    disp_up_unit = disp_up.clone()
+    disp_up_unit[:, 0] = disp_up_unit[:, 0] / ((dd - 1) / 2.0)
+    disp_up_unit[:, 1] = disp_up_unit[:, 1] / ((ww - 1) / 2.0)
+    disp_up_unit[:, 2] = disp_up_unit[:, 2] / ((hh - 1) / 2.0)
 
-        def load_seg(tp: str) -> torch.Tensor:
-            path = seg_dir / f"{case_id}_{tp}.nii"
-            arr = my_data.nib.load(str(path)).get_fdata().astype(np.int16)
-            return torch.from_numpy(arr)[None, None].to(device).float()
+    def load_seg(tp: str) -> torch.Tensor:
+        path = seg_dir / f"{case_id}_{tp}.nii"
+        if not path.exists():
+            # add .gz and try again
+            path = seg_dir / f"{case_id}_{tp}.nii.gz"
 
-        seg_moving = load_seg("01")
-        seg_fixed = load_seg("00")
-        seg_fixed_i = seg_fixed[0, 0].round().long()
+        arr = my_data.nib.load(str(path)).get_fdata().astype(np.int16)
+        return torch.from_numpy(arr)[None, None].to(device).float()
 
-        their_st = SpatialTransformer(size=cfg.img_shape, mode="nearest").to(device)
-        disp_their = disp_up.flip(1)
-        seg_their = their_st(seg_moving, disp_their)
-        dice_their = multilabel_dice(seg_their[0, 0].round().long(), seg_fixed_i)
+    seg_moving = load_seg("01")
+    seg_fixed = load_seg("00")
+    seg_fixed_i = seg_fixed[0, 0].round().long()
 
-        dice_before = multilabel_dice(seg_moving[0, 0].round().long(), seg_fixed_i)
-        tqdm.tqdm.write(f"{case_id}: before={dice_before:.4f};\tafter={dice_their:.4f}")
+    their_st = SpatialTransformer(size=cfg.img_shape, mode="nearest").to(device)
+    disp_their = disp_up.flip(1)
+    seg_their = their_st(seg_moving, disp_their)
+    dice_their = multilabel_dice(seg_their[0, 0].round().long(), seg_fixed_i)
+
+    dice_before = multilabel_dice(seg_moving[0, 0].round().long(), seg_fixed_i)
+    tqdm.tqdm.write(f"{case_id}: before={dice_before:.4f};\tafter={dice_their:.4f}")
 
     if False:
         # --- DEBUG: verify submitted field via evaluator pipeline ---
@@ -367,7 +494,7 @@ def process_subject(
 
     save_disp(disp_half, out_dir / "submission", case_id)
 
-    return dice_their
+    return dice_their, dice_before
 
 
 if __name__ == "__main__":

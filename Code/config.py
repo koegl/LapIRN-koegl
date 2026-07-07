@@ -59,7 +59,7 @@ class TrainingConfig:
 
     # train val
     epochs_lvl1: int = 100
-    epochs_lvl2: int = 151
+    epochs_lvl2: int = 70
     epochs_lvl3: int = 251
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
@@ -72,12 +72,12 @@ class TrainingConfig:
     w_jacobian: float = 2.0
     w_smooth: float = 2.0
     w_ct: float = 15.0
-    w_pet: float = 1.0
+    w_pet: float = 0.0
     w_dice_ct: float = 6.0
-    w_dice_pet: float = 0.4
-    w_mtv: float = 5.0
-    w_tlg: float = 5.0
-    w_masked_jac: float = 0.6
+    w_dice_pet: float = 0.0
+    w_mtv: float = 8.0
+    w_tlg: float = 8.0
+    w_masked_jac: float = 2.0
     w_dvf: float = 1000.0
 
     dice_pet_iou_threshold: float = 0.1
