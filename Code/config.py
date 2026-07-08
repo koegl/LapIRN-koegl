@@ -62,7 +62,7 @@ class TrainingConfig:
     epochs_lvl2: int = 70
     epochs_lvl3: int = 251
     unfreeze_epoch_in_lvl2: int = 10
-    unfreeze_epoch_in_lvl3: int = 10
+    unfreeze_epoch_in_lvl3: int = 10000
     val_interval: int = 2
     checkpoint_interval: int = 50
 
