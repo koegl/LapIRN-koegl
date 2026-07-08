@@ -180,7 +180,6 @@ def evaluate_lvl3(
                 loss_multiNCC
                 + config.w_jacobian * loss_jacobian
                 + config.w_smooth * loss_regulation
-                + config.w_mtv * loss_mtv
                 + config.w_tlg * loss_tlg
                 + config.w_masked_jac * loss_masked_jac
             )
@@ -540,7 +539,7 @@ def train_lvl3(
                     moving_pet_image,
                     moving_pet_mask,
                 )
-                loss = loss + config.w_mtv * loss_mtv + config.w_tlg * loss_tlg
+                loss = loss + config.w_tlg * loss_tlg
                 loss_dvf = torch.zeros((), device=device)
 
             loss_scaled = loss / config.accumulation_steps

@@ -63,7 +63,6 @@ def compute_io_loss(
     loss = (
         cfg.w_jacobian * loss_jac
         + cfg.w_smooth * loss_smooth
-        + cfg.w_mtv * loss_mtv
         + cfg.w_tlg * loss_tlg
         + cfg.w_masked_jac * loss_masked_jac
     )
