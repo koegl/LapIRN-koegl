@@ -1,8 +1,9 @@
+import json
 import os
 import sys
 import zipfile
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import affine_reg
 import Functions
@@ -26,21 +27,38 @@ import totalsegmentator.python_api as totalseg
 import main as autopet
 
 
+def load_split(split_path: Path) -> Tuple[List[str], List[str]]:
+    with open(split_path, "r") as f:
+        split = json.load(f)
+    train = split["train"]
+    val = split["val"]
+    return train, val
+
+
 def load_io_labels(
     ct_label_dir: Path,
     pet_label_dir: Path,
     case_id: str,
     device: torch.device,
+    ct_template: str = "ct_{case_id}_{tp}",
+    pet_template: str = "pet_{case_id}_{tp}",
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     def load(path: Path) -> torch.Tensor:
         arr = my_data.nib.load(str(path)).get_fdata().astype(np.int16)
         label = torch.from_numpy(arr)[None, None].to(device).float()
         return label
 
-    x_lbl_ct = load(ct_label_dir / f"ct_{case_id}_01.nii.gz")
-    y_lbl_ct = load(ct_label_dir / f"ct_{case_id}_00.nii.gz")
-    x_lbl_pet = load(pet_label_dir / f"pet_{case_id}_01.nii.gz")
-    y_lbl_pet = load(pet_label_dir / f"pet_{case_id}_00.nii.gz")
+    def p(label_dir: Path, template: str, tp: str) -> Path:
+        stem = template.format(case_id=case_id, tp=tp)
+        path = label_dir / f"{stem}.nii.gz"
+        if not path.exists():
+            path = label_dir / f"{stem}.nii"
+        return path
+
+    x_lbl_ct = load(p(ct_label_dir, ct_template, "01"))
+    y_lbl_ct = load(p(ct_label_dir, ct_template, "00"))
+    x_lbl_pet = load(p(pet_label_dir, pet_template, "01"))
+    y_lbl_pet = load(p(pet_label_dir, pet_template, "00"))
 
     labels = (x_lbl_ct, x_lbl_pet, y_lbl_ct, y_lbl_pet)
     return labels
@@ -93,7 +111,15 @@ val_subjects = [
     "0047",
     "0048",
 ]
-results_csv = Path("/home/iml/fryderyk.koegl/data/PSMAReg/results.csv")
+split_path = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/split.json")
+my_val_image_dir = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTr"
+)
+my_val_seg_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTr")
+results_csv_my_val = Path("/home/iml/fryderyk.koegl/data/PSMAReg/results_my_val.csv")
+results_csv_official_val = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val.csv"
+)
 
 
 def predict_ct_labels(
@@ -235,19 +261,25 @@ def save_disp(disp_half: torch.Tensor, out_dir: Path, case_id: str) -> None:
     my_data.nib.save(my_data.nib.Nifti1Image(disp_np, np.eye(4)), str(out_path))
 
 
-def multilabel_dice(pred: torch.Tensor, target: torch.Tensor) -> float:
-    """Mean Dice over shared nonzero labels. pred/target: (H, W, D) int."""
-    labels = torch.unique(target)
-    labels = labels[labels != 0]
+def multilabel_dice(
+    pred: torch.Tensor,
+    target: torch.Tensor,
+    label_ids: range = range(1, 118),
+) -> float:
+    """Mean Dice over a fixed label set, matching the official scorer.
+    pred/target: (H, W, D) int."""
     dices = []
-    for lbl in labels:
-        p = (pred == lbl).float()
-        t = (target == lbl).float()
-        denom = p.sum() + t.sum()
-        if denom == 0:
-            continue
-        dices.append((2.0 * (p * t).sum() / denom).item())
-    return float(np.mean(dices)) if dices else float("nan")
+    for lbl in label_ids:
+        p = pred == lbl
+        t = target == lbl
+        volume_sum = p.sum() + t.sum()
+        if volume_sum == 0:
+            dice = 0.0
+        else:
+            dice = (2.0 * (p & t).sum() / volume_sum).item()
+        dices.append(dice)
+    mean = float(np.mean(dices)) if dices else float("nan")
+    return mean
 
 
 def append_results_to_csv(
@@ -286,53 +318,34 @@ def append_results_to_csv(
     tqdm.tqdm.write(f"results saved → {csv_path}")
 
 
-def main() -> None:
-    cfg = TrainingConfig()
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    # cfg.start_channel = 7
-    cfg.cache_dir = val_cache_dir
-
-    model_path = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_upset-tern-26_stagelvl3_best.pth"
-    )
-    model_name = model_path.stem
-
-    out_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/submission_and_debug")
-    seg_dir = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/segmentations"
-    )
-
-    model = create_model(device, cfg, model_path)
-
-    grid_full = Functions.generate_grid_unit(cfg.img_shape)
-    grid_full = (
-        torch.from_numpy(np.reshape(grid_full, (1,) + grid_full.shape))
-        .to(device)
-        .float()
-    )
-
-    transform = miccai2020_model_stage.SpatialTransform_unit().to(device)
-    transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
-
-    use_io: bool = True
-    if use_io:
-        model_name += "_IO"
-        io_lr: float = 1e-1
-        # add all weights to model_name for reproducibility
-        model_name += f"lr{io_lr:.1e}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_masked_jac:.2f}"
-        print("warning using IO")
-
-    # pet_predictor = build_pet_predictor(device) if use_io else None
-    ct_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_ct")
-    pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
-
+def evaluate_split(
+    subjects: List[str],
+    image_dir: Path,
+    seg_dir: Path,
+    seg_template: str,
+    results_csv: Path,
+    model_name: str,
+    out_dir: Path,
+    model: torch.nn.Module,
+    transform: torch.nn.Module,
+    transform_nearest: torch.nn.Module,
+    grid_full: torch.Tensor,
+    cfg: TrainingConfig,
+    device: torch.device,
+    use_io: bool,
+    ct_label_dir: Path,
+    pet_label_dir: Path,
+    io_lr: float,
+    desc: str,
+    ct_label_template: str = "ct_{case_id}_{tp}",
+    pet_label_template: str = "pet_{case_id}_{tp}",
+) -> None:
     dices: Dict[str, float] = {}
     dices_before: Dict[str, float] = {}
-    for case_id in tqdm.tqdm(val_subjects, desc="inference"):
+    for case_id in tqdm.tqdm(subjects, desc=desc):
         dice_after, dice_before = process_subject(
             case_id,
-            val_image_dir,
+            image_dir,
             out_dir,
             model,
             transform,
@@ -341,20 +354,20 @@ def main() -> None:
             device,
             transform_nearest,
             seg_dir,
+            seg_template=seg_template,
             use_io=use_io,
             ct_label_dir=ct_label_dir,
             pet_label_dir=pet_label_dir,
+            ct_label_template=ct_label_template,
+            pet_label_template=pet_label_template,
             io_lr=io_lr,
         )
         dices[case_id] = dice_after
         dices_before[case_id] = dice_before
 
     avg = float(np.nanmean(list(dices.values())))
-    tqdm.tqdm.write(f"average dice: {avg:.4f}")
-
+    tqdm.tqdm.write(f"[{desc}] average dice: {avg:.4f}")
     append_results_to_csv(results_csv, model_name, dices, dices_before=dices_before)
-
-    compress_to_zip(out_dir / "submission", out_dir / "submission.zip")
 
 
 def process_subject(
@@ -368,9 +381,12 @@ def process_subject(
     device: torch.device,
     transform_nearest: torch.nn.Module,
     seg_dir: Path,
+    seg_template: str = "{case_id}_{tp}",
     use_io: bool = False,
     ct_label_dir: Optional[Path] = None,
     pet_label_dir: Optional[Path] = None,
+    ct_label_template: str = "ct_{case_id}_{tp}",
+    pet_label_template: str = "pet_{case_id}_{tp}",
     io_lr: float = 1e-1,
 ) -> Tuple[float, float]:
     pair = load_val_pair(val_image_dir, case_id)
@@ -404,7 +420,12 @@ def process_subject(
 
     if use_io:
         x_lbl_ct, x_lbl_pet, y_lbl_ct, y_lbl_pet = load_io_labels(
-            ct_label_dir, pet_label_dir, case_id, device
+            ct_label_dir,
+            pet_label_dir,
+            case_id,
+            device,
+            ct_template=ct_label_template,
+            pet_template=pet_label_template,
         )
         x_lbl_ct = transform_nearest(x_lbl_ct, flow_affine, grid_full)
         x_lbl_pet = transform_nearest(x_lbl_pet, flow_affine, grid_full)
@@ -457,11 +478,13 @@ def process_subject(
     disp_up_unit[:, 2] = disp_up_unit[:, 2] / ((hh - 1) / 2.0)
 
     def load_seg(tp: str) -> torch.Tensor:
-        path = seg_dir / f"{case_id}_{tp}.nii"
+        stem = seg_template.format(case_id=case_id, tp=tp)
+        path = seg_dir / f"{stem}.nii"
         if not path.exists():
-            # add .gz and try again
-            path = seg_dir / f"{case_id}_{tp}.nii.gz"
-
+            path = seg_dir / f"{stem}.nii.gz"
+        arr = my_data.nib.load(str(path)).get_fdata().astype(np.int16)
+        seg = torch.from_numpy(arr)[None, None].to(device).float()
+        return seg
         arr = my_data.nib.load(str(path)).get_fdata().astype(np.int16)
         return torch.from_numpy(arr)[None, None].to(device).float()
 
@@ -499,6 +522,96 @@ def process_subject(
     save_disp(disp_half, out_dir / "submission", case_id)
 
     return dice_their, dice_before
+
+
+def main() -> None:
+    cfg = TrainingConfig()
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    cfg.cache_dir = val_cache_dir
+
+    # --- what to evaluate ---
+    eval_official: bool = False
+    eval_my_val: bool = True
+
+    model_path = Path(
+        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_upset-tern-26_stagelvl3_best.pth"
+    )
+    model_name = model_path.stem
+
+    out_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/submission_and_debug")
+    official_seg_dir = Path(
+        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/segmentations"
+    )
+
+    model = create_model(device, cfg, model_path)
+
+    grid_full = Functions.generate_grid_unit(cfg.img_shape)
+    grid_full = (
+        torch.from_numpy(np.reshape(grid_full, (1,) + grid_full.shape))
+        .to(device)
+        .float()
+    )
+
+    transform = miccai2020_model_stage.SpatialTransform_unit().to(device)
+    transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
+
+    ct_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_ct")
+    pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
+
+    use_io: bool = False
+    io_lr: float = 1e-1
+    if use_io:
+        model_name += "_IO"
+        model_name += f"lr{io_lr:.1e}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_masked_jac:.2f}"
+        print("warning using IO")
+
+    if eval_official:
+        evaluate_split(
+            subjects=val_subjects,
+            image_dir=val_image_dir,
+            seg_dir=official_seg_dir,
+            seg_template="{case_id}_{tp}",
+            results_csv=results_csv_official_val,
+            model_name=model_name,
+            out_dir=out_dir,
+            model=model,
+            transform=transform,
+            transform_nearest=transform_nearest,
+            grid_full=grid_full,
+            cfg=cfg,
+            device=device,
+            use_io=use_io,
+            ct_label_dir=ct_label_dir,
+            pet_label_dir=pet_label_dir,
+            io_lr=io_lr,
+            desc="official val",
+        )
+        compress_to_zip(out_dir / "submission", out_dir / "submission.zip")
+
+    if eval_my_val:
+        _, my_val_subjects = load_split(split_path)
+        evaluate_split(
+            subjects=my_val_subjects,
+            image_dir=my_val_image_dir,
+            seg_dir=my_val_seg_dir,
+            seg_template="PSMARegPSMA_{case_id}_0000_{tp}",
+            results_csv=results_csv_my_val,
+            model_name=model_name,
+            out_dir=out_dir / "my_val",
+            model=model,
+            transform=transform,
+            transform_nearest=transform_nearest,
+            grid_full=grid_full,
+            cfg=cfg,
+            device=device,
+            use_io=use_io,
+            ct_label_dir=my_val_seg_dir,
+            pet_label_dir=my_val_seg_dir,
+            ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
+            pet_label_template="PSMARegPSMA_{case_id}_0001_{tp}",
+            io_lr=io_lr,
+            desc="my val",
+        )
 
 
 if __name__ == "__main__":
