@@ -10,6 +10,7 @@ import Functions
 import instance_opt
 import miccai2020_model_stage
 import my_data
+import ndv_official
 import nibabel as nib
 import numpy as np
 import pandas as pd
@@ -87,6 +88,24 @@ def predict_pet_labels(
     return label
 
 
+def compute_ndv_official(
+    disp_voxel: np.ndarray,
+    mask: np.ndarray,
+) -> float:
+    """percent_ndv matching the challenge scorer.
+    disp_voxel: (3, H, W, D) displacement, voxel units, official component order.
+    mask: (H, W, D) body mask.
+    """
+    identity = ndv_official.get_identity_grid(disp_voxel)
+    trans = disp_voxel + identity
+    jac_dets = ndv_official.calc_jac_dets(trans)
+    mask_inner = mask[1:-1, 1:-1, 1:-1] > 0
+    _, _, non_diff_volume, _ = ndv_official.calc_measurements(jac_dets, mask_inner)
+    total_voxels = float(mask_inner.sum())
+    percent_ndv = non_diff_volume / total_voxels * 100.0
+    return float(percent_ndv)
+
+
 # --- variables (define here, no argparse) ---
 val_image_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesVal")
 val_cache_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/affine_cache_val")
@@ -135,6 +154,12 @@ results_csv_my_val_mtv = Path(
 )
 results_csv_my_val_tlg = Path(
     "/home/iml/fryderyk.koegl/data/PSMAReg/results_my_val_tlg.csv"
+)
+results_csv_official_ndv = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val_ndv.csv"
+)
+results_csv_my_val_ndv = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/results_my_val_ndv.csv"
 )
 
 
@@ -377,6 +402,7 @@ def evaluate_split(
     desc: str,
     mtv_csv: Path,
     tlg_csv: Path,
+    ndv_csv: Path,
     ct_label_template: str = "ct_{case_id}_{tp}",
     pet_label_template: str = "pet_{case_id}_{tp}",
 ) -> None:
@@ -384,8 +410,9 @@ def evaluate_split(
     dices_before: Dict[str, float] = {}
     mtvs: Dict[str, float] = {}
     tlgs: Dict[str, float] = {}
+    ndvs: Dict[str, float] = {}
     for case_id in tqdm.tqdm(subjects, desc=desc):
-        dice_after, dice_before, mtv, tlg = process_subject(
+        dice_after, dice_before, mtv, tlg, ndv = process_subject(
             case_id,
             image_dir,
             out_dir,
@@ -408,12 +435,14 @@ def evaluate_split(
         dices_before[case_id] = dice_before
         mtvs[case_id] = mtv
         tlgs[case_id] = tlg
+        ndvs[case_id] = ndv
 
     avg = float(np.nanmean(list(dices.values())))
     tqdm.tqdm.write(f"[{desc}] average dice: {avg:.4f}")
     append_results_to_csv(results_csv, model_name, dices, dices_before=dices_before)
     append_metric_to_csv(mtv_csv, model_name, mtvs, "mtv")
     append_metric_to_csv(tlg_csv, model_name, tlgs, "tlg")
+    append_metric_to_csv(ndv_csv, model_name, ndvs, "ndv")
 
 
 def process_subject(
@@ -434,7 +463,7 @@ def process_subject(
     ct_label_template: str = "ct_{case_id}_{tp}",
     pet_label_template: str = "pet_{case_id}_{tp}",
     io_lr: float = 1e-1,
-) -> Tuple[float, float, float, float]:
+) -> Tuple[float, float, float, float, float]:
     pair = load_val_pair(val_image_dir, case_id)
     X = pair["x"].unsqueeze(0).to(device).float()
     Y = pair["y"].unsqueeze(0).to(device).float()
@@ -543,6 +572,10 @@ def process_subject(
     seg_their = their_st(seg_moving, disp_their)
     dice_their = multilabel_dice(seg_their[0, 0].round().long(), seg_fixed_i)
 
+    disp_voxel = disp_up[0].detach().cpu().numpy().astype(np.float32)
+    ndv_mask = Y[0, 0].detach().cpu().numpy() > 0
+    ndv = compute_ndv_official(disp_voxel, ndv_mask)
+
     dice_before = multilabel_dice(seg_moving[0, 0].round().long(), seg_fixed_i)
     tqdm.tqdm.write(f"{case_id}: before={dice_before:.4f};\tafter={dice_their:.4f}")
 
@@ -588,7 +621,7 @@ def process_subject(
 
     save_disp(disp_half, out_dir / "submission", case_id)
 
-    return dice_their, dice_before, mtv, tlg
+    return dice_their, dice_before, mtv, tlg, ndv
 
 
 def main() -> None:
@@ -597,8 +630,8 @@ def main() -> None:
     cfg.cache_dir = val_cache_dir
 
     # --- what to evaluate ---
-    eval_official: bool = False
-    eval_my_val: bool = True
+    eval_official: bool = True
+    eval_my_val: bool = False
 
     model_path = Path(
         "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_upset-tern-26_stagelvl3_best.pth"
@@ -654,6 +687,7 @@ def main() -> None:
             desc="official val",
             mtv_csv=results_csv_official_mtv,
             tlg_csv=results_csv_official_tlg,
+            ndv_csv=results_csv_official_ndv,
         )
         compress_to_zip(out_dir / "submission", out_dir / "submission.zip")
 
@@ -682,6 +716,7 @@ def main() -> None:
             desc="my val",
             mtv_csv=results_csv_my_val_mtv,
             tlg_csv=results_csv_my_val_tlg,
+            ndv_csv=results_csv_my_val_ndv,
         )
 
 
