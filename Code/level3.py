@@ -549,7 +549,7 @@ def train_lvl3(
             ) == steps_per_epoch  # trailing-partial flush
 
             if torch.isfinite(loss):
-                loss_scaled.backward()
+                loss_scaled.backward(retain_graph=True)
 
                 if is_step or is_last_in_epoch:
                     total_norm = torch.nn.utils.clip_grad_norm_(
@@ -563,6 +563,23 @@ def train_lvl3(
                             f"[lvl3] step {global_step}: grad_norm={total_norm.item():.2f} "
                             f"loss={loss.item():.4f} (skipped)"
                         )
+                        for name, l in [
+                            ("dice_ct", loss_dice_ct),
+                            ("jac", loss_jacobian),
+                            ("tlg", loss_tlg),
+                            ("mjac", loss_masked_jac),
+                        ]:
+                            if l is not None:
+                                g = torch.autograd.grad(
+                                    l,
+                                    model.parameters(),
+                                    retain_graph=True,
+                                    allow_unused=True,
+                                )
+                                gn = sum(
+                                    (x**2).sum() for x in g if x is not None
+                                ).sqrt()
+                                tqdm.tqdm.write(f"  spike {name}: gn={gn.item():.1f}")
                         optimizer.zero_grad()
                     else:
                         optimizer.step()
