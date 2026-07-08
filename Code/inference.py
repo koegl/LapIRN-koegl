@@ -16,6 +16,7 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 import tqdm
+import utils
 from config import TrainingConfig
 
 os.environ["TOTALSEG_WEIGHTS_PATH"] = (
@@ -116,9 +117,24 @@ my_val_image_dir = Path(
     "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTr"
 )
 my_val_seg_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTr")
-results_csv_my_val = Path("/home/iml/fryderyk.koegl/data/PSMAReg/results_my_val.csv")
-results_csv_official_val = Path(
-    "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val.csv"
+
+results_csv_my_val_dice = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/results_my_val_dice.csv"
+)
+results_csv_official_val_dice = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val_dice.csv"
+)
+results_csv_official_mtv = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val_mtv.csv"
+)
+results_csv_official_tlg = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val_tlg.csv"
+)
+results_csv_my_val_mtv = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/results_my_val_mtv.csv"
+)
+results_csv_my_val_tlg = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/results_my_val_tlg.csv"
 )
 
 
@@ -318,6 +334,28 @@ def append_results_to_csv(
     tqdm.tqdm.write(f"results saved → {csv_path}")
 
 
+def append_metric_to_csv(
+    csv_path: Path,
+    model_name: str,
+    values: Dict[str, float],
+    metric_name: str,
+) -> None:
+    """Append one experiment row for a per-case metric (no before row)."""
+    avg = float(np.nanmean(list(values.values())))
+    row: Dict[str, object] = {"model": model_name, f"avg_{metric_name}": avg}
+    row.update({f"{metric_name}_{k}": v for k, v in values.items()})
+    new_df = pd.DataFrame([row])
+
+    if csv_path.exists():
+        existing_df = pd.read_csv(csv_path)
+        combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+    else:
+        combined_df = new_df
+
+    combined_df.to_csv(csv_path, index=False)
+    tqdm.tqdm.write(f"results saved → {csv_path}")
+
+
 def evaluate_split(
     subjects: List[str],
     image_dir: Path,
@@ -337,13 +375,17 @@ def evaluate_split(
     pet_label_dir: Path,
     io_lr: float,
     desc: str,
+    mtv_csv: Path,
+    tlg_csv: Path,
     ct_label_template: str = "ct_{case_id}_{tp}",
     pet_label_template: str = "pet_{case_id}_{tp}",
 ) -> None:
     dices: Dict[str, float] = {}
     dices_before: Dict[str, float] = {}
+    mtvs: Dict[str, float] = {}
+    tlgs: Dict[str, float] = {}
     for case_id in tqdm.tqdm(subjects, desc=desc):
-        dice_after, dice_before = process_subject(
+        dice_after, dice_before, mtv, tlg = process_subject(
             case_id,
             image_dir,
             out_dir,
@@ -364,10 +406,14 @@ def evaluate_split(
         )
         dices[case_id] = dice_after
         dices_before[case_id] = dice_before
+        mtvs[case_id] = mtv
+        tlgs[case_id] = tlg
 
     avg = float(np.nanmean(list(dices.values())))
     tqdm.tqdm.write(f"[{desc}] average dice: {avg:.4f}")
     append_results_to_csv(results_csv, model_name, dices, dices_before=dices_before)
+    append_metric_to_csv(mtv_csv, model_name, mtvs, "mtv")
+    append_metric_to_csv(tlg_csv, model_name, tlgs, "tlg")
 
 
 def process_subject(
@@ -388,7 +434,7 @@ def process_subject(
     ct_label_template: str = "ct_{case_id}_{tp}",
     pet_label_template: str = "pet_{case_id}_{tp}",
     io_lr: float = 1e-1,
-) -> Tuple[float, float]:
+) -> Tuple[float, float, float, float]:
     pair = load_val_pair(val_image_dir, case_id)
     X = pair["x"].unsqueeze(0).to(device).float()
     Y = pair["y"].unsqueeze(0).to(device).float()
@@ -500,6 +546,27 @@ def process_subject(
     dice_before = multilabel_dice(seg_moving[0, 0].round().long(), seg_fixed_i)
     tqdm.tqdm.write(f"{case_id}: before={dice_before:.4f};\tafter={dice_their:.4f}")
 
+    their_st_lin = SpatialTransformer(size=cfg.img_shape, mode="bilinear").to(device)
+
+    def load_pet_mask(tp: str) -> torch.Tensor:
+        stem = pet_label_template.format(case_id=case_id, tp=tp)
+        path = pet_label_dir / f"{stem}.nii.gz"
+        if not path.exists():
+            path = pet_label_dir / f"{stem}.nii"
+        arr = my_data.nib.load(str(path)).get_fdata()
+        mask = (torch.from_numpy(arr)[None, None].to(device).float() > 0).float()
+        return mask
+
+    moving_pet_mask = load_pet_mask("01")
+    moving_pet_image = X[:, 1:2]
+    warped_pet_mask = their_st(moving_pet_mask, disp_their)
+    warped_pet_image = their_st_lin(moving_pet_image, disp_their)
+
+    mtv = utils.mtv_bias_loss(warped_pet_mask, moving_pet_mask).item()
+    tlg = utils.tlg_bias_loss(
+        warped_pet_image, warped_pet_mask, moving_pet_image, moving_pet_mask
+    ).item()
+
     if False:
         # --- DEBUG: verify submitted field via evaluator pipeline ---
         debug_dir = out_dir / "debug_compose"
@@ -521,7 +588,7 @@ def process_subject(
 
     save_disp(disp_half, out_dir / "submission", case_id)
 
-    return dice_their, dice_before
+    return dice_their, dice_before, mtv, tlg
 
 
 def main() -> None:
@@ -571,7 +638,7 @@ def main() -> None:
             image_dir=val_image_dir,
             seg_dir=official_seg_dir,
             seg_template="{case_id}_{tp}",
-            results_csv=results_csv_official_val,
+            results_csv=results_csv_official_val_dice,
             model_name=model_name,
             out_dir=out_dir,
             model=model,
@@ -585,6 +652,8 @@ def main() -> None:
             pet_label_dir=pet_label_dir,
             io_lr=io_lr,
             desc="official val",
+            mtv_csv=results_csv_official_mtv,
+            tlg_csv=results_csv_official_tlg,
         )
         compress_to_zip(out_dir / "submission", out_dir / "submission.zip")
 
@@ -595,7 +664,7 @@ def main() -> None:
             image_dir=my_val_image_dir,
             seg_dir=my_val_seg_dir,
             seg_template="PSMARegPSMA_{case_id}_0000_{tp}",
-            results_csv=results_csv_my_val,
+            results_csv=results_csv_my_val_dice,
             model_name=model_name,
             out_dir=out_dir / "my_val",
             model=model,
@@ -611,6 +680,8 @@ def main() -> None:
             pet_label_template="PSMARegPSMA_{case_id}_0001_{tp}",
             io_lr=io_lr,
             desc="my val",
+            mtv_csv=results_csv_my_val_mtv,
+            tlg_csv=results_csv_my_val_tlg,
         )
 
 
