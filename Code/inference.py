@@ -24,6 +24,7 @@ os.environ["TOTALSEG_WEIGHTS_PATH"] = (
     "/home/iml/fryderyk.koegl/code/LapIRN-koegl/totalsegmentator_weights/nnunet/results"
 )
 sys.path.insert(0, "/home/iml/fryderyk.koegl/code/autopet-3-submission")
+import hd95_official
 import totalsegmentator.python_api as totalseg
 
 import main as autopet
@@ -106,6 +107,21 @@ def compute_ndv_official(
     return float(percent_ndv)
 
 
+def compute_hd95_official(
+    fixed_labels: np.ndarray,
+    moving_labels: np.ndarray,
+    warped_labels: np.ndarray,
+    spacing_mm: Tuple[float, float, float],
+) -> float:
+    hd95 = hd95_official.compute_average_ct_label_hd95(
+        fixed_labels,
+        moving_labels,
+        warped_labels,
+        spacing_mm,
+    )
+    return float(hd95)
+
+
 # --- variables (define here, no argparse) ---
 val_image_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesVal")
 val_cache_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/affine_cache_val")
@@ -160,6 +176,12 @@ results_csv_official_ndv = Path(
 )
 results_csv_my_val_ndv = Path(
     "/home/iml/fryderyk.koegl/data/PSMAReg/results_my_val_ndv.csv"
+)
+results_csv_official_hd95 = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val_hd95.csv"
+)
+results_csv_my_val_hd95 = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/results_my_val_hd95.csv"
 )
 
 
@@ -403,6 +425,7 @@ def evaluate_split(
     mtv_csv: Path,
     tlg_csv: Path,
     ndv_csv: Path,
+    hd95_csv: Path,
     ct_label_template: str = "ct_{case_id}_{tp}",
     pet_label_template: str = "pet_{case_id}_{tp}",
 ) -> None:
@@ -411,8 +434,9 @@ def evaluate_split(
     mtvs: Dict[str, float] = {}
     tlgs: Dict[str, float] = {}
     ndvs: Dict[str, float] = {}
+    hd95s: Dict[str, float] = {}
     for case_id in tqdm.tqdm(subjects, desc=desc):
-        dice_after, dice_before, mtv, tlg, ndv = process_subject(
+        dice_after, dice_before, mtv, tlg, ndv, hd95 = process_subject(
             case_id,
             image_dir,
             out_dir,
@@ -436,6 +460,7 @@ def evaluate_split(
         mtvs[case_id] = mtv
         tlgs[case_id] = tlg
         ndvs[case_id] = ndv
+        hd95s[case_id] = hd95
 
     avg = float(np.nanmean(list(dices.values())))
     tqdm.tqdm.write(f"[{desc}] average dice: {avg:.4f}")
@@ -443,6 +468,7 @@ def evaluate_split(
     append_metric_to_csv(mtv_csv, model_name, mtvs, "mtv")
     append_metric_to_csv(tlg_csv, model_name, tlgs, "tlg")
     append_metric_to_csv(ndv_csv, model_name, ndvs, "ndv")
+    append_metric_to_csv(hd95_csv, model_name, hd95s, "hd95")
 
 
 def process_subject(
@@ -463,7 +489,7 @@ def process_subject(
     ct_label_template: str = "ct_{case_id}_{tp}",
     pet_label_template: str = "pet_{case_id}_{tp}",
     io_lr: float = 1e-1,
-) -> Tuple[float, float, float, float, float]:
+) -> Tuple[float, float, float, float, float, float]:
     pair = load_val_pair(val_image_dir, case_id)
     X = pair["x"].unsqueeze(0).to(device).float()
     Y = pair["y"].unsqueeze(0).to(device).float()
@@ -579,6 +605,18 @@ def process_subject(
     dice_before = multilabel_dice(seg_moving[0, 0].round().long(), seg_fixed_i)
     tqdm.tqdm.write(f"{case_id}: before={dice_before:.4f};\tafter={dice_their:.4f}")
 
+    fixed_seg_stem = seg_template.format(case_id=case_id, tp="00")
+    fixed_seg_path = seg_dir / f"{fixed_seg_stem}.nii"
+    if not fixed_seg_path.exists():
+        fixed_seg_path = seg_dir / f"{fixed_seg_stem}.nii.gz"
+    fixed_nii = my_data.nib.load(str(fixed_seg_path))
+    spacing_mm = tuple(float(z) for z in fixed_nii.header.get_zooms()[:3])
+
+    fixed_np = seg_fixed_i.cpu().numpy().astype(np.int16)
+    warped_np = seg_their[0, 0].round().long().cpu().numpy().astype(np.int16)
+    moving_np = seg_moving[0, 0].round().long().cpu().numpy().astype(np.int16)
+    hd95 = compute_hd95_official(fixed_np, moving_np, warped_np, spacing_mm)
+
     their_st_lin = SpatialTransformer(size=cfg.img_shape, mode="bilinear").to(device)
 
     def load_pet_mask(tp: str) -> torch.Tensor:
@@ -621,7 +659,7 @@ def process_subject(
 
     save_disp(disp_half, out_dir / "submission", case_id)
 
-    return dice_their, dice_before, mtv, tlg, ndv
+    return dice_their, dice_before, mtv, tlg, ndv, hd95
 
 
 def main() -> None:
@@ -631,7 +669,7 @@ def main() -> None:
 
     # --- what to evaluate ---
     eval_official: bool = True
-    eval_my_val: bool = False
+    eval_my_val: bool = True
 
     model_path = Path(
         "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_upset-tern-26_stagelvl3_best.pth"
@@ -666,6 +704,7 @@ def main() -> None:
         print("warning using IO")
 
     if eval_official:
+        # print("warning: reducing number of my val subjects")
         evaluate_split(
             subjects=val_subjects,
             image_dir=val_image_dir,
@@ -688,11 +727,14 @@ def main() -> None:
             mtv_csv=results_csv_official_mtv,
             tlg_csv=results_csv_official_tlg,
             ndv_csv=results_csv_official_ndv,
+            hd95_csv=results_csv_official_hd95,
         )
         compress_to_zip(out_dir / "submission", out_dir / "submission.zip")
 
     if eval_my_val:
         _, my_val_subjects = load_split(split_path)
+        # my_val_subjects = my_val_subjects[:2]
+        # print("warning: reducing number of my val subjects")
         evaluate_split(
             subjects=my_val_subjects,
             image_dir=my_val_image_dir,
@@ -717,6 +759,7 @@ def main() -> None:
             mtv_csv=results_csv_my_val_mtv,
             tlg_csv=results_csv_my_val_tlg,
             ndv_csv=results_csv_my_val_ndv,
+            hd95_csv=results_csv_my_val_hd95,
         )
 
 
