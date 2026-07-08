@@ -73,7 +73,7 @@ class TrainingConfig:
     w_smooth: float = 2.0
     w_ct: float = 15.0
     w_pet: float = 0.0
-    w_dice_ct: float = 6.0
+    w_dice_ct: float = 3.0
     w_dice_pet: float = 0.0
     w_tlg: float = 20.0
     w_masked_jac: float = 20.0
