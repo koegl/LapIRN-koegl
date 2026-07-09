@@ -636,7 +636,7 @@ def train_lvl2(
             f"dice={epoch_metrics['train_lvl2/dice_ct'] / len(train_generator):.4f}"
         )
 
-        if epoch % config.val_interval == 0 or epoch == config.epochs_lvl2:
+        if False and (epoch % config.val_interval == 0 or epoch == config.epochs_lvl2):
             val_losses = evaluate_lvl2(
                 model=model,
                 valid_generator=valid_generator,

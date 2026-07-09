@@ -426,7 +426,7 @@ def train_lvl3(
 
             F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X_affine, Y)
 
-            if saved_initial:
+            if saved_initial is False:
                 zero_disp = torch.zeros_like(F_X_Y)
                 x_ref = model.transform(
                     X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
@@ -457,7 +457,7 @@ def train_lvl3(
                 )
                 saved_initial = True
 
-            if epoch == 0 or epoch == config.epochs_lvl3:
+            if epoch == 0 or epoch == config.epochs_lvl3 or epoch % 20 == 0:
                 # print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
                 ct = X_Y[:, 0:1, :, :, :]
                 my_data.save_volume(
@@ -651,7 +651,7 @@ def train_lvl3(
             f"dice={epoch_metrics['train_lvl3/dice_ct'] / len(train_generator):.4f}"
         )
 
-        if epoch % config.val_interval == 0 or epoch == config.epochs_lvl3:
+        if False and (epoch % config.val_interval == 0 or epoch == config.epochs_lvl3):
             val_losses = evaluate_lvl3(
                 model=model,
                 val_generator=val_generator,
