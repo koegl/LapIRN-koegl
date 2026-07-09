@@ -53,8 +53,8 @@ class TrainingConfig:
     in_channel: int = 4
     n_classes: int = 3
     lr_lvl1: float = 5e-4
-    lr_lvl2: float = 1e-3 * 0.5
-    lr_lvl3: float = 1e-3 * 0.25
+    lr_lvl2: float = 5e-4
+    lr_lvl3: float = 1e-4
     start_channel: int = 11
 
     # train val
@@ -73,10 +73,10 @@ class TrainingConfig:
     w_smooth: float = 2.0
     w_ct: float = 15.0
     w_pet: float = 0.0
-    w_dice_ct: float = 3.0
+    w_dice_ct: float = 6.0
     w_dice_pet: float = 0.0
-    w_tlg: float = 20.0
-    w_masked_jac: float = 20.0
+    w_tlg: float = 10.0
+    w_masked_jac: float = 10.0
     w_dvf: float = 1000.0
 
     dice_pet_iou_threshold: float = 0.1
