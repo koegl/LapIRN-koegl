@@ -105,7 +105,7 @@ def main() -> None:
             # # path_model_l    evel1 = Path(
             # #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_stagelvl1_best.pth"
             # # )
-            path_model_level_1 = paths_model_level1["best"]
+            path_model_level_1 = paths_model_level1["final"]
             # path_model_level_1 = Path(
             # "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_tasteful-snail-153_stagelvl1_best.pth"
             # )
@@ -119,7 +119,7 @@ def main() -> None:
             # path_model_level_2 = Path(
             # "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_unleashed-sloth-539_stagelvl2_best.pth"
             # )
-            path_model_level_2 = paths_model_level2["best"]
+            path_model_level_2 = paths_model_level2["final"]
             path_model_level3 = level3.train_lvl3(
                 config, path_model_level_2, train_generator, valid_generator
             )
