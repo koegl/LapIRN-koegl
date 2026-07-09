@@ -56,6 +56,7 @@ def evaluate_lvl3(
         "mtv_bias": 0.0,
         "tlg_bias": 0.0,
         "masked_jac": 0.0,
+        "masked_jac_bone": 0.0,
         "ndv": 0.0,
     }
     n_batches = 0
@@ -63,6 +64,10 @@ def evaluate_lvl3(
     transform_nearest = SpatialTransformNearest_unit().to(device)
     for param in transform_nearest.parameters():
         param.requires_grad = False
+
+    bone_values = torch.tensor(
+        synthetic.BONE_LABEL_VALUES, dtype=torch.float32, device=device
+    )
 
     grid_full = generate_grid_unit(config.img_shape)
     grid_full = (
@@ -98,7 +103,7 @@ def evaluate_lvl3(
             X_affine = transform(X, flow_affine, grid_full)
 
             F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X_affine, Y)
-            if epoch % (config.val_interval * 50) == 0 or epoch == config.epochs_lvl3:
+            if epoch % (config.val_interval * 10) == 0 or epoch == config.epochs_lvl3:
                 if not saved_initial:
                     zero_disp = torch.zeros_like(F_X_Y)
                     x_ref = model.transform(
@@ -176,6 +181,9 @@ def evaluate_lvl3(
             )
             loss_masked_jac = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
 
+            moving_bone_mask = torch.isin(X_lbl_ct, bone_values).float()
+            loss_masked_jac_bone = utils.masked_jac_det_loss(jac_det, moving_bone_mask)
+
             loss = (
                 loss_multiNCC
                 + config.w_jacobian * loss_jacobian
@@ -183,6 +191,8 @@ def evaluate_lvl3(
                 + config.w_tlg * loss_tlg
                 + config.w_masked_jac * loss_masked_jac
             )
+            if loss_masked_jac_bone is not None:
+                loss = loss + config.w_masked_jac * loss_masked_jac_bone
             if loss_dice_ct is not None:
                 loss = loss + config.w_dice_ct * loss_dice_ct
             if loss_dice_pet is not None:
@@ -196,6 +206,7 @@ def evaluate_lvl3(
             val_losses["mtv_bias"] += loss_mtv.item()
             val_losses["tlg_bias"] += loss_tlg.item()
             val_losses["masked_jac"] += loss_masked_jac.item()
+            val_losses["masked_jac_bone"] += loss_masked_jac_bone.item()
             val_losses["ndv"] += ndv
 
             if loss_dice_ct is not None:
@@ -295,6 +306,10 @@ def train_lvl3(
 
     transform = SpatialTransform_unit().to(device)
     transform_nearest = SpatialTransformNearest_unit().to(device)
+
+    bone_values = torch.tensor(
+        synthetic.BONE_LABEL_VALUES, dtype=torch.float32, device=device
+    )
 
     for param in transform.parameters():
         param.requires_grad = False
@@ -411,7 +426,7 @@ def train_lvl3(
 
             F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X_affine, Y)
 
-            if False and not saved_initial:
+            if saved_initial:
                 zero_disp = torch.zeros_like(F_X_Y)
                 x_ref = model.transform(
                     X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
@@ -442,9 +457,8 @@ def train_lvl3(
                 )
                 saved_initial = True
 
-            if False and (epoch == 0 or epoch == config.epochs_lvl3):
-                # in the epoch==0 warped block:
-                print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
+            if epoch == 0 or epoch == config.epochs_lvl3:
+                # print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
                 ct = X_Y[:, 0:1, :, :, :]
                 my_data.save_volume(
                     volume=ct,
@@ -510,11 +524,15 @@ def train_lvl3(
             moving_pet_mask = (X_lbl_pet == 1).float()
             loss_masked_jac = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
 
+            moving_bone_mask = torch.isin(X_lbl_ct, bone_values).float()
+            loss_masked_jac_bone = utils.masked_jac_det_loss(jac_det, moving_bone_mask)
+
             loss = (
                 loss_multiNCC
                 + config.w_jacobian * loss_jacobian
                 + config.w_smooth * loss_regulation
                 + config.w_masked_jac * loss_masked_jac
+                + config.w_masked_jac * loss_masked_jac_bone
             )
             if loss_dice_ct is not None:
                 loss = loss + config.w_dice_ct * loss_dice_ct
@@ -593,6 +611,9 @@ def train_lvl3(
                 Jdet=f"{loss_jacobian.item():.6f}",
                 smo=f"{loss_regulation.item():.4f}",
                 dvf=f"{loss_dvf.item():.8f}",
+                ndv=f"{ndv:.4f}",
+                masked_jac=f"{loss_masked_jac.item():.4f}",
+                masked_jac_bone=f"{loss_masked_jac_bone.item():.4f}",
             )
             train_metrics = {
                 "train_lvl3/loss": loss.item(),
@@ -602,6 +623,7 @@ def train_lvl3(
                 "train_lvl3/mtv_bias": loss_mtv.item(),
                 "train_lvl3/tlg_bias": loss_tlg.item(),
                 "train_lvl3/masked_jac": loss_masked_jac.item(),
+                "train_lvl3/masked_jac_bone": loss_masked_jac_bone.item(),
                 "train_lvl3/jacob": loss_jacobian.item(),
                 "train_lvl3/ndv": ndv,
                 "train_lvl3/dvf": loss_dvf.item(),
@@ -621,13 +643,13 @@ def train_lvl3(
             {f"{key}_epoch": value / n_steps for key, value in epoch_metrics.items()},
             step=global_step,
         )
-        tqdm.tqdm.write(f"ep {epoch}: gated dice_pet on {n_gated} pairs")
+        # tqdm.tqdm.write(f"ep {epoch}: gated dice_pet on {n_gated} pairs")
 
-        # print(
-        #     f"ep: {epoch} "
-        #     f"ncc={epoch_metrics['train_lvl3/ncc_ct'] / len(train_generator):.4f} "
-        #     f"dice={epoch_metrics['train_lvl3/dice_ct'] / len(train_generator):.4f}"
-        # )
+        tqdm.tqdm.write(
+            f"ep: {epoch} "
+            f"ncc={epoch_metrics['train_lvl3/ncc_ct'] / len(train_generator):.4f} "
+            f"dice={epoch_metrics['train_lvl3/dice_ct'] / len(train_generator):.4f}"
+        )
 
         if epoch % config.val_interval == 0 or epoch == config.epochs_lvl3:
             val_losses = evaluate_lvl3(
@@ -670,9 +692,6 @@ def train_lvl3(
                 }
                 torch.save(opt_ckpt, best_optimizer_path)
                 tqdm.tqdm.write(
-                    f"epoch {epoch}: new best dice_ct {best_dice_ct:.4f} -> saved best"
-                )
-                print(
                     f"epoch {epoch}: new best dice_ct {best_dice_ct:.4f} -> saved best"
                 )
 

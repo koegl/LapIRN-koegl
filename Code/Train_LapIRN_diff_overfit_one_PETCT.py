@@ -68,6 +68,9 @@ def main() -> None:
         else:
             train_combined = torch_data.ConcatDataset([train_dataset])
 
+        print("warnign turned off synthetic")
+        train_combined = train_dataset
+
         val_dataset = my_data.PSMARegDataset(
             case_ids=val_ids,
             cfg=config,
@@ -95,28 +98,28 @@ def main() -> None:
             level2.train_lvl2
             level3.train_lvl3
 
-            # paths_model_level1 = level1.train_lvl1(
-            # config, train_generator, valid_generator
-            # )
-            print("skipping level 1, already trained")
+            paths_model_level1 = level1.train_lvl1(
+                config, train_generator, valid_generator
+            )
+            # print("skipping level 1, already trained")
             # # path_model_l    evel1 = Path(
             # #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_stagelvl1_best.pth"
             # # )
-            # path_model_level_1 = paths_model_level1["best"]
+            path_model_level_1 = paths_model_level1["best"]
             # path_model_level_1 = Path(
-            #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_shivering-midge-864_stagelvl1_best.pth"
+            # "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_tasteful-snail-153_stagelvl1_best.pth"
             # )
-            print("skipping level 2, already trained")
-            # paths_model_level2 = level2.train_lvl2(
-            # config, path_model_level_1, train_generator, valid_generator
-            # )
+            # print("skipping level 2, already trained")
+            paths_model_level2 = level2.train_lvl2(
+                config, path_model_level_1, train_generator, valid_generator
+            )
             # path_model_level_2 = Path(
             #     "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_nosy-shrike-707_stagelvl2_best.pth"
             # )
-            path_model_level_2 = Path(
-                "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_unleashed-sloth-539_stagelvl2_best.pth"
-            )
-            # path_model_level_2 = paths_model_level2["best"]
+            # path_model_level_2 = Path(
+            # "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_unleashed-sloth-539_stagelvl2_best.pth"
+            # )
+            path_model_level_2 = paths_model_level2["best"]
             path_model_level3 = level3.train_lvl3(
                 config, path_model_level_2, train_generator, valid_generator
             )

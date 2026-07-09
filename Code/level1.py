@@ -94,7 +94,7 @@ def evaluate_lvl1(
 
             F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_affine, Y)
 
-            if epoch % (config.val_interval * 25) == 0 or epoch == config.epochs_lvl1:
+            if epoch % (config.val_interval * 10) == 0 or epoch == config.epochs_lvl1:
                 if not saved_initial:
                     zero_disp = torch.zeros_like(F_X_Y)
                     x_ref = model.transform(
@@ -387,7 +387,7 @@ def train_lvl1(
             # with torch.amp.autocast(device_type="cuda"):
             F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_affine, Y)
 
-            if False and saved_initial is False:
+            if saved_initial is False:
                 zero_disp = torch.zeros_like(F_X_Y)
                 x_ref = model.transform(
                     X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
@@ -418,8 +418,8 @@ def train_lvl1(
                 )
                 saved_initial = True
 
-            if False and (epoch == 0 or epoch == config.epochs_lvl1):
-                print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
+            if epoch == 0 or epoch == config.epochs_lvl1 or epoch % 20 == 0:
+                # print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
                 ct = X_Y[:, 0:1, :, :, :]
                 my_data.save_volume(
                     volume=ct,
@@ -628,13 +628,13 @@ def train_lvl1(
             {f"{key}_epoch": value / n_steps for key, value in epoch_metrics.items()},
             step=global_step,
         )
-        tqdm.tqdm.write(f"ep {epoch}: gated dice_pet on {n_gated} pairs")
+        # tqdm.tqdm.write(f"ep {epoch}: gated dice_pet on {n_gated} pairs")
 
-        # print(
-        #     f"ep: {epoch} "
-        #     f"ncc={epoch_metrics['train_lvl1/ncc_ct'] / len(train_generator):.4f} "
-        #     f"dice={epoch_metrics['train_lvl1/dice_ct'] / len(train_generator):.4f}"
-        # )
+        tqdm.tqdm.write(
+            f"ep: {epoch} "
+            f"ncc={epoch_metrics['train_lvl1/ncc_ct'] / len(train_generator):.4f} "
+            f"dice={epoch_metrics['train_lvl1/dice_ct'] / len(train_generator):.4f}"
+        )
 
         if epoch % config.val_interval == 0 or epoch == config.epochs_lvl1:
             val_losses = evaluate_lvl1(
@@ -679,9 +679,6 @@ def train_lvl1(
                 }
                 torch.save(opt_ckpt, best_optimizer_path)
                 tqdm.tqdm.write(
-                    f"epoch {epoch}: new best dice_ct {best_dice_ct:.4f} -> saved best"
-                )
-                print(
                     f"epoch {epoch}: new best dice_ct {best_dice_ct:.4f} -> saved best"
                 )
 

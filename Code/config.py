@@ -27,7 +27,7 @@ class TrainingConfig:
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
     # augmentation
-    augment: bool = True
+    augment: bool = False
     aug_use_flip: bool = True
     aug_use_ct_intensity: bool = True
     aug_use_pet_intensity: bool = True
@@ -58,12 +58,12 @@ class TrainingConfig:
     start_channel: int = 11
 
     # train val
-    epochs_lvl1: int = 110
-    epochs_lvl2: int = 70
-    epochs_lvl3: int = 251
+    epochs_lvl1: int = 100
+    epochs_lvl2: int = 100
+    epochs_lvl3: int = 100
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10000
-    val_interval: int = 2
+    val_interval: int = 2000
     checkpoint_interval: int = 50
 
     accumulation_steps: int = 4
