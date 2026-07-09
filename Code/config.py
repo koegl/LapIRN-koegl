@@ -87,7 +87,7 @@ class TrainingConfig:
 
     lvl1_ncc_win: int = 5
     lvl2_ncc_win: int = 7
-    lvl3_ncc_win: int = 9
+    lvl3_ncc_win: int = 7
 
     mlflow_tracking_uri: str = "sqlite:////home/iml/fryderyk.koegl/code/mlruns.db"
     mlflow_experiment: str = "PSMAReg_LapIRN"
