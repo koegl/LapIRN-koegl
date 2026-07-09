@@ -7,7 +7,13 @@ import synthetic
 import torch
 import tqdm
 import utils
-from miccai2020_model_stage import NCC, jacobian_determinant, neg_Jdet_loss, smoothloss
+from miccai2020_model_stage import (
+    NCC,
+    SpatialTransform_unit,
+    jacobian_determinant,
+    neg_Jdet_loss,
+    smoothloss,
+)
 
 
 def warp_label(
@@ -20,6 +26,70 @@ def warp_label(
     return warped
 
 
+def dice_loss_with_grad(
+    moving_label: torch.Tensor,
+    fixed_label: torch.Tensor,
+    disp: torch.Tensor,
+    grid: torch.Tensor,
+    transform: SpatialTransform_unit,
+    class_weights: torch.Tensor | None = None,
+    eps: float = 1e-5,
+) -> torch.Tensor | None:
+    """Per-class soft dice loss. If class_weights is given (one weight per
+    class value, indexed by the integer label), the per-class dice terms are
+    weighted before averaging; weights are renormalized over the classes
+    actually used so the loss scale stays comparable across subjects."""
+    classes = fixed_label.unique()
+    classes = classes[classes != 0]
+    if classes.numel() == 0:
+        return None
+    flow = disp.permute(0, 2, 3, 4, 1)
+    dice_scores = []
+    weights = []
+    for c in classes:
+        moving_c = (moving_label == c).float()
+        fixed_c = (fixed_label == c).float()
+        warped_c = transform(moving_c, flow, grid)
+        intersection = (warped_c * fixed_c).sum()
+        cardinality = warped_c.sum() + fixed_c.sum()
+        dice_c = (2.0 * intersection + eps) / (cardinality + eps)
+        dice_scores.append(dice_c)
+        if class_weights is not None:
+            weights.append(class_weights[int(c.item())])
+    dice_stack = torch.stack(dice_scores)
+    if class_weights is not None:
+        w = torch.stack(weights)
+        w = w / (w.mean() + eps)
+        loss = 1.0 - (w * dice_stack).sum() / w.sum()
+    else:
+        loss = 1.0 - dice_stack.mean()
+    return loss
+
+
+import numpy as np
+
+
+def multilabel_dice(
+    pred: torch.Tensor,
+    target: torch.Tensor,
+    label_ids: range = range(1, 118),
+) -> float:
+    """Mean Dice over a fixed label set, matching the official scorer.
+    pred/target: (H, W, D) int."""
+    dices = []
+    for lbl in label_ids:
+        p = pred == lbl
+        t = target == lbl
+        volume_sum = p.sum() + t.sum()
+        if volume_sum == 0:
+            dice = 0.0
+        else:
+            dice = (2.0 * (p & t).sum() / volume_sum).item()
+        dices.append(dice)
+    mean = float(np.mean(dices)) if dices else float("nan")
+    return mean
+
+
 def compute_io_loss(
     disp_unit: torch.Tensor,
     y: torch.Tensor,
@@ -28,11 +98,13 @@ def compute_io_loss(
     x_lbl_pet: torch.Tensor,
     y_lbl_ct: torch.Tensor,
     transform: torch.nn.Module,
+    transform_nearest: torch.nn.Module,
     grid: torch.Tensor,
     cfg: config.TrainingConfig,
     bone_values: torch.Tensor,
     loss_ncc: NCC,
     ncc_weight: float,
+    class_weights: torch.Tensor | None,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
     disp_flow = disp_unit.permute(0, 2, 3, 4, 1)
 
@@ -49,8 +121,8 @@ def compute_io_loss(
 
     loss_ncc_ct = loss_ncc(x_y_ct, y_ct)
 
-    loss_dice_ct = utils.dice_loss_with_grad(
-        x_lbl_ct, y_lbl_ct, disp_unit, grid, transform
+    loss_dice_ct = dice_loss_with_grad(
+        x_lbl_ct, y_lbl_ct, disp_unit, grid, transform, class_weights=class_weights
     )
 
     moving_pet_mask = (x_lbl_pet == 1).float()
@@ -69,6 +141,19 @@ def compute_io_loss(
     moving_bone_mask = torch.isin(x_lbl_ct, bone_values).float()
     loss_masked_jac_bone = utils.masked_jac_det_loss(jac_det, moving_bone_mask)
 
+    with torch.no_grad():
+        warped_lbl_ct = warp_label(x_lbl_ct, disp_unit, grid, transform_nearest)
+        pred = warped_lbl_ct[0, 0].round().long()
+        target = y_lbl_ct[0, 0].round().long()
+        hard_dices = []
+        for lbl in range(1, 118):
+            p = pred == lbl
+            t = target == lbl
+            volume_sum = p.sum() + t.sum()
+            dice = 0.0 if volume_sum == 0 else (2.0 * (p & t).sum() / volume_sum).item()
+            hard_dices.append(dice)
+        hard_dice = float(np.mean(hard_dices))
+
     loss = (
         ncc_weight * loss_ncc_ct
         + cfg.w_jacobian * loss_jac
@@ -83,6 +168,7 @@ def compute_io_loss(
     logs = {
         "ncc_ct": loss_ncc_ct.item(),
         "dice_ct": loss_dice_ct.item() if loss_dice_ct is not None else float("nan"),
+        "hard_dice_ct": hard_dice,
         "smooth": loss_smooth.item(),
         "jac": loss_jac.item(),
         "masked_jac": loss_masked_jac.item(),
@@ -93,6 +179,27 @@ def compute_io_loss(
     return loss, logs
 
 
+def build_class_weights(
+    moving_label: torch.Tensor,
+    fixed_label: torch.Tensor,
+    n_labels: int,
+    device: torch.device,
+) -> torch.Tensor:
+    """w_c = 1 - starting_hard_dice_c, indexed by label value (size n_labels)."""
+    weights = torch.ones(n_labels, device=device)
+    pred = moving_label[0, 0].round().long()
+    target = fixed_label[0, 0].round().long()
+    for lbl in range(1, n_labels):
+        p = pred == lbl
+        t = target == lbl
+        volume_sum = p.sum() + t.sum()
+        if volume_sum == 0:
+            continue
+        dice = (2.0 * (p & t).sum() / volume_sum).item()
+        weights[lbl] = 1.0 - dice
+    return weights
+
+
 def run_io(
     y: torch.Tensor,
     f_x_y: torch.Tensor,
@@ -101,6 +208,7 @@ def run_io(
     x_lbl_pet: torch.Tensor,
     y_lbl_ct: torch.Tensor,
     transform: torch.nn.Module,
+    transform_nearest: torch.nn.Module,
     grid: torch.Tensor,
     cfg: config.TrainingConfig,
     device: torch.device,
@@ -115,14 +223,24 @@ def run_io(
     if ncc_weight is None:
         ncc_weight = cfg.w_ct
 
-    identity_vox = synthetic.build_identity_grid(cfg.img_shape, device)
-    velocity = torch.zeros_like(f_x_y, requires_grad=True)
+    half_shape = tuple(s // 2 for s in cfg.img_shape)
+    identity_vox_half = synthetic.build_identity_grid(half_shape, device)
+    velocity = torch.zeros((1, 3) + half_shape, device=device)
+    velocity.requires_grad_(True)
     optimizer = torch.optim.Adam([velocity], lr=lr)
 
     bone_values = torch.tensor(
         synthetic.BONE_LABEL_VALUES, dtype=torch.float32, device=device
     )
     loss_ncc = NCC(cfg.lvl3_ncc_win)
+
+    base = f_x_y.detach()
+    # x_lbl_ct_start = warp_label(
+    #     x_lbl_ct, base, grid, transform_nearest
+    # )  # or transform w/ nearest
+    # class_weights = build_class_weights(
+    #     x_lbl_ct_start, y_lbl_ct, n_labels=118, device=device
+    # )
 
     base = f_x_y.detach()
     best_loss = float("inf")
@@ -132,12 +250,17 @@ def run_io(
     for i in pbar:
         start_time = time.time()
         optimizer.zero_grad()
-        disp_res = synthetic.integrate_svf(velocity, identity_vox, n_integration)
+        disp_res_half = synthetic.integrate_svf(
+            velocity, identity_vox_half, n_integration
+        )
+        disp_res_full = torch.nn.functional.interpolate(
+            disp_res_half, scale_factor=2, mode="trilinear", align_corners=False
+        )
         disp_res_unit = synthetic.unit_flow_from_voxel_disp(
-            disp_res, cfg.img_shape
+            disp_res_full, cfg.img_shape
         ).flip(1)
         disp_unit = base + disp_res_unit
-        loss, _ = compute_io_loss(
+        loss, logs = compute_io_loss(
             disp_unit,
             y,
             X_affine,
@@ -145,11 +268,13 @@ def run_io(
             x_lbl_pet,
             y_lbl_ct,
             transform,
+            transform_nearest,
             grid,
             cfg,
             bone_values,
             loss_ncc=loss_ncc,
             ncc_weight=ncc_weight,
+            class_weights=None,  # class_weights,
         )
         loss.backward()
         optimizer.step()
@@ -160,6 +285,8 @@ def run_io(
             best_disp_i = i
 
         pbar.set_postfix(
+            dice_weighted=f"{1 - logs['dice_ct']:.4f}",
+            dice_hard=f"{logs['hard_dice_ct']:.4f}",
             loss=f"{loss.item():.4f}",
             best=f"{best_loss:.4f}",
             best_i=best_disp_i,

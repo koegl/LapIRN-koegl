@@ -159,6 +159,12 @@ results_csv_my_val_dice = Path(
 results_csv_official_val_dice = Path(
     "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val_dice.csv"
 )
+results_csv_my_val_dice_per_label = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/results_my_val_dice_per_label.csv"
+)
+results_csv_official_val_dice_per_label = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val_dice_per_label.csv"
+)
 results_csv_official_mtv = Path(
     "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val_mtv.csv"
 )
@@ -324,6 +330,49 @@ def save_disp(disp_half: torch.Tensor, out_dir: Path, case_id: str) -> None:
     my_data.nib.save(my_data.nib.Nifti1Image(disp_np, np.eye(4)), str(out_path))
 
 
+def dice_per_label(
+    pred: torch.Tensor,
+    target: torch.Tensor,
+    label_ids: range = range(1, 118),
+    empty_value: float = float("nan"),
+) -> Dict[int, float]:
+    """Per-label hard dice. `empty_value` is returned for labels absent from
+    both pred and target: float('nan') = official convention (dropped from the
+    mean), 0.0 = 'my' convention (counted)."""
+    scores: Dict[int, float] = {}
+    for lbl in label_ids:
+        p = pred == lbl
+        t = target == lbl
+        volume_sum = p.sum() + t.sum()
+        if volume_sum == 0:
+            scores[lbl] = empty_value
+        else:
+            scores[lbl] = (2.0 * (p & t).sum() / volume_sum).item()
+    return scores
+
+
+def build_per_label_df(
+    per_case: Dict[str, Dict[int, float]],
+    label_ids: range = range(1, 118),
+) -> pd.DataFrame:
+    data: Dict[str, Dict] = {}
+    for case_id, scores in per_case.items():
+        col: Dict = {lbl: scores.get(lbl, float("nan")) for lbl in label_ids}
+        present = [v for v in col.values() if not np.isnan(v)]
+        col["mean_dice"] = float(np.mean(present)) if present else float("nan")
+        data[case_id] = col
+    df = pd.DataFrame(data)
+    df.index.name = "label"
+    return df
+
+
+def worst_labels(df: pd.DataFrame, n: int = 20) -> pd.Series:
+    label_rows = [r for r in df.index if r != "mean_dice"]
+    means = df.loc[label_rows].mean(axis=1)
+    worst = means.sort_values().head(n)
+    return worst
+
+
 def multilabel_dice(
     pred: torch.Tensor,
     target: torch.Tensor,
@@ -421,11 +470,13 @@ def evaluate_split(
     ct_label_dir: Path,
     pet_label_dir: Path,
     io_lr: float,
+    io_it: int,
     desc: str,
     mtv_csv: Path,
     tlg_csv: Path,
     ndv_csv: Path,
     hd95_csv: Path,
+    per_label_csv: Path,
     ct_label_template: str = "ct_{case_id}_{tp}",
     pet_label_template: str = "pet_{case_id}_{tp}",
 ) -> None:
@@ -435,8 +486,9 @@ def evaluate_split(
     tlgs: Dict[str, float] = {}
     ndvs: Dict[str, float] = {}
     hd95s: Dict[str, float] = {}
+    per_case: Dict[str, Dict[int, float]] = {}
     for case_id in tqdm.tqdm(subjects, desc=desc):
-        dice_after, dice_before, mtv, tlg, ndv, hd95 = process_subject(
+        dice_after, dice_before, mtv, tlg, ndv, hd95, per_label = process_subject(
             case_id,
             image_dir,
             out_dir,
@@ -454,6 +506,7 @@ def evaluate_split(
             ct_label_template=ct_label_template,
             pet_label_template=pet_label_template,
             io_lr=io_lr,
+            io_it=io_it,
         )
         dices[case_id] = dice_after
         dices_before[case_id] = dice_before
@@ -461,6 +514,11 @@ def evaluate_split(
         tlgs[case_id] = tlg
         ndvs[case_id] = ndv
         hd95s[case_id] = hd95
+        per_case[case_id] = per_label
+
+    df = build_per_label_df(per_case)
+    df.to_csv(per_label_csv)
+    tqdm.tqdm.write(f"worst labels:\n{worst_labels(df)}")
 
     avg = float(np.nanmean(list(dices.values())))
     tqdm.tqdm.write(f"[{desc}] average dice: {avg:.4f}")
@@ -489,7 +547,8 @@ def process_subject(
     ct_label_template: str = "ct_{case_id}_{tp}",
     pet_label_template: str = "pet_{case_id}_{tp}",
     io_lr: float = 1e-1,
-) -> Tuple[float, float, float, float, float, float]:
+    io_it: int = 100,
+) -> Tuple[float, float, float, float, float, float, Dict[int, float]]:
     pair = load_val_pair(val_image_dir, case_id)
     X = pair["x"].unsqueeze(0).to(device).float()
     Y = pair["y"].unsqueeze(0).to(device).float()
@@ -539,11 +598,32 @@ def process_subject(
             x_lbl_pet,
             y_lbl_ct,
             transform,
+            transform_nearest,
             grid_full,
             cfg,
             device,
             lr=io_lr,
+            n_steps=io_it,
         )
+
+    if False:
+        # --- DIAGNOSTIC: replicate IO hard_dice path (transform_nearest, unit flow) ---
+        x_lbl_ct_diag, _, y_lbl_ct_diag, _ = load_io_labels(
+            ct_label_dir,
+            pet_label_dir,
+            case_id,
+            device,
+            ct_template=ct_label_template,
+            pet_template=pet_label_template,
+        )
+        x_lbl_ct_diag = transform_nearest(x_lbl_ct_diag, flow_affine, grid_full)
+        warped_diag = transform_nearest(
+            x_lbl_ct_diag, F_X_Y.permute(0, 2, 3, 4, 1), grid_full
+        )
+        dice_diag = multilabel_dice(
+            warped_diag[0, 0].round().long(), y_lbl_ct_diag[0, 0].round().long()
+        )
+        tqdm.tqdm.write(f"{case_id}: dice diag (IO path replica)={dice_diag:.4f}")
 
     deform_grid = grid_full + F_X_Y.permute(0, 2, 3, 4, 1)
     affine_grid = grid_full + flow_affine
@@ -563,21 +643,7 @@ def process_subject(
         total_unit_flow.permute(0, 2, 3, 4, 1).clone()
     ).permute(0, 4, 1, 2, 3)
 
-    disp_half = torch.nn.functional.interpolate(
-        total_voxel, scale_factor=0.5, mode="trilinear", align_corners=False
-    )
-
-    disp_up = torch.nn.functional.interpolate(
-        disp_half, scale_factor=2, mode="trilinear", align_corners=False
-    )
-
-    dice_their = np.nan
-
-    _, _, hh, ww, dd = disp_up.shape
-    disp_up_unit = disp_up.clone()
-    disp_up_unit[:, 0] = disp_up_unit[:, 0] / ((dd - 1) / 2.0)
-    disp_up_unit[:, 1] = disp_up_unit[:, 1] / ((ww - 1) / 2.0)
-    disp_up_unit[:, 2] = disp_up_unit[:, 2] / ((hh - 1) / 2.0)
+    their_st = SpatialTransformer(size=cfg.img_shape, mode="nearest").to(device)
 
     def load_seg(tp: str) -> torch.Tensor:
         stem = seg_template.format(case_id=case_id, tp=tp)
@@ -593,11 +659,35 @@ def process_subject(
     seg_moving = load_seg("01")
     seg_fixed = load_seg("00")
     seg_fixed_i = seg_fixed[0, 0].round().long()
+    disp_half = torch.nn.functional.interpolate(
+        total_voxel, scale_factor=0.5, mode="trilinear", align_corners=False
+    )
 
-    their_st = SpatialTransformer(size=cfg.img_shape, mode="nearest").to(device)
+    # --- dice BEFORE half-res round-trip (full-res total_voxel) ---
+    disp_full_their = total_voxel.flip(1)
+    seg_full = their_st(seg_moving, disp_full_their)
+    dice_full = multilabel_dice(seg_full[0, 0].round().long(), seg_fixed_i)
+    tqdm.tqdm.write(f"{case_id}: dice full-res (pre round-trip)={dice_full:.4f}")
+
+    disp_up = torch.nn.functional.interpolate(
+        disp_half, scale_factor=2, mode="trilinear", align_corners=False
+    )
+
+    dice_their = np.nan
+
+    _, _, hh, ww, dd = disp_up.shape
+    disp_up_unit = disp_up.clone()
+    disp_up_unit[:, 0] = disp_up_unit[:, 0] / ((dd - 1) / 2.0)
+    disp_up_unit[:, 1] = disp_up_unit[:, 1] / ((ww - 1) / 2.0)
+    disp_up_unit[:, 2] = disp_up_unit[:, 2] / ((hh - 1) / 2.0)
+
     disp_their = disp_up.flip(1)
     seg_their = their_st(seg_moving, disp_their)
     dice_their = multilabel_dice(seg_their[0, 0].round().long(), seg_fixed_i)
+
+    per_label = dice_per_label(
+        seg_their[0, 0].round().long(), seg_fixed_i, empty_value=float("nan")
+    )
 
     disp_voxel = disp_up[0].detach().cpu().numpy().astype(np.float32)
     ndv_mask = Y[0, 0].detach().cpu().numpy() > 0
@@ -658,7 +748,7 @@ def process_subject(
         )
         # --- END DEBUG ---
 
-    if False:
+    if True:
         # --- DEBUG: save X, Y, warped X, ct label, warped ct label ---
         debug_dir = out_dir / "overlap_debug"
         debug_dir.mkdir(parents=True, exist_ok=True)
@@ -677,16 +767,16 @@ def process_subject(
             pet_template=pet_label_template,
         )
 
-        save_ct(X, "X")
-        save_ct(Y, "Y")
-        save_ct(warped, "warped_X")
-        save_ct(x_lbl_ct, "ct_label_moving")
-        save_ct(y_lbl_ct, "ct_label_fixed")
-        save_ct(seg_their.round(), "ct_label_moving_warped")
+        save_ct(X, f"{case_id}_X")
+        save_ct(Y, f"{case_id}_Y")
+        save_ct(warped, f"{case_id}_warped_X")
+        save_ct(x_lbl_ct, f"{case_id}_ct_label_moving")
+        save_ct(y_lbl_ct, f"{case_id}_ct_label_fixed")
+        save_ct(seg_their.round(), f"{case_id}_ct_label_moving_warped")
 
     save_disp(disp_half, out_dir / "submission", case_id)
 
-    return dice_their, dice_before, mtv, tlg, ndv, hd95
+    return dice_their, dice_before, mtv, tlg, ndv, hd95, per_label
 
 
 def main() -> None:
@@ -699,7 +789,7 @@ def main() -> None:
     eval_my_val: bool = True
 
     model_path = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_upset-tern-26_stagelvl3_best.pth"
+        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_masked-midge-298_stagelvl3_best.pth"
     )
     model_name = model_path.stem
 
@@ -723,11 +813,12 @@ def main() -> None:
     ct_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_ct")
     pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
-    use_io: bool = False
-    io_lr: float = 1e-1
+    use_io: bool = True
+    io_lr: float = 4e-1
+    io_it: float = 100
     if use_io:
         model_name += "_IO"
-        model_name += f"lr{io_lr:.1e}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_masked_jac:.2f}"
+        model_name += f"lr{io_lr:.1e}_it{io_it}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_masked_jac:.2f}"
         print("warning using IO")
 
     if eval_official:
@@ -750,17 +841,19 @@ def main() -> None:
             ct_label_dir=ct_label_dir,
             pet_label_dir=pet_label_dir,
             io_lr=io_lr,
+            io_it=io_it,
             desc="official val",
             mtv_csv=results_csv_official_mtv,
             tlg_csv=results_csv_official_tlg,
             ndv_csv=results_csv_official_ndv,
             hd95_csv=results_csv_official_hd95,
+            per_label_csv=results_csv_official_val_dice_per_label,
         )
         compress_to_zip(out_dir / "submission", out_dir / "submission.zip")
 
     if eval_my_val:
         _, my_val_subjects = load_split(split_path)
-        # my_val_subjects = my_val_subjects[:2]
+        # my_val_subjects = my_val_subjects[0:1]
         # print("warning: reducing number of my val subjects")
         evaluate_split(
             subjects=my_val_subjects,
@@ -777,6 +870,7 @@ def main() -> None:
             cfg=cfg,
             device=device,
             use_io=use_io,
+            io_it=io_it,
             ct_label_dir=my_val_seg_dir,
             pet_label_dir=my_val_seg_dir,
             ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
@@ -787,6 +881,7 @@ def main() -> None:
             tlg_csv=results_csv_my_val_tlg,
             ndv_csv=results_csv_my_val_ndv,
             hd95_csv=results_csv_my_val_hd95,
+            per_label_csv=results_csv_my_val_dice_per_label,
         )
 
 
