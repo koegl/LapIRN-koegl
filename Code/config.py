@@ -62,7 +62,7 @@ class TrainingConfig:
     epochs_lvl2: int = 70
     epochs_lvl3: int = 251
     unfreeze_epoch_in_lvl2: int = 10
-    unfreeze_epoch_in_lvl3: int = 10000
+    unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
     checkpoint_interval: int = 50
 
@@ -75,8 +75,8 @@ class TrainingConfig:
     w_pet: float = 0.0
     w_dice_ct: float = 6.0
     w_dice_pet: float = 0.0
-    w_tlg: float = 10.0
-    w_masked_jac: float = 10.0
+    w_tlg: float = 5.0
+    w_masked_jac: float = 0.6
     w_dvf: float = 1000.0
 
     dice_pet_iou_threshold: float = 0.1
