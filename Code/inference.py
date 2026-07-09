@@ -532,6 +532,7 @@ def process_subject(
         x_lbl_pet = transform_nearest(x_lbl_pet, flow_affine, grid_full)
 
         F_X_Y = instance_opt.run_io(
+            Y,
             F_X_Y,
             X_affine,
             x_lbl_ct,

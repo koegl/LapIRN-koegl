@@ -1,5 +1,5 @@
 import time
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import config
 import Functions
@@ -7,11 +7,7 @@ import synthetic
 import torch
 import tqdm
 import utils
-from miccai2020_model_stage import (
-    jacobian_determinant,
-    neg_Jdet_loss,
-    smoothloss,
-)
+from miccai2020_model_stage import NCC, jacobian_determinant, neg_Jdet_loss, smoothloss
 
 
 def warp_label(
@@ -26,6 +22,7 @@ def warp_label(
 
 def compute_io_loss(
     disp_unit: torch.Tensor,
+    y: torch.Tensor,
     X_affine: torch.Tensor,
     x_lbl_ct: torch.Tensor,
     x_lbl_pet: torch.Tensor,
@@ -34,6 +31,8 @@ def compute_io_loss(
     grid: torch.Tensor,
     cfg: config.TrainingConfig,
     bone_values: torch.Tensor,
+    loss_ncc: NCC,
+    ncc_weight: float,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
     disp_flow = disp_unit.permute(0, 2, 3, 4, 1)
 
@@ -41,6 +40,14 @@ def compute_io_loss(
     jac_det = jacobian_determinant(disp_voxel)
     loss_jac = neg_Jdet_loss(disp_voxel, grid)
     loss_smooth = smoothloss(disp_unit)
+
+    # warp the moving image once, reuse the CT and PET channels
+    x_y = transform(X_affine, disp_flow, grid)
+    x_y_ct = x_y[:, 0:1]
+    x_y_pet = x_y[:, 1:2]
+    y_ct = y[:, 0:1]
+
+    loss_ncc_ct = loss_ncc(x_y_ct, y_ct)
 
     loss_dice_ct = utils.dice_loss_with_grad(
         x_lbl_ct, y_lbl_ct, disp_unit, grid, transform
@@ -50,9 +57,7 @@ def compute_io_loss(
     warped_pet_mask = utils.warp_binary_mask(
         moving_pet_mask, disp_unit, grid, transform
     )
-    warped_pet_image = transform(
-        X_affine[:, 1:2], disp_unit.permute(0, 2, 3, 4, 1), grid
-    )
+    warped_pet_image = x_y_pet
     moving_pet_image = X_affine[:, 1:2]
 
     loss_mtv = utils.mtv_bias_loss(warped_pet_mask, moving_pet_mask)
@@ -65,7 +70,8 @@ def compute_io_loss(
     loss_masked_jac_bone = utils.masked_jac_det_loss(jac_det, moving_bone_mask)
 
     loss = (
-        cfg.w_jacobian * loss_jac
+        ncc_weight * loss_ncc_ct
+        + cfg.w_jacobian * loss_jac
         + cfg.w_smooth * loss_smooth
         + cfg.w_tlg * loss_tlg
         + cfg.w_masked_jac * loss_masked_jac
@@ -75,6 +81,7 @@ def compute_io_loss(
         loss = loss + cfg.w_dice_ct * loss_dice_ct
 
     logs = {
+        "ncc_ct": loss_ncc_ct.item(),
         "dice_ct": loss_dice_ct.item() if loss_dice_ct is not None else float("nan"),
         "smooth": loss_smooth.item(),
         "jac": loss_jac.item(),
@@ -83,21 +90,11 @@ def compute_io_loss(
         "mtv": loss_mtv.item(),
         "tlg": loss_tlg.item(),
     }
-
-    # print each los and next to it each loss multiplied by its weights
-    # print(
-    #     f"dice_ct: {logs['dice_ct']:.4f} ({cfg.w_dice_ct * logs['dice_ct']:.4f})\n"
-    #     f"smooth: {logs['smooth']:.4f} ({cfg.w_smooth * logs['smooth']:.4f})\n"
-    #     f"jac: {logs['jac']:.4f} ({cfg.w_jacobian * logs['jac']:.4f})\n"
-    #     f"masked_jac: {logs['masked_jac']:.4f} ({cfg.w_masked_jac * logs['masked_jac']:.4f})\n"
-    #     f"masked_jac_bone: {logs['masked_jac_bone']:.4f} ({cfg.w_masked_jac * logs['masked_jac_bone']:.4f})\n"
-    #     f"mtv: {logs['mtv']:.4f} ({cfg.w_mtv * logs['mtv']:.4f})\n"
-    #     f"tlg: {logs['tlg']:.4f} ({cfg.w_tlg * logs['tlg']:.4f})"
-    # )
     return loss, logs
 
 
 def run_io(
+    y: torch.Tensor,
     f_x_y: torch.Tensor,
     X_affine: torch.Tensor,
     x_lbl_ct: torch.Tensor,
@@ -110,7 +107,14 @@ def run_io(
     n_steps: int = 100,
     lr: float = 1e-1,
     n_integration: int = 7,
+    ncc_weight: Optional[float] = None,
 ) -> torch.Tensor:
+    # NCC is not scored by the challenge; keep it as a modest dense proxy that
+    # fills gradient where label-dice is flat. Try a small value (e.g. 1-3);
+    # defaults to cfg.w_ct if not set.
+    if ncc_weight is None:
+        ncc_weight = cfg.w_ct
+
     identity_vox = synthetic.build_identity_grid(cfg.img_shape, device)
     velocity = torch.zeros_like(f_x_y, requires_grad=True)
     optimizer = torch.optim.Adam([velocity], lr=lr)
@@ -118,6 +122,7 @@ def run_io(
     bone_values = torch.tensor(
         synthetic.BONE_LABEL_VALUES, dtype=torch.float32, device=device
     )
+    loss_ncc = NCC(cfg.lvl3_ncc_win)
 
     base = f_x_y.detach()
     best_loss = float("inf")
@@ -134,6 +139,7 @@ def run_io(
         disp_unit = base + disp_res_unit
         loss, _ = compute_io_loss(
             disp_unit,
+            y,
             X_affine,
             x_lbl_ct,
             x_lbl_pet,
@@ -142,6 +148,8 @@ def run_io(
             grid,
             cfg,
             bone_values,
+            loss_ncc=loss_ncc,
+            ncc_weight=ncc_weight,
         )
         loss.backward()
         optimizer.step()
