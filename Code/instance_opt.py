@@ -33,6 +33,7 @@ def compute_io_loss(
     transform: torch.nn.Module,
     grid: torch.Tensor,
     cfg: config.TrainingConfig,
+    bone_values: torch.Tensor,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
     disp_flow = disp_unit.permute(0, 2, 3, 4, 1)
 
@@ -60,11 +61,15 @@ def compute_io_loss(
     )
     loss_masked_jac = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
 
+    moving_bone_mask = torch.isin(x_lbl_ct, bone_values).float()
+    loss_masked_jac_bone = utils.masked_jac_det_loss(jac_det, moving_bone_mask)
+
     loss = (
         cfg.w_jacobian * loss_jac
         + cfg.w_smooth * loss_smooth
         + cfg.w_tlg * loss_tlg
         + cfg.w_masked_jac * loss_masked_jac
+        + cfg.w_masked_jac * loss_masked_jac_bone
     )
     if loss_dice_ct is not None:
         loss = loss + cfg.w_dice_ct * loss_dice_ct
@@ -74,6 +79,7 @@ def compute_io_loss(
         "smooth": loss_smooth.item(),
         "jac": loss_jac.item(),
         "masked_jac": loss_masked_jac.item(),
+        "masked_jac_bone": loss_masked_jac_bone.item(),
         "mtv": loss_mtv.item(),
         "tlg": loss_tlg.item(),
     }
@@ -84,6 +90,7 @@ def compute_io_loss(
     #     f"smooth: {logs['smooth']:.4f} ({cfg.w_smooth * logs['smooth']:.4f})\n"
     #     f"jac: {logs['jac']:.4f} ({cfg.w_jacobian * logs['jac']:.4f})\n"
     #     f"masked_jac: {logs['masked_jac']:.4f} ({cfg.w_masked_jac * logs['masked_jac']:.4f})\n"
+    #     f"masked_jac_bone: {logs['masked_jac_bone']:.4f} ({cfg.w_masked_jac * logs['masked_jac_bone']:.4f})\n"
     #     f"mtv: {logs['mtv']:.4f} ({cfg.w_mtv * logs['mtv']:.4f})\n"
     #     f"tlg: {logs['tlg']:.4f} ({cfg.w_tlg * logs['tlg']:.4f})"
     # )
@@ -108,6 +115,10 @@ def run_io(
     velocity = torch.zeros_like(f_x_y, requires_grad=True)
     optimizer = torch.optim.Adam([velocity], lr=lr)
 
+    bone_values = torch.tensor(
+        synthetic.BONE_LABEL_VALUES, dtype=torch.float32, device=device
+    )
+
     base = f_x_y.detach()
     best_loss = float("inf")
     best_disp = base.clone()
@@ -130,6 +141,7 @@ def run_io(
             transform,
             grid,
             cfg,
+            bone_values,
         )
         loss.backward()
         optimizer.step()
