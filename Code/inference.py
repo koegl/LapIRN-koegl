@@ -658,6 +658,32 @@ def process_subject(
         )
         # --- END DEBUG ---
 
+    if False:
+        # --- DEBUG: save X, Y, warped X, ct label, warped ct label ---
+        debug_dir = out_dir / "overlap_debug"
+        debug_dir.mkdir(parents=True, exist_ok=True)
+
+        def save_ct(vol: torch.Tensor, name: str) -> None:
+            arr = vol[0, 0].detach().cpu().numpy().astype(np.float32)
+            path = debug_dir / f"{case_id}_{name}.nii.gz"
+            my_data.nib.save(my_data.nib.Nifti1Image(arr, np.eye(4)), str(path))
+
+        x_lbl_ct, _, y_lbl_ct, _ = load_io_labels(
+            ct_label_dir,
+            pet_label_dir,
+            case_id,
+            device,
+            ct_template=ct_label_template,
+            pet_template=pet_label_template,
+        )
+
+        save_ct(X, "X")
+        save_ct(Y, "Y")
+        save_ct(warped, "warped_X")
+        save_ct(x_lbl_ct, "ct_label_moving")
+        save_ct(y_lbl_ct, "ct_label_fixed")
+        save_ct(seg_their.round(), "ct_label_moving_warped")
+
     save_disp(disp_half, out_dir / "submission", case_id)
 
     return dice_their, dice_before, mtv, tlg, ndv, hd95
