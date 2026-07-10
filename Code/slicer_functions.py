@@ -105,3 +105,39 @@ def load_bone_labels(seg_path: str):
     display_node.SetOpacity2DOutline(1.0)
 
     return seg_node
+
+
+def merge_all_segments(seg_node_name: str, node_name: str = None):
+    """Combine all segments of a segmentation node into one, in a new node.
+
+    Args:
+        seg_node_name: Name of the source segmentation node.
+        node_name: Name for the new node. Defaults to source name + '_merged'.
+
+    Returns:
+        The new segmentation node with a single merged segment.
+    """
+    src_node = slicer.util.getNode(seg_node_name)
+
+    if node_name is None:
+        node_name = seg_node_name + "_merged"
+
+    labelmap = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLLabelMapVolumeNode")
+    slicer.modules.segmentations.logic().ExportAllSegmentsToLabelmapNode(
+        src_node, labelmap
+    )
+
+    arr = slicer.util.arrayFromVolume(labelmap)
+    arr[arr != 0] = 1
+    slicer.util.updateVolumeFromArray(labelmap, arr)
+
+    merged_node = slicer.mrmlScene.AddNewNodeByClass(
+        "vtkMRMLSegmentationNode", node_name
+    )
+    merged_node.CreateDefaultDisplayNodes()
+    slicer.modules.segmentations.logic().ImportLabelmapToSegmentationNode(
+        labelmap, merged_node
+    )
+    slicer.mrmlScene.RemoveNode(labelmap)
+
+    return merged_node
