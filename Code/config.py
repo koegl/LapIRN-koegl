@@ -55,7 +55,7 @@ class TrainingConfig:
     lr_lvl1: float = 5e-4
     lr_lvl2: float = 5e-4
     lr_lvl3: float = 0.00025
-    start_channel: int = 7
+    start_channel: int = 11
 
     # train val
     epochs_lvl1: int = 110
@@ -69,14 +69,14 @@ class TrainingConfig:
     accumulation_steps: int = 4
 
     # loss weights
-    w_jacobian: float = 3.0
-    w_smooth: float = 3.0
-    w_ct: float = 3.0
+    w_jacobian: float = 2.0
+    w_smooth: float = 2.0
+    w_ct: float = 15.0
     w_pet: float = 0.0
-    w_dice_ct: float = 3.0
+    w_dice_ct: float = 6.0
     w_dice_pet: float = 0.0
-    w_tlg: float = 0.7
-    w_masked_jac: float = 0.6
+    w_tlg: float = 5.0
+    w_masked_jac: float = 2.0
     w_dvf: float = 100.0
 
     dice_pet_iou_threshold: float = 0.1
@@ -85,9 +85,9 @@ class TrainingConfig:
     shuffle: bool = True
     num_workers: int = 8
 
-    lvl1_ncc_win: int = 7
-    lvl2_ncc_win: int = 5
-    lvl3_ncc_win: int = 7
+    lvl1_ncc_win: int = 5
+    lvl2_ncc_win: int = 7
+    lvl3_ncc_win: int = 9
 
     mlflow_tracking_uri: str = "sqlite:////home/iml/fryderyk.koegl/code/mlruns.db"
     mlflow_experiment: str = "PSMAReg_LapIRN"
