@@ -55,15 +55,15 @@ def main() -> None:
             num_workers=config.num_workers,
             # overfit="0049",
         )
-        synth_dataset = my_data.SyntheticSourceDataset(
-            cfg=config,
-            source_ids=synth_ids,
-            repeat=config.synthetic_repeat,
-            use_cache=config.use_cache_train_synthetic,
-            num_workers=config.num_workers,
-            augment=config.augment,
-        )
         if config.use_synthetic:
+            synth_dataset = my_data.SyntheticSourceDataset(
+                cfg=config,
+                source_ids=synth_ids,
+                repeat=config.synthetic_repeat,
+                use_cache=config.use_cache_train_synthetic,
+                num_workers=config.num_workers,
+                augment=config.augment,
+            )
             train_combined = torch_data.ConcatDataset([train_dataset, synth_dataset])
         else:
             train_combined = torch_data.ConcatDataset([train_dataset])
