@@ -467,6 +467,7 @@ def evaluate_split(
     cfg: TrainingConfig,
     device: torch.device,
     use_io: bool,
+    use_class_weights: bool,
     ct_label_dir: Path,
     pet_label_dir: Path,
     io_lr: float,
@@ -501,6 +502,7 @@ def evaluate_split(
             seg_dir,
             seg_template=seg_template,
             use_io=use_io,
+            use_class_weights=use_class_weights,
             ct_label_dir=ct_label_dir,
             pet_label_dir=pet_label_dir,
             ct_label_template=ct_label_template,
@@ -542,6 +544,7 @@ def process_subject(
     seg_dir: Path,
     seg_template: str = "{case_id}_{tp}",
     use_io: bool = False,
+    use_class_weights: bool = False,
     ct_label_dir: Optional[Path] = None,
     pet_label_dir: Optional[Path] = None,
     ct_label_template: str = "ct_{case_id}_{tp}",
@@ -602,6 +605,7 @@ def process_subject(
             grid_full,
             cfg,
             device,
+            use_class_weights=use_class_weights,
             lr=io_lr,
             n_steps=io_it,
         )
@@ -786,10 +790,10 @@ def main() -> None:
 
     # --- what to evaluate ---
     eval_official: bool = True
-    eval_my_val: bool = True
+    eval_my_val: bool = False
 
     model_path = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_upset-tern-26_stagelvl3_best.pth"
+        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_masked-midge-298_stagelvl3_best.pth"
     )
     model_name = model_path.stem
 
@@ -814,15 +818,23 @@ def main() -> None:
     pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
     use_io: bool = True
+    use_class_weights = True
     io_lr: float = 4e-1
     io_it: float = 100
     if use_io:
-        model_name += "_IO"
-        model_name += f"lr{io_lr:.1e}_it{io_it}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_masked_jac:.2f}"
+        model_name += "_IO_"
+        model_name += f"lr{io_lr:.1e}_it{io_it}_wncc{cfg.w_ct:.2f}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_masked_jac:.2f}"
         print("warning using IO")
+    if use_class_weights:
+        model_name += "_classweights"
+        print("warning using class weights")
 
     if eval_official:
         # print("warning: reducing number of my val subjects")
+
+        per_label_dice_csv = results_csv_official_val_dice_per_label.with_stem(
+            results_csv_official_val_dice_per_label.stem + model_name
+        )
         evaluate_split(
             subjects=val_subjects,
             image_dir=val_image_dir,
@@ -838,6 +850,7 @@ def main() -> None:
             cfg=cfg,
             device=device,
             use_io=use_io,
+            use_class_weights=use_class_weights,
             ct_label_dir=ct_label_dir,
             pet_label_dir=pet_label_dir,
             io_lr=io_lr,
@@ -847,11 +860,14 @@ def main() -> None:
             tlg_csv=results_csv_official_tlg,
             ndv_csv=results_csv_official_ndv,
             hd95_csv=results_csv_official_hd95,
-            per_label_csv=results_csv_official_val_dice_per_label,
+            per_label_csv=per_label_dice_csv,
         )
         compress_to_zip(out_dir / "submission", out_dir / "submission.zip")
 
     if eval_my_val:
+        per_label_dice_csv = results_csv_my_val_dice_per_label.with_stem(
+            results_csv_my_val_dice_per_label.stem + model_name
+        )
         _, my_val_subjects = load_split(split_path)
         # my_val_subjects = my_val_subjects[0:1]
         # print("warning: reducing number of my val subjects")
@@ -870,6 +886,7 @@ def main() -> None:
             cfg=cfg,
             device=device,
             use_io=use_io,
+            use_class_weights=use_class_weights,
             io_it=io_it,
             ct_label_dir=my_val_seg_dir,
             pet_label_dir=my_val_seg_dir,
@@ -881,7 +898,7 @@ def main() -> None:
             tlg_csv=results_csv_my_val_tlg,
             ndv_csv=results_csv_my_val_ndv,
             hd95_csv=results_csv_my_val_hd95,
-            per_label_csv=results_csv_my_val_dice_per_label,
+            per_label_csv=per_label_dice_csv,
         )
 
 

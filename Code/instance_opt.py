@@ -212,6 +212,7 @@ def run_io(
     grid: torch.Tensor,
     cfg: config.TrainingConfig,
     device: torch.device,
+    use_class_weights: bool = False,
     n_steps: int = 100,
     lr: float = 1e-1,
     n_integration: int = 7,
@@ -235,12 +236,15 @@ def run_io(
     loss_ncc = NCC(cfg.lvl3_ncc_win)
 
     base = f_x_y.detach()
-    # x_lbl_ct_start = warp_label(
-    #     x_lbl_ct, base, grid, transform_nearest
-    # )  # or transform w/ nearest
-    # class_weights = build_class_weights(
-    #     x_lbl_ct_start, y_lbl_ct, n_labels=118, device=device
-    # )
+    if use_class_weights:
+        x_lbl_ct_start = warp_label(
+            x_lbl_ct, base, grid, transform_nearest
+        )  # or transform w/ nearest
+        class_weights = build_class_weights(
+            x_lbl_ct_start, y_lbl_ct, n_labels=118, device=device
+        )
+    else:
+        class_weights = None
 
     base = f_x_y.detach()
     best_loss = float("inf")
@@ -274,7 +278,7 @@ def run_io(
             bone_values,
             loss_ncc=loss_ncc,
             ncc_weight=ncc_weight,
-            class_weights=None,  # class_weights,
+            class_weights=class_weights,
         )
         loss.backward()
         optimizer.step()
