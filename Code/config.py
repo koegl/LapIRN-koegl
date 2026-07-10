@@ -54,7 +54,7 @@ class TrainingConfig:
     n_classes: int = 3
     lr_lvl1: float = 5e-4
     lr_lvl2: float = 5e-4
-    lr_lvl3: float = 1e-5
+    lr_lvl3: float = 0.00025
     start_channel: int = 11
 
     # train val
