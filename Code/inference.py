@@ -789,7 +789,7 @@ def main() -> None:
     eval_my_val: bool = True
 
     model_path = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_masked-midge-298_stagelvl3_best.pth"
+        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_upset-tern-26_stagelvl3_best.pth"
     )
     model_name = model_path.stem
 
