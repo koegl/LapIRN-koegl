@@ -427,9 +427,9 @@ def train_lvl2(
                 )
                 saved_initial = True
 
-            if False and (epoch == 0 or epoch == config.epochs_lvl2):
+            if False and (epoch == 0 or epoch == config.epochs_lvl2 or epoch % 20 == 0):
                 # in the epoch==0 warped block:
-                print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
+                # print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
                 ct = X_Y[:, 0:1, :, :, :]
                 my_data.save_volume(
                     volume=ct,

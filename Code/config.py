@@ -1,7 +1,7 @@
 import socket
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 
 COMPUTER_NAME = socket.gethostname()
 
@@ -25,6 +25,18 @@ class TrainingConfig:
     use_cache_train_synthetic: bool = True
     use_cache_valid: bool = True
     img_shape: Tuple[int, int, int] = (192, 192, 288)
+
+    # direct lables
+    use_labels_directly: bool = True
+    label_groups: List[List[int]] = field(
+        default_factory=lambda: [
+            list(range(92, 116)),  # ribs (92..115)
+            list(range(26, 51)),  # vertebrae (26..50)
+            [2, 3, 5, 21],  # kidneys + liver + bladder
+        ]
+    )
+    n_label_groups: int = field(init=False)
+    sdt_clip_vox: float = 15.0
 
     # augmentation
     augment: bool = True
@@ -50,17 +62,17 @@ class TrainingConfig:
 
     range_flow: float = 0.4
 
-    in_channel: int = 4
+    in_channel: int = field(init=False)
     n_classes: int = 3
-    lr_lvl1: float = 5e-4
-    lr_lvl2: float = 5e-4
+    lr_lvl1: float = 0.0001
+    lr_lvl2: float = 0.0005
     lr_lvl3: float = 0.00025
-    start_channel: int = 11
+    start_channel: int = 7
 
     # train val
-    epochs_lvl1: int = 110
-    epochs_lvl2: int = 70
-    epochs_lvl3: int = 251
+    epochs_lvl1: int = 150
+    epochs_lvl2: int = 150
+    epochs_lvl3: int = 200
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
@@ -69,9 +81,9 @@ class TrainingConfig:
     accumulation_steps: int = 4
 
     # loss weights
-    w_jacobian: float = 2.0
-    w_smooth: float = 2.0
-    w_ct: float = 15.0
+    w_jacobian: float = 3.0
+    w_smooth: float = 3.0
+    w_ct: float = 10.0
     w_pet: float = 0.0
     w_dice_ct: float = 6.0
     w_dice_pet: float = 0.0
@@ -116,3 +128,7 @@ class TrainingConfig:
         "/home/iml/fryderyk.koegl/code/LapIRN-koegl/saved/synthetic_examle.pth"
     )
     overfit_synthetic: bool = False
+
+    def __post_init__(self) -> None:
+        self.n_label_groups = len(self.label_groups) if self.use_labels_directly else 0
+        self.in_channel = 4 + 2 * self.n_label_groups

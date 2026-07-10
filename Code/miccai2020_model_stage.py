@@ -216,8 +216,9 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
         cat_input = self.down_avg(cat_input)
         cat_input_lvl1 = self.down_avg(cat_input)
 
-        down_y = cat_input_lvl1[:, 2:4, :, :, :]
-        down_x = cat_input_lvl1[:, 0:2, :, :, :]
+        c = x.shape[1]  # channels per image
+        down_y = cat_input_lvl1[:, c : 2 * c, :, :, :]  # y block: channels 5..9
+        down_x = cat_input_lvl1[:, 0:c, :, :, :]  # x block: channels 0..4
 
         fea_e0 = self.input_encoder_lvl1(cat_input_lvl1)
         e0 = self.down_conv(fea_e0)

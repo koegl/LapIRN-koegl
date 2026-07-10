@@ -442,7 +442,7 @@ def train_lvl3(
                 )
                 saved_initial = True
 
-            if False and (epoch == 0 or epoch == config.epochs_lvl3):
+            if False and (epoch == 0 or epoch == config.epochs_lvl3 or epoch % 20 == 0):
                 # in the epoch==0 warped block:
                 print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
                 ct = X_Y[:, 0:1, :, :, :]

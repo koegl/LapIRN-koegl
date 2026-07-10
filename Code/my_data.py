@@ -1,22 +1,58 @@
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Hashable, List, Mapping, Optional, Tuple
 
 import config
 import monai.data as monai_data
 import nibabel as nib
 import numpy as np
+import sdt
 import synthetic
 import torch
 from monai.transforms import (
     Compose,
     ConcatItemsd,
+    MapTransform,
     RandScaleIntensityd,
     RandShiftIntensityd,
     Transform,
 )
 from scipy import ndimage
 from torch.utils import data as torch_data
+
+
+class ComputeSDTChannelsd(MapTransform):
+    """Compute grouped SDT channels from a label map and store under out_key.
+
+    Runs once inside the cached load transform. Output is (n_groups, H, W, D).
+    """
+
+    def __init__(
+        self,
+        label_key: str,
+        out_key: str,
+        label_groups: List[List[int]],
+        clip_vox: float,
+    ) -> None:
+        super().__init__(keys=[label_key])
+        self.label_key = label_key
+        self.out_key = out_key
+        self.label_groups = label_groups
+        self.clip_vox = clip_vox
+
+    def __call__(
+        self, data: Mapping[Hashable, torch.Tensor]
+    ) -> Mapping[Hashable, torch.Tensor]:
+        d = dict(data)
+        seg = d[self.label_key].squeeze(0).cpu().numpy().astype(np.int64)
+        channels = []
+        for group in self.label_groups:
+            mask = np.isin(seg, group)
+            signed_dt = sdt.compute_clipped_sdt(mask, self.clip_vox)
+            channels.append(signed_dt)
+        stacked = np.stack(channels, axis=0)
+        d[self.out_key] = torch.from_numpy(stacked).float()
+        return d
 
 
 def save_volume(
@@ -583,8 +619,8 @@ class SyntheticSourceDataset(torch_data.Dataset):
         sources = [(c, tp) for (c, tp) in all_sources if c in wanted]
         self.sources = sources * repeat
 
-        # print("warning temp reduce size")
-        # self.sources = [self.sources[0]]
+        print("warning temp reduce size")
+        self.sources = [self.sources[0]]
 
         data_dicts = [{"case_id": c, "tp": tp} for c, tp in self.sources]
         load_transform = Compose([LoadSingleToDict(self.data_dir)])
@@ -719,16 +755,26 @@ class PSMARegDataset(torch_data.Dataset):
 
         self.pairs = pairs
 
-        # print("warning temp reduce size")
+        print("warning temp reduce size")
         # self.pairs = [self.pairs[0], self.pairs[2]]
-        # self.pairs = [self.pairs[0]]
+        self.pairs = [self.pairs[0]]
 
         data_dicts = [
             {"case_id": case_id, "tp_x": tp_x, "tp_y": tp_y}
             for case_id, tp_x, tp_y in self.pairs
         ]
 
-        load_transform = Compose([LoadPairToDict(self.data_dir)])
+        load_transform = Compose(
+            [
+                LoadPairToDict(self.data_dir),
+                ComputeSDTChannelsd(
+                    "x_label_ct", "x_sdt", cfg.label_groups, cfg.sdt_clip_vox
+                ),
+                ComputeSDTChannelsd(
+                    "y_label_ct", "y_sdt", cfg.label_groups, cfg.sdt_clip_vox
+                ),
+            ]
+        )
 
         if use_cache:
             self.dataset = monai_data.CacheDataset(
@@ -767,6 +813,8 @@ class PSMARegDataset(torch_data.Dataset):
             "x_label_pet",
             "y_label_ct",
             "y_label_pet",
+            "x_sdt",
+            "y_sdt",
         ]
 
         # Augmentation parameters — always initialised so training loop can
@@ -805,8 +853,8 @@ class PSMARegDataset(torch_data.Dataset):
                 crop_feet_fixed = int(
                     np.random.randint(0, self.cfg.aug_max_crop_z_feet_asym + 1)
                 )
-                moving_keys = ["x_ct", "x_pet", "x_label_ct", "x_label_pet"]
-                fixed_keys = ["y_ct", "y_pet", "y_label_ct", "y_label_pet"]
+                moving_keys = ["x_ct", "x_pet", "x_label_ct", "x_label_pet", "x_sdt"]
+                fixed_keys = ["y_ct", "y_pet", "y_label_ct", "y_label_pet", "y_sdt"]
                 data = apply_z_crop(
                     data, moving_keys, crop_head_moving, crop_feet_moving
                 )
@@ -815,6 +863,11 @@ class PSMARegDataset(torch_data.Dataset):
         # Intensity augmentation (MONAI) + channel stacking
         data = self.intensity_transform(data)
 
+        # --- SDT label channels (global switch) ----------------------------
+        if self.cfg.use_labels_directly:
+            data["x"] = torch.cat([data["x"], data["x_sdt"]], dim=0)
+            data["y"] = torch.cat([data["y"], data["y_sdt"]], dim=0)
+            x = 0
         # Attach augmentation parameters for DVF consistency in training loop
         data["aug_flipped"] = flipped
 

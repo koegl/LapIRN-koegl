@@ -418,8 +418,8 @@ def train_lvl1(
                 )
                 saved_initial = True
 
-            if False and (epoch == 0 or epoch == config.epochs_lvl1):
-                print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
+            if False and (epoch == 0 or epoch == config.epochs_lvl1 or epoch % 20 == 0):
+                # print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
                 ct = X_Y[:, 0:1, :, :, :]
                 my_data.save_volume(
                     volume=ct,
