@@ -1,14 +1,15 @@
+from pathlib import Path
 from typing import Sequence
 
 import numpy as np
+import slicer
 
 
-def load_bone_labels(seg_path: str, node_name: str = "bone_mask"):
-    """Load a segmentation, merge all bone labels into one, discard the rest.
+def load_bone_labels(seg_path: str):
+    """Load a segmentation, merge all bone labels into one red outline segment.
 
     Args:
         seg_path: Path to the segmentation NIfTI (labelmap).
-        node_name: Name for the resulting node in the scene.
 
     Returns:
         The created segmentation node.
@@ -77,6 +78,9 @@ def load_bone_labels(seg_path: str, node_name: str = "bone_mask"):
         116,
     )
 
+    node_name = Path(seg_path).name.replace(".nii.gz", "").replace(".nii", "")
+    node_name += "_bone"
+
     labelmap_node = slicer.util.loadLabelVolume(seg_path)
 
     arr = slicer.util.arrayFromVolume(labelmap_node)
@@ -91,5 +95,13 @@ def load_bone_labels(seg_path: str, node_name: str = "bone_mask"):
         labelmap_node, seg_node
     )
     slicer.mrmlScene.RemoveNode(labelmap_node)
+
+    segmentation = seg_node.GetSegmentation()
+    segment_id = segmentation.GetNthSegmentID(0)
+    segmentation.GetSegment(segment_id).SetColor(1.0, 0.0, 0.0)
+
+    display_node = seg_node.GetDisplayNode()
+    display_node.SetOpacity2DFill(0.0)
+    display_node.SetOpacity2DOutline(1.0)
 
     return seg_node
