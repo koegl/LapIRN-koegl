@@ -30,13 +30,14 @@ class TrainingConfig:
     use_labels_directly: bool = True
     label_groups: List[List[int]] = field(
         default_factory=lambda: [
-            list(range(92, 116)),  # ribs (92..115)
-            list(range(26, 51)),  # vertebrae (26..50)
-            [2, 3, 5, 21],  # kidneys + liver + bladder
+            list(range(92, 116, 2)),  # ribs (92..115)
+            list(range(93, 117, 2)),  # ribs (92..115)
+            list(range(26, 51, 2)),  # vertebrae (26..50)
+            list(range(27, 50, 2)),  # vertebrae (26..50)
         ]
     )
     n_label_groups: int = field(init=False)
-    sdt_clip_vox: float = 15.0
+    sdt_clip_vox: float = 7.5
 
     # augmentation
     augment: bool = True
