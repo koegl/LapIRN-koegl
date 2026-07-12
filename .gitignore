@@ -10,5 +10,5 @@ saved/*
 *.nii.gz
 *.npy
 *.png
-*.csv
+# *.csv
 totalsegmentator_weights/*
