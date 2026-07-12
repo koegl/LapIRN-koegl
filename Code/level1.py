@@ -553,28 +553,9 @@ def train_lvl1(
         loss_scaled = loss / config.accumulation_steps
         is_step = (global_step + 1) % config.accumulation_steps == 0 or is_last_step
 
-        if torch.isfinite(loss):
-            loss_scaled.backward()
-
-            if is_step:
-                total_norm = torch.nn.utils.clip_grad_norm_(
-                    model.parameters(), max_norm=1.0
-                )
-                mlflow.log_metrics(
-                    {"lvl1/grad_norm": total_norm.item()}, step=global_step
-                )
-                if not torch.isfinite(total_norm) or total_norm > 100.0:
-                    tqdm.tqdm.write(
-                        f"[lvl1] step {global_step}: grad_norm={total_norm.item():.2f} "
-                        f"loss={loss.item():.4f} (skipped)"
-                    )
-                    optimizer.zero_grad()
-                else:
-                    optimizer.step()
-                    optimizer.zero_grad()
-        else:
-            tqdm.tqdm.write(f"[lvl1] step {global_step}: non-finite loss (skipped)")
-            optimizer.zero_grad()
+        utils.optimizer_step_with_guard(
+            loss, loss_scaled, optimizer, model, is_step, global_step, level=1
+        )
 
         lossall[:, global_step] = np.array(
             [

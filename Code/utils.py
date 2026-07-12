@@ -1,6 +1,7 @@
 import contextlib
 from typing import Callable
 
+import mlflow
 import numpy as np
 import torch
 import tqdm
@@ -8,6 +9,46 @@ from config import TrainingConfig
 from miccai2020_model_stage import (
     SpatialTransform_unit,
 )
+
+
+def optimizer_step_with_guard(
+    loss: torch.Tensor,
+    loss_scaled: torch.Tensor,
+    optimizer: torch.optim.Optimizer,
+    model: torch.nn.Module,
+    is_step: bool,
+    global_step: int,
+    level: int,
+) -> None:
+
+    if torch.isfinite(loss):
+        loss_scaled.backward()
+
+        if is_step:
+            total_norm = torch.nn.utils.clip_grad_norm_(
+                model.parameters(), max_norm=1.0
+            )
+            mlflow.log_metrics(
+                {f"lvl{level}/grad_norm": total_norm.item()}, step=global_step
+            )
+            if not torch.isfinite(total_norm) or total_norm > 100.0:
+                tqdm.tqdm.write(
+                    f"[lvl{level}] step {global_step}: grad_norm={total_norm.item():.2f} "
+                    f"loss={loss.item():.4f} (skipped)"
+                )
+                optimizer.zero_grad()
+            else:
+                optimizer.step()
+                optimizer.zero_grad()
+    else:
+        tqdm.tqdm.write(f"[lvl{level}] step {global_step}: non-finite loss (skipped)")
+        optimizer.zero_grad()
+
+
+def cycle(loader: torch.utils.data.DataLoader):
+    while True:
+        for batch in loader:
+            yield batch
 
 
 @contextlib.contextmanager
