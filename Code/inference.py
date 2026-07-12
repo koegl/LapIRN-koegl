@@ -154,40 +154,40 @@ my_val_image_dir = Path(
 my_val_seg_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTr")
 
 results_csv_my_val_dice = Path(
-    "/home/iml/fryderyk.koegl/data/PSMAReg/results_my_val_dice.csv"
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/results_my_val_dice.csv"
 )
 results_csv_official_val_dice = Path(
-    "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val_dice.csv"
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/results_official_val_dice.csv"
 )
 results_csv_my_val_dice_per_label = Path(
-    "/home/iml/fryderyk.koegl/data/PSMAReg/results_my_val_dice_per_label.csv"
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/results_my_val_dice_per_label.csv"
 )
 results_csv_official_val_dice_per_label = Path(
-    "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val_dice_per_label.csv"
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/results_official_val_dice_per_label.csv"
 )
 results_csv_official_mtv = Path(
-    "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val_mtv.csv"
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/results_official_val_mtv.csv"
 )
 results_csv_official_tlg = Path(
-    "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val_tlg.csv"
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/results_official_val_tlg.csv"
 )
 results_csv_my_val_mtv = Path(
-    "/home/iml/fryderyk.koegl/data/PSMAReg/results_my_val_mtv.csv"
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/results_my_val_mtv.csv"
 )
 results_csv_my_val_tlg = Path(
-    "/home/iml/fryderyk.koegl/data/PSMAReg/results_my_val_tlg.csv"
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/results_my_val_tlg.csv"
 )
 results_csv_official_ndv = Path(
-    "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val_ndv.csv"
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/results_official_val_ndv.csv"
 )
 results_csv_my_val_ndv = Path(
-    "/home/iml/fryderyk.koegl/data/PSMAReg/results_my_val_ndv.csv"
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/results_my_val_ndv.csv"
 )
 results_csv_official_hd95 = Path(
-    "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val_hd95.csv"
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/results_official_val_hd95.csv"
 )
 results_csv_my_val_hd95 = Path(
-    "/home/iml/fryderyk.koegl/data/PSMAReg/results_my_val_hd95.csv"
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/results_my_val_hd95.csv"
 )
 
 
@@ -752,7 +752,7 @@ def process_subject(
         )
         # --- END DEBUG ---
 
-    if True:
+    if False:
         # --- DEBUG: save X, Y, warped X, ct label, warped ct label ---
         debug_dir = out_dir / "overlap_debug"
         debug_dir.mkdir(parents=True, exist_ok=True)
@@ -787,17 +787,20 @@ def main() -> None:
     cfg = TrainingConfig()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     cfg.cache_dir = val_cache_dir
+    cfg.in_channel = 4
 
     # --- what to evaluate ---
     eval_official: bool = True
     eval_my_val: bool = False
 
+    model_ori_name = "vaunted-steed-116"
+
     model_path = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_masked-midge-298_stagelvl3_best.pth"
+        f"/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_{model_ori_name}_stagelvl3_best.pth"
     )
     model_name = model_path.stem
 
-    out_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/submission_and_debug")
+    out_dir = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results")
     official_seg_dir = Path(
         "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/segmentations"
     )
@@ -817,7 +820,7 @@ def main() -> None:
     ct_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_ct")
     pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
-    use_io: bool = True
+    use_io: bool = False
     use_class_weights = True
     io_lr: float = 4e-1
     io_it: float = 100
@@ -825,9 +828,9 @@ def main() -> None:
         model_name += "_IO_"
         model_name += f"lr{io_lr:.1e}_it{io_it}_wncc{cfg.w_ct:.2f}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_masked_jac:.2f}"
         print("warning using IO")
-    if use_class_weights:
-        model_name += "_classweights"
-        print("warning using class weights")
+        if use_class_weights:
+            model_name += "_classweights"
+            print("warning using class weights")
 
     if eval_official:
         # print("warning: reducing number of my val subjects")
