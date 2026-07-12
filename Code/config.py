@@ -68,16 +68,16 @@ class TrainingConfig:
 
     in_channel: int = field(init=False)
     n_classes: int = 3
-    lr_lvl1: float = 0.0001
+    lr_lvl1: float = 0.0005
     lr_lvl2: float = 0.0005
     lr_lvl3: float = 0.00025
     start_channel: int = 7
 
     # train val
-    epochs_lvl1: int = 150
-    epochs_lvl2: int = 150
-    epochs_lvl3: int = 200
-    unfreeze_epoch_in_lvl2: int = 10
+    total_steps_lvl1: int = 0
+    total_steps_lvl2: int = 2
+    total_steps_lvl3: int = 200
+    unfreeze_epoch_in_lvl2: int = 0
     unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
     checkpoint_interval: int = 50
@@ -87,12 +87,12 @@ class TrainingConfig:
     # loss weights
     w_jacobian: float = 3.0
     w_smooth: float = 3.0
-    w_ct: float = 10.0
+    w_ct: float = 3.0
     w_pet: float = 0.0
-    w_dice_ct: float = 6.0
+    w_dice_ct: float = 3.0
     w_dice_pet: float = 0.0
-    w_tlg: float = 5.0
-    w_masked_jac: float = 2.0
+    w_tlg: float = 0.7
+    w_masked_jac: float = 0.6
     w_dvf: float = 100.0
 
     dice_pet_iou_threshold: float = 0.1

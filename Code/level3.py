@@ -41,7 +41,9 @@ def evaluate_lvl3(
     transform: SpatialTransform_unit,
     grid: torch.Tensor,
     epoch: int,
+    val_interval: int,
     saved_initial: bool,
+    is_last: bool,
 ) -> Dict[str, float]:
 
     model.eval()
@@ -98,7 +100,7 @@ def evaluate_lvl3(
             X_affine = transform(X, flow_affine, grid_full)
 
             F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X_affine, Y)
-            if epoch % (config.val_interval * 50) == 0 or epoch == config.epochs_lvl3:
+            if epoch % (val_interval * 50) == 0 or is_last:
                 if not saved_initial:
                     zero_disp = torch.zeros_like(F_X_Y)
                     x_ref = model.transform(
@@ -232,6 +234,11 @@ def train_lvl3(
 ) -> Dict[str, Path]:
     print("Training lvl3...")
 
+    steps_per_epoch = len(train_generator)
+    total_steps = config.total_steps_lvl3
+    val_step_interval = config.val_interval * steps_per_epoch
+    unfreeze_step = config.unfreeze_epoch_in_lvl3 * steps_per_epoch
+
     best_dice_ct = float("inf")
     config.model_save_dir.mkdir(parents=True, exist_ok=True)
     best_model_path = (
@@ -240,7 +247,7 @@ def train_lvl3(
     )
     final_model_path = (
         config.model_save_dir
-        / f"{config.mlflow_experiment}_{mlflow.active_run().info.run_name}_stagelvl3_{config.epochs_lvl3}.pth"
+        / f"{config.mlflow_experiment}_{mlflow.active_run().info.run_name}_stagelvl3_{total_steps}.pth"
     )
     if (resume_model_path is None) != (resume_optimizer_path is None):
         raise ValueError(
@@ -316,70 +323,61 @@ def train_lvl3(
 
     config.save_dir.mkdir(parents=True, exist_ok=True)
 
-    lossall = np.zeros((4, config.epochs_lvl3 + 1))
+    lossall = np.zeros((4, total_steps))
 
-    steps_per_epoch = len(train_generator)
-    lossall = np.zeros((4, (config.epochs_lvl3 + 1) * steps_per_epoch))
-
-    start_epoch = 0
-    global_step = 0
+    start_global_step = 0
     if resume_model_path is not None:
         print("Resuming lvl3 from...", resume_model_path)
         model.load_state_dict(torch.load(resume_model_path, map_location=device))
         opt_ckpt = torch.load(resume_optimizer_path, map_location=device)
         optimizer.load_state_dict(opt_ckpt["optimizer"])
-        start_epoch = opt_ckpt["epoch"] + 1
-        global_step = opt_ckpt["global_step"]
+        start_global_step = opt_ckpt["global_step"]
         best_dice_ct = opt_ckpt["best_dice_ct"]
 
-    epoch = start_epoch
+    train_iter = utils.cycle(train_generator)
+
     if config.overfit is False:
         pbar = tqdm.tqdm(
-            total=config.epochs_lvl3 + 1, initial=start_epoch, desc="lvl3 training"
+            total=total_steps, initial=start_global_step, desc="lvl3 training"
         )
 
     saved_initial: bool = False
     run_name = mlflow.active_run().info.run_name
 
-    while epoch <= config.epochs_lvl3:
-        epoch_metrics: Dict[str, float] = {}
-        n_steps = 0
-        n_gated = 0
+    epoch_metrics: Dict[str, float] = {}
+    n_gated = 0
 
-        for batch in train_generator:
-            is_synthetic = bool(batch["is_synthetic"][0])
+    # re-apply unfreeze if resuming past the threshold
+    if start_global_step >= unfreeze_step:
+        model.unfreeze_modellvl2()
 
-            Y = batch["y"].to(device).float()
-            Y_lbl_ct = batch["y_label_ct"].to(device)
-            Y_lbl_pet = batch["y_label_pet"].to(device)
+    for global_step in range(start_global_step, total_steps):
+        epoch = global_step // steps_per_epoch
+        is_epoch_start = global_step % steps_per_epoch == 0
+        is_epoch_end = global_step % steps_per_epoch == steps_per_epoch - 1
+        is_last_step = global_step == total_steps - 1
 
-            if is_synthetic:
-                if config.overfit_synthetic:
-                    if config.frozen_synthetic_path.exists():
-                        frozen = synthetic.load_frozen_pair(
-                            config.frozen_synthetic_path, device
-                        )
-                    else:
-                        X_full, X_lbl_ct, X_lbl_pet, gt_unit = (
-                            synthetic.generate_synthetic_moving_cached(
-                                source=Y,
-                                source_label_ct=Y_lbl_ct,
-                                source_label_pet=Y_lbl_pet,
-                                body_map=batch["body_map"].to(device),
-                                device=device,
-                            )
-                        )
-                        frozen = {
-                            "x": X_full,
-                            "x_label_ct": X_lbl_ct,
-                            "x_label_pet": X_lbl_pet,
-                            "gt_unit": gt_unit,
-                        }
-                        synthetic.save_frozen_pair(frozen, config.frozen_synthetic_path)
-                    X_full = frozen["x"]
-                    X_lbl_ct = frozen["x_label_ct"]
-                    X_lbl_pet = frozen["x_label_pet"]
-                    gt_unit = frozen["gt_unit"]
+        if is_epoch_start:
+            epoch_metrics = {}
+            n_gated = 0
+
+        if global_step == unfreeze_step:
+            model.unfreeze_modellvl2()
+
+        batch = next(train_iter)
+
+        is_synthetic = bool(batch["is_synthetic"][0])
+
+        Y = batch["y"].to(device).float()
+        Y_lbl_ct = batch["y_label_ct"].to(device)
+        Y_lbl_pet = batch["y_label_pet"].to(device)
+
+        if is_synthetic:
+            if config.overfit_synthetic:
+                if config.frozen_synthetic_path.exists():
+                    frozen = synthetic.load_frozen_pair(
+                        config.frozen_synthetic_path, device
+                    )
                 else:
                     X_full, X_lbl_ct, X_lbl_pet, gt_unit = (
                         synthetic.generate_synthetic_moving_cached(
@@ -390,251 +388,266 @@ def train_lvl3(
                             device=device,
                         )
                     )
-                X_affine = X_full
-                X = X_affine
+                    frozen = {
+                        "x": X_full,
+                        "x_label_ct": X_lbl_ct,
+                        "x_label_pet": X_lbl_pet,
+                        "gt_unit": gt_unit,
+                    }
+                    synthetic.save_frozen_pair(frozen, config.frozen_synthetic_path)
+                X_full = frozen["x"]
+                X_lbl_ct = frozen["x_label_ct"]
+                X_lbl_pet = frozen["x_label_pet"]
+                gt_unit = frozen["gt_unit"]
             else:
-                X = batch["x"].to(device).float()
-                X_lbl_ct = batch["x_label_ct"].to(device)
-                X_lbl_pet = batch["x_label_pet"].to(device)
-                gt_unit = None
-
-                flow_affine = create_affine_flow(
-                    config=config,
-                    device=device,
-                    case_id=batch["case_id"][0],
-                    tp_x=batch["tp_x"][0],
-                    tp_y=batch["tp_y"][0],
-                    aug_flipped=batch["aug_flipped"],
-                    aug_crop_head=batch["aug_crop_head"],
-                    aug_crop_feet=batch["aug_crop_feet"],
-                )
-                X_affine = transform(X, flow_affine, grid_full)
-
-            F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X_affine, Y)
-
-            if config.overfit is True and saved_initial is False:
-                zero_disp = torch.zeros_like(F_X_Y)
-                x_ref = model.transform(
-                    X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
-                )
-                x_affine = model.transform(
-                    X_affine, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
-                )
-                y_ref = model.transform(
-                    Y, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
-                )
-                my_data.save_volume(
-                    volume=x_ref[:, 0:1, ...],
-                    out_dir=config.save_dir / "initial",
-                    epoch=epoch,
-                    name=f"x_ref_ct_lvl3_{run_name}_{batch['case_id'][0]}",
-                )
-                my_data.save_volume(
-                    volume=x_affine[:, 0:1, ...],
-                    out_dir=config.save_dir / "initial",
-                    epoch=epoch,
-                    name=f"x_affine_ct_lvl3_{run_name}_{batch['case_id'][0]}",
-                )
-                my_data.save_volume(
-                    volume=Y_4x[:, 0:1, ...],
-                    out_dir=config.save_dir / "initial",
-                    epoch=epoch,
-                    name=f"y_ref_ct_lvl3_{run_name}_{batch['case_id'][0]}",
-                )
-                saved_initial = True
-
-            if config.overfit is True and (
-                epoch == 0 or epoch == config.epochs_lvl3 or epoch % 20 == 0
-            ):
-                # in the epoch==0 warped block:
-                print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
-                ct = X_Y[:, 0:1, :, :, :]
-                my_data.save_volume(
-                    volume=ct,
-                    out_dir=config.save_dir / "warped",
-                    epoch=epoch,
-                    name=f"warped_ct_lvl3_{run_name}_{batch['case_id'][0]}",
-                )
-
-            X_Y_ct = X_Y[:, 0:1, ...]
-            X_Y_pet = X_Y[:, 1:2, ...]
-            Y_4x_ct = Y_4x[:, 0:1, ...]
-            Y_4x_pet = Y_4x[:, 1:2, ...]
-
-            F_X_Y_norm = transform_unit_flow_to_flow_cuda(
-                F_X_Y.permute(0, 2, 3, 4, 1).clone()
-            )
-            jac_det = jacobian_determinant(F_X_Y_norm)
-            ndv = utils.compute_ndv(jac_det)
-            loss_jacobian = loss_Jdet(F_X_Y_norm, grid)
-
-            _, _, x, y, z = F_xy.shape
-            F_xy[:, 0, :, :, :] = F_xy[:, 0, :, :, :] * (z - 1)
-            F_xy[:, 1, :, :, :] = F_xy[:, 1, :, :, :] * (y - 1)
-            F_xy[:, 2, :, :, :] = F_xy[:, 2, :, :, :] * (x - 1)
-            loss_regulation = loss_smooth(F_xy)
-
-            # synthetic labels are already in the (deformed) moving frame; the
-            # real branch needs the affine applied first
-            if not is_synthetic:
-                X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_affine, grid_full)
-                X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_affine, grid_full)
-
-            if is_synthetic:
-                use_dice_pet = True
-                use_ncc_pet = True
-            else:
-                pet_iou = utils.affine_pet_iou(
-                    batch["x_label_pet"].to(device),
-                    Y_lbl_pet,
-                    flow_affine,
-                    grid_full,
-                    transform_nearest,
-                )
-                use_dice_pet = pet_iou >= config.dice_pet_iou_threshold
-                use_ncc_pet = pet_iou >= config.dice_pet_iou_threshold
-            if not use_dice_pet:
-                n_gated += 1
-
-            loss_ncc_ct = loss_similarity_ct(X_Y_ct, Y_4x_ct)
-            loss_ncc_pet = loss_similarity_pet(X_Y_pet, Y_4x_pet)
-            if use_ncc_pet:
-                loss_multiNCC = config.w_ct * loss_ncc_ct + config.w_pet * loss_ncc_pet
-            else:
-                loss_multiNCC = config.w_ct * loss_ncc_ct
-
-            loss_dice_ct = utils.dice_loss_with_grad(
-                X_lbl_ct, Y_lbl_ct, F_X_Y, model.grid_1, transform
-            )
-            loss_dice_pet = utils.dice_loss_with_grad(
-                X_lbl_pet, Y_lbl_pet, F_X_Y, model.grid_1, transform
-            )
-
-            moving_pet_mask = (X_lbl_pet == 1).float()
-            loss_masked_jac = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
-
-            loss = (
-                loss_multiNCC
-                + config.w_jacobian * loss_jacobian
-                + config.w_smooth * loss_regulation
-                + config.w_masked_jac * loss_masked_jac
-            )
-            if loss_dice_ct is not None:
-                loss = loss + config.w_dice_ct * loss_dice_ct
-            if loss_dice_pet is not None and use_dice_pet:
-                loss = loss + config.w_dice_pet * loss_dice_pet
-
-            if is_synthetic:
-                loss_dvf = ((F_X_Y - gt_unit) ** 2).mean()
-                loss = loss + config.w_dvf * loss_dvf
-                loss_mtv = torch.zeros((), device=device)
-                loss_tlg = torch.zeros((), device=device)
-            else:
-                warped_pet_mask = utils.warp_binary_mask(
-                    moving_pet_mask, F_X_Y, model.grid_1, transform
-                )
-                warped_pet_image = X_Y[:, 1:2]
-                moving_pet_image = X_affine[:, 1:2]
-                loss_mtv = utils.mtv_bias_loss(warped_pet_mask, moving_pet_mask)
-                loss_tlg = utils.tlg_bias_loss(
-                    warped_pet_image,
-                    warped_pet_mask,
-                    moving_pet_image,
-                    moving_pet_mask,
-                )
-                loss = loss + config.w_tlg * loss_tlg
-                loss_dvf = torch.zeros((), device=device)
-
-            loss_scaled = loss / config.accumulation_steps
-            is_step = (global_step + 1) % config.accumulation_steps == 0
-            is_last_in_epoch = (
-                n_steps + 1
-            ) == steps_per_epoch  # trailing-partial flush
-
-            if torch.isfinite(loss):
-                loss_scaled.backward()
-
-                if is_step or is_last_in_epoch:
-                    total_norm = torch.nn.utils.clip_grad_norm_(
-                        model.parameters(), max_norm=1.0
+                X_full, X_lbl_ct, X_lbl_pet, gt_unit = (
+                    synthetic.generate_synthetic_moving_cached(
+                        source=Y,
+                        source_label_ct=Y_lbl_ct,
+                        source_label_pet=Y_lbl_pet,
+                        body_map=batch["body_map"].to(device),
+                        device=device,
                     )
-                    mlflow.log_metrics(
-                        {"lvl3/grad_norm": total_norm.item()}, step=global_step
-                    )
-                    if not torch.isfinite(total_norm) or total_norm > 100.0:
-                        tqdm.tqdm.write(
-                            f"[lvl3] step {global_step}: grad_norm={total_norm.item():.2f} "
-                            f"loss={loss.item():.4f} (skipped)"
-                        )
-                        optimizer.zero_grad()
-                    else:
-                        optimizer.step()
-                        optimizer.zero_grad()
-            else:
-                tqdm.tqdm.write(f"[lvl3] step {global_step}: non-finite loss (skipped)")
-                optimizer.zero_grad()  # drop any partial accumulation from this bad micro-step
-
-            lossall[:, global_step] = np.array(
-                [
-                    loss.item(),
-                    loss_multiNCC.item(),
-                    loss_jacobian.item(),
-                    loss_regulation.item(),
-                ]
-            )
-            if config.overfit is False:
-                pbar.set_postfix(
-                    loss=f"{loss.item():.4f}",
-                    ncc=f"{loss_multiNCC.item():.4f}",
-                    dice_ct=f"{loss_dice_ct.item():.4f}"
-                    if loss_dice_ct is not None
-                    else "n/a",
-                    dice_pet=f"{loss_dice_pet.item():.4f}"
-                    if loss_dice_pet is not None
-                    else "n/a",
-                    mtv=f"{loss_mtv.item():.4f}",
-                    tlg=f"{loss_tlg.item():.4f}",
-                    Jdet=f"{loss_jacobian.item():.6f}",
-                    smo=f"{loss_regulation.item():.4f}",
-                    dvf=f"{loss_dvf.item():.8f}",
                 )
-            train_metrics = {
-                "train_lvl3/loss": loss.item(),
-                "train_lvl3/ncc_ct": loss_ncc_ct.item(),
-                "train_lvl3/ncc_pet": loss_ncc_pet.item(),
-                "train_lvl3/smooth": loss_regulation.item(),
-                "train_lvl3/mtv_bias": loss_mtv.item(),
-                "train_lvl3/tlg_bias": loss_tlg.item(),
-                "train_lvl3/masked_jac": loss_masked_jac.item(),
-                "train_lvl3/jacob": loss_jacobian.item(),
-                "train_lvl3/ndv": ndv,
-                "train_lvl3/dvf": loss_dvf.item(),
-            }
-            if loss_dice_ct is not None:
-                train_metrics["train_lvl3/dice_ct"] = loss_dice_ct.item()
-            if loss_dice_pet is not None:
-                train_metrics["train_lvl3/dice_pet"] = loss_dice_pet.item()
-            mlflow.log_metrics(train_metrics, step=global_step)
+            X_affine = X_full
+            X = X_affine
+        else:
+            X = batch["x"].to(device).float()
+            X_lbl_ct = batch["x_label_ct"].to(device)
+            X_lbl_pet = batch["x_label_pet"].to(device)
+            gt_unit = None
 
-            for key, value in train_metrics.items():
-                epoch_metrics[key] = epoch_metrics.get(key, 0.0) + value
-            n_steps += 1
-            global_step += 1
+            flow_affine = create_affine_flow(
+                config=config,
+                device=device,
+                case_id=batch["case_id"][0],
+                tp_x=batch["tp_x"][0],
+                tp_y=batch["tp_y"][0],
+                aug_flipped=batch["aug_flipped"],
+                aug_crop_head=batch["aug_crop_head"],
+                aug_crop_feet=batch["aug_crop_feet"],
+            )
+            X_affine = transform(X, flow_affine, grid_full)
 
-        mlflow.log_metrics(
-            {f"{key}_epoch": value / n_steps for key, value in epoch_metrics.items()},
-            step=global_step,
+        F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X_affine, Y)
+
+        if config.overfit is True and saved_initial is False:
+            zero_disp = torch.zeros_like(F_X_Y)
+            x_ref = model.transform(X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1)
+            x_affine = model.transform(
+                X_affine, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
+            )
+            y_ref = model.transform(Y, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1)
+            my_data.save_volume(
+                volume=x_ref[:, 0:1, ...],
+                out_dir=config.save_dir / "initial",
+                epoch=epoch,
+                name=f"x_ref_ct_lvl3_{run_name}_{batch['case_id'][0]}",
+            )
+            my_data.save_volume(
+                volume=x_affine[:, 0:1, ...],
+                out_dir=config.save_dir / "initial",
+                epoch=epoch,
+                name=f"x_affine_ct_lvl3_{run_name}_{batch['case_id'][0]}",
+            )
+            my_data.save_volume(
+                volume=Y_4x[:, 0:1, ...],
+                out_dir=config.save_dir / "initial",
+                epoch=epoch,
+                name=f"y_ref_ct_lvl3_{run_name}_{batch['case_id'][0]}",
+            )
+            saved_initial = True
+
+        if config.overfit is True and (
+            (is_epoch_start and (epoch == 0 or epoch % 20 == 0)) or is_last_step
+        ):
+            # in the epoch==0 warped block:
+            print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
+            ct = X_Y[:, 0:1, :, :, :]
+            my_data.save_volume(
+                volume=ct,
+                out_dir=config.save_dir / "warped",
+                epoch=epoch,
+                name=f"warped_ct_lvl3_{run_name}_{batch['case_id'][0]}",
+            )
+
+        X_Y_ct = X_Y[:, 0:1, ...]
+        X_Y_pet = X_Y[:, 1:2, ...]
+        Y_4x_ct = Y_4x[:, 0:1, ...]
+        Y_4x_pet = Y_4x[:, 1:2, ...]
+
+        F_X_Y_norm = transform_unit_flow_to_flow_cuda(
+            F_X_Y.permute(0, 2, 3, 4, 1).clone()
+        )
+        jac_det = jacobian_determinant(F_X_Y_norm)
+        ndv = utils.compute_ndv(jac_det)
+        loss_jacobian = loss_Jdet(F_X_Y_norm, grid)
+
+        _, _, x, y, z = F_xy.shape
+        F_xy[:, 0, :, :, :] = F_xy[:, 0, :, :, :] * (z - 1)
+        F_xy[:, 1, :, :, :] = F_xy[:, 1, :, :, :] * (y - 1)
+        F_xy[:, 2, :, :, :] = F_xy[:, 2, :, :, :] * (x - 1)
+        loss_regulation = loss_smooth(F_xy)
+
+        # synthetic labels are already in the (deformed) moving frame; the
+        # real branch needs the affine applied first
+        if not is_synthetic:
+            X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_affine, grid_full)
+            X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_affine, grid_full)
+
+        if is_synthetic:
+            use_dice_pet = True
+            use_ncc_pet = True
+        else:
+            pet_iou = utils.affine_pet_iou(
+                batch["x_label_pet"].to(device),
+                Y_lbl_pet,
+                flow_affine,
+                grid_full,
+                transform_nearest,
+            )
+            use_dice_pet = pet_iou >= config.dice_pet_iou_threshold
+            use_ncc_pet = pet_iou >= config.dice_pet_iou_threshold
+        if not use_dice_pet:
+            n_gated += 1
+
+        loss_ncc_ct = loss_similarity_ct(X_Y_ct, Y_4x_ct)
+        loss_ncc_pet = loss_similarity_pet(X_Y_pet, Y_4x_pet)
+        if use_ncc_pet:
+            loss_multiNCC = config.w_ct * loss_ncc_ct + config.w_pet * loss_ncc_pet
+        else:
+            loss_multiNCC = config.w_ct * loss_ncc_ct
+
+        loss_dice_ct = utils.dice_loss_with_grad(
+            X_lbl_ct, Y_lbl_ct, F_X_Y, model.grid_1, transform
+        )
+        loss_dice_pet = utils.dice_loss_with_grad(
+            X_lbl_pet, Y_lbl_pet, F_X_Y, model.grid_1, transform
         )
 
-        if config.overfit:
-            print(
-                f"ep: {epoch} "
-                f"ncc={epoch_metrics['train_lvl3/ncc_ct'] / len(train_generator):.4f} "
-                f"dice={epoch_metrics['train_lvl3/dice_ct'] / len(train_generator):.4f}"
+        moving_pet_mask = (X_lbl_pet == 1).float()
+        loss_masked_jac = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
+
+        loss = (
+            loss_multiNCC
+            + config.w_jacobian * loss_jacobian
+            + config.w_smooth * loss_regulation
+            + config.w_masked_jac * loss_masked_jac
+        )
+        if loss_dice_ct is not None:
+            loss = loss + config.w_dice_ct * loss_dice_ct
+        if loss_dice_pet is not None and use_dice_pet:
+            loss = loss + config.w_dice_pet * loss_dice_pet
+
+        if is_synthetic:
+            loss_dvf = ((F_X_Y - gt_unit) ** 2).mean()
+            loss = loss + config.w_dvf * loss_dvf
+            loss_mtv = torch.zeros((), device=device)
+            loss_tlg = torch.zeros((), device=device)
+        else:
+            warped_pet_mask = utils.warp_binary_mask(
+                moving_pet_mask, F_X_Y, model.grid_1, transform
             )
+            warped_pet_image = X_Y[:, 1:2]
+            moving_pet_image = X_affine[:, 1:2]
+            loss_mtv = utils.mtv_bias_loss(warped_pet_mask, moving_pet_mask)
+            loss_tlg = utils.tlg_bias_loss(
+                warped_pet_image,
+                warped_pet_mask,
+                moving_pet_image,
+                moving_pet_mask,
+            )
+            loss = loss + config.w_tlg * loss_tlg
+            loss_dvf = torch.zeros((), device=device)
+
+        loss_scaled = loss / config.accumulation_steps
+        is_step = (global_step + 1) % config.accumulation_steps == 0 or is_last_step
+
+        if torch.isfinite(loss):
+            loss_scaled.backward()
+
+            if is_step:
+                total_norm = torch.nn.utils.clip_grad_norm_(
+                    model.parameters(), max_norm=1.0
+                )
+                mlflow.log_metrics(
+                    {"lvl3/grad_norm": total_norm.item()}, step=global_step
+                )
+                if not torch.isfinite(total_norm) or total_norm > 100.0:
+                    tqdm.tqdm.write(
+                        f"[lvl3] step {global_step}: grad_norm={total_norm.item():.2f} "
+                        f"loss={loss.item():.4f} (skipped)"
+                    )
+                    optimizer.zero_grad()
+                else:
+                    optimizer.step()
+                    optimizer.zero_grad()
+        else:
+            tqdm.tqdm.write(f"[lvl3] step {global_step}: non-finite loss (skipped)")
+            optimizer.zero_grad()  # drop any partial accumulation from this bad micro-step
+
+        lossall[:, global_step] = np.array(
+            [
+                loss.item(),
+                loss_multiNCC.item(),
+                loss_jacobian.item(),
+                loss_regulation.item(),
+            ]
+        )
+        if config.overfit is False:
+            pbar.set_postfix(
+                loss=f"{loss.item():.4f}",
+                ncc=f"{loss_multiNCC.item():.4f}",
+                dice_ct=f"{loss_dice_ct.item():.4f}"
+                if loss_dice_ct is not None
+                else "n/a",
+                dice_pet=f"{loss_dice_pet.item():.4f}"
+                if loss_dice_pet is not None
+                else "n/a",
+                mtv=f"{loss_mtv.item():.4f}",
+                tlg=f"{loss_tlg.item():.4f}",
+                Jdet=f"{loss_jacobian.item():.6f}",
+                smo=f"{loss_regulation.item():.4f}",
+                dvf=f"{loss_dvf.item():.8f}",
+            )
+        train_metrics = {
+            "train_lvl3/loss": loss.item(),
+            "train_lvl3/ncc_ct": loss_ncc_ct.item(),
+            "train_lvl3/ncc_pet": loss_ncc_pet.item(),
+            "train_lvl3/smooth": loss_regulation.item(),
+            "train_lvl3/mtv_bias": loss_mtv.item(),
+            "train_lvl3/tlg_bias": loss_tlg.item(),
+            "train_lvl3/masked_jac": loss_masked_jac.item(),
+            "train_lvl3/jacob": loss_jacobian.item(),
+            "train_lvl3/ndv": ndv,
+            "train_lvl3/dvf": loss_dvf.item(),
+        }
+        if loss_dice_ct is not None:
+            train_metrics["train_lvl3/dice_ct"] = loss_dice_ct.item()
+        if loss_dice_pet is not None:
+            train_metrics["train_lvl3/dice_pet"] = loss_dice_pet.item()
+        mlflow.log_metrics(train_metrics, step=global_step)
+
+        for key, value in train_metrics.items():
+            epoch_metrics[key] = epoch_metrics.get(key, 0.0) + value
+
+        if is_epoch_end:
+            mlflow.log_metrics(
+                {
+                    f"{key}_epoch": value / steps_per_epoch
+                    for key, value in epoch_metrics.items()
+                },
+                step=global_step,
+            )
+            if config.overfit:
+                print(
+                    f"ep: {epoch} "
+                    f"ncc={epoch_metrics['train_lvl3/ncc_ct'] / steps_per_epoch:.4f} "
+                    f"dice={epoch_metrics['train_lvl3/dice_ct'] / steps_per_epoch:.4f}"
+                )
 
         if config.overfit is False and (
-            epoch % config.val_interval == 0 or epoch == config.epochs_lvl3
+            global_step % val_step_interval == 0 or is_last_step
         ):
             val_losses = evaluate_lvl3(
                 model=model,
@@ -648,15 +661,21 @@ def train_lvl3(
                 transform=transform,
                 grid=grid,
                 epoch=epoch,
+                val_interval=config.val_interval,
                 saved_initial=saved_initial,
+                is_last=is_last_step,
             )
             saved_initial = True
             mlflow.log_metrics(
-                {f"valid_lvl3/val_{key}": value for key, value in val_losses.items()},
+                {
+                    f"valid_lvl3/val_{key}": value
+                    for key, value in val_losses.items()
+                    if not (isinstance(value, float) and np.isnan(value))
+                },
                 step=global_step,
             )
             tqdm.tqdm.write(
-                f"epoch {epoch} -> val loss {val_losses['loss']:.4f} "
+                f"step {global_step} (ep {epoch}) -> val loss {val_losses['loss']:.4f} "
                 f"- ncc_ct {val_losses['ncc_ct']:.4f} "
                 f"- ncc_pet {val_losses['ncc_pet']:.4f} "
                 f"- dice_ct {val_losses['dice_ct']:.4f} "
@@ -670,39 +689,29 @@ def train_lvl3(
                 torch.save(model.state_dict(), best_model_path)
                 opt_ckpt = {
                     "optimizer": optimizer.state_dict(),
-                    "epoch": epoch,
                     "global_step": global_step,
                     "best_dice_ct": best_dice_ct,
                 }
                 torch.save(opt_ckpt, best_optimizer_path)
                 tqdm.tqdm.write(
-                    f"epoch {epoch}: new best dice_ct {best_dice_ct:.4f} -> saved best"
+                    f"step {global_step}: new best dice_ct {best_dice_ct:.4f} -> saved best"
                 )
                 print(
-                    f"epoch {epoch}: new best dice_ct {best_dice_ct:.4f} -> saved best"
+                    f"step {global_step}: new best dice_ct {best_dice_ct:.4f} -> saved best"
                 )
 
-        if epoch == config.unfreeze_epoch_in_lvl3:
-            model.unfreeze_modellvl2()
-
-        if epoch == config.epochs_lvl3:
-            torch.save(model.state_dict(), final_model_path)
-            np.save(
-                config.save_dir
-                / f"loss_{config.mlflow_experiment}_stagelvl3_{config.epochs_lvl3}.npy",
-                lossall,
-            )
-
-        # utils.save_checkpoint(model, optimizer, epoch, "lvl3", config, lossall)
-
-        epoch += 1
         if config.overfit is False:
             pbar.update(1)
 
-        if epoch > config.epochs_lvl3:
-            break
     if config.overfit is False:
         pbar.close()
+
+    torch.save(model.state_dict(), final_model_path)
+    np.save(
+        config.save_dir
+        / f"loss_{config.mlflow_experiment}_stagelvl3_{total_steps}.npy",
+        lossall,
+    )
 
     result = {
         "final": final_model_path,
