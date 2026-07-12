@@ -820,7 +820,7 @@ def main() -> None:
     ct_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_ct")
     pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
-    use_io: bool = False
+    use_io: bool = True
     use_class_weights = True
     io_lr: float = 4e-1
     io_it: float = 100

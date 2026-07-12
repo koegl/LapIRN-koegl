@@ -17,7 +17,7 @@ class TrainingConfig:
     model_save_dir: Path = DATA_PATH / "PSMAReg/models"
 
     # overfit
-    overfit: bool = False
+    overfit: bool = True
 
     # Dataset
     data_dir = DATA_PATH / "PSMAReg/PSMAReg_dataset"
@@ -74,11 +74,11 @@ class TrainingConfig:
     start_channel: int = 7
 
     # train val
-    total_steps_lvl1: int = 0
-    total_steps_lvl2: int = 2
-    total_steps_lvl3: int = 200
+    total_steps_lvl1: int = 150
+    total_steps_lvl2: int = 100
+    total_steps_lvl3: int = 75
     unfreeze_epoch_in_lvl2: int = 0
-    unfreeze_epoch_in_lvl3: int = 10
+    unfreeze_epoch_in_lvl3: int = 0
     val_interval: int = 2
     checkpoint_interval: int = 50
 
