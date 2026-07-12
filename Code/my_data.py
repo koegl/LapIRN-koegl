@@ -79,6 +79,41 @@ def save_volume(
     )
 
 
+def save_initial(
+    model: torch.nn.Module,
+    X: torch.Tensor,
+    X_affine: torch.Tensor,
+    Y_4x: torch.Tensor,
+    F_X_Y: torch.Tensor,
+    cfg: config.TrainingConfig,
+    epoch: int,
+    run_name: str,
+    batch: Dict[str, List[str]],
+    level: int,
+) -> None:
+    zero_disp = torch.zeros_like(F_X_Y)
+    x_ref = model.transform(X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1)
+    x_affine = model.transform(X_affine, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1)
+    save_volume(
+        volume=x_ref[:, 0:1, ...],
+        out_dir=cfg.save_dir / "initial",
+        epoch=epoch,
+        name=f"x_ref_ct_lvl{level}_{run_name}_{batch['case_id'][0]}",
+    )
+    save_volume(
+        volume=x_affine[:, 0:1, ...],
+        out_dir=cfg.save_dir / "initial",
+        epoch=epoch,
+        name=f"x_affine_ct_lvl{level}_{run_name}_{batch['case_id'][0]}",
+    )
+    save_volume(
+        volume=Y_4x[:, 0:1, ...],
+        out_dir=cfg.save_dir / "initial",
+        epoch=epoch,
+        name=f"y_ref_ct_lvl{level}_{run_name}_{batch['case_id'][0]}",
+    )
+
+
 def norm_ct(vol: np.ndarray) -> np.ndarray:
     """Min-max normalize a CT volume to [0, 1]."""
     return (vol - vol.min()) / (vol.max() - vol.min() + 1e-8)

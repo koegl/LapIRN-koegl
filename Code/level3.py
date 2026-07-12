@@ -239,15 +239,19 @@ def train_lvl3(
     val_step_interval = config.val_interval * steps_per_epoch
     unfreeze_step = config.unfreeze_epoch_in_lvl3 * steps_per_epoch
 
+    run_name = mlflow.active_run().info.run_name
+    if run_name is None:
+        raise ValueError("MLflow run name is None. Please ensure an active run exists.")
+
     best_dice_ct = float("inf")
     config.model_save_dir.mkdir(parents=True, exist_ok=True)
     best_model_path = (
         config.model_save_dir
-        / f"{config.mlflow_experiment}_{mlflow.active_run().info.run_name}_stagelvl3_best.pth"
+        / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best.pth"
     )
     final_model_path = (
         config.model_save_dir
-        / f"{config.mlflow_experiment}_{mlflow.active_run().info.run_name}_stagelvl3_{total_steps}.pth"
+        / f"{config.mlflow_experiment}_{run_name}_stagelvl3_{total_steps}.pth"
     )
     if (resume_model_path is None) != (resume_optimizer_path is None):
         raise ValueError(
@@ -256,7 +260,7 @@ def train_lvl3(
         )
     best_optimizer_path = (
         config.model_save_dir
-        / f"{config.mlflow_experiment}_{mlflow.active_run().info.run_name}_stagelvl3_best_optimizer.pth"
+        / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best_optimizer.pth"
     )
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -342,7 +346,6 @@ def train_lvl3(
         )
 
     saved_initial: bool = False
-    run_name = mlflow.active_run().info.run_name
 
     epoch_metrics: Dict[str, float] = {}
     n_gated = 0
@@ -432,37 +435,23 @@ def train_lvl3(
         F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X_affine, Y)
 
         if config.overfit is True and saved_initial is False:
-            zero_disp = torch.zeros_like(F_X_Y)
-            x_ref = model.transform(X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1)
-            x_affine = model.transform(
-                X_affine, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
-            )
-            y_ref = model.transform(Y, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1)
-            my_data.save_volume(
-                volume=x_ref[:, 0:1, ...],
-                out_dir=config.save_dir / "initial",
-                epoch=epoch,
-                name=f"x_ref_ct_lvl3_{run_name}_{batch['case_id'][0]}",
-            )
-            my_data.save_volume(
-                volume=x_affine[:, 0:1, ...],
-                out_dir=config.save_dir / "initial",
-                epoch=epoch,
-                name=f"x_affine_ct_lvl3_{run_name}_{batch['case_id'][0]}",
-            )
-            my_data.save_volume(
-                volume=Y_4x[:, 0:1, ...],
-                out_dir=config.save_dir / "initial",
-                epoch=epoch,
-                name=f"y_ref_ct_lvl3_{run_name}_{batch['case_id'][0]}",
+            my_data.save_initial(
+                model,
+                X,
+                X_affine,
+                Y_4x,
+                F_X_Y,
+                config,
+                epoch,
+                run_name,
+                batch,
+                level=3,
             )
             saved_initial = True
 
         if config.overfit is True and (
             (is_epoch_start and (epoch == 0 or epoch % 20 == 0)) or is_last_step
         ):
-            # in the epoch==0 warped block:
-            print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
             ct = X_Y[:, 0:1, :, :, :]
             my_data.save_volume(
                 volume=ct,
