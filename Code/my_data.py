@@ -619,8 +619,9 @@ class SyntheticSourceDataset(torch_data.Dataset):
         sources = [(c, tp) for (c, tp) in all_sources if c in wanted]
         self.sources = sources * repeat
 
-        # print("warning temp reduce size")
-        # self.sources = [self.sources[0]]
+        if self.cfg.overfit:
+            print("warning temp reduce size")
+            self.sources = [self.sources[0]]
 
         data_dicts = [{"case_id": c, "tp": tp} for c, tp in self.sources]
         load_transform = Compose([LoadSingleToDict(self.data_dir)])
@@ -755,9 +756,10 @@ class PSMARegDataset(torch_data.Dataset):
 
         self.pairs = pairs
 
-        # print("warning temp reduce size")
-        # self.pairs = [self.pairs[0], self.pairs[2]]
-        # self.pairs = [self.pairs[0]]
+        if self.cfg.overfit:
+            print("warning temp reduce size")
+            self.pairs = [self.pairs[0], self.pairs[2]]
+            self.pairs = [self.pairs[0]]
 
         data_dicts = [
             {"case_id": case_id, "tp_x": tp_x, "tp_y": tp_y}
@@ -865,6 +867,38 @@ class PSMARegDataset(torch_data.Dataset):
 
         # --- SDT label channels (global switch) ----------------------------
         if self.cfg.use_labels_directly:
+            """
+            save_volume(
+                data["y_sdt"][0],
+                out_dir=Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/temp_output"),
+                epoch=0,
+                name="fixed_lbl_0",
+            )
+            save_volume(
+                data["y_sdt"][1],
+                out_dir=Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/temp_output"),
+                epoch=0,
+                name="fixed_lbl_1",
+            )
+            save_volume(
+                data["y_sdt"][2],
+                out_dir=Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/temp_output"),
+                epoch=0,
+                name="fixed_lbl_2",
+            )
+            save_volume(
+                data["y_sdt"][3],
+                out_dir=Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/temp_output"),
+                epoch=0,
+                name="fixed_lbl_3",
+            )
+            save_volume(
+                data["y"][0],
+                out_dir=Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/temp_output"),
+                epoch=0,
+                name="fixed",
+            )
+            """
             data["x"] = torch.cat([data["x"], data["x_sdt"]], dim=0)
             data["y"] = torch.cat([data["y"], data["y_sdt"]], dim=0)
             x = 0

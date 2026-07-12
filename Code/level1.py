@@ -308,9 +308,10 @@ def train_lvl1(
         best_dice_ct = opt_ckpt["best_dice_ct"]
 
     epoch = start_epoch
-    pbar = tqdm.tqdm(
-        total=config.epochs_lvl1 + 1, initial=start_epoch, desc="lvl1 training"
-    )
+    if config.overfit is False:
+        pbar = tqdm.tqdm(
+            total=config.epochs_lvl1 + 1, initial=start_epoch, desc="lvl1 training"
+        )
 
     saved_initial: bool = False
     run_name = mlflow.active_run().info.run_name
@@ -387,7 +388,7 @@ def train_lvl1(
             # with torch.amp.autocast(device_type="cuda"):
             F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_affine, Y)
 
-            if False and saved_initial is False:
+            if config.overfit is True and saved_initial is False:
                 zero_disp = torch.zeros_like(F_X_Y)
                 x_ref = model.transform(
                     X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
@@ -418,7 +419,9 @@ def train_lvl1(
                 )
                 saved_initial = True
 
-            if False and (epoch == 0 or epoch == config.epochs_lvl1 or epoch % 20 == 0):
+            if config.overfit is True and (
+                epoch == 0 or epoch == config.epochs_lvl1 or epoch % 20 == 0
+            ):
                 # print(f"{F_X_Y.abs().mean().item()=} {F_X_Y.abs().max().item()=}")
                 ct = X_Y[:, 0:1, :, :, :]
                 my_data.save_volume(
@@ -585,19 +588,20 @@ def train_lvl1(
                     loss_regulation.item(),
                 ]
             )
-            pbar.set_postfix(
-                loss=f"{loss.item():.4f}",
-                ncc=f"{loss_multiNCC.item():.4f}",
-                dice_ct=f"{loss_dice_ct.item():.4f}"
-                if loss_dice_ct is not None
-                else "n/a",
-                dice_pet=f"{loss_dice_pet.item():.4f}"
-                if loss_dice_pet is not None
-                else "n/a",
-                Jdet=f"{loss_jacobian.item():.6f}",
-                smo=f"{loss_regulation.item():.4f}",
-                dvf=f"{loss_dvf.item():.8f}",
-            )
+            if config.overfit is False:
+                pbar.set_postfix(
+                    loss=f"{loss.item():.4f}",
+                    ncc=f"{loss_multiNCC.item():.4f}",
+                    dice_ct=f"{loss_dice_ct.item():.4f}"
+                    if loss_dice_ct is not None
+                    else "n/a",
+                    dice_pet=f"{loss_dice_pet.item():.4f}"
+                    if loss_dice_pet is not None
+                    else "n/a",
+                    Jdet=f"{loss_jacobian.item():.6f}",
+                    smo=f"{loss_regulation.item():.4f}",
+                    dvf=f"{loss_dvf.item():.8f}",
+                )
             loss_dice_ct_value = (
                 loss_dice_ct.item() if loss_dice_ct is not None else 0.0
             )
@@ -628,15 +632,17 @@ def train_lvl1(
             {f"{key}_epoch": value / n_steps for key, value in epoch_metrics.items()},
             step=global_step,
         )
-        tqdm.tqdm.write(f"ep {epoch}: gated dice_pet on {n_gated} pairs")
 
-        # print(
-        #     f"ep: {epoch} "
-        #     f"ncc={epoch_metrics['train_lvl1/ncc_ct'] / len(train_generator):.4f} "
-        #     f"dice={epoch_metrics['train_lvl1/dice_ct'] / len(train_generator):.4f}"
-        # )
+        if config.overfit:
+            print(
+                f"ep: {epoch} "
+                f"ncc={epoch_metrics['train_lvl1/ncc_ct'] / len(train_generator):.4f} "
+                f"dice={epoch_metrics['train_lvl1/dice_ct'] / len(train_generator):.4f}"
+            )
 
-        if epoch % config.val_interval == 0 or epoch == config.epochs_lvl1:
+        if config.overfit is False and (
+            epoch % config.val_interval == 0 or epoch == config.epochs_lvl1
+        ):
             val_losses = evaluate_lvl1(
                 model=model,
                 val_generator=val_generator,
@@ -688,13 +694,15 @@ def train_lvl1(
         # utils.save_checkpoint(model, optimizer, epoch, "lvl1", config, lossall)
 
         epoch += 1
-        pbar.update(1)
+        if config.overfit is False:
+            pbar.update(1)
 
         if epoch > config.epochs_lvl1:
             # print("Warn not saving final model")
             torch.save(model.state_dict(), final_model_path)
             break
-    pbar.close()
+    if config.overfit is False:
+        pbar.close()
 
     result = {
         "final": final_model_path,

@@ -16,6 +16,9 @@ class TrainingConfig:
     save_dir: Path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/saved")
     model_save_dir: Path = DATA_PATH / "PSMAReg/models"
 
+    # overfit
+    overfit: bool = False
+
     # Dataset
     data_dir = DATA_PATH / "PSMAReg/PSMAReg_dataset"
     cache_dir = DATA_PATH / "PSMAReg/affine_cache"
@@ -133,3 +136,10 @@ class TrainingConfig:
     def __post_init__(self) -> None:
         self.n_label_groups = len(self.label_groups) if self.use_labels_directly else 0
         self.in_channel = 4 + 2 * self.n_label_groups
+
+        if self.overfit:
+            self.augment = False
+
+            self.use_cache_train_real = True
+            self.use_cache_train_synthetic = False
+            self.use_cache_valid = False
