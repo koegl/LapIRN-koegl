@@ -1,9 +1,11 @@
+import os
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
 import mlflow
 import my_data
 import numpy as np
+import psutil
 import synthetic
 import torch
 import torch.nn.functional as F
@@ -225,6 +227,7 @@ def train_lvl2(
     resume_optimizer_path: Optional[Path] = None,
 ) -> Dict[str, Path]:
     print("Training lvl2...")
+    proc = psutil.Process(os.getpid())
 
     steps_per_epoch = len(train_generator)
     total_steps = config.total_steps_lvl2
@@ -618,6 +621,8 @@ def train_lvl2(
         if config.overfit is False and (
             global_step % val_step_interval == 0 or is_last_step
         ):
+            print(f"step {global_step} RSS: {proc.memory_info().rss / 1e9:.2f} GB")
+
             val_losses = evaluate_lvl2(
                 model=model,
                 valid_generator=valid_generator,

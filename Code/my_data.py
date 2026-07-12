@@ -793,25 +793,28 @@ class PSMARegDataset(torch_data.Dataset):
 
         if self.cfg.overfit:
             print("warning temp reduce size")
-            self.pairs = [self.pairs[0], self.pairs[2]]
-            self.pairs = [self.pairs[0]]
+            # self.pairs = [self.pairs[0], self.pairs[2]]
+            self.pairs = [self.pairs[1]]
 
         data_dicts = [
             {"case_id": case_id, "tp_x": tp_x, "tp_y": tp_y}
             for case_id, tp_x, tp_y in self.pairs
         ]
 
-        load_transform = Compose(
-            [
-                LoadPairToDict(self.data_dir),
-                ComputeSDTChannelsd(
-                    "x_label_ct", "x_sdt", cfg.label_groups, cfg.sdt_clip_vox
-                ),
-                ComputeSDTChannelsd(
-                    "y_label_ct", "y_sdt", cfg.label_groups, cfg.sdt_clip_vox
-                ),
-            ]
-        )
+        if self.cfg.use_labels_directly:
+            load_transform = Compose(
+                [
+                    LoadPairToDict(self.data_dir),
+                    ComputeSDTChannelsd(
+                        "x_label_ct", "x_sdt", cfg.label_groups, cfg.sdt_clip_vox
+                    ),
+                    ComputeSDTChannelsd(
+                        "y_label_ct", "y_sdt", cfg.label_groups, cfg.sdt_clip_vox
+                    ),
+                ]
+            )
+        else:
+            load_transform = Compose([LoadPairToDict(self.data_dir)])
 
         if use_cache:
             self.dataset = monai_data.CacheDataset(
