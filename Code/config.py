@@ -17,7 +17,7 @@ class TrainingConfig:
     model_save_dir: Path = DATA_PATH / "PSMAReg/models"
 
     # overfit
-    overfit: bool = False
+    overfit: bool = True
 
     # Dataset
     data_dir = DATA_PATH / "PSMAReg/PSMAReg_dataset"
@@ -29,8 +29,10 @@ class TrainingConfig:
     use_cache_valid: bool = True
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
+    use_poly_affine: bool = True
+
     # direct lables
-    use_labels_directly: bool = True
+    use_labels_directly: bool = False
     label_groups: List[List[int]] = field(
         default_factory=lambda: [
             list(range(92, 116, 2)),  # ribs (92..115)
@@ -74,8 +76,8 @@ class TrainingConfig:
     start_channel: int = 7
 
     # train val
-    total_steps_lvl1: int = 60000
-    total_steps_lvl2: int = 40000
+    total_steps_lvl1: int = 200
+    total_steps_lvl2: int = 100
     total_steps_lvl3: int = 60000
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
@@ -85,14 +87,14 @@ class TrainingConfig:
     accumulation_steps: int = field(init=False)
 
     # loss weights
-    w_jacobian: float = 3.0
-    w_smooth: float = 3.0
-    w_ct: float = 10.0
+    w_jacobian: float = 2.0
+    w_smooth: float = 2.0
+    w_ct: float = 15.0
     w_pet: float = 0.0
     w_dice_ct: float = 6.0
     w_dice_pet: float = 0.0
     w_tlg: float = 5.0
-    w_masked_jac: float = 2.0
+    w_masked_jac: float = 0.6
     w_dvf: float = 100.0
 
     dice_pet_iou_threshold: float = 0.1

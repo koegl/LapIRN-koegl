@@ -118,9 +118,9 @@ def main() -> None:
                 )
                 path_model_level_2 = paths_model_level2["final"]
 
-                path_model_level3 = level3.train_lvl3(
-                    config, path_model_level_2, train_generator, train_generator
-                )
+                # path_model_level3 = level3.train_lvl3(
+                #     config, path_model_level_2, train_generator, train_generator
+                # )
             else:
                 paths_model_level1 = level1.train_lvl1(
                     config, train_generator, valid_generator

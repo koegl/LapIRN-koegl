@@ -793,7 +793,7 @@ def main() -> None:
     eval_official: bool = True
     eval_my_val: bool = False
 
-    model_ori_name = "vaunted-steed-116"
+    model_ori_name = "painted-croc-375"
 
     model_path = Path(
         f"/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_{model_ori_name}_stagelvl3_best.pth"

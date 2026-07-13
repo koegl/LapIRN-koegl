@@ -2,16 +2,17 @@ import os
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
+import affine_reg
 import mlflow
 import my_data
 import numpy as np
+import poly_affine_reg
 import psutil
 import synthetic
 import torch
 import torch.nn.functional as F
 import tqdm
 import utils
-from affine_reg import create_affine_flow
 from config import TrainingConfig
 from Functions import (
     generate_grid,
@@ -83,20 +84,68 @@ def evaluate_lvl1(
             Y_lbl_ct = batch["y_label_ct"].to(device)
             Y_lbl_pet = batch["y_label_pet"].to(device)
 
-            flow_affine = create_affine_flow(
+            case_id: str = batch["case_id"][0]
+            tp_y: str = batch["tp_y"][0]
+            tp_x: str = batch["tp_x"][0]
+
+            flow_affine = affine_reg.create_affine_flow(
                 config=config,
                 device=device,
-                case_id=batch["case_id"][0],
-                tp_x=batch["tp_x"][0],
-                tp_y=batch["tp_y"][0],
+                case_id=case_id,
+                tp_x=tp_x,
+                tp_y=tp_y,
                 aug_flipped=batch["aug_flipped"],
                 aug_crop_head=batch["aug_crop_head"],
                 aug_crop_feet=batch["aug_crop_feet"],
             )
 
-            X_affine = transform(X, flow_affine, grid_full)
+            if config.use_poly_affine:
+                X_prereg = transform(X, flow_affine, grid_full)
+            else:
+                poly_dvf = poly_affine_reg.get_polyaffine_dvf(
+                    case_id=case_id,
+                    tp_x=tp_x,
+                    tp_y=tp_y,
+                    fixed_seg_path=config.data_dir
+                    / "labelsTr"
+                    / f"{case_id}_{tp_y}.nii.gz",
+                    moving_seg_path=config.data_dir
+                    / "labelsTr"
+                    / f"{case_id}_{tp_x}.nii.gz",
+                    get_affine_dvf_fn=lambda: affine_reg.get_affine_dvf(
+                        case_id=case_id,
+                        tp_x=tp_x,
+                        tp_y=tp_y,
+                        fixed_ct_path=config.data_dir
+                        / "imagesTr"
+                        / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
+                        moving_ct_path=config.data_dir
+                        / "imagesTr"
+                        / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
+                        make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
+                        preprocess_ct_fn=affine_reg.preprocess_ct,
+                        ants_affine_to_fullres_voxel_disp_fn=(
+                            affine_reg.ants_affine_to_fullres_voxel_disp
+                        ),
+                    ),
+                    cfg=config,
+                    device=device,
+                )
+                flow_poly = poly_affine_reg.create_polyaffine_flow(
+                    poly_dvf=poly_dvf,
+                    aug_flipped=batch["aug_flipped"],
+                    aug_crop_head=batch["aug_crop_head"],
+                    aug_crop_feet=batch["aug_crop_feet"],
+                    cfg=config,
+                    device=device,
+                )
+                flow_total = poly_affine_reg.compose_flows(
+                    flow_affine, flow_poly, grid_full
+                )
 
-            F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_affine, Y)
+                X_prereg = transform(X, flow_total, grid_full)
+
+            F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_prereg, Y)
 
             if epoch % (val_interval * 25) == 0 or is_last:
                 if not saved_initial:
@@ -104,8 +153,8 @@ def evaluate_lvl1(
                     x_ref = model.transform(
                         X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
                     )
-                    x_affine = model.transform(
-                        X_affine, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
+                    x_prereg = model.transform(
+                        X_prereg, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
                     )
                     y_ref = model.transform(
                         Y, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
@@ -117,10 +166,10 @@ def evaluate_lvl1(
                         name="x_ref_ct_lvl1",
                     )
                     my_data.save_volume(
-                        volume=x_affine[:, 0:1, ...],
+                        volume=x_prereg[:, 0:1, ...],
                         out_dir=config.save_dir / "initial",
                         epoch=epoch,
-                        name="x_affine_ct_lvl1",
+                        name="x_prereg_ct_lvl1",
                     )
                     my_data.save_volume(
                         volume=y_ref[:, 0:1, ...],
@@ -326,7 +375,7 @@ def train_lvl1(
     n_gated = 0
 
     for global_step in range(start_global_step, total_steps):
-        print(f"step {global_step} RSS: {proc.memory_info().rss / 1e9:.2f} GB")
+        # print(f"step {global_step} RSS: {proc.memory_info().rss / 1e9:.2f} GB")
 
         epoch = global_step // steps_per_epoch
         is_epoch_start = global_step % steps_per_epoch == 0
@@ -382,34 +431,82 @@ def train_lvl1(
                         device=device,
                     )
                 )
-            X_affine = X_full
-            X = X_affine
+            X_prereg = X_full
+            X = X_prereg
         else:
             X = batch["x"].to(device).float()
             X_lbl_ct = batch["x_label_ct"].to(device)
             X_lbl_pet = batch["x_label_pet"].to(device)
             gt_unit = None
 
-            flow_affine = create_affine_flow(
+            case_id: str = batch["case_id"][0]
+            tp_y: str = batch["tp_y"][0]
+            tp_x: str = batch["tp_x"][0]
+
+            flow_affine = affine_reg.create_affine_flow(
                 config=config,
                 device=device,
-                case_id=batch["case_id"][0],
-                tp_x=batch["tp_x"][0],
-                tp_y=batch["tp_y"][0],
+                case_id=case_id,
+                tp_x=tp_x,
+                tp_y=tp_y,
                 aug_flipped=batch["aug_flipped"],
                 aug_crop_head=batch["aug_crop_head"],
                 aug_crop_feet=batch["aug_crop_feet"],
             )
-            X_affine = transform(X, flow_affine, grid_full)
 
-        # with torch.amp.autocast(device_type="cuda"):
-        F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_affine, Y)
+            if config.use_poly_affine:
+                X_prereg = transform(X, flow_affine, grid_full)
+            else:
+                poly_dvf = poly_affine_reg.get_polyaffine_dvf(
+                    case_id=case_id,
+                    tp_x=tp_x,
+                    tp_y=tp_y,
+                    fixed_seg_path=config.data_dir
+                    / "labelsTr"
+                    / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
+                    moving_seg_path=config.data_dir
+                    / "labelsTr"
+                    / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
+                    get_affine_dvf_fn=lambda: affine_reg.get_affine_dvf(
+                        case_id=case_id,
+                        tp_x=tp_x,
+                        tp_y=tp_y,
+                        fixed_ct_path=config.data_dir
+                        / "imagesTr"
+                        / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
+                        moving_ct_path=config.data_dir
+                        / "imagesTr"
+                        / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
+                        make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
+                        preprocess_ct_fn=affine_reg.preprocess_ct,
+                        ants_affine_to_fullres_voxel_disp_fn=(
+                            affine_reg.ants_affine_to_fullres_voxel_disp
+                        ),
+                    ),
+                    cfg=config,
+                    device=device,
+                )
+                flow_poly = poly_affine_reg.create_polyaffine_flow(
+                    poly_dvf=poly_dvf,
+                    aug_flipped=batch["aug_flipped"],
+                    aug_crop_head=batch["aug_crop_head"],
+                    aug_crop_feet=batch["aug_crop_feet"],
+                    cfg=config,
+                    device=device,
+                )
+                flow_total = poly_affine_reg.compose_flows(
+                    flow_affine, flow_poly, grid_full
+                )
+
+                X_prereg = transform(X, flow_total, grid_full)
+
+        F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_prereg, Y)
 
         if config.overfit is True and saved_initial is False:
             my_data.save_initial(
                 model,
                 X,
-                X_affine,
+                X_prereg,
                 Y_4x,
                 F_X_Y,
                 config,

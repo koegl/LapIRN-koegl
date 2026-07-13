@@ -82,7 +82,7 @@ def save_volume(
 def save_initial(
     model: torch.nn.Module,
     X: torch.Tensor,
-    X_affine: torch.Tensor,
+    X_prereg: torch.Tensor,
     Y_4x: torch.Tensor,
     F_X_Y: torch.Tensor,
     cfg: config.TrainingConfig,
@@ -93,7 +93,7 @@ def save_initial(
 ) -> None:
     zero_disp = torch.zeros_like(F_X_Y)
     x_ref = model.transform(X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1)
-    x_affine = model.transform(X_affine, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1)
+    x_affine = model.transform(X_prereg, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1)
     save_volume(
         volume=x_ref[:, 0:1, ...],
         out_dir=cfg.save_dir / "initial",
@@ -104,7 +104,7 @@ def save_initial(
         volume=x_affine[:, 0:1, ...],
         out_dir=cfg.save_dir / "initial",
         epoch=epoch,
-        name=f"x_affine_ct_lvl{level}_{run_name}_{batch['case_id'][0]}",
+        name=f"x_prereg_ct_lvl{level}_{run_name}_{batch['case_id'][0]}",
     )
     save_volume(
         volume=Y_4x[:, 0:1, ...],
