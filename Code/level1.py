@@ -108,10 +108,10 @@ def evaluate_lvl1(
                     tp_y=tp_y,
                     fixed_seg_path=config.data_dir
                     / "labelsTr"
-                    / f"{case_id}_{tp_y}.nii.gz",
+                    / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
                     moving_seg_path=config.data_dir
                     / "labelsTr"
-                    / f"{case_id}_{tp_x}.nii.gz",
+                    / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
                     get_affine_dvf_fn=lambda: affine_reg.get_affine_dvf(
                         case_id=case_id,
                         tp_x=tp_x,
