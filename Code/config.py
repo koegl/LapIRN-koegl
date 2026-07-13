@@ -17,7 +17,7 @@ class TrainingConfig:
     model_save_dir: Path = DATA_PATH / "PSMAReg/models"
 
     # overfit
-    overfit: bool = True
+    overfit: bool = False
 
     # Dataset
     data_dir = DATA_PATH / "PSMAReg/PSMAReg_dataset"
@@ -70,14 +70,14 @@ class TrainingConfig:
 
     in_channel: int = field(init=False)
     n_classes: int = 3
-    lr_lvl1: float = 0.0002
-    lr_lvl2: float = 0.0001
+    lr_lvl1: float = 0.0005
+    lr_lvl2: float = 0.0005
     lr_lvl3: float = 0.00025
     start_channel: int = 7
 
     # train val
-    total_steps_lvl1: int = 200
-    total_steps_lvl2: int = 100
+    total_steps_lvl1: int = 60000
+    total_steps_lvl2: int = 30000
     total_steps_lvl3: int = 60000
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
@@ -87,14 +87,14 @@ class TrainingConfig:
     accumulation_steps: int = field(init=False)
 
     # loss weights
-    w_jacobian: float = 2.0
-    w_smooth: float = 2.0
-    w_ct: float = 15.0
+    w_jacobian: float = 3.0
+    w_smooth: float = 3.0
+    w_ct: float = 10.0
     w_pet: float = 0.0
-    w_dice_ct: float = 6.0
+    w_dice_ct: float = 5.0
     w_dice_pet: float = 0.0
-    w_tlg: float = 5.0
-    w_masked_jac: float = 0.6
+    w_tlg: float = 2.0
+    w_masked_jac: float = 2.0
     w_dvf: float = 100.0
 
     dice_pet_iou_threshold: float = 0.1
@@ -103,9 +103,9 @@ class TrainingConfig:
     shuffle: bool = True
     num_workers: int = 8
 
-    lvl1_ncc_win: int = 5
+    lvl1_ncc_win: int = 7
     lvl2_ncc_win: int = 7
-    lvl3_ncc_win: int = 9
+    lvl3_ncc_win: int = 7
 
     mlflow_tracking_uri: str = "sqlite:////home/iml/fryderyk.koegl/code/mlruns.db"
     mlflow_experiment: str = "PSMAReg_LapIRN"
