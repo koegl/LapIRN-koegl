@@ -853,9 +853,16 @@ class PSMARegDataset(torch_data.Dataset):
             "x_label_pet",
             "y_label_ct",
             "y_label_pet",
-            "x_sdt",
-            "y_sdt",
         ]
+
+        moving_keys = ["x_ct", "x_pet", "x_label_ct", "x_label_pet"]
+        fixed_keys = ["y_ct", "y_pet", "y_label_ct", "y_label_pet"]
+
+        if self.cfg.use_labels_directly:
+            all_spatial_keys += ["x_sdt", "y_sdt"]
+
+            moving_keys += ["x_sdt"]
+            fixed_keys += ["y_sdt"]
 
         # Augmentation parameters — always initialised so training loop can
         # use them unconditionally regardless of whether augment=True/False
@@ -893,8 +900,7 @@ class PSMARegDataset(torch_data.Dataset):
                 crop_feet_fixed = int(
                     np.random.randint(0, self.cfg.aug_max_crop_z_feet_asym + 1)
                 )
-                moving_keys = ["x_ct", "x_pet", "x_label_ct", "x_label_pet", "x_sdt"]
-                fixed_keys = ["y_ct", "y_pet", "y_label_ct", "y_label_pet", "y_sdt"]
+
                 data = apply_z_crop(
                     data, moving_keys, crop_head_moving, crop_feet_moving
                 )
