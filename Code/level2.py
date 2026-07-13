@@ -101,7 +101,7 @@ def evaluate_lvl2(
                 aug_crop_feet=batch["aug_crop_feet"],
             )
 
-            if config.use_poly_affine:
+            if config.use_poly_affine is False:
                 X_prereg = transform(X, flow_affine, grid_full)
             else:
                 poly_dvf = poly_affine_reg.get_polyaffine_dvf(
@@ -390,8 +390,6 @@ def train_lvl2(
         model.unfreeze_modellvl1()
 
     for global_step in range(start_global_step, total_steps):
-        # print(f"step {global_step} RSS: {proc.memory_info().rss / 1e9:.2f} GB")
-
         epoch = global_step // steps_per_epoch
         is_epoch_start = global_step % steps_per_epoch == 0
         is_epoch_end = global_step % steps_per_epoch == steps_per_epoch - 1
@@ -472,7 +470,7 @@ def train_lvl2(
                 aug_crop_feet=batch["aug_crop_feet"],
             )
 
-            if config.use_poly_affine:
+            if config.use_poly_affine is False:
                 X_prereg = transform(X, flow_affine, grid_full)
             else:
                 poly_dvf = poly_affine_reg.get_polyaffine_dvf(

@@ -61,6 +61,8 @@ def affine_dvf_to_unit_flow(
 
 def get_polyaffine_dvf(
     case_id: str,
+    tp_x: str,
+    tp_y: str,
     fixed_seg_path: Path,
     moving_seg_path: Path,
     get_affine_dvf_fn: Callable[[], np.ndarray],
@@ -78,7 +80,7 @@ def get_polyaffine_dvf(
     """Canonical polyaffine residual DVF (H, W, D, 3), voxel units, (i, j, k)
     order. Cached in memory and on disk. `get_affine_dvf_fn` returns the
     canonical affine DVF and is only called on a cache miss."""
-    mem_key = f"{case_id}_{TP_X}_{TP_Y}"
+    mem_key = f"{case_id}_{tp_x}_{tp_y}"
     if mem_key in _POLY_DVF_CACHE:
         return _POLY_DVF_CACHE[mem_key].astype(np.float32)
 
@@ -166,8 +168,8 @@ def load_val_pair(val_image_dir, case_id: str) -> Dict[str, torch.Tensor]:
         arr = my_data.nib.load(str(path)).get_fdata().astype(np.float32)
         return arr
 
-    x_ct_raw = load_ct("01")
-    y_ct_raw = load_ct("00")
+    x_ct_raw = load_ct(TP_X)
+    y_ct_raw = load_ct(TP_Y)
 
     x_mask = my_data.get_body_mask(x_ct_raw)
     y_mask = my_data.get_body_mask(y_ct_raw)
@@ -179,8 +181,8 @@ def load_val_pair(val_image_dir, case_id: str) -> Dict[str, torch.Tensor]:
         y_ct_raw, y_mask, fill_value=float(np.percentile(y_ct_raw, 0.5))
     )
 
-    x_pet_raw = my_data.apply_body_mask(load_pet("01"), x_mask, fill_value=0.0)
-    y_pet_raw = my_data.apply_body_mask(load_pet("00"), y_mask, fill_value=0.0)
+    x_pet_raw = my_data.apply_body_mask(load_pet(TP_X), x_mask, fill_value=0.0)
+    y_pet_raw = my_data.apply_body_mask(load_pet(TP_Y), y_mask, fill_value=0.0)
 
     def t(arr: np.ndarray) -> torch.Tensor:
         return torch.from_numpy(arr).unsqueeze(0)
@@ -482,10 +484,9 @@ def main() -> None:
     val_image_dir = Path(
         "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTr"
     )
-    seg_dir = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/segmentations"
-    )
-    seg_template = "{case_id}_{tp}"
+    seg_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTr")
+    seg_template = "PSMARegPSMA_{case_id}_0000_{tp}"
+    # seg_template = "{case_id}_{tp}"
     out_dir = (
         Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/polyaffine_debug") / case_id
     )
@@ -516,32 +517,62 @@ def main() -> None:
     pair = load_val_pair(val_image_dir, case_id)
     x = pair["x"].unsqueeze(0).to(device).float()
     y = pair["y"].unsqueeze(0).to(device).float()
-    seg_moving = load_seg(seg_dir, seg_template, case_id, "01", device)
-    seg_fixed = load_seg(seg_dir, seg_template, case_id, "00", device)
+    seg_moving = load_seg(seg_dir, seg_template, case_id, TP_X, device)
+    seg_fixed = load_seg(seg_dir, seg_template, case_id, TP_Y, device)
 
-    # --- affine pre-reg ---
+    # --- affine pre-reg (for debug volumes + composition) ---
     flow_affine = create_affine_flow(case_id, val_image_dir, cfg, device)
     x_affine = transform(x, flow_affine, grid_full)
     seg_moving_affine = transform_nearest(seg_moving, flow_affine, grid_full)
 
-    # --- polyaffine on affine-warped bones ---
-    seg_fixed_np = seg_fixed[0, 0].round().long().cpu().numpy().astype(np.int16)
-    seg_moving_affine_np = (
-        seg_moving_affine[0, 0].round().long().cpu().numpy().astype(np.int16)
-    )
-    velocity = build_polyaffine_velocity(
-        seg_fixed_np=seg_fixed_np,
-        seg_moving_np=seg_moving_affine_np,
-        bone_labels=synthetic.BONE_LABEL_VALUES,
+    # --- polyaffine (cached) ---
+    def seg_path(tp: str) -> Path:
+        stem = seg_template.format(case_id=case_id, tp=tp)
+        p = seg_dir / f"{stem}.nii"
+        if not p.exists():
+            p = seg_dir / f"{stem}.nii.gz"
+        return p
+
+    def affine_dvf_fn() -> np.ndarray:
+        dvf = affine_reg.get_affine_dvf(
+            case_id=case_id,
+            tp_x=TP_X,
+            tp_y=TP_Y,
+            fixed_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{TP_X}.nii.gz",
+            moving_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{TP_Y}.nii.gz",
+            make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
+            preprocess_ct_fn=affine_reg.preprocess_ct,
+            ants_affine_to_fullres_voxel_disp_fn=(
+                affine_reg.ants_affine_to_fullres_voxel_disp
+            ),
+        )
+        return dvf
+
+    poly_dvf = get_polyaffine_dvf(
+        case_id=case_id,
+        tp_x=TP_X,
+        tp_y=TP_Y,
+        fixed_seg_path=seg_path(TP_Y),
+        moving_seg_path=seg_path(TP_X),
+        get_affine_dvf_fn=affine_dvf_fn,
+        cfg=cfg,
+        device=device,
         sigma=sigma,
         w_bg=w_bg,
+        ss_steps=ss_steps,
         icp_max_iter=icp_max_iter,
         icp_tol=icp_tol,
         min_voxels=min_voxels,
         max_points=max_points,
     )
-    disp_poly_vox = integrate_svf(velocity, ss_steps, device)
-    flow_poly = voxel_disp_to_unit_flow(disp_poly_vox, cfg.img_shape)
+    flow_poly = create_polyaffine_flow(
+        poly_dvf=poly_dvf,
+        aug_flipped=False,
+        aug_crop_head=0,
+        aug_crop_feet=0,
+        cfg=cfg,
+        device=device,
+    )
 
     # --- compose and warp the ORIGINAL moving once ---
     total_flow = compose_flows(flow_affine, flow_poly, grid_full)
