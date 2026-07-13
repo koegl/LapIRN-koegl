@@ -239,9 +239,7 @@ def train_lvl1(
     total_steps = config.total_steps_lvl1
     val_step_interval = config.val_interval * steps_per_epoch
 
-    run_name = mlflow.active_run().info.run_name
-    if run_name is None:
-        raise ValueError("MLflow run name is None. Please ensure an active run exists.")
+    run_name = utils.get_run_name()
 
     best_dice_ct = float("inf")
     config.model_save_dir.mkdir(parents=True, exist_ok=True)

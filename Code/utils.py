@@ -11,6 +11,29 @@ from miccai2020_model_stage import (
 )
 
 
+def add_jobid_to_mlflow_run() -> None:
+    job_id = os.environ.get("SLURM_JOB_ID", "local")
+
+    auto_name = str(mlflow.active_run().info.run_name)
+    auto_name_no_id = auto_name.rsplit("-", 1)[0]
+
+    new_name = f"{auto_name_no_id}_{job_id}"
+
+    mlflow.set_tag("mlflow.runName", new_name)
+    mlflow.set_tag("slurm_job_id", job_id)
+
+
+def get_run_name() -> str:
+
+    run_id = mlflow.active_run().info.run_id
+    run_name = mlflow.get_run(run_id).info.run_name
+
+    if run_name is None:
+        raise ValueError("MLflow run name is None. Please ensure an active run exists.")
+
+    return run_name
+
+
 def optimizer_step_with_guard(
     loss: torch.Tensor,
     loss_scaled: torch.Tensor,

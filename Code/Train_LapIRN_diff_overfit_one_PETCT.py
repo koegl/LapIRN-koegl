@@ -4,6 +4,7 @@ import os
 os.environ["MLFLOW_ALLOW_FILE_STORE"] = "true"
 
 
+import os
 from pathlib import Path
 
 import level1
@@ -26,6 +27,8 @@ def main() -> None:
     mlflow.set_tracking_uri("file:///home/iml/fryderyk.koegl/code/mlruns")
     mlflow.set_experiment("PSMAReg_LapIRN")
     with mlflow.start_run():
+        utils.add_jobid_to_mlflow_run()
+
         train_ids, val_ids = my_data.get_train_val_split(
             data_dir=config.data_dir,
             split_path=config.split_path,
