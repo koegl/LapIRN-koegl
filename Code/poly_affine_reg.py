@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Sequence, Tuple
 
 import affine_reg
+import config
 import Functions
 import miccai2020_model_stage
 import my_data
@@ -34,8 +35,8 @@ TP_X = "02"
 TP_Y = "00"
 
 
-def _poly_cache_path(case_id: str) -> Path:
-    path = POLY_CACHE_DIR / f"poly_{case_id}_{TP_X}_{TP_Y}.npy"
+def _poly_cache_path(case_id: str, cache_dir: Path) -> Path:
+    path = cache_dir / f"poly_{case_id}_{TP_X}_{TP_Y}.npy"
     return path
 
 
@@ -84,7 +85,10 @@ def get_polyaffine_dvf(
     if mem_key in _POLY_DVF_CACHE:
         return _POLY_DVF_CACHE[mem_key].astype(np.float32)
 
-    cache_path = _poly_cache_path(case_id)
+    cfg = config.TrainingConfig()
+    cfg.cache_dir_poly.mkdir(parents=True, exist_ok=True)
+
+    cache_path = _poly_cache_path(case_id, cfg.cache_dir_poly)
     if cache_path.exists():
         dvf = np.load(str(cache_path))
         _POLY_DVF_CACHE[mem_key] = dvf.astype(np.float16)
@@ -124,7 +128,6 @@ def get_polyaffine_dvf(
     disp = integrate_svf(velocity, ss_steps, device)
     poly_dvf = disp[0].permute(1, 2, 3, 0).contiguous().cpu().numpy().astype(np.float32)
 
-    POLY_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     np.save(str(cache_path), poly_dvf)
     _POLY_DVF_CACHE[mem_key] = poly_dvf.astype(np.float16)
     return poly_dvf

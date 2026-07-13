@@ -22,6 +22,7 @@ class TrainingConfig:
     # Dataset
     data_dir = DATA_PATH / "PSMAReg/PSMAReg_dataset"
     cache_dir = DATA_PATH / "PSMAReg/affine_cache"
+    cache_dir_poly = DATA_PATH / "PSMAReg/poly_cache"
     split_path = DATA_PATH / "PSMAReg/PSMAReg_dataset/split.json"
     val_fraction: float = 0.15
     use_cache_train_real: bool = True
