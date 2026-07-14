@@ -325,6 +325,122 @@ def masked_jac_det_loss(
     return ((masked_det - target) ** 2).sum() / (mask.sum() + eps)
 
 
+def orthonormality_loss(
+    jac: torch.Tensor,
+    mask: torch.Tensor,
+    eps: float = 1e-5,
+) -> torch.Tensor:
+    """Penalise deviation of the Jacobian from orthonormality inside mask.
+
+    Rigid motions have an orthonormal Jacobian (J^T J = I), which forbids local
+    shear and anisotropic scaling. This penalises ||J^T J - I||_F^2 per voxel.
+    Consumes the interior Jacobian returned by ``jacobian_determinant`` (via
+    ``return_jac=True``); boundary voxels contribute 0.
+
+    Args:
+        jac: (B, 3, 3, D-2, H-2, W-2) Jacobian J = I + du/dx, indexed [:, row, col].
+        mask: (B, 1, D, H, W) binary float mask (e.g. bones).
+        eps: Smoothing term.
+
+    Returns:
+        Scalar mean orthonormality error inside mask.
+    """
+    # (J^T J)_ij = sum_k jac[:, k, i] * jac[:, k, j]; jac indexed [b, row, col, d, h, w]
+    jtj = torch.einsum("bkidhw,bkjdhw->bijdhw", jac, jac)
+    eye = torch.eye(3, device=jac.device, dtype=jac.dtype).view(1, 3, 3, 1, 1, 1)
+    m = jtj - eye
+    err = (m * m).sum(dim=(1, 2))  # ||J^T J - I||_F^2, (B, D-2, H-2, W-2)
+
+    err = torch.nn.functional.pad(err, (1, 1, 1, 1, 1, 1), value=0.0).unsqueeze(1)
+    return (err * mask).sum() / (mask.sum() + eps)
+
+
+def affine_loss(
+    flow: torch.Tensor,
+    mask: torch.Tensor,
+    eps: float = 1e-5,
+) -> torch.Tensor:
+    """Penalise deviation from local affine-ness inside mask.
+
+    A displacement field is affine iff all its second-order derivatives vanish,
+    i.e. the Jacobian is constant over the region. This penalises the 3D bending
+    energy ||d^2 u||^2 (all second partials, including mixed) per voxel, forcing
+    the masked region to share a single transform. Combined with
+    ``orthonormality_loss`` and ``masked_jac_det_loss`` this yields local
+    rigidity. Boundary voxels contribute 0.
+
+    Args:
+        flow: (B, D, H, W, 3) displacement field in voxel units.
+        mask: (B, 1, D, H, W) binary float mask (e.g. bones).
+        eps: Smoothing term.
+
+    Returns:
+        Scalar mean bending energy inside mask.
+    """
+    energy = 0.0
+    for c in range(3):
+        f = flow[..., c]
+        center = f[:, 1:-1, 1:-1, 1:-1]
+        # pure second derivatives
+        fxx = f[:, 2:, 1:-1, 1:-1] - 2 * center + f[:, :-2, 1:-1, 1:-1]
+        fyy = f[:, 1:-1, 2:, 1:-1] - 2 * center + f[:, 1:-1, :-2, 1:-1]
+        fzz = f[:, 1:-1, 1:-1, 2:] - 2 * center + f[:, 1:-1, 1:-1, :-2]
+        # mixed second derivatives
+        fxy = (
+            f[:, 2:, 2:, 1:-1] - f[:, 2:, :-2, 1:-1]
+            - f[:, :-2, 2:, 1:-1] + f[:, :-2, :-2, 1:-1]
+        ) / 4
+        fxz = (
+            f[:, 2:, 1:-1, 2:] - f[:, 2:, 1:-1, :-2]
+            - f[:, :-2, 1:-1, 2:] + f[:, :-2, 1:-1, :-2]
+        ) / 4
+        fyz = (
+            f[:, 1:-1, 2:, 2:] - f[:, 1:-1, 2:, :-2]
+            - f[:, 1:-1, :-2, 2:] + f[:, 1:-1, :-2, :-2]
+        ) / 4
+        energy = energy + (
+            fxx * fxx + fyy * fyy + fzz * fzz
+            + 2 * (fxy * fxy + fxz * fxz + fyz * fyz)
+        )  # (B, D-2, H-2, W-2)
+
+    energy = torch.nn.functional.pad(
+        energy, (1, 1, 1, 1, 1, 1), value=0.0
+    ).unsqueeze(1)
+    return (energy * mask).sum() / (mask.sum() + eps)
+
+
+def enforce_rigidity_loss(
+    jac_det: torch.Tensor,
+    jac: torch.Tensor,
+    flow: torch.Tensor,
+    mask: torch.Tensor,
+    eps: float = 1e-5,
+):
+    """Combined local-rigidity loss over a masked region (e.g. bones).
+
+    Enforces the three Staring/Modersitzki conditions (summed with equal weight;
+    scale the whole term with ``config.w_bone_rigidity`` at the call site):
+      * properness    -- det(J) = 1   (``masked_jac_det_loss``)
+      * orthonormality -- J^T J = I    (``orthonormality_loss``)
+      * affine-ness    -- d^2 u = 0    (``affine_loss``)
+
+    Args:
+        jac_det: (B, 1, D, H, W) Jacobian determinant field.
+        jac: (B, 3, 3, D-2, H-2, W-2) Jacobian from ``jacobian_determinant(..., return_jac=True)``.
+        flow: (B, D, H, W, 3) displacement field in voxel units.
+        mask: (B, 1, D, H, W) binary float mask.
+        eps: Smoothing term.
+
+    Returns:
+        (total, (det, ortho, affine)) scalar tensors.
+    """
+    det = masked_jac_det_loss(jac_det, mask, eps)
+    ortho = orthonormality_loss(jac, mask, eps)
+    affine = affine_loss(flow, mask, eps)
+    total = det + ortho + affine
+    return total, (det, ortho, affine)
+
+
 def warp_binary_mask(
     mask: torch.Tensor,
     disp: torch.Tensor,

@@ -58,7 +58,8 @@ def evaluate_lvl3(
         "jacobian": 0.0,
         "mtv_bias": 0.0,
         "tlg_bias": 0.0,
-        "masked_jac": 0.0,
+        "jacobian_tumor": 0.0,
+        "rigidity": 0.0,
         "ndv": 0.0,
     }
     n_batches = 0
@@ -194,7 +195,7 @@ def evaluate_lvl3(
             F_X_Y_norm = transform_unit_flow_to_flow_cuda(
                 F_X_Y.permute(0, 2, 3, 4, 1).clone()
             )
-            jac_det = jacobian_determinant(F_X_Y_norm)
+            jac_det, jac = jacobian_determinant(F_X_Y_norm, return_jac=True)
             ndv = utils.compute_ndv(jac_det)
             loss_jacobian = loss_Jdet(F_X_Y_norm, grid)
 
@@ -227,12 +228,21 @@ def evaluate_lvl3(
             )
             loss_jacobian_tumor = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
 
+            bone_labels_tensor = torch.tensor(
+                synthetic.BONE_LABEL_VALUES, device=device, dtype=X_lbl_ct.dtype
+            )
+            bone_mask = torch.isin(X_lbl_ct, bone_labels_tensor).float()
+            loss_rigidity, _ = utils.enforce_rigidity_loss(
+                jac_det, jac, F_X_Y_norm, bone_mask
+            )
+
             loss = (
                 loss_multiNCC
                 + config.w_jacobian * loss_jacobian
                 + config.w_smooth * loss_regulation
                 + config.w_tlg * loss_tlg
                 + config.w_jacobian_tumor * loss_jacobian_tumor
+                + config.w_bone_rigidity * loss_rigidity
             )
             if loss_dice_ct is not None:
                 loss = loss + config.w_dice_ct_lvl3 * loss_dice_ct
@@ -246,7 +256,8 @@ def evaluate_lvl3(
             val_losses["jacobian"] += loss_jacobian.item()
             val_losses["mtv_bias"] += loss_mtv.item()
             val_losses["tlg_bias"] += loss_tlg.item()
-            val_losses["masked_jac"] += loss_jacobian_tumor.item()
+            val_losses["jacobian_tumor"] += loss_jacobian_tumor.item()
+            val_losses["rigidity"] += loss_rigidity.item()
             val_losses["ndv"] += ndv
 
             if loss_dice_ct is not None:
@@ -564,7 +575,7 @@ def train_lvl3(
         F_X_Y_norm = transform_unit_flow_to_flow_cuda(
             F_X_Y.permute(0, 2, 3, 4, 1).clone()
         )
-        jac_det = jacobian_determinant(F_X_Y_norm)
+        jac_det, jac = jacobian_determinant(F_X_Y_norm, return_jac=True)
         ndv = utils.compute_ndv(jac_det)
         loss_jacobian = loss_Jdet(F_X_Y_norm, grid)
 
@@ -611,13 +622,22 @@ def train_lvl3(
         )
 
         moving_pet_mask = (X_lbl_pet == 1).float()
-        loss_masked_jac = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
+        loss_jacobian_tumor = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
+
+        bone_labels_tensor = torch.tensor(
+            synthetic.BONE_LABEL_VALUES, device=device, dtype=X_lbl_ct.dtype
+        )
+        bone_mask = torch.isin(X_lbl_ct, bone_labels_tensor).float()
+        loss_rigidity, (loss_rig_det, loss_rig_ortho, loss_rig_affine) = (
+            utils.enforce_rigidity_loss(jac_det, jac, F_X_Y_norm, bone_mask)
+        )
 
         loss = (
             loss_multiNCC
             + config.w_jacobian * loss_jacobian
             + config.w_smooth * loss_regulation
-            + config.w_jacobian_tumor * loss_masked_jac
+            + config.w_jacobian_tumor * loss_jacobian_tumor
+            + config.w_bone_rigidity * loss_rigidity
         )
         if loss_dice_ct is not None:
             loss = loss + config.w_dice_ct_lvl3 * loss_dice_ct
@@ -683,8 +703,9 @@ def train_lvl3(
             "train_lvl3/smooth": loss_regulation.item(),
             "train_lvl3/mtv_bias": loss_mtv.item(),
             "train_lvl3/tlg_bias": loss_tlg.item(),
-            "train_lvl3/masked_jac": loss_masked_jac.item(),
-            "train_lvl3/jacob": loss_jacobian.item(),
+            "train_lvl3/jacobian_tumor": loss_jacobian_tumor.item(),
+            "train_lvl3/jacobian": loss_jacobian.item(),
+            "train_lvl3/rigidity": loss_rigidity.item(),
             "train_lvl3/ndv": ndv,
             "train_lvl3/dvf": loss_dvf.item(),
         }
