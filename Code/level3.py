@@ -235,7 +235,7 @@ def evaluate_lvl3(
                 + config.w_masked_jac * loss_masked_jac
             )
             if loss_dice_ct is not None:
-                loss = loss + config.w_dice_ct * loss_dice_ct
+                loss = loss + config.w_dice_ct_lvl3 * loss_dice_ct
             if loss_dice_pet is not None:
                 loss = loss + config.w_dice_pet * loss_dice_pet
 
@@ -620,7 +620,7 @@ def train_lvl3(
             + config.w_masked_jac * loss_masked_jac
         )
         if loss_dice_ct is not None:
-            loss = loss + config.w_dice_ct * loss_dice_ct
+            loss = loss + config.w_dice_ct_lvl3 * loss_dice_ct
         if loss_dice_pet is not None and use_dice_pet:
             loss = loss + config.w_dice_pet * loss_dice_pet
 

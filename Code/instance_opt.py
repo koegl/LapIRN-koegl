@@ -163,7 +163,7 @@ def compute_io_loss(
         + cfg.w_masked_jac * loss_masked_jac_bone
     )
     if loss_dice_ct is not None:
-        loss = loss + cfg.w_dice_ct * loss_dice_ct
+        loss = loss + cfg.w_dice_ct_lvl3 * loss_dice_ct
 
     logs = {
         "ncc_ct": loss_ncc_ct.item(),

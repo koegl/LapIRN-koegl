@@ -92,7 +92,9 @@ class TrainingConfig:
     w_smooth: float = 3.0
     w_ct: float = 10.0
     w_pet: float = 0.0
-    w_dice_ct: float = 6.0
+    w_dice_ct_lvl1: float = 1.5
+    w_dice_ct_lvl2: float = 3.0
+    w_dice_ct_lvl3: float = 6.0
     w_dice_pet: float = 0.0
     w_tlg: float = 2.0
     w_masked_jac: float = 5.0
