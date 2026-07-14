@@ -139,20 +139,6 @@ def downsample_label(label: torch.Tensor, scale_factor: float) -> torch.Tensor:
     ).long()
 
 
-def compute_ndv(jac_det: torch.Tensor) -> float:
-    """Compute Non-Diffeomorphic Volume Percentage.
-
-    Args:
-        jac_det: (B, 1, D, H, W) Jacobian determinant field.
-
-    Returns:
-        Percentage of voxels with det(J) <= 0, as float in [0, 100].
-    """
-    with torch.no_grad():
-        ndv = (jac_det <= 0).float().mean().item() * 100
-    return ndv
-
-
 def soft_dice_loss_binary(
     pred: torch.Tensor, target: torch.Tensor, eps: float = 1e-5
 ) -> torch.Tensor:
@@ -334,8 +320,8 @@ def orthonormality_loss(
 
     Rigid motions have an orthonormal Jacobian (J^T J = I), which forbids local
     shear and anisotropic scaling. This penalises ||J^T J - I||_F^2 per voxel.
-    Consumes the interior Jacobian returned by ``jacobian_determinant`` (via
-    ``return_jac=True``); boundary voxels contribute 0.
+    Consumes the interior Jacobian returned by ``jacobian.jacobian_matrix``;
+    boundary voxels contribute 0.
 
     Args:
         jac: (B, 3, 3, D-2, H-2, W-2) Jacobian J = I + du/dx, indexed [:, row, col].
@@ -426,7 +412,7 @@ def enforce_rigidity_loss(
 
     Args:
         jac_det: (B, 1, D, H, W) Jacobian determinant field.
-        jac: (B, 3, 3, D-2, H-2, W-2) Jacobian from ``jacobian_determinant(..., return_jac=True)``.
+        jac: (B, 3, 3, D-2, H-2, W-2) Jacobian from ``jacobian.jacobian_matrix``.
         flow: (B, D, H, W, 3) displacement field in voxel units.
         mask: (B, 1, D, H, W) binary float mask.
         eps: Smoothing term.

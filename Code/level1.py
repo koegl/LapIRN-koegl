@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Callable, Dict, Optional
 
 import affine_reg
+import jacobian
 import mlflow
 import my_data
 import numpy as np
@@ -24,8 +25,6 @@ from miccai2020_model_stage import (
     Miccai2020_LDR_laplacian_unit_add_lvl1,
     SpatialTransform_unit,
     SpatialTransformNearest_unit,
-    jacobian_determinant,
-    neg_Jdet_loss,
     smoothloss,
 )
 from torch.utils import data as torch_data
@@ -187,9 +186,13 @@ def evaluate_lvl1(
             F_X_Y_norm = transform_unit_flow_to_flow_cuda(
                 F_X_Y.permute(0, 2, 3, 4, 1).clone()
             )
-            jac_det = jacobian_determinant(F_X_Y_norm)
-            ndv = utils.compute_ndv(jac_det)
-            loss_jacobian = loss_Jdet(F_X_Y_norm, grid_4)
+            body_mask = torch.nn.functional.interpolate(
+                batch["y_body_mask"].to(device),
+                size=F_X_Y_norm.shape[1:4],
+                mode="nearest",
+            )
+            ndv = jacobian.percent_ndv(F_X_Y_norm, mask=body_mask)
+            loss_jacobian = loss_Jdet(F_X_Y_norm, grid_4, mask=body_mask)
 
             _, _, x, y, z = F_xy.shape
             F_xy[:, 0, :, :, :] = F_xy[:, 0, :, :, :] * (z - 1)
@@ -310,7 +313,7 @@ def train_lvl1(
     loss_similarity_ct = NCC(win=config.lvl1_ncc_win)
     loss_similarity_pet = NCC(win=config.lvl1_ncc_win)
     loss_smooth = smoothloss
-    loss_Jdet = neg_Jdet_loss
+    loss_Jdet = jacobian.non_diff_volume_loss
 
     transform = SpatialTransform_unit().to(device)
     transform_nearest = SpatialTransformNearest_unit().to(device)
@@ -526,10 +529,12 @@ def train_lvl1(
         F_X_Y_norm = transform_unit_flow_to_flow_cuda(
             F_X_Y.permute(0, 2, 3, 4, 1).clone()
         )
-        jac_det = jacobian_determinant(F_X_Y_norm)
-        ndv = utils.compute_ndv(jac_det)
+        body_mask = torch.nn.functional.interpolate(
+            batch["y_body_mask"].to(device), size=F_X_Y_norm.shape[1:4], mode="nearest"
+        )
+        ndv = jacobian.percent_ndv(F_X_Y_norm, mask=body_mask)
 
-        loss_jacobian = loss_Jdet(F_X_Y_norm, grid_4)
+        loss_jacobian = loss_Jdet(F_X_Y_norm, grid_4, mask=body_mask)
 
         # reg2 - use velocity
         _, _, x, y, z = F_xy.shape
@@ -683,8 +688,9 @@ def train_lvl1(
             if config.overfit:
                 print(
                     f"ep: {epoch} "
-                    f"ncc={epoch_metrics['train_lvl1/ncc_ct'] / steps_per_epoch:.4f} "
-                    f"dice={epoch_metrics['train_lvl1/dice_ct'] / steps_per_epoch:.4f}"
+                    f"ncc={epoch_metrics['train_lvl1/ncc_ct'] * config.w_ct:.4f} "
+                    f"dice={epoch_metrics['train_lvl1/dice_ct'] * config.w_dice_ct_lvl1:.4f} "
+                    f"jacob={epoch_metrics['train_lvl1/jacob'] * config.w_jacobian:.6f} "
                 )
 
         if config.overfit is False and (

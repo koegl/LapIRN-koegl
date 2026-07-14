@@ -264,6 +264,7 @@ def load_single_session(data_dir: Path, case_id: str, tp: str) -> dict:
             load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0001_{tp}.nii.gz")
         ),
         "body_map": body_map,
+        "body_mask": to_t(mask.astype(np.float32)).float(),
     }
     return out
 
@@ -504,6 +505,7 @@ def load_pair_to_dict(data_dir: Path, case_id: str, tp_x: str, tp_y: str) -> dic
         "y_label_pet": t(
             load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0001_{tp_y}.nii.gz")
         ),
+        "y_body_mask": t(y_mask.astype(np.float32)).float(),
     }
 
 
@@ -677,7 +679,7 @@ class SyntheticSourceDataset(torch_data.Dataset):
     def __getitem__(self, index: int) -> dict:
         s = self.dataset[index]
 
-        spatial_keys = ["ct", "pet", "label_ct", "label_pet", "body_map"]
+        spatial_keys = ["ct", "pet", "label_ct", "label_pet", "body_map", "body_mask"]
 
         flipped = False
         crop_head = 0
@@ -714,6 +716,7 @@ class SyntheticSourceDataset(torch_data.Dataset):
             "tp_x": tp,
             "tp_y": tp,
             "body_map": s["body_map"],
+            "y_body_mask": s["body_mask"],
         }
         return item
 
@@ -853,10 +856,11 @@ class PSMARegDataset(torch_data.Dataset):
             "x_label_pet",
             "y_label_ct",
             "y_label_pet",
+            "y_body_mask",
         ]
 
         moving_keys = ["x_ct", "x_pet", "x_label_ct", "x_label_pet"]
-        fixed_keys = ["y_ct", "y_pet", "y_label_ct", "y_label_pet"]
+        fixed_keys = ["y_ct", "y_pet", "y_label_ct", "y_label_pet", "y_body_mask"]
 
         if self.cfg.use_labels_directly:
             all_spatial_keys += ["x_sdt", "y_sdt"]

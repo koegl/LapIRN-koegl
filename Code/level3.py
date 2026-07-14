@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Callable, Dict, Optional
 
 import affine_reg
+import jacobian
 import mlflow
 import my_data
 import numpy as np
@@ -22,9 +23,7 @@ from miccai2020_model_stage import (
     Miccai2020_LDR_laplacian_unit_add_lvl3,
     SpatialTransform_unit,
     SpatialTransformNearest_unit,
-    jacobian_determinant,
     multi_resolution_NCC,
-    neg_Jdet_loss,
     smoothloss,
 )
 from torch.utils import data as torch_data
@@ -195,9 +194,10 @@ def evaluate_lvl3(
             F_X_Y_norm = transform_unit_flow_to_flow_cuda(
                 F_X_Y.permute(0, 2, 3, 4, 1).clone()
             )
-            jac_det, jac = jacobian_determinant(F_X_Y_norm, return_jac=True)
-            ndv = utils.compute_ndv(jac_det)
-            loss_jacobian = loss_Jdet(F_X_Y_norm, grid)
+            jac_det, jac = jacobian.jacobian_matrix(F_X_Y_norm)
+            body_mask = batch["y_body_mask"].to(device)  # full res at lvl3
+            ndv = jacobian.percent_ndv(F_X_Y_norm, mask=body_mask)
+            loss_jacobian = loss_Jdet(F_X_Y_norm, grid, mask=body_mask)
 
             _, _, x, y, z = F_xy.shape
             F_xy[:, 0, :, :, :] = F_xy[:, 0, :, :, :] * (z - 1)
@@ -360,7 +360,7 @@ def train_lvl3(
     loss_similarity_ct = multi_resolution_NCC(win=config.lvl3_ncc_win, scale=3)
     loss_similarity_pet = multi_resolution_NCC(win=config.lvl3_ncc_win, scale=3)
     loss_smooth = smoothloss
-    loss_Jdet = neg_Jdet_loss
+    loss_Jdet = jacobian.non_diff_volume_loss
 
     transform = SpatialTransform_unit().to(device)
     transform_nearest = SpatialTransformNearest_unit().to(device)
@@ -575,9 +575,10 @@ def train_lvl3(
         F_X_Y_norm = transform_unit_flow_to_flow_cuda(
             F_X_Y.permute(0, 2, 3, 4, 1).clone()
         )
-        jac_det, jac = jacobian_determinant(F_X_Y_norm, return_jac=True)
-        ndv = utils.compute_ndv(jac_det)
-        loss_jacobian = loss_Jdet(F_X_Y_norm, grid)
+        jac_det, jac = jacobian.jacobian_matrix(F_X_Y_norm)
+        body_mask = batch["y_body_mask"].to(device)  # full res at lvl3
+        ndv = jacobian.percent_ndv(F_X_Y_norm, mask=body_mask)
+        loss_jacobian = loss_Jdet(F_X_Y_norm, grid, mask=body_mask)
 
         _, _, x, y, z = F_xy.shape
         F_xy[:, 0, :, :, :] = F_xy[:, 0, :, :, :] * (z - 1)

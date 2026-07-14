@@ -3,6 +3,7 @@ from typing import Dict, Optional, Tuple
 
 import config
 import Functions
+import jacobian
 import synthetic
 import torch
 import tqdm
@@ -10,8 +11,6 @@ import utils
 from miccai2020_model_stage import (
     NCC,
     SpatialTransform_unit,
-    jacobian_determinant,
-    neg_Jdet_loss,
     smoothloss,
 )
 
@@ -109,8 +108,8 @@ def compute_io_loss(
     disp_flow = disp_unit.permute(0, 2, 3, 4, 1)
 
     disp_voxel = Functions.transform_unit_flow_to_flow_cuda(disp_flow.clone())
-    jac_det = jacobian_determinant(disp_voxel)
-    loss_jac = neg_Jdet_loss(disp_voxel, grid)
+    jac_det, _ = jacobian.jacobian_matrix(disp_voxel)
+    loss_jac = jacobian.non_diff_volume_loss(disp_voxel)
     loss_smooth = smoothloss(disp_unit)
 
     # warp the moving image once, reuse the CT and PET channels
