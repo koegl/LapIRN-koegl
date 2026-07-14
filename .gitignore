@@ -12,3 +12,9 @@ saved/*
 *.png
 *.zip
 totalsegmentator_weights/*
+.claude/._settings.local.json
+Code/._config.py
+Code/._level3.py
+Code/._miccai2020_model_stage.py
+Code/._utils.py
+._.claude
