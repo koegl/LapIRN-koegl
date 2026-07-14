@@ -60,6 +60,8 @@ def evaluate_lvl1(
     }
     n_batches = 0
 
+    run_name = utils.get_run_name()
+
     transform_nearest = SpatialTransformNearest_unit().to(device)
     for param in transform_nearest.parameters():
         param.requires_grad = False
@@ -149,33 +151,17 @@ def evaluate_lvl1(
 
             if epoch % (val_interval * 25) == 0 or is_last:
                 if not saved_initial:
-                    zero_disp = torch.zeros_like(F_X_Y)
-                    x_ref = model.transform(
-                        X, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
-                    )
-                    x_prereg = model.transform(
-                        X_prereg, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
-                    )
-                    y_ref = model.transform(
-                        Y, zero_disp.permute(0, 2, 3, 4, 1), model.grid_1
-                    )
-                    my_data.save_volume(
-                        volume=x_ref[:, 0:1, ...],
-                        out_dir=config.save_dir / "initial",
-                        epoch=epoch,
-                        name="x_ref_ct_lvl1",
-                    )
-                    my_data.save_volume(
-                        volume=x_prereg[:, 0:1, ...],
-                        out_dir=config.save_dir / "initial",
-                        epoch=epoch,
-                        name="x_prereg_ct_lvl1",
-                    )
-                    my_data.save_volume(
-                        volume=y_ref[:, 0:1, ...],
-                        out_dir=config.save_dir / "initial",
-                        epoch=epoch,
-                        name="y_ref_ct_lvl1",
+                    my_data.save_initial(
+                        model,
+                        X,
+                        X_prereg,
+                        Y_4x,
+                        F_X_Y,
+                        config,
+                        epoch,
+                        run_name,
+                        batch,
+                        level=1,
                     )
                     saved_initial = True
 
@@ -185,7 +171,7 @@ def evaluate_lvl1(
                         volume=ct,
                         out_dir=config.save_dir / "warped",
                         epoch=epoch,
-                        name="warped_ct_lvl1",
+                        name=f"warped_ct_lvl1_{run_name}_{batch['case_id'][0]}",
                     )
                     saved = True
 
