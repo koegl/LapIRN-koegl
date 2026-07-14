@@ -2402,7 +2402,7 @@ def neg_Jdet_loss(y_pred, sample_grid):
     return torch.mean(selected_neg_Jdet)
 
 
-def jacobian_determinant(flow: torch.Tensor, return_jac: bool = False):
+def jacobian_determinant(flow: torch.Tensor) -> torch.Tensor:
     """Differentiable per-voxel Jacobian determinant, matching challenge convention.
 
     Uses central differences (kernel [-0.5, 0, 0.5]), matching calc_J_i with
@@ -2411,13 +2411,9 @@ def jacobian_determinant(flow: torch.Tensor, return_jac: bool = False):
 
     Args:
         flow: (B, D, H, W, 3) displacement field in voxel units.
-        return_jac: if True, also return the full Jacobian matrix on the
-            interior voxels (unpadded), for reuse by rigidity losses.
 
     Returns:
-        (B, 1, D, H, W) Jacobian determinant field. If ``return_jac`` is True,
-        additionally returns the Jacobian J = I + du/dx of shape
-        (B, 3, 3, D-2, H-2, W-2), indexed [:, row, col].
+        (B, 1, D, H, W) Jacobian determinant field.
     """
     dx = flow[..., 0]
     dy = flow[..., 1]
@@ -2442,20 +2438,8 @@ def jacobian_determinant(flow: torch.Tensor, return_jac: bool = False):
 
     # pad boundary with 1.0 (identity Jacobian) matching challenge's boundary exclusion
     det = torch.nn.functional.pad(det, (1, 1, 1, 1, 1, 1), value=1.0)
-    det = det.unsqueeze(1)  # (B, 1, D, H, W)
 
-    if not return_jac:
-        return det
-
-    jac = torch.stack(
-        [
-            torch.stack([d00, d01, d02], dim=1),
-            torch.stack([d10, d11, d12], dim=1),
-            torch.stack([d20, d21, d22], dim=1),
-        ],
-        dim=1,
-    )  # (B, 3(row), 3(col), D-2, H-2, W-2)
-    return det, jac
+    return det.unsqueeze(1)  # (B, 1, D, H, W)
 
 
 class NCC(torch.nn.Module):
