@@ -30,7 +30,7 @@ class TrainingConfig:
     use_cache_valid: bool = True
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
-    use_poly_affine: bool = True
+    use_poly_affine: bool = False
 
     # direct lables
     use_labels_directly: bool = False
