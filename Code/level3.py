@@ -219,7 +219,7 @@ def evaluate_lvl3(
                 moving_pet_mask, F_X_Y, model.grid_1, transform
             )
             warped_pet_image = X_Y[:, 1:2]
-            moving_pet_image = X_affine[:, 1:2]
+            moving_pet_image = X_prereg[:, 1:2]
 
             loss_mtv = utils.mtv_bias_loss(warped_pet_mask, moving_pet_mask)
             loss_tlg = utils.tlg_bias_loss(
@@ -634,7 +634,7 @@ def train_lvl3(
                 moving_pet_mask, F_X_Y, model.grid_1, transform
             )
             warped_pet_image = X_Y[:, 1:2]
-            moving_pet_image = X_affine[:, 1:2]
+            moving_pet_image = X_prereg[:, 1:2]
             loss_mtv = utils.mtv_bias_loss(warped_pet_mask, moving_pet_mask)
             loss_tlg = utils.tlg_bias_loss(
                 warped_pet_image,
