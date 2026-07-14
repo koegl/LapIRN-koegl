@@ -89,16 +89,16 @@ class TrainingConfig:
 
     # loss weights
     w_jacobian: float = 3.0
-    w_smooth: float = 3.0
-    w_ct: float = 10.0
+    w_smooth: float = 0.0
+    w_ct: float = 15.0
     w_pet: float = 0.0
-    w_dice_ct_lvl1: float = 1.5
+    w_dice_ct_lvl1: float = 1.0
     w_dice_ct_lvl2: float = 3.0
-    w_dice_ct_lvl3: float = 6.0
+    w_dice_ct_lvl3: float = 9.0
     w_dice_pet: float = 0.0
-    w_tlg: float = 2.0
-    w_jacobian_tumor: float = 5.0
-    w_bone_rigidity: float = 2.0
+    w_tlg: float = 5.0
+    w_jacobian_tumor: float = 40.0
+    w_bone_rigidity: float = 8
     w_dvf: float = 100.0
 
     dice_pet_iou_threshold: float = 0.1
