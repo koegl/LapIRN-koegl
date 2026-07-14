@@ -71,9 +71,9 @@ class TrainingConfig:
 
     in_channel: int = field(init=False)
     n_classes: int = 3
-    lr_lvl1: float = 0.0005
-    lr_lvl2: float = 0.0004
-    lr_lvl3: float = 0.0003
+    lr_lvl1: float = 0.00025
+    lr_lvl2: float = 0.0002
+    lr_lvl3: float = 0.0001
     start_channel: int = 7
 
     # train val
@@ -88,12 +88,12 @@ class TrainingConfig:
     accumulation_steps: int = field(init=False)
 
     # loss weights
-    w_jacobian: float = 3.0
+    w_jacobian: float = 100.0
     w_smooth: float = 0.0
     w_ct: float = 15.0
     w_pet: float = 0.0
-    w_dice_ct_lvl1: float = 1.0
-    w_dice_ct_lvl2: float = 3.0
+    w_dice_ct_lvl1: float = 3.0
+    w_dice_ct_lvl2: float = 6.0
     w_dice_ct_lvl3: float = 9.0
     w_dice_pet: float = 0.0
     w_tlg: float = 5.0

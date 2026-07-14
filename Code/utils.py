@@ -49,15 +49,20 @@ def optimizer_step_with_guard(
         loss_scaled.backward()
 
         if is_step:
+            # clip_grad_norm_ returns the PRE-clip norm and already scales the
+            # applied gradients down to max_norm, so a large pre-clip norm is
+            # safe to step on. Only skip on non-finite gradients (NaN/Inf);
+            # skipping on magnitude here deadlocks (skipped step -> weights
+            # unchanged -> same large norm -> skipped forever).
             total_norm = torch.nn.utils.clip_grad_norm_(
-                model.parameters(), max_norm=1.0
+                model.parameters(), max_norm=5.0
             )
             mlflow.log_metrics(
                 {f"lvl{level}/grad_norm": total_norm.item()}, step=global_step
             )
-            if not torch.isfinite(total_norm) or total_norm > 100.0:
+            if not torch.isfinite(total_norm):
                 tqdm.tqdm.write(
-                    f"[lvl{level}] step {global_step}: grad_norm={total_norm.item():.2f} "
+                    f"[lvl{level}] step {global_step}: non-finite grad_norm "
                     f"loss={loss.item():.4f} (skipped)"
                 )
                 optimizer.zero_grad()
@@ -373,25 +378,28 @@ def affine_loss(
         fzz = f[:, 1:-1, 1:-1, 2:] - 2 * center + f[:, 1:-1, 1:-1, :-2]
         # mixed second derivatives
         fxy = (
-            f[:, 2:, 2:, 1:-1] - f[:, 2:, :-2, 1:-1]
-            - f[:, :-2, 2:, 1:-1] + f[:, :-2, :-2, 1:-1]
+            f[:, 2:, 2:, 1:-1]
+            - f[:, 2:, :-2, 1:-1]
+            - f[:, :-2, 2:, 1:-1]
+            + f[:, :-2, :-2, 1:-1]
         ) / 4
         fxz = (
-            f[:, 2:, 1:-1, 2:] - f[:, 2:, 1:-1, :-2]
-            - f[:, :-2, 1:-1, 2:] + f[:, :-2, 1:-1, :-2]
+            f[:, 2:, 1:-1, 2:]
+            - f[:, 2:, 1:-1, :-2]
+            - f[:, :-2, 1:-1, 2:]
+            + f[:, :-2, 1:-1, :-2]
         ) / 4
         fyz = (
-            f[:, 1:-1, 2:, 2:] - f[:, 1:-1, 2:, :-2]
-            - f[:, 1:-1, :-2, 2:] + f[:, 1:-1, :-2, :-2]
+            f[:, 1:-1, 2:, 2:]
+            - f[:, 1:-1, 2:, :-2]
+            - f[:, 1:-1, :-2, 2:]
+            + f[:, 1:-1, :-2, :-2]
         ) / 4
         energy = energy + (
-            fxx * fxx + fyy * fyy + fzz * fzz
-            + 2 * (fxy * fxy + fxz * fxz + fyz * fyz)
+            fxx * fxx + fyy * fyy + fzz * fzz + 2 * (fxy * fxy + fxz * fxz + fyz * fyz)
         )  # (B, D-2, H-2, W-2)
 
-    energy = torch.nn.functional.pad(
-        energy, (1, 1, 1, 1, 1, 1), value=0.0
-    ).unsqueeze(1)
+    energy = torch.nn.functional.pad(energy, (1, 1, 1, 1, 1, 1), value=0.0).unsqueeze(1)
     return (energy * mask).sum() / (mask.sum() + eps)
 
 
