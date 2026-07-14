@@ -31,12 +31,10 @@ from config import TrainingConfig
 
 _POLY_DVF_CACHE: Dict[str, np.ndarray] = {}
 POLY_CACHE_DIR = Path("/home/iml/fryderyk.koegl/data/PSMAReg/polyaffine_cache")
-TP_X = "02"
-TP_Y = "00"
 
 
-def _poly_cache_path(case_id: str, cache_dir: Path) -> Path:
-    path = cache_dir / f"poly_{case_id}_{TP_X}_{TP_Y}.npy"
+def _poly_cache_path(case_id: str, cache_dir: Path, tp_x: str, tp_y: str) -> Path:
+    path = cache_dir / f"poly_{case_id}_{tp_x}_{tp_y}.npy"
     return path
 
 
@@ -88,7 +86,7 @@ def get_polyaffine_dvf(
     cfg = config.TrainingConfig()
     cfg.cache_dir_poly.mkdir(parents=True, exist_ok=True)
 
-    cache_path = _poly_cache_path(case_id, cfg.cache_dir_poly)
+    cache_path = _poly_cache_path(case_id, cfg.cache_dir_poly, tp_x, tp_y)
     if cache_path.exists():
         dvf = np.load(str(cache_path))
         _POLY_DVF_CACHE[mem_key] = dvf.astype(np.float16)
@@ -158,7 +156,9 @@ def create_polyaffine_flow(
     return flow
 
 
-def load_val_pair(val_image_dir, case_id: str) -> Dict[str, torch.Tensor]:
+def load_val_pair(
+    val_image_dir: Path, case_id: str, tp_x: str, tp_y: str
+) -> Dict[str, torch.Tensor]:
     """Load fixed (00) + moving (01) CT+PET pair, body-masked and normalized."""
 
     def load_ct(tp: str) -> np.ndarray:
@@ -171,8 +171,8 @@ def load_val_pair(val_image_dir, case_id: str) -> Dict[str, torch.Tensor]:
         arr = my_data.nib.load(str(path)).get_fdata().astype(np.float32)
         return arr
 
-    x_ct_raw = load_ct(TP_X)
-    y_ct_raw = load_ct(TP_Y)
+    x_ct_raw = load_ct(tp_x)
+    y_ct_raw = load_ct(tp_y)
 
     x_mask = my_data.get_body_mask(x_ct_raw)
     y_mask = my_data.get_body_mask(y_ct_raw)
@@ -184,8 +184,8 @@ def load_val_pair(val_image_dir, case_id: str) -> Dict[str, torch.Tensor]:
         y_ct_raw, y_mask, fill_value=float(np.percentile(y_ct_raw, 0.5))
     )
 
-    x_pet_raw = my_data.apply_body_mask(load_pet(TP_X), x_mask, fill_value=0.0)
-    y_pet_raw = my_data.apply_body_mask(load_pet(TP_Y), y_mask, fill_value=0.0)
+    x_pet_raw = my_data.apply_body_mask(load_pet(tp_x), x_mask, fill_value=0.0)
+    y_pet_raw = my_data.apply_body_mask(load_pet(tp_y), y_mask, fill_value=0.0)
 
     def t(arr: np.ndarray) -> torch.Tensor:
         return torch.from_numpy(arr).unsqueeze(0)
@@ -197,7 +197,7 @@ def load_val_pair(val_image_dir, case_id: str) -> Dict[str, torch.Tensor]:
 
 
 def load_seg(
-    seg_dir, seg_template: str, case_id: str, tp: str, device: torch.device
+    seg_dir: Path, seg_template: str, case_id: str, tp: str, device: torch.device
 ) -> torch.Tensor:
     """Load a multi-label CT segmentation as (1, 1, H, W, D) float tensor."""
     stem = seg_template.format(case_id=case_id, tp=tp)
@@ -210,16 +210,21 @@ def load_seg(
 
 
 def create_affine_flow(
-    case_id: str, val_image_dir, cfg: TrainingConfig, device: torch.device
+    case_id: str,
+    val_image_dir: Path,
+    cfg: TrainingConfig,
+    device: torch.device,
+    tp_x: str,
+    tp_y: str,
 ) -> torch.Tensor:
     """Affine pre-reg flow in the LapIRN unit-flow convention (matches
     inference script)."""
     dvf = affine_reg.get_affine_dvf(
         case_id=case_id,
-        tp_x=TP_X,
-        tp_y=TP_Y,
-        fixed_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{TP_X}.nii.gz",
-        moving_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{TP_Y}.nii.gz",
+        tp_x=tp_x,
+        tp_y=tp_y,
+        fixed_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
+        moving_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
         make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
         preprocess_ct_fn=affine_reg.preprocess_ct,
         ants_affine_to_fullres_voxel_disp_fn=(
@@ -484,6 +489,9 @@ def main() -> None:
     from pathlib import Path
 
     case_id = "0006"
+    tp_x = "02"
+    tp_y = "00"
+
     val_image_dir = Path(
         "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTr"
     )
@@ -517,11 +525,11 @@ def main() -> None:
     transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
 
     # --- load pair + segmentations ---
-    pair = load_val_pair(val_image_dir, case_id)
+    pair = load_val_pair(val_image_dir, case_id, tp_x, tp_y)
     x = pair["x"].unsqueeze(0).to(device).float()
     y = pair["y"].unsqueeze(0).to(device).float()
-    seg_moving = load_seg(seg_dir, seg_template, case_id, TP_X, device)
-    seg_fixed = load_seg(seg_dir, seg_template, case_id, TP_Y, device)
+    seg_moving = load_seg(seg_dir, seg_template, case_id, tp_x, device)
+    seg_fixed = load_seg(seg_dir, seg_template, case_id, tp_y, device)
 
     # --- affine pre-reg (for debug volumes + composition) ---
     flow_affine = create_affine_flow(case_id, val_image_dir, cfg, device)
@@ -539,10 +547,10 @@ def main() -> None:
     def affine_dvf_fn() -> np.ndarray:
         dvf = affine_reg.get_affine_dvf(
             case_id=case_id,
-            tp_x=TP_X,
-            tp_y=TP_Y,
-            fixed_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{TP_X}.nii.gz",
-            moving_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{TP_Y}.nii.gz",
+            tp_x=tp_x,
+            tp_y=tp_y,
+            fixed_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
+            moving_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
             make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
             preprocess_ct_fn=affine_reg.preprocess_ct,
             ants_affine_to_fullres_voxel_disp_fn=(
@@ -553,10 +561,10 @@ def main() -> None:
 
     poly_dvf = get_polyaffine_dvf(
         case_id=case_id,
-        tp_x=TP_X,
-        tp_y=TP_Y,
-        fixed_seg_path=seg_path(TP_Y),
-        moving_seg_path=seg_path(TP_X),
+        tp_x=tp_x,
+        tp_y=tp_y,
+        fixed_seg_path=seg_path(tp_y),
+        moving_seg_path=seg_path(tp_x),
         get_affine_dvf_fn=affine_dvf_fn,
         cfg=cfg,
         device=device,
