@@ -225,14 +225,14 @@ def evaluate_lvl3(
             loss_tlg = utils.tlg_bias_loss(
                 warped_pet_image, warped_pet_mask, moving_pet_image, moving_pet_mask
             )
-            loss_masked_jac = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
+            loss_jacobian_tumor = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
 
             loss = (
                 loss_multiNCC
                 + config.w_jacobian * loss_jacobian
                 + config.w_smooth * loss_regulation
                 + config.w_tlg * loss_tlg
-                + config.w_masked_jac * loss_masked_jac
+                + config.w_jacobian_tumor * loss_jacobian_tumor
             )
             if loss_dice_ct is not None:
                 loss = loss + config.w_dice_ct_lvl3 * loss_dice_ct
@@ -246,7 +246,7 @@ def evaluate_lvl3(
             val_losses["jacobian"] += loss_jacobian.item()
             val_losses["mtv_bias"] += loss_mtv.item()
             val_losses["tlg_bias"] += loss_tlg.item()
-            val_losses["masked_jac"] += loss_masked_jac.item()
+            val_losses["masked_jac"] += loss_jacobian_tumor.item()
             val_losses["ndv"] += ndv
 
             if loss_dice_ct is not None:
@@ -617,7 +617,7 @@ def train_lvl3(
             loss_multiNCC
             + config.w_jacobian * loss_jacobian
             + config.w_smooth * loss_regulation
-            + config.w_masked_jac * loss_masked_jac
+            + config.w_jacobian_tumor * loss_masked_jac
         )
         if loss_dice_ct is not None:
             loss = loss + config.w_dice_ct_lvl3 * loss_dice_ct

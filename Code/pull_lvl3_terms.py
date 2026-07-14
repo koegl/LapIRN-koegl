@@ -72,7 +72,7 @@ def main() -> None:
         ("dice_ct", "train_lvl3/dice_ct_epoch", cfg.w_dice_ct),
         ("smooth", "train_lvl3/smooth_epoch", cfg.w_smooth),
         ("jacobian", "train_lvl3/jacob_epoch", cfg.w_jacobian),
-        ("masked_jac", "train_lvl3/masked_jac_epoch", cfg.w_masked_jac),
+        ("masked_jac", "train_lvl3/masked_jac_epoch", cfg.w_jacobian_tumor),
         ("tlg", "train_lvl3/tlg_bias_epoch", cfg.w_tlg),
         ("dvf", "train_lvl3/dvf_epoch", cfg.w_dvf),
     ]
