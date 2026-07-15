@@ -886,9 +886,6 @@ def train_lvl1(
                 tqdm.tqdm.write(
                     f"step {global_step}: new best dice_ct {best_dice_ct:.4f} -> saved best"
                 )
-                print(
-                    f"step {global_step}: new best dice_ct {best_dice_ct:.4f} -> saved best"
-                )
 
         if config.overfit is False:
             pbar.update(1)
