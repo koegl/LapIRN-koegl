@@ -369,10 +369,6 @@ def train_lvl1(
     epoch_metrics: Dict[str, float] = {}
     n_gated = 0
 
-    # debug: dice split by flip state, to check per-population stationarity
-    flip_dice_sum = {True: 0.0, False: 0.0}
-    flip_dice_n = {True: 0, False: 0}
-
     for global_step in range(start_global_step, total_steps):
         epoch = global_step // steps_per_epoch
         is_epoch_start = global_step % steps_per_epoch == 0
@@ -386,8 +382,6 @@ def train_lvl1(
         if is_epoch_start:
             epoch_metrics = {}
             n_gated = 0
-            flip_dice_sum = {True: 0.0, False: 0.0}
-            flip_dice_n = {True: 0, False: 0}
 
         batch = next(train_iter)
 
@@ -627,103 +621,6 @@ def train_lvl1(
             X_lbl_pet_down, Y_lbl_pet_down, F_X_Y, model.grid_1, transform
         )
 
-        # debug: accumulate dice_ct split by whether this sample was flipped
-        if loss_dice_ct is not None:
-            is_flipped = bool(batch["aug_flipped"][0])
-            flip_dice_sum[is_flipped] += loss_dice_ct.item()
-            flip_dice_n[is_flipped] += 1
-
-        # debug: dice of the CT labels under the prereg flows alone (no network
-        # deformation), evaluated at full resolution on the *original* moving
-        # label (before the flow_prereg warp applied above). flow_prereg is the
-        # composed affine+poly flow that is actually used; flow_affine is the
-        # pure affine flow. Only defined for the real (non-synthetic) branch.
-        debug_interval = 20
-        if False and (
-            not is_synthetic and (global_step % debug_interval == 0 or is_last_step)
-        ):
-            with torch.no_grad():
-                X_lbl_ct_orig = batch["x_label_ct"].to(device).float()
-                loss_dice_ct_poly = utils.dice_loss_with_grad(
-                    X_lbl_ct_orig,
-                    Y_lbl_ct,
-                    flow_prereg.permute(0, 4, 1, 2, 3),
-                    grid_full,
-                    transform,
-                    return_each=True,
-                )
-                loss_dice_ct_affine = utils.dice_loss_with_grad(
-                    X_lbl_ct_orig,
-                    Y_lbl_ct,
-                    flow_affine.permute(0, 4, 1, 2, 3),
-                    grid_full,
-                    transform,
-                    return_each=True,
-                )
-                loss_dice_ct_ori = utils.dice_loss_with_grad(
-                    X_lbl_ct_orig,
-                    Y_lbl_ct,
-                    torch.zeros_like(flow_prereg.permute(0, 4, 1, 2, 3)),
-                    grid_full,
-                    transform,
-                    return_each=True,
-                )
-
-                # full-res composed flow: prereg (outer) o network flow (inner).
-                # F_X_Y is a quarter-res unit flow -> upsample to full res, then
-                # compose as the pipeline warps (network first, prereg after).
-                F_X_Y_full = F.interpolate(
-                    F_X_Y,
-                    size=config.img_shape,
-                    mode="trilinear",
-                    align_corners=True,
-                ).permute(0, 2, 3, 4, 1)
-                full_flow = poly_affine_reg.compose_flows(
-                    flow_prereg, F_X_Y_full, grid_full
-                )
-                loss_dice_ct_composed = utils.dice_loss_with_grad(
-                    X_lbl_ct_orig,
-                    Y_lbl_ct,
-                    full_flow.permute(0, 4, 1, 2, 3),
-                    grid_full,
-                    transform,
-                    return_each=True,
-                )
-
-                # NCC (CT) and NDV (folding) for each of the 4 flow states.
-                body_mask_full = torch.nn.functional.interpolate(
-                    batch["y_body_mask"].to(device),
-                    size=config.img_shape,
-                    mode="nearest",
-                )
-                zero_flow = torch.zeros_like(flow_prereg)
-
-                def _ncc_ndv(flow_unit: torch.Tensor):
-                    warped = transform(X, flow_unit, grid_full)
-                    ncc = loss_similarity_ct(warped[:, 0:1, ...], Y[:, 0:1, ...]).item()
-                    ndv = jacobian.percent_ndv(
-                        transform_unit_flow_to_flow_cuda(flow_unit.clone()),
-                        mask=body_mask_full,
-                    )
-                    return ncc, ndv
-
-                ncc_ori, ndv_ori = _ncc_ndv(zero_flow)
-                ncc_affine, ndv_affine = _ncc_ndv(flow_affine)
-                ncc_poly, ndv_poly = _ncc_ndv(flow_prereg)
-                ncc_composed, ndv_composed = _ncc_ndv(full_flow)
-
-                print(
-                    f"[dbg lvl1 ep{epoch} step{global_step}]\n"
-                    f"  dice_ct ori={loss_dice_ct_ori.mean().item():.4f}\t"
-                    f"affine={loss_dice_ct_affine.mean().item():.4f}\t"
-                    f"poly={loss_dice_ct_poly.mean().item():.4f}\t"
-                    f"composed={loss_dice_ct_composed.mean().item():.4f}\n"
-                    f"  ncc_ct  ori={ncc_ori:.4f}\taffine={ncc_affine:.4f}\t"
-                    f"poly={ncc_poly:.4f}\tcomposed={ncc_composed:.4f}\n"
-                    f"  ndv     ori={ndv_ori:.4f}\taffine={ndv_affine:.4f}\t"
-                    f"poly={ndv_poly:.4f}\tcomposed={ndv_composed:.4f}"
-                )
-
         # update total loss
         loss = (
             loss_multiNCC
@@ -806,28 +703,6 @@ def train_lvl1(
                     for key, value in epoch_metrics.items()
                 },
                 step=global_step,
-            )
-            # debug: dice_ct split by flip state (each should be flat across
-            # epochs when weights are frozen and augmentation is stationary)
-            flip_split_metrics = {
-                "train_lvl1/dice_ct_flipped_n": float(flip_dice_n[True]),
-                "train_lvl1/dice_ct_noflip_n": float(flip_dice_n[False]),
-            }
-            if flip_dice_n[True] > 0:
-                flip_split_metrics["train_lvl1/dice_ct_flipped"] = (
-                    flip_dice_sum[True] / flip_dice_n[True]
-                )
-            if flip_dice_n[False] > 0:
-                flip_split_metrics["train_lvl1/dice_ct_noflip"] = (
-                    flip_dice_sum[False] / flip_dice_n[False]
-                )
-            mlflow.log_metrics(flip_split_metrics, step=global_step)
-            print(
-                f"[flip-split ep{epoch}] "
-                f"flipped: dice={flip_split_metrics.get('train_lvl1/dice_ct_flipped', float('nan')):.4f} "
-                f"(n={flip_dice_n[True]})  "
-                f"noflip: dice={flip_split_metrics.get('train_lvl1/dice_ct_noflip', float('nan')):.4f} "
-                f"(n={flip_dice_n[False]})"
             )
             if config.overfit:
                 print(
