@@ -50,9 +50,9 @@ class TrainingConfig:
     aug_use_flip: bool = True
     aug_use_ct_intensity: bool = True
     aug_use_pet_intensity: bool = True
-    aug_use_z_crop: bool = False
-    aug_use_z_crop_asym: bool = False
-    aug_flip_prob: float = 1.0
+    aug_use_z_crop: bool = True
+    aug_use_z_crop_asym: bool = True
+    aug_flip_prob: float = 0.5
     aug_ct_shift_range: Tuple[float, float] = (
         -0.010,
         0.010,
@@ -71,9 +71,9 @@ class TrainingConfig:
 
     in_channel: int = field(init=False)
     n_classes: int = 3
-    lr_lvl1: float = 0.000
-    lr_lvl2: float = 0.0005
-    lr_lvl3: float = 0.00025
+    lr_lvl1: float = 0.0003
+    lr_lvl2: float = 0.0002
+    lr_lvl3: float = 0.0001
     # linear LR warmup (0 -> full lr) applied at the start of every level,
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
@@ -92,17 +92,17 @@ class TrainingConfig:
     accumulation_steps: int = field(init=False)
 
     # loss weights
-    w_jacobian: float = 1000.0
+    w_jacobian: float = 2000.0
     w_smooth: float = 2.0
-    w_ct: float = 3.0
+    w_ct: float = 5.0
     w_pet: float = 0.0
     w_dice_ct_lvl1: float = 3.0
-    w_dice_ct_lvl2: float = 3.0
-    w_dice_ct_lvl3: float = 3.0
+    w_dice_ct_lvl2: float = 4.0
+    w_dice_ct_lvl3: float = 5.0
     w_dice_pet: float = 0.0
-    w_tlg: float = 0.7
-    w_jacobian_tumor: float = 0.6
-    w_bone_rigidity: float = 0.6
+    w_tlg: float = 2.0
+    w_jacobian_tumor: float = 2.0
+    w_bone_rigidity: float = 2.0
     w_dvf: float = 100.0
 
     dice_pet_iou_threshold: float = 0.1
@@ -111,9 +111,9 @@ class TrainingConfig:
     shuffle: bool = True
     num_workers: int = 8
 
-    lvl1_ncc_win: int = 7
+    lvl1_ncc_win: int = 5
     lvl2_ncc_win: int = 7
-    lvl3_ncc_win: int = 7
+    lvl3_ncc_win: int = 9
 
     mlflow_tracking_uri: str = "sqlite:////home/iml/fryderyk.koegl/code/mlruns.db"
     mlflow_experiment: str = "PSMAReg_LapIRN"
