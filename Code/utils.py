@@ -12,6 +12,28 @@ from miccai2020_model_stage import (
 )
 
 
+def warmup_lr_factor(global_step: int, warmup_steps: int) -> float:
+    """Linear LR warmup factor: ramps 0 -> 1 over the first `warmup_steps`
+    training steps, then stays at 1. `warmup_steps <= 0` disables warmup."""
+    if warmup_steps <= 0:
+        return 1.0
+    return min(1.0, (global_step + 1) / warmup_steps)
+
+
+def apply_warmup_lr(
+    optimizer: torch.optim.Optimizer,
+    base_lr: float,
+    global_step: int,
+    warmup_steps: int,
+) -> float:
+    """Set the optimizer LR to `base_lr` scaled by the linear warmup factor.
+    Returns the LR applied (for logging)."""
+    lr = base_lr * warmup_lr_factor(global_step, warmup_steps)
+    for param_group in optimizer.param_groups:
+        param_group["lr"] = lr
+    return lr
+
+
 def add_jobid_to_mlflow_run() -> None:
     job_id = os.environ.get("SLURM_JOB_ID", "local")
 
@@ -201,6 +223,7 @@ def dice_loss_with_grad(
     grid: torch.Tensor,
     transform: SpatialTransform_unit,
     eps: float = 1e-5,
+    return_each: bool = False,
 ) -> torch.Tensor | None:
     """Per-class soft dice loss with gradients flowing through disp.
 
@@ -249,7 +272,10 @@ def dice_loss_with_grad(
 
         dice_scores.append((2.0 * intersection + eps) / (cardinality + eps))
 
-    return 1.0 - torch.stack(dice_scores).mean()
+    if return_each:
+        return 1.0 - torch.stack(dice_scores)
+    else:
+        return 1.0 - torch.stack(dice_scores).mean()
 
 
 def mtv_bias_loss(
