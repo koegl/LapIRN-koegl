@@ -484,46 +484,25 @@ def print_dice_comparison(dice_a: Dict[int, float], dice_b: Dict[int, float]) ->
     print(f"{'mean':>6} {mean_a:8.4f} {mean_b:9.4f} {mean_b - mean_a:+8.4f}")
 
 
-def main() -> None:
-    # --- config (define here, no argparse) ---
-    from pathlib import Path
+def run_pair(
+    case_id: str,
+    tp_x: str,
+    tp_y: str,
+    val_image_dir: Path,
+    seg_dir: Path,
+    seg_template: str,
+    cfg: TrainingConfig,
+    device: torch.device,
+    grid_full: torch.Tensor,
+    transform: "miccai2020_model_stage.SpatialTransform_unit",
+    transform_nearest: "miccai2020_model_stage.SpatialTransformNearest_unit",
+    out_dir: Path,
+) -> Tuple[Dict[int, float], Dict[int, float]]:
+    """Compute prereg-only per-label dice for a single (case, tp_x->tp_y) pair.
 
-    case_id = "0006"
-    tp_x = "02"
-    tp_y = "00"
-
-    val_image_dir = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTr"
-    )
-    seg_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTr")
-    seg_template = "PSMARegPSMA_{case_id}_0000_{tp}"
-    # seg_template = "{case_id}_{tp}"
-    out_dir = (
-        Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/polyaffine_debug") / case_id
-    )
-
-    # polyaffine params
-    sigma = 8.0  # weight bandwidth in voxels (transition-zone smoothness)
-    w_bg = 0.01  # background/identity anchor weight
-    ss_steps = 6  # scaling-and-squaring steps
-    icp_max_iter = 30
-    icp_tol = 1e-3
-    min_voxels = 200  # skip tiny bone labels
-    max_points = 3000  # surface-point cap per bone for ICP
-
-    cfg = TrainingConfig()
-    cfg.in_channel = 4
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    grid_full = Functions.generate_grid_unit(cfg.img_shape)
-    grid_full = (
-        torch.from_numpy(np.reshape(grid_full, (1,) + grid_full.shape))
-        .to(device)
-        .float()
-    )
-    transform = miccai2020_model_stage.SpatialTransform_unit().to(device)
-    transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
-
+    Returns (dice_affine, dice_poly): affine-only vs affine+polyaffine, each
+    mapping label id -> hard dice against the fixed segmentation. No network.
+    """
     # --- load pair + segmentations ---
     pair = load_val_pair(val_image_dir, case_id, tp_x, tp_y)
     x = pair["x"].unsqueeze(0).to(device).float()
@@ -531,8 +510,8 @@ def main() -> None:
     seg_moving = load_seg(seg_dir, seg_template, case_id, tp_x, device)
     seg_fixed = load_seg(seg_dir, seg_template, case_id, tp_y, device)
 
-    # --- affine pre-reg (for debug volumes + composition) ---
-    flow_affine = create_affine_flow(case_id, val_image_dir, cfg, device)
+    # --- affine pre-reg ---
+    flow_affine = create_affine_flow(case_id, val_image_dir, cfg, device, tp_x, tp_y)
     x_affine = transform(x, flow_affine, grid_full)
     seg_moving_affine = transform_nearest(seg_moving, flow_affine, grid_full)
 
@@ -545,7 +524,7 @@ def main() -> None:
         return p
 
     def affine_dvf_fn() -> np.ndarray:
-        dvf = affine_reg.get_affine_dvf(
+        return affine_reg.get_affine_dvf(
             case_id=case_id,
             tp_x=tp_x,
             tp_y=tp_y,
@@ -557,7 +536,6 @@ def main() -> None:
                 affine_reg.ants_affine_to_fullres_voxel_disp
             ),
         )
-        return dvf
 
     poly_dvf = get_polyaffine_dvf(
         case_id=case_id,
@@ -568,13 +546,6 @@ def main() -> None:
         get_affine_dvf_fn=affine_dvf_fn,
         cfg=cfg,
         device=device,
-        sigma=sigma,
-        w_bg=w_bg,
-        ss_steps=ss_steps,
-        icp_max_iter=icp_max_iter,
-        icp_tol=icp_tol,
-        min_voxels=min_voxels,
-        max_points=max_points,
     )
     flow_poly = create_polyaffine_flow(
         poly_dvf=poly_dvf,
@@ -590,7 +561,7 @@ def main() -> None:
     x_prereg = transform(x, total_flow, grid_full)
     seg_prereg = transform_nearest(seg_moving, total_flow, grid_full)
 
-    # --- dice debug: affine vs affine+polyaffine ---
+    # --- dice: affine vs affine+polyaffine ---
     seg_fixed_i = seg_fixed[0, 0].round().long()
     seg_affine_i = seg_moving_affine[0, 0].round().long()
     seg_poly_i = seg_prereg[0, 0].round().long()
@@ -600,20 +571,113 @@ def main() -> None:
     labels_present = [int(v) for v in present.tolist() if v != 0]
     dice_affine = dice_per_label(seg_affine_i, seg_fixed_i, labels_present)
     dice_poly = dice_per_label(seg_poly_i, seg_fixed_i, labels_present)
-    print_dice_comparison(dice_affine, dice_poly)
 
-    # --- debug volumes (CT channel 0 for images; labels) ---
-    save_volume(y, out_dir, "0_fixed_image")
-    save_volume(x, out_dir, "1_moving_image")
-    save_volume(x_affine, out_dir, "2_affine_moving_image")
-    save_volume(x_prereg, out_dir, "3_polyaffine_moving_image")
+    # --- debug volumes (commented out for the full-dataset sweep) ---
+    # save_volume(y, out_dir, "0_fixed_image")
+    # save_volume(x, out_dir, "1_moving_image")
+    # save_volume(x_affine, out_dir, "2_affine_moving_image")
+    # save_volume(x_prereg, out_dir, "3_polyaffine_moving_image")
+    # save_volume(seg_fixed, out_dir, "0_fixed_label")
+    # save_volume(seg_moving, out_dir, "1_moving_label")
+    # save_volume(seg_moving_affine, out_dir, "2_affine_moving_label")
+    # save_volume(seg_prereg, out_dir, "3_polyaffine_moving_label")
 
-    save_volume(seg_fixed, out_dir, "0_fixed_label")
-    save_volume(seg_moving, out_dir, "1_moving_label")
-    save_volume(seg_moving_affine, out_dir, "2_affine_moving_label")
-    save_volume(seg_prereg, out_dir, "3_polyaffine_moving_label")
+    return dice_affine, dice_poly
 
-    tqdm.tqdm.write(f"debug volumes saved -> {out_dir}")
+
+def main() -> None:
+    # --- config: all paths come from TrainingConfig so this is HPC-portable ---
+    cfg = TrainingConfig()
+    cfg.in_channel = 4
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    val_image_dir = cfg.data_dir / "imagesTr"
+    seg_dir = cfg.data_dir / "labelsTr"
+    seg_template = "PSMARegPSMA_{case_id}_0000_{tp}"
+    out_dir = cfg.save_dir / "polyaffine_debug"
+
+    # polyaffine params: left at get_polyaffine_dvf defaults to match training,
+    # which also uses the defaults.
+
+    grid_full = Functions.generate_grid_unit(cfg.img_shape)
+    grid_full = (
+        torch.from_numpy(np.reshape(grid_full, (1,) + grid_full.shape))
+        .to(device)
+        .float()
+    )
+    transform = miccai2020_model_stage.SpatialTransform_unit().to(device)
+    transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
+
+    # --- enumerate the training pairs exactly like the trainer does ---
+    case_timepoints = my_data.list_case_timepoints(cfg.data_dir)
+    train_ids, _ = my_data.get_train_val_split(cfg.data_dir, cfg.split_path)
+    pairs = my_data.build_registration_pairs(
+        case_timepoints, case_ids=train_ids, include_intermediate_pairs=True
+    )
+    print(f"train cases: {len(train_ids)}  registration pairs: {len(pairs)}")
+
+    # per-pair means and the whole per-label pool (for a global mean)
+    rows: List[Tuple[str, str, str, float, float]] = []
+    all_affine: List[float] = []
+    all_poly: List[float] = []
+    n_poly_worse = 0
+
+    for case_id, tp_x, tp_y in tqdm.tqdm(pairs, desc="prereg dice sweep"):
+        try:
+            dice_affine, dice_poly = run_pair(
+                case_id=case_id,
+                tp_x=tp_x,
+                tp_y=tp_y,
+                val_image_dir=val_image_dir,
+                seg_dir=seg_dir,
+                seg_template=seg_template,
+                cfg=cfg,
+                device=device,
+                grid_full=grid_full,
+                transform=transform,
+                transform_nearest=transform_nearest,
+                out_dir=out_dir / f"{case_id}_{tp_x}_{tp_y}",
+            )
+        except Exception as exc:  # keep the sweep alive on HPC
+            tqdm.tqdm.write(f"[WARN] {case_id} {tp_x}->{tp_y} failed: {exc}")
+            continue
+
+        labels = sorted(set(dice_affine) | set(dice_poly))
+        a_vals = [dice_affine[k] for k in labels if k in dice_affine]
+        p_vals = [dice_poly[k] for k in labels if k in dice_poly]
+        mean_a = float(np.mean(a_vals)) if a_vals else float("nan")
+        mean_p = float(np.mean(p_vals)) if p_vals else float("nan")
+        all_affine.extend(a_vals)
+        all_poly.extend(p_vals)
+        if mean_p < mean_a:  # remember: higher hard-dice is better here
+            n_poly_worse += 1
+        rows.append((case_id, tp_x, tp_y, mean_a, mean_p))
+        tqdm.tqdm.write(
+            f"{case_id} {tp_x}->{tp_y}  "
+            f"affine={mean_a:.4f}  poly={mean_p:.4f}  delta={mean_p - mean_a:+.4f}"
+        )
+
+    # --- summary ---
+    print("\n================ SUMMARY (hard dice, higher = better) ================")
+    print(f"pairs evaluated:            {len(rows)}")
+    if rows:
+        pair_a = np.array([r[3] for r in rows])
+        pair_p = np.array([r[4] for r in rows])
+        print(f"per-pair mean  affine:      {np.nanmean(pair_a):.4f}")
+        print(f"per-pair mean  poly:        {np.nanmean(pair_p):.4f}")
+        print(f"per-label mean affine:      {np.mean(all_affine):.4f}")
+        print(f"per-label mean poly:        {np.mean(all_poly):.4f}")
+        print(
+            f"pairs where poly < affine:  {n_poly_worse} / {len(rows)} "
+            f"({100.0 * n_poly_worse / len(rows):.1f}%)"
+        )
+        worst = sorted(rows, key=lambda r: r[4] - r[3])[:10]
+        print("\nworst poly regressions (poly - affine):")
+        for case_id, tp_x, tp_y, mean_a, mean_p in worst:
+            print(
+                f"  {case_id} {tp_x}->{tp_y}  "
+                f"affine={mean_a:.4f}  poly={mean_p:.4f}  delta={mean_p - mean_a:+.4f}"
+            )
 
 
 if __name__ == "__main__":
