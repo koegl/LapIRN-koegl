@@ -330,27 +330,40 @@ def apply_augmentation_to_dvf(
     flipped: bool,
     crop_head: int,
     crop_feet: int,
+    crop_head_fixed: int = 0,
+    crop_feet_fixed: int = 0,
 ) -> np.ndarray:
     """Apply the same augmentation that was applied to the images to a DVF.
 
     Call this after get_affine_dvf to ensure the DVF stays consistent with
-    the augmented images. The augmentation parameters (flipped, crop_head,
-    crop_feet) must match those used in ZAxisFOVCropd and RandFlipd for
-    this sample.
+    the augmented images. The DVF/flow is indexed in the fixed (output) space
+    (SpatialTransform samples the moving at grid+flow), so it must mirror the
+    exact crop sequence applied to the *fixed* image: first the symmetric
+    z-crop (applied to all keys), then the asymmetric fixed-only z-crop. The
+    moving-only asymmetric crop is NOT applied here: it is handled by cropping
+    the moving image that the flow samples from.
 
     Args:
         dvf: Displacement field of shape (H, W, D, 3).
         flipped: Whether a left-right flip was applied to the images.
-        crop_head: Slices removed from the superior end.
-        crop_feet: Slices removed from the inferior end.
+        crop_head: Symmetric slices removed from the superior end (all keys).
+        crop_feet: Symmetric slices removed from the inferior end (all keys).
+        crop_head_fixed: Additional asymmetric slices removed from the fixed
+            image's superior end (0 if asymmetric crop is disabled).
+        crop_feet_fixed: Additional asymmetric slices removed from the fixed
+            image's inferior end.
 
     Returns:
         Augmentation-consistent DVF of same shape.
     """
     if flipped:
         dvf = flip_dvf_lr(dvf)
+    # mirror the fixed image's crop sequence exactly: symmetric first, then
+    # the asymmetric fixed-only crop (matches apply_z_crop order in __getitem__)
     if crop_head > 0 or crop_feet > 0:
         dvf = crop_dvf_z(dvf, crop_head, crop_feet)
+    if crop_head_fixed > 0 or crop_feet_fixed > 0:
+        dvf = crop_dvf_z(dvf, crop_head_fixed, crop_feet_fixed)
     return dvf
 
 
@@ -383,6 +396,8 @@ def create_affine_flow(
     aug_flipped: bool,
     aug_crop_head: int,
     aug_crop_feet: int,
+    aug_crop_head_fixed: int = 0,
+    aug_crop_feet_fixed: int = 0,
 ) -> torch.Tensor:
     """Load images/labels from a batch and apply the cached affine DVF.
 
@@ -425,6 +440,8 @@ def create_affine_flow(
         flipped=aug_flipped,
         crop_head=aug_crop_head,
         crop_feet=aug_crop_feet,
+        crop_head_fixed=aug_crop_head_fixed,
+        crop_feet_fixed=aug_crop_feet_fixed,
     )
 
     dvf_tensor = dvf_to_tensor(dvf, device)

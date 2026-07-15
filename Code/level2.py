@@ -98,6 +98,8 @@ def evaluate_lvl2(
                 aug_flipped=batch["aug_flipped"],
                 aug_crop_head=batch["aug_crop_head"],
                 aug_crop_feet=batch["aug_crop_feet"],
+                aug_crop_head_fixed=batch["aug_crop_head_fixed"],
+                aug_crop_feet_fixed=batch["aug_crop_feet_fixed"],
             )
 
             if config.use_poly_affine is False:
@@ -137,6 +139,8 @@ def evaluate_lvl2(
                     aug_flipped=batch["aug_flipped"],
                     aug_crop_head=batch["aug_crop_head"],
                     aug_crop_feet=batch["aug_crop_feet"],
+                    aug_crop_head_fixed=batch["aug_crop_head_fixed"],
+                    aug_crop_feet_fixed=batch["aug_crop_feet_fixed"],
                     cfg=config,
                     device=device,
                 )
@@ -483,6 +487,8 @@ def train_lvl2(
                 aug_flipped=batch["aug_flipped"],
                 aug_crop_head=batch["aug_crop_head"],
                 aug_crop_feet=batch["aug_crop_feet"],
+                aug_crop_head_fixed=batch["aug_crop_head_fixed"],
+                aug_crop_feet_fixed=batch["aug_crop_feet_fixed"],
             )
             flow_affine = flow_prereg.clone()
 
@@ -523,6 +529,8 @@ def train_lvl2(
                     aug_flipped=batch["aug_flipped"],
                     aug_crop_head=batch["aug_crop_head"],
                     aug_crop_feet=batch["aug_crop_feet"],
+                    aug_crop_head_fixed=batch["aug_crop_head_fixed"],
+                    aug_crop_feet_fixed=batch["aug_crop_feet_fixed"],
                     cfg=config,
                     device=device,
                 )

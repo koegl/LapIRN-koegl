@@ -138,6 +138,8 @@ def create_polyaffine_flow(
     aug_crop_feet: int,
     cfg: TrainingConfig,
     device: torch.device,
+    aug_crop_head_fixed: int = 0,
+    aug_crop_feet_fixed: int = 0,
 ) -> torch.Tensor:
     """Canonical poly DVF -> augmented unit flow, transported with the same
     augmentation machinery as the affine flow."""
@@ -146,6 +148,8 @@ def create_polyaffine_flow(
         flipped=aug_flipped,
         crop_head=aug_crop_head,
         crop_feet=aug_crop_feet,
+        crop_head_fixed=aug_crop_head_fixed,
+        crop_feet_fixed=aug_crop_feet_fixed,
     )
     dvf_tensor = affine_reg.dvf_to_tensor(dvf_aug, device)
     h, w, d = cfg.img_shape
