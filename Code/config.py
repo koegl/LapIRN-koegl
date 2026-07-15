@@ -52,7 +52,7 @@ class TrainingConfig:
     aug_use_pet_intensity: bool = True
     aug_use_z_crop: bool = False
     aug_use_z_crop_asym: bool = False
-    aug_flip_prob: float = 1.0
+    aug_flip_prob: float = 0.5
     aug_ct_shift_range: Tuple[float, float] = (
         -0.010,
         0.010,
