@@ -219,12 +219,13 @@ def create_affine_flow(
 ) -> torch.Tensor:
     """Affine pre-reg flow in the LapIRN unit-flow convention (matches
     inference script)."""
+    # tp_x is moving, tp_y is fixed (matches training / get_affine_dvf docstring)
     dvf = affine_reg.get_affine_dvf(
         case_id=case_id,
         tp_x=tp_x,
         tp_y=tp_y,
-        fixed_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
-        moving_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
+        fixed_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
+        moving_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
         make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
         preprocess_ct_fn=affine_reg.preprocess_ct,
         ants_affine_to_fullres_voxel_disp_fn=(
@@ -497,11 +498,12 @@ def run_pair(
     transform: "miccai2020_model_stage.SpatialTransform_unit",
     transform_nearest: "miccai2020_model_stage.SpatialTransformNearest_unit",
     out_dir: Path,
-) -> Tuple[Dict[int, float], Dict[int, float]]:
+) -> Tuple[Dict[int, float], Dict[int, float], Dict[int, float]]:
     """Compute prereg-only per-label dice for a single (case, tp_x->tp_y) pair.
 
-    Returns (dice_affine, dice_poly): affine-only vs affine+polyaffine, each
-    mapping label id -> hard dice against the fixed segmentation. No network.
+    Returns (dice_ori, dice_affine, dice_poly): no-warp vs affine-only vs
+    affine+polyaffine, each mapping label id -> hard dice against the fixed
+    segmentation. No network.
     """
     # --- load pair + segmentations ---
     pair = load_val_pair(val_image_dir, case_id, tp_x, tp_y)
@@ -524,12 +526,13 @@ def run_pair(
         return p
 
     def affine_dvf_fn() -> np.ndarray:
+        # tp_x is moving, tp_y is fixed (matches training / get_affine_dvf)
         return affine_reg.get_affine_dvf(
             case_id=case_id,
             tp_x=tp_x,
             tp_y=tp_y,
-            fixed_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
-            moving_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
+            fixed_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
+            moving_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
             make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
             preprocess_ct_fn=affine_reg.preprocess_ct,
             ants_affine_to_fullres_voxel_disp_fn=(
@@ -561,14 +564,21 @@ def run_pair(
     x_prereg = transform(x, total_flow, grid_full)
     seg_prereg = transform_nearest(seg_moving, total_flow, grid_full)
 
-    # --- dice: affine vs affine+polyaffine ---
+    # --- dice: initial (no warp) vs affine vs affine+polyaffine ---
     seg_fixed_i = seg_fixed[0, 0].round().long()
+    seg_moving_i = seg_moving[0, 0].round().long()
     seg_affine_i = seg_moving_affine[0, 0].round().long()
     seg_poly_i = seg_prereg[0, 0].round().long()
     present = torch.cat(
-        [seg_fixed_i.unique(), seg_affine_i.unique(), seg_poly_i.unique()]
+        [
+            seg_fixed_i.unique(),
+            seg_moving_i.unique(),
+            seg_affine_i.unique(),
+            seg_poly_i.unique(),
+        ]
     ).unique()
     labels_present = [int(v) for v in present.tolist() if v != 0]
+    dice_ori = dice_per_label(seg_moving_i, seg_fixed_i, labels_present)
     dice_affine = dice_per_label(seg_affine_i, seg_fixed_i, labels_present)
     dice_poly = dice_per_label(seg_poly_i, seg_fixed_i, labels_present)
 
@@ -582,7 +592,7 @@ def run_pair(
     # save_volume(seg_moving_affine, out_dir, "2_affine_moving_label")
     # save_volume(seg_prereg, out_dir, "3_polyaffine_moving_label")
 
-    return dice_affine, dice_poly
+    return dice_ori, dice_affine, dice_poly
 
 
 def main() -> None:
@@ -617,14 +627,15 @@ def main() -> None:
     print(f"train cases: {len(train_ids)}  registration pairs: {len(pairs)}")
 
     # per-pair means and the whole per-label pool (for a global mean)
-    rows: List[Tuple[str, str, str, float, float]] = []
+    rows: List[Tuple[str, str, str, float, float, float]] = []
+    all_ori: List[float] = []
     all_affine: List[float] = []
     all_poly: List[float] = []
     n_poly_worse = 0
 
     for case_id, tp_x, tp_y in tqdm.tqdm(pairs, desc="prereg dice sweep"):
         try:
-            dice_affine, dice_poly = run_pair(
+            dice_ori, dice_affine, dice_poly = run_pair(
                 case_id=case_id,
                 tp_x=tp_x,
                 tp_y=tp_y,
@@ -642,41 +653,49 @@ def main() -> None:
             tqdm.tqdm.write(f"[WARN] {case_id} {tp_x}->{tp_y} failed: {exc}")
             continue
 
-        labels = sorted(set(dice_affine) | set(dice_poly))
+        labels = sorted(set(dice_ori) | set(dice_affine) | set(dice_poly))
+        o_vals = [dice_ori[k] for k in labels if k in dice_ori]
         a_vals = [dice_affine[k] for k in labels if k in dice_affine]
         p_vals = [dice_poly[k] for k in labels if k in dice_poly]
+        mean_o = float(np.mean(o_vals)) if o_vals else float("nan")
         mean_a = float(np.mean(a_vals)) if a_vals else float("nan")
         mean_p = float(np.mean(p_vals)) if p_vals else float("nan")
+        all_ori.extend(o_vals)
         all_affine.extend(a_vals)
         all_poly.extend(p_vals)
         if mean_p < mean_a:  # remember: higher hard-dice is better here
             n_poly_worse += 1
-        rows.append((case_id, tp_x, tp_y, mean_a, mean_p))
+        rows.append((case_id, tp_x, tp_y, mean_o, mean_a, mean_p))
         tqdm.tqdm.write(
             f"{case_id} {tp_x}->{tp_y}  "
-            f"affine={mean_a:.4f}  poly={mean_p:.4f}  delta={mean_p - mean_a:+.4f}"
+            f"ori={mean_o:.4f}  affine={mean_a:.4f}  poly={mean_p:.4f}  "
+            f"delta(poly-affine)={mean_p - mean_a:+.4f}"
         )
 
     # --- summary ---
     print("\n================ SUMMARY (hard dice, higher = better) ================")
     print(f"pairs evaluated:            {len(rows)}")
     if rows:
-        pair_a = np.array([r[3] for r in rows])
-        pair_p = np.array([r[4] for r in rows])
+        pair_o = np.array([r[3] for r in rows])
+        pair_a = np.array([r[4] for r in rows])
+        pair_p = np.array([r[5] for r in rows])
+        print(f"per-pair mean  ori:         {np.nanmean(pair_o):.4f}")
         print(f"per-pair mean  affine:      {np.nanmean(pair_a):.4f}")
         print(f"per-pair mean  poly:        {np.nanmean(pair_p):.4f}")
+        print(f"per-label mean ori:         {np.mean(all_ori):.4f}")
         print(f"per-label mean affine:      {np.mean(all_affine):.4f}")
         print(f"per-label mean poly:        {np.mean(all_poly):.4f}")
         print(
             f"pairs where poly < affine:  {n_poly_worse} / {len(rows)} "
             f"({100.0 * n_poly_worse / len(rows):.1f}%)"
         )
-        worst = sorted(rows, key=lambda r: r[4] - r[3])[:10]
+        worst = sorted(rows, key=lambda r: r[5] - r[4])[:10]
         print("\nworst poly regressions (poly - affine):")
-        for case_id, tp_x, tp_y, mean_a, mean_p in worst:
+        for case_id, tp_x, tp_y, mean_o, mean_a, mean_p in worst:
             print(
                 f"  {case_id} {tp_x}->{tp_y}  "
-                f"affine={mean_a:.4f}  poly={mean_p:.4f}  delta={mean_p - mean_a:+.4f}"
+                f"ori={mean_o:.4f}  affine={mean_a:.4f}  poly={mean_p:.4f}  "
+                f"delta={mean_p - mean_a:+.4f}"
             )
 
 
