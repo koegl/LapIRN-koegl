@@ -677,7 +677,9 @@ class SyntheticSourceDataset(torch_data.Dataset):
         return len(self.sources)
 
     def __getitem__(self, index: int) -> dict:
-        s = self.dataset[index]
+        # shallow-copy so augmentation key-reassignments do not mutate the
+        # cached sample in place (CacheDataset returns a shared reference)
+        s = dict(self.dataset[index])
 
         spatial_keys = ["ct", "pet", "label_ct", "label_pet", "body_map", "body_mask"]
 
@@ -845,7 +847,9 @@ class PSMARegDataset(torch_data.Dataset):
         return len(self.pairs)
 
     def __getitem__(self, index: int) -> dict:
-        data = self.dataset[index]
+        # shallow-copy so augmentation key-reassignments do not mutate the
+        # cached sample in place (CacheDataset returns a shared reference)
+        data = dict(self.dataset[index])
 
         all_spatial_keys = [
             "x_ct",
