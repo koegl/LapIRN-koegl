@@ -256,8 +256,10 @@ def dice_loss_with_grad(
         moving_c = (moving_label == c).float()
         fixed_c = (fixed_label == c).float()
 
-        # skip if both are empty (matches challenge convention)
-        if fixed_c.sum() == 0 and moving_c.sum() == 0:
+        # skip if either label is empty: a class present in only one image
+        # (e.g. cropped out of the moving by augmentation) yields dice~0 with
+        # no usable registration gradient and only biases the mean.
+        if fixed_c.sum() == 0 or moving_c.sum() == 0:
             continue
 
         warped_c = transform(moving_c, flow, grid)
@@ -265,12 +267,11 @@ def dice_loss_with_grad(
         intersection = (warped_c * fixed_c).sum()
         cardinality = warped_c.sum() + fixed_c.sum()
 
-        # if fixed is empty but moving is not (or vice versa), dice = 0
-        if fixed_c.sum() == 0:
-            dice_scores.append(torch.tensor(0.0, device=disp.device))
-            continue
-
         dice_scores.append((2.0 * intersection + eps) / (cardinality + eps))
+
+    # every class was skipped (no overlapping labels present)
+    if len(dice_scores) == 0:
+        return None
 
     if return_each:
         return 1.0 - torch.stack(dice_scores)
