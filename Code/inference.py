@@ -822,8 +822,8 @@ def main() -> None:
 
     use_io: bool = True
     use_class_weights = True
-    io_lr: float = 4e-1
-    io_it: float = 100
+    io_lr: float = 5e-1
+    io_it: float = 60
     if use_io:
         model_name += "_IO_"
         model_name += f"lr{io_lr:.1e}_it{io_it}_wncc{cfg.w_ct:.2f}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct_lvl3:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_jacobian_tumor:.2f}"
