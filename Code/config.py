@@ -47,7 +47,7 @@ class TrainingConfig:
 
     # augmentation
     augment: bool = True
-    aug_use_flip: bool = True
+    aug_use_flip: bool = False
     aug_use_ct_intensity: bool = True
     aug_use_pet_intensity: bool = True
     aug_use_z_crop: bool = False
