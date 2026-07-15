@@ -89,7 +89,7 @@ def evaluate_lvl1(
             tp_y: str = batch["tp_y"][0]
             tp_x: str = batch["tp_x"][0]
 
-            flow_affine = affine_reg.create_affine_flow(
+            flow_prereg = affine_reg.create_affine_flow(
                 config=config,
                 device=device,
                 case_id=case_id,
@@ -101,7 +101,7 @@ def evaluate_lvl1(
             )
 
             if config.use_poly_affine is False:
-                X_prereg = transform(X, flow_affine, grid_full)
+                X_prereg = transform(X, flow_prereg, grid_full)
             else:
                 poly_dvf = poly_affine_reg.get_polyaffine_dvf(
                     case_id=case_id,
@@ -140,11 +140,11 @@ def evaluate_lvl1(
                     cfg=config,
                     device=device,
                 )
-                flow_total = poly_affine_reg.compose_flows(
-                    flow_affine, flow_poly, grid_full
+                flow_prereg = poly_affine_reg.compose_flows(
+                    flow_prereg, flow_poly, grid_full
                 )
 
-                X_prereg = transform(X, flow_total, grid_full)
+                X_prereg = transform(X, flow_prereg, grid_full)
 
             F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_prereg, Y)
 
@@ -200,8 +200,8 @@ def evaluate_lvl1(
             F_xy[:, 2, :, :, :] = F_xy[:, 2, :, :, :] * (x - 1)
             loss_regulation = loss_smooth(F_xy)
 
-            X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_affine, grid_full)
-            X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_affine, grid_full)
+            X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_prereg, grid_full)
+            X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_prereg, grid_full)
 
             X_lbl_ct_down = utils.downsample_label(
                 X_lbl_ct.to(device), scale_factor=0.25
@@ -430,7 +430,7 @@ def train_lvl1(
             tp_y: str = batch["tp_y"][0]
             tp_x: str = batch["tp_x"][0]
 
-            flow_affine = affine_reg.create_affine_flow(
+            flow_prereg = affine_reg.create_affine_flow(
                 config=config,
                 device=device,
                 case_id=case_id,
@@ -440,9 +440,10 @@ def train_lvl1(
                 aug_crop_head=batch["aug_crop_head"],
                 aug_crop_feet=batch["aug_crop_feet"],
             )
+            flow_affine = flow_prereg.clone()
 
             if config.use_poly_affine is False:
-                X_prereg = transform(X, flow_affine, grid_full)
+                X_prereg = transform(X, flow_prereg, grid_full)
             else:
                 poly_dvf = poly_affine_reg.get_polyaffine_dvf(
                     case_id=case_id,
@@ -481,11 +482,11 @@ def train_lvl1(
                     cfg=config,
                     device=device,
                 )
-                flow_total = poly_affine_reg.compose_flows(
-                    flow_affine, flow_poly, grid_full
+                flow_prereg = poly_affine_reg.compose_flows(
+                    flow_prereg, flow_poly, grid_full
                 )
 
-                X_prereg = transform(X, flow_total, grid_full)
+                X_prereg = transform(X, flow_prereg, grid_full)
 
         F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_prereg, Y)
 
@@ -546,8 +547,8 @@ def train_lvl1(
         # synthetic labels are already in the (deformed) moving frame; the
         # real branch needs the affine applied first
         if not is_synthetic:
-            X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_affine, grid_full)
-            X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_affine, grid_full)
+            X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_prereg, grid_full)
+            X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_prereg, grid_full)
 
         if is_synthetic:
             use_dice_pet = True
@@ -556,7 +557,7 @@ def train_lvl1(
             pet_iou = utils.affine_pet_iou(
                 batch["x_label_pet"].to(device),
                 Y_lbl_pet,
-                flow_affine,
+                flow_prereg,
                 grid_full,
                 transform_nearest,
             )
@@ -605,6 +606,97 @@ def train_lvl1(
         loss_dice_pet = utils.dice_loss_with_grad(
             X_lbl_pet_down, Y_lbl_pet_down, F_X_Y, model.grid_1, transform
         )
+
+        # debug: dice of the CT labels under the prereg flows alone (no network
+        # deformation), evaluated at full resolution on the *original* moving
+        # label (before the flow_prereg warp applied above). flow_prereg is the
+        # composed affine+poly flow that is actually used; flow_affine is the
+        # pure affine flow. Only defined for the real (non-synthetic) branch.
+        debug_interval = 20
+        if False and (
+            not is_synthetic and (global_step % debug_interval == 0 or is_last_step)
+        ):
+            with torch.no_grad():
+                X_lbl_ct_orig = batch["x_label_ct"].to(device).float()
+                loss_dice_ct_poly = utils.dice_loss_with_grad(
+                    X_lbl_ct_orig,
+                    Y_lbl_ct,
+                    flow_prereg.permute(0, 4, 1, 2, 3),
+                    grid_full,
+                    transform,
+                    return_each=True,
+                )
+                loss_dice_ct_affine = utils.dice_loss_with_grad(
+                    X_lbl_ct_orig,
+                    Y_lbl_ct,
+                    flow_affine.permute(0, 4, 1, 2, 3),
+                    grid_full,
+                    transform,
+                    return_each=True,
+                )
+                loss_dice_ct_ori = utils.dice_loss_with_grad(
+                    X_lbl_ct_orig,
+                    Y_lbl_ct,
+                    torch.zeros_like(flow_prereg.permute(0, 4, 1, 2, 3)),
+                    grid_full,
+                    transform,
+                    return_each=True,
+                )
+
+                # full-res composed flow: prereg (outer) o network flow (inner).
+                # F_X_Y is a quarter-res unit flow -> upsample to full res, then
+                # compose as the pipeline warps (network first, prereg after).
+                F_X_Y_full = F.interpolate(
+                    F_X_Y,
+                    size=config.img_shape,
+                    mode="trilinear",
+                    align_corners=True,
+                ).permute(0, 2, 3, 4, 1)
+                full_flow = poly_affine_reg.compose_flows(
+                    flow_prereg, F_X_Y_full, grid_full
+                )
+                loss_dice_ct_composed = utils.dice_loss_with_grad(
+                    X_lbl_ct_orig,
+                    Y_lbl_ct,
+                    full_flow.permute(0, 4, 1, 2, 3),
+                    grid_full,
+                    transform,
+                    return_each=True,
+                )
+
+                # NCC (CT) and NDV (folding) for each of the 4 flow states.
+                body_mask_full = torch.nn.functional.interpolate(
+                    batch["y_body_mask"].to(device),
+                    size=config.img_shape,
+                    mode="nearest",
+                )
+                zero_flow = torch.zeros_like(flow_prereg)
+
+                def _ncc_ndv(flow_unit: torch.Tensor):
+                    warped = transform(X, flow_unit, grid_full)
+                    ncc = loss_similarity_ct(warped[:, 0:1, ...], Y[:, 0:1, ...]).item()
+                    ndv = jacobian.percent_ndv(
+                        transform_unit_flow_to_flow_cuda(flow_unit.clone()),
+                        mask=body_mask_full,
+                    )
+                    return ncc, ndv
+
+                ncc_ori, ndv_ori = _ncc_ndv(zero_flow)
+                ncc_affine, ndv_affine = _ncc_ndv(flow_affine)
+                ncc_poly, ndv_poly = _ncc_ndv(flow_prereg)
+                ncc_composed, ndv_composed = _ncc_ndv(full_flow)
+
+                print(
+                    f"[dbg lvl1 ep{epoch} step{global_step}]\n"
+                    f"  dice_ct ori={loss_dice_ct_ori.mean().item():.4f}\t"
+                    f"affine={loss_dice_ct_affine.mean().item():.4f}\t"
+                    f"poly={loss_dice_ct_poly.mean().item():.4f}\t"
+                    f"composed={loss_dice_ct_composed.mean().item():.4f}\n"
+                    f"  ncc_ct  ori={ncc_ori:.4f}\taffine={ncc_affine:.4f}\t"
+                    f"poly={ncc_poly:.4f}\tcomposed={ncc_composed:.4f}\n"
+                    f"  ndv     ori={ndv_ori:.4f}\taffine={ndv_affine:.4f}\t"
+                    f"poly={ndv_poly:.4f}\tcomposed={ndv_composed:.4f}"
+                )
 
         # update total loss
         loss = (
@@ -687,10 +779,10 @@ def train_lvl1(
             )
             if config.overfit:
                 print(
-                    f"ep: {epoch} "
-                    f"ncc={epoch_metrics['train_lvl1/ncc_ct'] * config.w_ct:.4f} "
-                    f"dice={epoch_metrics['train_lvl1/dice_ct'] * config.w_dice_ct_lvl1:.4f} "
-                    f"jacob={epoch_metrics['train_lvl1/jacob'] * config.w_jacobian:.6f} "
+                    f"ep: {epoch}\t"
+                    f"ncc={epoch_metrics['train_lvl1/ncc_ct']:.4f}; ncc_weighted={epoch_metrics['train_lvl1/ncc_ct'] * config.w_ct:.4f}\t"
+                    f"dice={epoch_metrics['train_lvl1/dice_ct']:.4f}; dice_weighted={epoch_metrics['train_lvl1/dice_ct'] * config.w_dice_ct_lvl1:.4f}\t"
+                    f"jacob={epoch_metrics['train_lvl1/jacob']:.6f}; jacob_weighted={epoch_metrics['train_lvl1/jacob'] * config.w_jacobian:.6f} "
                 )
 
         if config.overfit is False and (
