@@ -369,6 +369,10 @@ def train_lvl1(
     epoch_metrics: Dict[str, float] = {}
     n_gated = 0
 
+    # debug: dice split by flip state, to check per-population stationarity
+    flip_dice_sum = {True: 0.0, False: 0.0}
+    flip_dice_n = {True: 0, False: 0}
+
     for global_step in range(start_global_step, total_steps):
         epoch = global_step // steps_per_epoch
         is_epoch_start = global_step % steps_per_epoch == 0
@@ -382,6 +386,8 @@ def train_lvl1(
         if is_epoch_start:
             epoch_metrics = {}
             n_gated = 0
+            flip_dice_sum = {True: 0.0, False: 0.0}
+            flip_dice_n = {True: 0, False: 0}
 
         batch = next(train_iter)
 
@@ -621,6 +627,12 @@ def train_lvl1(
             X_lbl_pet_down, Y_lbl_pet_down, F_X_Y, model.grid_1, transform
         )
 
+        # debug: accumulate dice_ct split by whether this sample was flipped
+        if loss_dice_ct is not None:
+            is_flipped = bool(batch["aug_flipped"][0])
+            flip_dice_sum[is_flipped] += loss_dice_ct.item()
+            flip_dice_n[is_flipped] += 1
+
         # debug: dice of the CT labels under the prereg flows alone (no network
         # deformation), evaluated at full resolution on the *original* moving
         # label (before the flow_prereg warp applied above). flow_prereg is the
@@ -794,6 +806,28 @@ def train_lvl1(
                     for key, value in epoch_metrics.items()
                 },
                 step=global_step,
+            )
+            # debug: dice_ct split by flip state (each should be flat across
+            # epochs when weights are frozen and augmentation is stationary)
+            flip_split_metrics = {
+                "train_lvl1/dice_ct_flipped_n": float(flip_dice_n[True]),
+                "train_lvl1/dice_ct_noflip_n": float(flip_dice_n[False]),
+            }
+            if flip_dice_n[True] > 0:
+                flip_split_metrics["train_lvl1/dice_ct_flipped"] = (
+                    flip_dice_sum[True] / flip_dice_n[True]
+                )
+            if flip_dice_n[False] > 0:
+                flip_split_metrics["train_lvl1/dice_ct_noflip"] = (
+                    flip_dice_sum[False] / flip_dice_n[False]
+                )
+            mlflow.log_metrics(flip_split_metrics, step=global_step)
+            print(
+                f"[flip-split ep{epoch}] "
+                f"flipped: dice={flip_split_metrics.get('train_lvl1/dice_ct_flipped', float('nan')):.4f} "
+                f"(n={flip_dice_n[True]})  "
+                f"noflip: dice={flip_split_metrics.get('train_lvl1/dice_ct_noflip', float('nan')):.4f} "
+                f"(n={flip_dice_n[False]})"
             )
             if config.overfit:
                 print(
