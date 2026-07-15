@@ -47,11 +47,11 @@ class TrainingConfig:
 
     # augmentation
     augment: bool = True
-    aug_use_flip: bool = False
+    aug_use_flip: bool = True
     aug_use_ct_intensity: bool = True
     aug_use_pet_intensity: bool = True
-    aug_use_z_crop: bool = False
-    aug_use_z_crop_asym: bool = False
+    aug_use_z_crop: bool = True
+    aug_use_z_crop_asym: bool = True
     aug_flip_prob: float = 0.5
     aug_ct_shift_range: Tuple[float, float] = (
         -0.010,
@@ -109,7 +109,7 @@ class TrainingConfig:
 
     batch_size: int = 1
     shuffle: bool = True
-    num_workers: int = 8
+    num_workers: int = 0
 
     lvl1_ncc_win: int = 7
     lvl2_ncc_win: int = 7
