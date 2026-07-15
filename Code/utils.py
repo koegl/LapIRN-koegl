@@ -40,7 +40,7 @@ def add_jobid_to_mlflow_run() -> None:
     auto_name = str(mlflow.active_run().info.run_name)
     auto_name_no_id = auto_name.rsplit("-", 1)[0]
 
-    new_name = f"{auto_name_no_id}_{job_id}"
+    new_name = f"{auto_name_no_id}-{job_id}"
 
     mlflow.set_tag("mlflow.runName", new_name)
     mlflow.set_tag("slurm_job_id", job_id)
