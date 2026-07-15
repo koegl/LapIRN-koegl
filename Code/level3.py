@@ -398,6 +398,14 @@ def train_lvl3(
 
     train_iter = utils.cycle(train_generator)
 
+    warmup_steps = int(round(config.warmup_epochs * steps_per_epoch))
+    if config.warmup_epochs >= config.unfreeze_epoch_in_lvl3:
+        print(
+            f"[WARN] lvl3 warmup ({config.warmup_epochs} ep) does not finish "
+            f"before unfreeze ({config.unfreeze_epoch_in_lvl3} ep); the fresh "
+            f"head is still warming when lvl2 is unfrozen."
+        )
+
     if config.overfit is False:
         pbar = tqdm.tqdm(
             total=total_steps, initial=start_global_step, desc="lvl3 training"
@@ -417,6 +425,10 @@ def train_lvl3(
         is_epoch_start = global_step % steps_per_epoch == 0
         is_epoch_end = global_step % steps_per_epoch == steps_per_epoch - 1
         is_last_step = global_step == total_steps - 1
+
+        current_lr = utils.apply_warmup_lr(
+            optimizer, config.lr_lvl3, global_step, warmup_steps
+        )
 
         if is_epoch_start:
             epoch_metrics = {}
@@ -709,6 +721,7 @@ def train_lvl3(
             "train_lvl3/rigidity": loss_rigidity.item(),
             "train_lvl3/ndv": ndv,
             "train_lvl3/dvf": loss_dvf.item(),
+            "train_lvl3/lr": current_lr,
         }
         if loss_dice_ct is not None:
             train_metrics["train_lvl3/dice_ct"] = loss_dice_ct.item()

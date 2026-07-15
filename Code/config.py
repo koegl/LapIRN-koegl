@@ -71,15 +71,19 @@ class TrainingConfig:
 
     in_channel: int = field(init=False)
     n_classes: int = 3
-    lr_lvl1: float = 0.00025
-    lr_lvl2: float = 0.0002
-    lr_lvl3: float = 0.0001
+    lr_lvl1: float = 0.0001
+    lr_lvl2: float = 0.0005
+    lr_lvl3: float = 0.00025
+    # linear LR warmup (0 -> full lr) applied at the start of every level,
+    # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
+    # level head is fully warmed before the previous level is unfrozen.
+    warmup_epochs: float = 5
     start_channel: int = 7
 
     # train val
     total_steps_lvl1: int = 60000
-    total_steps_lvl2: int = 30000
-    total_steps_lvl3: int = 60000
+    total_steps_lvl2: int = 40000
+    total_steps_lvl3: int = 30000
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
@@ -88,17 +92,17 @@ class TrainingConfig:
     accumulation_steps: int = field(init=False)
 
     # loss weights
-    w_jacobian: float = 100.0
-    w_smooth: float = 0.0
-    w_ct: float = 15.0
+    w_jacobian: float = 1000.0
+    w_smooth: float = 2.0
+    w_ct: float = 3.0
     w_pet: float = 0.0
     w_dice_ct_lvl1: float = 3.0
-    w_dice_ct_lvl2: float = 6.0
-    w_dice_ct_lvl3: float = 9.0
+    w_dice_ct_lvl2: float = 3.0
+    w_dice_ct_lvl3: float = 3.0
     w_dice_pet: float = 0.0
-    w_tlg: float = 5.0
-    w_jacobian_tumor: float = 40.0
-    w_bone_rigidity: float = 8
+    w_tlg: float = 0.7
+    w_jacobian_tumor: float = 0.6
+    w_bone_rigidity: float = 0.6
     w_dvf: float = 100.0
 
     dice_pet_iou_threshold: float = 0.1

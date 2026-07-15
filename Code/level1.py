@@ -353,6 +353,8 @@ def train_lvl1(
 
     train_iter = utils.cycle(train_generator)
 
+    warmup_steps = int(round(config.warmup_epochs * steps_per_epoch))
+
     if config.overfit is False:
         pbar = tqdm.tqdm(
             total=total_steps, initial=start_global_step, desc="lvl1 training"
@@ -368,6 +370,10 @@ def train_lvl1(
         is_epoch_start = global_step % steps_per_epoch == 0
         is_epoch_end = global_step % steps_per_epoch == steps_per_epoch - 1
         is_last_step = global_step == total_steps - 1
+
+        current_lr = utils.apply_warmup_lr(
+            optimizer, config.lr_lvl1, global_step, warmup_steps
+        )
 
         if is_epoch_start:
             epoch_metrics = {}
@@ -759,6 +765,7 @@ def train_lvl1(
             "train_lvl1/jacob": loss_jacobian.item(),
             "train_lvl1/ndv": ndv,
             "train_lvl1/dvf": loss_dvf.item(),
+            "train_lvl1/lr": current_lr,
         }
         if loss_dice_ct is not None:
             train_metrics["train_lvl1/dice_ct"] = loss_dice_ct.item()
@@ -780,6 +787,7 @@ def train_lvl1(
             if config.overfit:
                 print(
                     f"ep: {epoch}\t"
+                    f"lr: {current_lr:.6f}\t"
                     f"ncc={epoch_metrics['train_lvl1/ncc_ct']:.4f}; ncc_weighted={epoch_metrics['train_lvl1/ncc_ct'] * config.w_ct:.4f}\t"
                     f"dice={epoch_metrics['train_lvl1/dice_ct']:.4f}; dice_weighted={epoch_metrics['train_lvl1/dice_ct'] * config.w_dice_ct_lvl1:.4f}\t"
                     f"jacob={epoch_metrics['train_lvl1/jacob']:.6f}; jacob_weighted={epoch_metrics['train_lvl1/jacob'] * config.w_jacobian:.6f} "
