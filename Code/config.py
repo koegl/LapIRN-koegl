@@ -46,7 +46,7 @@ class TrainingConfig:
     sdt_clip_vox: float = 7.5
 
     # augmentation
-    augment: bool = True
+    augment: bool = False
     aug_use_flip: bool = True
     aug_use_ct_intensity: bool = True
     aug_use_pet_intensity: bool = True
@@ -71,7 +71,7 @@ class TrainingConfig:
 
     in_channel: int = field(init=False)
     n_classes: int = 3
-    lr_lvl1: float = 0.0000
+    lr_lvl1: float = 0.0001
     lr_lvl2: float = 0.0005
     lr_lvl3: float = 0.00025
     # linear LR warmup (0 -> full lr) applied at the start of every level,
