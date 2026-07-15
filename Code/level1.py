@@ -771,6 +771,9 @@ def train_lvl1(
             train_metrics["train_lvl1/dice_ct"] = loss_dice_ct.item()
         if loss_dice_pet is not None:
             train_metrics["train_lvl1/dice_pet"] = loss_dice_pet.item()
+        train_metrics["aug/flip"] = float(batch["aug_flipped"][0])
+        train_metrics["aug/crop_head"] = float(batch["aug_crop_head"][0])
+        train_metrics["aug/crop_feet"] = float(batch["aug_crop_feet"][0])
         mlflow.log_metrics(train_metrics, step=global_step)
 
         for key, value in train_metrics.items():
