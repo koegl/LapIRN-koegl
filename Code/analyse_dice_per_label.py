@@ -94,16 +94,18 @@ def fmt_labels(ids: pd.Index, names: pd.Series) -> List[str]:
 
 
 def main() -> None:
-    csv_path = (
-        "/home/iml/fryderyk.koegl/data/PSMAReg/results_official_val_dice_per_label.csv"
-    )
+    csv_path = "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/results_official_val_dice_per_labelPSMAReg_LapIRN_vaunted-steed-116_stagelvl3_best_IO_lr4.0e-01_it100_wncc3.00_wJac3.00_wSmooth3.00_wCT3.00_wPET0.00_wDiceCT3.00_wDicePET0.00_wTLG0.70_wMaskedJac0.60_classweights.csv"
     out_dir = "/home/iml/fryderyk.koegl/data/PSMAReg/dice_per_label_analysis_figs"
     names_path = (
         "/home/iml/fryderyk.koegl/code/LapIRN-koegl/total_segmentator_labels.csv"
     )
-    n_worst = 20
+    n_worst = 30
     present_eps = 1e-3
     min_present = 15
+
+    model_name = (
+        csv_path.split("/")[-1].split(".csv")[0].split("LapIRN_")[-1].split("_stage")[0]
+    )
 
     os.makedirs(out_dir, exist_ok=True)
     labels, _ = load_scores(csv_path)
@@ -112,7 +114,7 @@ def main() -> None:
     stats = stats[stats["n_present"] >= min_present]
     stats.insert(0, "name", [names.get(i, "?") for i in stats.index])
 
-    print("\n=== 20 worst labels (sorted by mean_all) ===")
+    print(f"\n=== {n_worst}ś worst labels (sorted by mean_all) ===")
     print(stats.head(n_worst).round(4).to_string())
     print("\nLabels with near-zero Dice in >=1 case:")
     flagged = stats[stats["n_near_zero"] > 0]
@@ -124,7 +126,7 @@ def main() -> None:
 
     tasks: List[Tuple[str, Callable]] = [
         (
-            "worst_labels_heatmap.png",
+            f"worst_labels_heatmap_{model_name}.png",
             lambda p: plot_heatmap(labels, names, p, mask_below=0.5, vmin=0.5),
         )
     ]
