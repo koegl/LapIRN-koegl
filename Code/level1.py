@@ -688,6 +688,26 @@ def train_lvl1(
             train_metrics["train_lvl1/dice_ct"] = loss_dice_ct.item()
         if loss_dice_pet is not None:
             train_metrics["train_lvl1/dice_pet"] = loss_dice_pet.item()
+        # weighted contributions (weight * term = actual share of the total loss)
+        train_metrics["train_lvl1/w_ncc_ct"] = config.w_ct * loss_ncc_ct.item()
+        train_metrics["train_lvl1/w_ncc_pet"] = (
+            config.w_pet * loss_ncc_pet.item() if use_ncc_pet else 0.0
+        )
+        train_metrics["train_lvl1/w_jacob"] = (
+            config.w_jacobian * loss_jacobian.item()
+        )
+        train_metrics["train_lvl1/w_smooth"] = (
+            config.w_smooth * loss_regulation.item()
+        )
+        train_metrics["train_lvl1/w_dvf"] = config.w_dvf * loss_dvf.item()
+        if loss_dice_ct is not None:
+            train_metrics["train_lvl1/w_dice_ct"] = (
+                config.w_dice_ct_lvl1 * loss_dice_ct.item()
+            )
+        if loss_dice_pet is not None and use_dice_pet:
+            train_metrics["train_lvl1/w_dice_pet"] = (
+                config.w_dice_pet * loss_dice_pet.item()
+            )
         train_metrics["aug/flip"] = float(batch["aug_flipped"][0])
         train_metrics["aug/crop_head"] = float(batch["aug_crop_head"][0])
         train_metrics["aug/crop_feet"] = float(batch["aug_crop_feet"][0])
