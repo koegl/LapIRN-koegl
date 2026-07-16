@@ -108,7 +108,7 @@ def compute_io_loss(
     disp_flow = disp_unit.permute(0, 2, 3, 4, 1)
 
     disp_voxel = Functions.transform_unit_flow_to_flow_cuda(disp_flow.clone())
-    jac_det, _ = jacobian.jacobian_matrix(disp_voxel)
+    jac_det, jac = jacobian.jacobian_matrix(disp_voxel)
     loss_jac = jacobian.non_diff_volume_loss(disp_voxel)
     loss_smooth = smoothloss(disp_unit)
 
@@ -138,7 +138,9 @@ def compute_io_loss(
     loss_masked_jac = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
 
     moving_bone_mask = torch.isin(x_lbl_ct, bone_values).float()
-    loss_masked_jac_bone = utils.masked_jac_det_loss(jac_det, moving_bone_mask)
+    loss_rigidity, _ = utils.enforce_rigidity_loss(
+        jac_det, jac, disp_voxel, moving_bone_mask
+    )
 
     with torch.no_grad():
         warped_lbl_ct = warp_label(x_lbl_ct, disp_unit, grid, transform_nearest)
@@ -159,7 +161,7 @@ def compute_io_loss(
         + cfg.w_smooth * loss_smooth
         + cfg.w_tlg * loss_tlg
         + cfg.w_jacobian_tumor * loss_masked_jac
-        + cfg.w_jacobian_tumor * loss_masked_jac_bone
+        + cfg.w_bone_rigidity * loss_rigidity
     )
     if loss_dice_ct is not None:
         loss = loss + cfg.w_dice_ct_lvl3 * loss_dice_ct
@@ -171,7 +173,7 @@ def compute_io_loss(
         "smooth": loss_smooth.item(),
         "jac": loss_jac.item(),
         "masked_jac": loss_masked_jac.item(),
-        "masked_jac_bone": loss_masked_jac_bone.item(),
+        "bone_rigidity": loss_rigidity.item(),
         "mtv": loss_mtv.item(),
         "tlg": loss_tlg.item(),
     }
