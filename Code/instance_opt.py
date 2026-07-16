@@ -158,7 +158,7 @@ def compute_io_loss(
     loss = (
         ncc_weight * loss_ncc_ct
         + cfg.w_jacobian * loss_jac
-        + cfg.w_smooth * loss_smooth
+        # + cfg.w_smooth * loss_smooth
         + cfg.w_tlg * loss_tlg
         + cfg.w_jacobian_tumor * loss_masked_jac
         + cfg.w_bone_rigidity * loss_rigidity
