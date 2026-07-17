@@ -1,9 +1,5 @@
-notes
-1012 - is only chest, keep it for now
-
-
 checked up to and including:
-
+1129
 
 deleted cases because affine was bad:
 1006
@@ -18,3 +14,12 @@ deleted cases because affine was bad:
 1044
 1051
 1059
+1070
+1072
+1073
+1076
+1086
+1096
+1098
+1107
+1125
