@@ -568,20 +568,23 @@ def train_lvl1(
             use_dice_pet = True
             use_ncc_pet = True
         else:
-            pet_iou = utils.affine_pet_iou(
-                batch["x_label_pet"].to(device),
-                Y_lbl_pet,
-                flow_prereg,
-                grid_full,
-                transform_nearest,
-            )
-            use_dice_pet = pet_iou >= config.dice_pet_iou_threshold
-            use_ncc_pet = pet_iou >= config.dice_pet_iou_threshold
+            # pet_iou = utils.affine_pet_iou(
+            #     batch["x_label_pet"].to(device),
+            #     Y_lbl_pet,
+            #     flow_prereg,
+            #     grid_full,
+            #     transform_nearest,
+            # )
+            # use_dice_pet = pet_iou >= config.dice_pet_iou_threshold
+            # use_ncc_pet = pet_iou >= config.dice_pet_iou_threshold
+            use_dice_pet = False
+            use_ncc_pet = False
         if not use_dice_pet:
             n_gated += 1
 
         loss_ncc_ct = loss_similarity_ct(X_Y_ct, Y_4x_ct)
-        loss_ncc_pet = loss_similarity_pet(X_Y_pet, Y_4x_pet)
+        with torch.no_grad():
+            loss_ncc_pet = loss_similarity_pet(X_Y_pet, Y_4x_pet)
         if use_ncc_pet:
             loss_multiNCC = config.w_ct * loss_ncc_ct + config.w_pet * loss_ncc_pet
         else:
@@ -617,9 +620,10 @@ def train_lvl1(
         loss_dice_ct = utils.dice_loss_with_grad(
             X_lbl_ct_down, Y_lbl_ct_down, F_X_Y, model.grid_1, transform
         )
-        loss_dice_pet = utils.dice_loss_with_grad(
-            X_lbl_pet_down, Y_lbl_pet_down, F_X_Y, model.grid_1, transform
-        )
+        with torch.no_grad():
+            loss_dice_pet = utils.dice_loss_with_grad(
+                X_lbl_pet_down, Y_lbl_pet_down, F_X_Y, model.grid_1, transform
+            )
 
         # update total loss
         loss = (
@@ -757,6 +761,32 @@ def train_lvl1(
                 },
                 step=global_step,
             )
+            if valid_tubingen_generator is not None:
+                val_losses_tubingen = evaluate_lvl1(
+                    model=model,
+                    val_generator=valid_tubingen_generator,
+                    config=config,
+                    device=device,
+                    loss_similarity_ct=loss_similarity_ct,
+                    loss_similarity_pet=loss_similarity_pet,
+                    loss_smooth=loss_smooth,
+                    loss_Jdet=loss_Jdet,
+                    transform=transform,
+                    grid_4=grid_4,
+                    epoch=epoch,
+                    val_interval=config.val_interval,
+                    saved_initial=saved_initial,
+                    is_last=is_last_step,
+                )
+                mlflow.log_metrics(
+                    {
+                        f"valid_lvl1/val_{key}_tubingen": value
+                        for key, value in val_losses_tubingen.items()
+                        if not (isinstance(value, float) and np.isnan(value))
+                    },
+                    step=global_step,
+                )
+
             tqdm.tqdm.write(
                 f"step {global_step} (ep {epoch}) -> val loss {val_losses['loss']:.4f} "
                 f"- ncc_ct {val_losses['ncc_ct']:.4f} "

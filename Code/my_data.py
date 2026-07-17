@@ -521,11 +521,18 @@ def load_pair_to_dict(
     )
 
     if tubingen:
-        x_pet_raw = np.zeros_like(x_ct_raw, dtype=np.float32)
-        y_pet_raw = np.zeros_like(y_ct_raw, dtype=np.float32)
+        return {
+            "x_ct": t(norm_ct(x_ct_raw)).float(),
+            "y_ct": t(norm_ct(y_ct_raw)).float(),
+            "x_label_ct": t(
+                load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz")
+            ),
+            "y_label_ct": t(
+                load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz")
+            ),
+            "y_body_mask": t(y_mask.astype(np.float32)).float(),
+        }
 
-        x_label_pet = np.zeros_like(x_ct_raw, dtype=np.uint8)
-        y_label_pet = np.zeros_like(y_ct_raw, dtype=np.uint8)
     else:
         x_pet_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp_x}.nii.gz")
         y_pet_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp_y}.nii.gz")
@@ -537,21 +544,21 @@ def load_pair_to_dict(
 
         y_label_pet = load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0001_{tp_y}.nii.gz")
 
-    return {
-        "x_ct": t(norm_ct(x_ct_raw)).float(),
-        "x_pet": t(norm_pet(x_pet_raw)).float(),
-        "y_ct": t(norm_ct(y_ct_raw)).float(),
-        "y_pet": t(norm_pet(y_pet_raw)).float(),
-        "x_label_ct": t(
-            load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz")
-        ),
-        "x_label_pet": t(x_label_pet),
-        "y_label_ct": t(
-            load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz")
-        ),
-        "y_label_pet": t(y_label_pet),
-        "y_body_mask": t(y_mask.astype(np.float32)).float(),
-    }
+        return {
+            "x_ct": t(norm_ct(x_ct_raw)).float(),
+            "x_pet": t(norm_pet(x_pet_raw)).float(),
+            "y_ct": t(norm_ct(y_ct_raw)).float(),
+            "y_pet": t(norm_pet(y_pet_raw)).float(),
+            "x_label_ct": t(
+                load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz")
+            ),
+            "x_label_pet": t(x_label_pet),
+            "y_label_ct": t(
+                load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz")
+            ),
+            "y_label_pet": t(y_label_pet),
+            "y_body_mask": t(y_mask.astype(np.float32)).float(),
+        }
 
 
 def build_intensity_transform(
@@ -759,6 +766,7 @@ class SyntheticSourceDataset(torch_data.Dataset):
             "aug_crop_head_fixed": 0,
             "aug_crop_feet_fixed": 0,
             "is_synthetic": True,
+            "is_tubingen": False,
             "case_id": case_id,
             "tp_x": tp,
             "tp_y": tp,
@@ -1016,6 +1024,7 @@ class PSMARegDataset(torch_data.Dataset):
         data["tp_y"] = tp_y
 
         data["is_synthetic"] = False
+        data["is_tubingen"] = False
 
         return data
 
@@ -1109,6 +1118,11 @@ class TubingenDataset(torch_data.Dataset):
         # shallow-copy so augmentation key-reassignments do not mutate the
         # cached sample in place (CacheDataset returns a shared reference)
         data = dict(self.dataset[index])
+
+        data["x_pet"] = torch.zeros_like(data["x_ct"])
+        data["y_pet"] = torch.zeros_like(data["y_ct"])
+        data["x_label_pet"] = torch.zeros_like(data["x_label_ct"])
+        data["y_label_pet"] = torch.zeros_like(data["y_label_ct"])
 
         all_spatial_keys = [
             "x_ct",
@@ -1230,5 +1244,6 @@ class TubingenDataset(torch_data.Dataset):
         data["tp_y"] = tp_y
 
         data["is_synthetic"] = False
+        data["is_tubingen"] = False
 
         return data

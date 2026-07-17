@@ -292,7 +292,8 @@ def train_lvl3(
     config: TrainingConfig,
     path_model_level2: Path,
     train_generator: torch_data.DataLoader,
-    val_generator: torch_data.DataLoader,
+    valid_generator: torch_data.DataLoader,
+    valid_tubingen_generator: Optional[torch_data.DataLoader] = None,
     resume_model_path: Optional[Path] = None,
     resume_optimizer_path: Optional[Path] = None,
 ) -> Dict[str, Path]:
@@ -616,20 +617,23 @@ def train_lvl3(
             use_dice_pet = True
             use_ncc_pet = True
         else:
-            pet_iou = utils.affine_pet_iou(
-                batch["x_label_pet"].to(device),
-                Y_lbl_pet,
-                flow_prereg,
-                grid_full,
-                transform_nearest,
-            )
-            use_dice_pet = pet_iou >= config.dice_pet_iou_threshold
-            use_ncc_pet = pet_iou >= config.dice_pet_iou_threshold
+            # pet_iou = utils.affine_pet_iou(
+            #     batch["x_label_pet"].to(device),
+            #     Y_lbl_pet,
+            #     flow_prereg,
+            #     grid_full,
+            #     transform_nearest,
+            # )
+            # use_dice_pet = pet_iou >= config.dice_pet_iou_threshold
+            # use_ncc_pet = pet_iou >= config.dice_pet_iou_threshold
+            use_dice_pet = False
+            use_ncc_pet = False
         if not use_dice_pet:
             n_gated += 1
 
         loss_ncc_ct = loss_similarity_ct(X_Y_ct, Y_4x_ct)
-        loss_ncc_pet = loss_similarity_pet(X_Y_pet, Y_4x_pet)
+        with torch.no_grad():
+            loss_ncc_pet = loss_similarity_pet(X_Y_pet, Y_4x_pet)
         if use_ncc_pet:
             loss_multiNCC = config.w_ct * loss_ncc_ct + config.w_pet * loss_ncc_pet
         else:
@@ -638,9 +642,10 @@ def train_lvl3(
         loss_dice_ct = utils.dice_loss_with_grad(
             X_lbl_ct, Y_lbl_ct, F_X_Y, model.grid_1, transform
         )
-        loss_dice_pet = utils.dice_loss_with_grad(
-            X_lbl_pet, Y_lbl_pet, F_X_Y, model.grid_1, transform
-        )
+        with torch.no_grad():
+            loss_dice_pet = utils.dice_loss_with_grad(
+                X_lbl_pet, Y_lbl_pet, F_X_Y, model.grid_1, transform
+            )
 
         moving_pet_mask = (X_lbl_pet == 1).float()
         loss_jacobian_tumor = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
@@ -783,7 +788,7 @@ def train_lvl3(
         ):
             val_losses = evaluate_lvl3(
                 model=model,
-                val_generator=val_generator,
+                val_generator=valid_generator,
                 config=config,
                 device=device,
                 loss_similarity_ct=loss_similarity_ct,
@@ -806,6 +811,32 @@ def train_lvl3(
                 },
                 step=global_step,
             )
+            if valid_tubingen_generator is not None:
+                val_losses_tubingen = evaluate_lvl3(
+                    model=model,
+                    val_generator=valid_tubingen_generator,
+                    config=config,
+                    device=device,
+                    loss_similarity_ct=loss_similarity_ct,
+                    loss_similarity_pet=loss_similarity_pet,
+                    loss_smooth=loss_smooth,
+                    loss_Jdet=loss_Jdet,
+                    transform=transform,
+                    grid=grid,
+                    epoch=epoch,
+                    val_interval=config.val_interval,
+                    saved_initial=saved_initial,
+                    is_last=is_last_step,
+                )
+                mlflow.log_metrics(
+                    {
+                        f"valid_lvl3/val_{key}_tubingen": value
+                        for key, value in val_losses_tubingen.items()
+                        if not (isinstance(value, float) and np.isnan(value))
+                    },
+                    step=global_step,
+                )
+
             tqdm.tqdm.write(
                 f"step {global_step} (ep {epoch}) -> val loss {val_losses['loss']:.4f} "
                 f"- ncc_ct {val_losses['ncc_ct']:.4f} "
