@@ -1162,30 +1162,38 @@ class TubingenDataset(torch_data.Dataset):
                 flipped = True
 
             # --- Z-axis FOV crop --------------------------------------------
-            if self.cfg.aug_use_z_crop:
-                crop_head = int(np.random.randint(0, self.cfg.aug_max_crop_z_head + 1))
-                crop_feet = int(np.random.randint(0, self.cfg.aug_max_crop_z_feet + 1))
-                data = apply_z_crop(data, all_spatial_keys, crop_head, crop_feet)
+            # for tubingen we dont crop because they are already very heterogeneous
+            if False:
+                if self.cfg.aug_use_z_crop:
+                    crop_head = int(
+                        np.random.randint(0, self.cfg.aug_max_crop_z_head + 1)
+                    )
+                    crop_feet = int(
+                        np.random.randint(0, self.cfg.aug_max_crop_z_feet + 1)
+                    )
+                    data = apply_z_crop(data, all_spatial_keys, crop_head, crop_feet)
 
-                # --- Asymmetric Z-axis FOV crop (independent fixed/moving) ----
-            if self.cfg.aug_use_z_crop_asym:
-                crop_head_moving = int(
-                    np.random.randint(0, self.cfg.aug_max_crop_z_head_asym + 1)
-                )
-                crop_feet_moving = int(
-                    np.random.randint(0, self.cfg.aug_max_crop_z_feet_asym + 1)
-                )
-                crop_head_fixed = int(
-                    np.random.randint(0, self.cfg.aug_max_crop_z_head_asym + 1)
-                )
-                crop_feet_fixed = int(
-                    np.random.randint(0, self.cfg.aug_max_crop_z_feet_asym + 1)
-                )
+                    # --- Asymmetric Z-axis FOV crop (independent fixed/moving) ----
+                if self.cfg.aug_use_z_crop_asym:
+                    crop_head_moving = int(
+                        np.random.randint(0, self.cfg.aug_max_crop_z_head_asym + 1)
+                    )
+                    crop_feet_moving = int(
+                        np.random.randint(0, self.cfg.aug_max_crop_z_feet_asym + 1)
+                    )
+                    crop_head_fixed = int(
+                        np.random.randint(0, self.cfg.aug_max_crop_z_head_asym + 1)
+                    )
+                    crop_feet_fixed = int(
+                        np.random.randint(0, self.cfg.aug_max_crop_z_feet_asym + 1)
+                    )
 
-                data = apply_z_crop(
-                    data, moving_keys, crop_head_moving, crop_feet_moving
-                )
-                data = apply_z_crop(data, fixed_keys, crop_head_fixed, crop_feet_fixed)
+                    data = apply_z_crop(
+                        data, moving_keys, crop_head_moving, crop_feet_moving
+                    )
+                    data = apply_z_crop(
+                        data, fixed_keys, crop_head_fixed, crop_feet_fixed
+                    )
 
         # Intensity augmentation (MONAI) + channel stacking
         data = self.intensity_transform(data)
