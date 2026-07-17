@@ -24,25 +24,28 @@ def segment(image: Path, output: Path, fast: bool = True) -> None:
 
 
 def main() -> None:
-    input_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesVal")
+    input_dir = Path(
+        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTr_tubingen"
+    )
     output_dir = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/segmentations_fast"
+        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTr_tubingen"
     )
     skip_existing = True
+    fast = False
 
     output_dir.mkdir(parents=True, exist_ok=True)
     images = find_ct_images(input_dir)
 
     pbar = tqdm(images, desc="TotalSegmentator", unit="case")
     for image in pbar:
-        output = output_dir / output_name(image)
+        output = output_dir / image.name
         pbar.set_postfix_str(output.name)
 
         if skip_existing and output.exists():
             tqdm.write(f"skip {output.name}")
             continue
 
-        segment(image, output)
+        segment(image, output, fast=fast)
         tqdm.write(f"done {output.name}")
 
 
