@@ -91,7 +91,7 @@ def evaluate_lvl3(
             tp_y: str = batch["tp_y"][0]
             tp_x: str = batch["tp_x"][0]
 
-            flow_affine = affine_reg.create_affine_flow(
+            flow_prereg = affine_reg.create_affine_flow(
                 config=config,
                 device=device,
                 case_id=case_id,
@@ -105,7 +105,7 @@ def evaluate_lvl3(
             )
 
             if config.use_poly_affine is False:
-                X_prereg = transform(X, flow_affine, grid_full)
+                X_prereg = transform(X, flow_prereg, grid_full)
             else:
                 poly_dvf = poly_affine_reg.get_polyaffine_dvf(
                     case_id=case_id,
@@ -146,11 +146,11 @@ def evaluate_lvl3(
                     cfg=config,
                     device=device,
                 )
-                flow_total = poly_affine_reg.compose_flows(
-                    flow_affine, flow_poly, grid_full
+                flow_prereg = poly_affine_reg.compose_flows(
+                    flow_prereg, flow_poly, grid_full
                 )
 
-                X_prereg = transform(X, flow_total, grid_full)
+                X_prereg = transform(X, flow_prereg, grid_full)
 
             F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X_prereg, Y)
             if epoch % (val_interval * 50) == 0 or is_last:
@@ -209,8 +209,8 @@ def evaluate_lvl3(
             F_xy[:, 2, :, :, :] = F_xy[:, 2, :, :, :] * (x - 1)
             loss_regulation = loss_smooth(F_xy)
 
-            X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_affine, grid_full)
-            X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_affine, grid_full)
+            X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_prereg, grid_full)
+            X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_prereg, grid_full)
 
             loss_dice_ct = utils.dice_loss_with_grad(
                 X_lbl_ct, Y_lbl_ct, F_X_Y, model.grid_1, transform
@@ -498,7 +498,7 @@ def train_lvl3(
             tp_y: str = batch["tp_y"][0]
             tp_x: str = batch["tp_x"][0]
 
-            flow_affine = affine_reg.create_affine_flow(
+            flow_prereg = affine_reg.create_affine_flow(
                 config=config,
                 device=device,
                 case_id=case_id,
@@ -512,7 +512,7 @@ def train_lvl3(
             )
 
             if config.use_poly_affine is False:
-                X_prereg = transform(X, flow_affine, grid_full)
+                X_prereg = transform(X, flow_prereg, grid_full)
             else:
                 poly_dvf = poly_affine_reg.get_polyaffine_dvf(
                     case_id=case_id,
@@ -553,11 +553,11 @@ def train_lvl3(
                     cfg=config,
                     device=device,
                 )
-                flow_total = poly_affine_reg.compose_flows(
-                    flow_affine, flow_poly, grid_full
+                flow_prereg = poly_affine_reg.compose_flows(
+                    flow_prereg, flow_poly, grid_full
                 )
 
-                X_prereg = transform(X, flow_total, grid_full)
+                X_prereg = transform(X, flow_prereg, grid_full)
 
         F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X_prereg, Y)
 
@@ -609,8 +609,8 @@ def train_lvl3(
         # synthetic labels are already in the (deformed) moving frame; the
         # real branch needs the affine applied first
         if not is_synthetic:
-            X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_affine, grid_full)
-            X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_affine, grid_full)
+            X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_prereg, grid_full)
+            X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_prereg, grid_full)
 
         if is_synthetic:
             use_dice_pet = True
@@ -619,7 +619,7 @@ def train_lvl3(
             pet_iou = utils.affine_pet_iou(
                 batch["x_label_pet"].to(device),
                 Y_lbl_pet,
-                flow_affine,
+                flow_prereg,
                 grid_full,
                 transform_nearest,
             )
@@ -740,12 +740,8 @@ def train_lvl3(
         train_metrics["train_lvl3/w_ncc_pet"] = (
             config.w_pet * loss_ncc_pet.item() if use_ncc_pet else 0.0
         )
-        train_metrics["train_lvl3/w_jacob"] = (
-            config.w_jacobian * loss_jacobian.item()
-        )
-        train_metrics["train_lvl3/w_smooth"] = (
-            config.w_smooth * loss_regulation.item()
-        )
+        train_metrics["train_lvl3/w_jacob"] = config.w_jacobian * loss_jacobian.item()
+        train_metrics["train_lvl3/w_smooth"] = config.w_smooth * loss_regulation.item()
         train_metrics["train_lvl3/w_jacob_tumor"] = (
             config.w_jacobian_tumor * loss_jacobian_tumor.item()
         )
