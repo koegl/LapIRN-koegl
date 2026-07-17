@@ -33,6 +33,7 @@ def main() -> None:
             data_dir=config.data_dir,
             split_path=config.split_path,
             val_fraction=config.val_fraction,
+            tubingen=False,
         )
         synth_ids = [
             c
@@ -40,14 +41,33 @@ def main() -> None:
                 config.data_dir, exclude_case_ids=train_ids + val_ids
             )
         ]
+        train_ids_tubingen, val_ids_tubingen = my_data.get_train_val_split(
+            data_dir=config.data_dir,
+            split_path=config.split_path,
+            val_fraction=config.val_fraction,
+            tubingen=True,
+        )
         config_to_log = config.to_mlflow_params()
         config_to_log["train_indices"] = train_ids
+        config_to_log["train_indices_tubingen"] = train_ids_tubingen
+        config_to_log["synth_indices"] = synth_ids
         config_to_log["val_indices"] = val_ids
+        config_to_log["val_indices_tubingen"] = val_ids_tubingen
         mlflow.log_params(config.to_mlflow_params())
         mlflow.log_text(
             json.dumps(config.to_mlflow_params(), indent=2),
             artifact_file="config.json",
         )
+
+        val_dataset = my_data.PSMARegDataset(
+            case_ids=val_ids,
+            cfg=config,
+            augment=False,
+            use_cache=config.use_cache_valid,
+            include_intermediate_pairs=False,
+            num_workers=config.num_workers,
+        )
+        val_dataset_tubingen = None
 
         train_dataset = my_data.PSMARegDataset(
             case_ids=train_ids,
@@ -56,8 +76,9 @@ def main() -> None:
             use_cache=config.use_cache_train_real,
             include_intermediate_pairs=True,
             num_workers=config.num_workers,
-            # overfit="0049",
         )
+        all_train_datasets = [train_dataset]
+
         if config.use_synthetic:
             synth_dataset = my_data.SyntheticSourceDataset(
                 cfg=config,
@@ -67,19 +88,26 @@ def main() -> None:
                 num_workers=config.num_workers,
                 augment=config.augment,
             )
-            train_combined = torch_data.ConcatDataset([train_dataset, synth_dataset])
-        else:
-            train_combined = torch_data.ConcatDataset([train_dataset])
+            all_train_datasets.append(synth_dataset)
+        if config.use_tubingen:
+            train_tubingen_dataset = my_data.TubingenDataset(
+                case_ids=train_ids_tubingen,
+                cfg=config,
+                augment=config.augment,
+                use_cache=config.use_cache_train_real,
+                num_workers=config.num_workers,
+            )
+            all_train_datasets.append(train_tubingen_dataset)
 
-        val_dataset = my_data.PSMARegDataset(
-            case_ids=val_ids,
-            cfg=config,
-            augment=False,
-            use_cache=config.use_cache_valid,
-            include_intermediate_pairs=False,
-            num_workers=config.num_workers,
-            # overfit="0049",
-        )
+            val_dataset_tubingen = my_data.TubingenDataset(
+                case_ids=val_ids_tubingen,
+                cfg=config,
+                augment=False,
+                use_cache=config.use_cache_valid,
+                num_workers=config.num_workers,
+            )
+
+        train_combined = torch_data.ConcatDataset(all_train_datasets)
 
         train_generator = torch_data.DataLoader(
             train_combined,
@@ -90,6 +118,15 @@ def main() -> None:
             val_dataset,
             batch_size=config.batch_size,
             shuffle=False,
+        )
+        valid_tubingen_generator = (
+            None
+            if val_dataset_tubingen is None
+            else torch_data.DataLoader(
+                val_dataset_tubingen,
+                batch_size=config.batch_size,
+                shuffle=False,
+            )
         )
 
         with utils.track_peak_memory("training"):
@@ -103,23 +140,32 @@ def main() -> None:
                     "Warning: Overfitting mode is enabled. This is for debugging purposes only."
                 )
                 train_generator = torch_data.DataLoader(
-                    train_dataset,
+                    train_tubingen_dataset,
                     batch_size=config.batch_size,
                     shuffle=config.shuffle,
                 )
 
                 paths_model_level1 = level1.train_lvl1(
-                    config, train_generator, train_generator
+                    config, train_generator, valid_generator, valid_tubingen_generator
                 )
+                # path_model_level_1 = Path(
+                #     "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_sedate-fish_local_stagelvl1_150.pth"
+                # )
                 path_model_level_1 = paths_model_level1["final"]
 
                 paths_model_level2 = level2.train_lvl2(
-                    config, path_model_level_1, train_generator, train_generator
+                    config,
+                    path_model_level_1,
+                    train_generator,
+                    valid_generator,
                 )
                 path_model_level_2 = paths_model_level2["final"]
 
                 # path_model_level3 = level3.train_lvl3(
-                #     config, path_model_level_2, train_generator, train_generator
+                #     config,
+                #     path_model_level_2,
+                #     train_generator,
+                #     valid_generator,
                 # )
             else:
                 # paths_model_level1 = level1.train_lvl1(

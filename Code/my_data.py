@@ -177,18 +177,44 @@ def build_registration_pairs(
     return pairs
 
 
+def remove_tubingen(
+    split_train: List[str], split_valid: List[str]
+) -> Tuple[List[str], List[str]]:
+    split_train_filtered = [cid for cid in split_train if not cid.startswith("1")]
+    split_valid_filtered = [cid for cid in split_valid if not cid.startswith("1")]
+
+    return split_train_filtered, split_valid_filtered
+
+
+def remove_non_tubingen(
+    split_train: List[str], split_valid: List[str]
+) -> Tuple[List[str], List[str]]:
+
+    split_train_filtered = [cid for cid in split_train if cid.startswith("1")]
+    split_valid_filtered = [cid for cid in split_valid if cid.startswith("1")]
+
+    return split_train_filtered, split_valid_filtered
+
+
 def get_train_val_split(
     data_dir: Path,
     split_path: Path,
     val_fraction: float = 0.2,
     seed: int = 0,
     min_timepoints: int = 2,
+    tubingen: bool = False,
 ) -> Tuple[List[str], List[str]]:
     """Get or create a patient-level train/val split."""
     if split_path.exists():
         with open(split_path, "r") as f:
             split = json.load(f)
-        return split["train"], split["val"]
+
+        if tubingen:
+            train, val = remove_non_tubingen(split["train"], split["val"])
+        else:
+            train, val = remove_tubingen(split["train"], split["val"])
+
+        return train, val
 
     case_timepoints = list_case_timepoints(data_dir)
     eligible_ids = sorted(
@@ -206,6 +232,11 @@ def get_train_val_split(
 
     split_path.parent.mkdir(parents=True, exist_ok=True)
     with open(split_path, "w") as f:
+        if tubingen:
+            train_ids, val_ids = remove_non_tubingen(train_ids, val_ids)
+        else:
+            train_ids, val_ids = remove_tubingen(train_ids, val_ids)
+
         json.dump({"train": train_ids, "val": val_ids}, f, indent=2)
 
     return train_ids, val_ids
@@ -431,16 +462,23 @@ class LoadPairToDict(Transform):
     to be applied independently per modality.
     """
 
-    def __init__(self, data_dir: Path) -> None:
+    def __init__(self, data_dir: Path, tubingen: bool = False) -> None:
         self.data_dir = data_dir
+        self.tubingen = tubingen
 
     def __call__(self, data: dict) -> dict:
         return load_pair_to_dict(
-            self.data_dir, data["case_id"], data["tp_x"], data["tp_y"]
+            self.data_dir,
+            data["case_id"],
+            data["tp_x"],
+            data["tp_y"],
+            tubingen=self.tubingen,
         )
 
 
-def load_pair_to_dict(data_dir: Path, case_id: str, tp_x: str, tp_y: str) -> dict:
+def load_pair_to_dict(
+    data_dir: Path, case_id: str, tp_x: str, tp_y: str, tubingen: bool = False
+) -> dict:
     """Load and normalize one longitudinal CT/PET pair into a dict of tensors.
 
     Args:
@@ -482,11 +520,22 @@ def load_pair_to_dict(data_dir: Path, case_id: str, tp_x: str, tp_y: str) -> dic
         y_ct_raw, y_mask, fill_value=float(np.percentile(y_ct_raw, 0.5))
     )
 
-    x_pet_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp_x}.nii.gz")
-    y_pet_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp_y}.nii.gz")
+    if tubingen:
+        x_pet_raw = np.zeros_like(x_ct_raw, dtype=np.float32)
+        y_pet_raw = np.zeros_like(y_ct_raw, dtype=np.float32)
 
-    x_pet_raw = apply_body_mask(x_pet_raw, x_mask, fill_value=0.0)
-    y_pet_raw = apply_body_mask(y_pet_raw, y_mask, fill_value=0.0)
+        x_label_pet = np.zeros_like(x_ct_raw, dtype=np.uint8)
+        y_label_pet = np.zeros_like(y_ct_raw, dtype=np.uint8)
+    else:
+        x_pet_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp_x}.nii.gz")
+        y_pet_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp_y}.nii.gz")
+
+        x_pet_raw = apply_body_mask(x_pet_raw, x_mask, fill_value=0.0)
+        y_pet_raw = apply_body_mask(y_pet_raw, y_mask, fill_value=0.0)
+
+        x_label_pet = load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0001_{tp_x}.nii.gz")
+
+        y_label_pet = load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0001_{tp_y}.nii.gz")
 
     return {
         "x_ct": t(norm_ct(x_ct_raw)).float(),
@@ -496,15 +545,11 @@ def load_pair_to_dict(data_dir: Path, case_id: str, tp_x: str, tp_y: str) -> dic
         "x_label_ct": t(
             load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz")
         ),
-        "x_label_pet": t(
-            load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0001_{tp_x}.nii.gz")
-        ),
+        "x_label_pet": t(x_label_pet),
         "y_label_ct": t(
             load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz")
         ),
-        "y_label_pet": t(
-            load_lbl(label_dir / f"PSMARegPSMA_{case_id}_0001_{tp_y}.nii.gz")
-        ),
+        "y_label_pet": t(y_label_pet),
         "y_body_mask": t(y_mask.astype(np.float32)).float(),
     }
 
@@ -820,6 +865,220 @@ class PSMARegDataset(torch_data.Dataset):
             )
         else:
             load_transform = Compose([LoadPairToDict(self.data_dir)])
+
+        if use_cache:
+            self.dataset = monai_data.CacheDataset(
+                data=data_dicts,
+                transform=load_transform,
+                cache_rate=cache_rate,
+                num_workers=num_workers,
+            )
+        else:
+            self.dataset = monai_data.Dataset(data=data_dicts, transform=load_transform)
+
+        # Intensity transform (MONAI) — spatial augmentation is done manually below
+        if augment:
+            self.intensity_transform = build_intensity_transform(
+                ct_shift_range=cfg.aug_ct_shift_range,
+                ct_scale_range=cfg.aug_ct_scale_range,
+                pet_scale_range=cfg.aug_pet_scale_range,
+                use_ct_intensity=cfg.aug_use_ct_intensity,
+                use_pet_intensity=cfg.aug_use_pet_intensity,
+            )
+        else:
+            self.intensity_transform = build_val_transform()
+
+    def __len__(self) -> int:
+        return len(self.pairs)
+
+    def __getitem__(self, index: int) -> dict:
+        # shallow-copy so augmentation key-reassignments do not mutate the
+        # cached sample in place (CacheDataset returns a shared reference)
+        data = dict(self.dataset[index])
+
+        all_spatial_keys = [
+            "x_ct",
+            "x_pet",
+            "y_ct",
+            "y_pet",
+            "x_label_ct",
+            "x_label_pet",
+            "y_label_ct",
+            "y_label_pet",
+            "y_body_mask",
+        ]
+
+        moving_keys = ["x_ct", "x_pet", "x_label_ct", "x_label_pet"]
+        fixed_keys = ["y_ct", "y_pet", "y_label_ct", "y_label_pet", "y_body_mask"]
+
+        if self.cfg.use_labels_directly:
+            all_spatial_keys += ["x_sdt", "y_sdt"]
+
+            moving_keys += ["x_sdt"]
+            fixed_keys += ["y_sdt"]
+
+        # Augmentation parameters — always initialised so training loop can
+        # use them unconditionally regardless of whether augment=True/False
+        flipped = False
+        crop_head = 0
+        crop_feet = 0
+        crop_head_moving = 0
+        crop_feet_moving = 0
+        crop_head_fixed = 0
+        crop_feet_fixed = 0
+
+        if self.augment:
+            # --- Left-right flip --------------------------------------------
+            if self.cfg.aug_use_flip and np.random.random() < self.cfg.aug_flip_prob:
+                data = apply_flip(data, all_spatial_keys)
+                flipped = True
+
+            # --- Z-axis FOV crop --------------------------------------------
+            if self.cfg.aug_use_z_crop:
+                crop_head = int(np.random.randint(0, self.cfg.aug_max_crop_z_head + 1))
+                crop_feet = int(np.random.randint(0, self.cfg.aug_max_crop_z_feet + 1))
+                data = apply_z_crop(data, all_spatial_keys, crop_head, crop_feet)
+
+                # --- Asymmetric Z-axis FOV crop (independent fixed/moving) ----
+            if self.cfg.aug_use_z_crop_asym:
+                crop_head_moving = int(
+                    np.random.randint(0, self.cfg.aug_max_crop_z_head_asym + 1)
+                )
+                crop_feet_moving = int(
+                    np.random.randint(0, self.cfg.aug_max_crop_z_feet_asym + 1)
+                )
+                crop_head_fixed = int(
+                    np.random.randint(0, self.cfg.aug_max_crop_z_head_asym + 1)
+                )
+                crop_feet_fixed = int(
+                    np.random.randint(0, self.cfg.aug_max_crop_z_feet_asym + 1)
+                )
+
+                data = apply_z_crop(
+                    data, moving_keys, crop_head_moving, crop_feet_moving
+                )
+                data = apply_z_crop(data, fixed_keys, crop_head_fixed, crop_feet_fixed)
+
+        # Intensity augmentation (MONAI) + channel stacking
+        data = self.intensity_transform(data)
+
+        # --- SDT label channels (global switch) ----------------------------
+        if self.cfg.use_labels_directly:
+            """
+            save_volume(
+                data["y_sdt"][0],
+                out_dir=Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/temp_output"),
+                epoch=0,
+                name="fixed_lbl_0",
+            )
+            save_volume(
+                data["y_sdt"][1],
+                out_dir=Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/temp_output"),
+                epoch=0,
+                name="fixed_lbl_1",
+            )
+            save_volume(
+                data["y_sdt"][2],
+                out_dir=Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/temp_output"),
+                epoch=0,
+                name="fixed_lbl_2",
+            )
+            save_volume(
+                data["y_sdt"][3],
+                out_dir=Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/temp_output"),
+                epoch=0,
+                name="fixed_lbl_3",
+            )
+            save_volume(
+                data["y"][0],
+                out_dir=Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/temp_output"),
+                epoch=0,
+                name="fixed",
+            )
+            """
+            data["x"] = torch.cat([data["x"], data["x_sdt"]], dim=0)
+            data["y"] = torch.cat([data["y"], data["y_sdt"]], dim=0)
+            x = 0
+        # Attach augmentation parameters for DVF consistency in training loop
+        data["aug_flipped"] = flipped
+
+        data["aug_crop_head"] = crop_head
+        data["aug_crop_feet"] = crop_feet
+
+        data["aug_crop_head_moving"] = crop_head_moving
+        data["aug_crop_feet_moving"] = crop_feet_moving
+        data["aug_crop_head_fixed"] = crop_head_fixed
+        data["aug_crop_feet_fixed"] = crop_feet_fixed
+
+        case_id, tp_x, tp_y = self.pairs[index]
+        data["case_id"] = case_id
+        data["tp_x"] = tp_x
+        data["tp_y"] = tp_y
+
+        data["is_synthetic"] = False
+
+        return data
+
+
+class TubingenDataset(torch_data.Dataset):
+    def __init__(
+        self,
+        cfg: config.TrainingConfig,
+        case_ids: Optional[List[str]] = None,
+        overfit: Optional[str] = None,
+        use_cache: bool = False,
+        cache_rate: float = 1.0,
+        num_workers: int = 4,
+        augment: bool = False,
+    ) -> None:
+        self.data_dir = cfg.data_dir
+
+        self.cfg = cfg
+        self.augment = augment
+
+        case_timepoints = list_case_timepoints(cfg.data_dir)
+
+        if overfit is not None:
+            if overfit not in case_timepoints or len(case_timepoints[overfit]) < 2:
+                raise ValueError(
+                    f"Patient {overfit!r} must have at least two timepoints."
+                )
+            pairs = build_registration_pairs(
+                case_timepoints,
+                case_ids=[overfit],
+            )
+        else:
+            pairs = build_registration_pairs(
+                case_timepoints,
+                case_ids=case_ids,
+            )
+
+        self.pairs = pairs
+
+        if self.cfg.overfit:
+            print("warning temp reduce size")
+            # self.pairs = [self.pairs[0], self.pairs[2]]
+            self.pairs = [self.pairs[0]]
+
+        data_dicts = [
+            {"case_id": case_id, "tp_x": tp_x, "tp_y": tp_y}
+            for case_id, tp_x, tp_y in self.pairs
+        ]
+
+        if self.cfg.use_labels_directly:
+            load_transform = Compose(
+                [
+                    LoadPairToDict(self.data_dir, tubingen=True),
+                    ComputeSDTChannelsd(
+                        "x_label_ct", "x_sdt", cfg.label_groups, cfg.sdt_clip_vox
+                    ),
+                    ComputeSDTChannelsd(
+                        "y_label_ct", "y_sdt", cfg.label_groups, cfg.sdt_clip_vox
+                    ),
+                ]
+            )
+        else:
+            load_transform = Compose([LoadPairToDict(self.data_dir, tubingen=True)])
 
         if use_cache:
             self.dataset = monai_data.CacheDataset(

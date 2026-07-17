@@ -490,7 +490,6 @@ def train_lvl2(
                 aug_crop_head_fixed=batch["aug_crop_head_fixed"],
                 aug_crop_feet_fixed=batch["aug_crop_feet_fixed"],
             )
-            flow_affine = flow_prereg.clone()
 
             if config.use_poly_affine is False:
                 X_prereg = transform(X, flow_prereg, grid_full)
@@ -726,12 +725,8 @@ def train_lvl2(
         train_metrics["train_lvl2/w_ncc_pet"] = (
             config.w_pet * loss_ncc_pet.item() if use_ncc_pet else 0.0
         )
-        train_metrics["train_lvl2/w_jacob"] = (
-            config.w_jacobian * loss_jacobian.item()
-        )
-        train_metrics["train_lvl2/w_smooth"] = (
-            config.w_smooth * loss_regulation.item()
-        )
+        train_metrics["train_lvl2/w_jacob"] = config.w_jacobian * loss_jacobian.item()
+        train_metrics["train_lvl2/w_smooth"] = config.w_smooth * loss_regulation.item()
         train_metrics["train_lvl2/w_dvf"] = config.w_dvf * loss_dvf.item()
         if loss_dice_ct is not None:
             train_metrics["train_lvl2/w_dice_ct"] = (

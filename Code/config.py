@@ -34,6 +34,8 @@ class TrainingConfig:
 
     # direct lables
     use_labels_directly: bool = False
+    use_tubingen: bool = True
+
     label_groups: List[List[int]] = field(
         default_factory=lambda: [
             list(range(92, 116, 2)),  # ribs (92..115)

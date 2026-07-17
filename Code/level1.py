@@ -270,7 +270,8 @@ def evaluate_lvl1(
 def train_lvl1(
     config: TrainingConfig,
     train_generator: torch_data.DataLoader,
-    val_generator: torch_data.DataLoader,
+    valid_generator: torch_data.DataLoader,
+    valid_tubingen_generator: Optional[torch_data.DataLoader] = None,
     resume_model_path: Optional[Path] = None,
     resume_optimizer_path: Optional[Path] = None,
 ) -> Dict[str, Path]:
@@ -452,7 +453,6 @@ def train_lvl1(
                 aug_crop_head_fixed=batch["aug_crop_head_fixed"],
                 aug_crop_feet_fixed=batch["aug_crop_feet_fixed"],
             )
-            flow_affine = flow_prereg.clone()
 
             if config.use_poly_affine is False:
                 X_prereg = transform(X, flow_prereg, grid_full)
@@ -693,12 +693,8 @@ def train_lvl1(
         train_metrics["train_lvl1/w_ncc_pet"] = (
             config.w_pet * loss_ncc_pet.item() if use_ncc_pet else 0.0
         )
-        train_metrics["train_lvl1/w_jacob"] = (
-            config.w_jacobian * loss_jacobian.item()
-        )
-        train_metrics["train_lvl1/w_smooth"] = (
-            config.w_smooth * loss_regulation.item()
-        )
+        train_metrics["train_lvl1/w_jacob"] = config.w_jacobian * loss_jacobian.item()
+        train_metrics["train_lvl1/w_smooth"] = config.w_smooth * loss_regulation.item()
         train_metrics["train_lvl1/w_dvf"] = config.w_dvf * loss_dvf.item()
         if loss_dice_ct is not None:
             train_metrics["train_lvl1/w_dice_ct"] = (
@@ -738,7 +734,7 @@ def train_lvl1(
         ):
             val_losses = evaluate_lvl1(
                 model=model,
-                val_generator=val_generator,
+                val_generator=valid_generator,
                 config=config,
                 device=device,
                 loss_similarity_ct=loss_similarity_ct,
