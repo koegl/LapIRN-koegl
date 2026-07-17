@@ -1064,12 +1064,11 @@ class TubingenDataset(torch_data.Dataset):
 
         self.pairs = pairs
 
-        self._remove_badly_preregistered_pairs()
-
         if self.cfg.overfit:
+            i = 0
             print("warning temp reduce size")
             # self.pairs = [self.pairs[0], self.pairs[2]]
-            self.pairs = [self.pairs[0]]
+            self.pairs = [self.pairs[i]]
 
         data_dicts = [
             {"case_id": case_id, "tp_x": tp_x, "tp_y": tp_y}
@@ -1112,68 +1111,6 @@ class TubingenDataset(torch_data.Dataset):
             )
         else:
             self.intensity_transform = build_val_transform()
-
-    def _remove_badly_preregistered_pairs(self) -> None:
-
-        cases_to_remove = [
-            "1006",
-            "1009",
-            "1014",
-            "1015",
-            "1016",
-            "1025",
-            "1038",
-            "1039",
-            "1043",
-            "1044",
-            "1051",
-            "1059",
-            "1070",
-            "1072",
-            "1073",
-            "1076",
-            "1086",
-            "1096",
-            "1098",
-            "1107",
-            "1125",
-            "1130",
-            "1133",
-            "1135",
-            "1136",
-            "1139",
-            "1141",
-            "1148",
-            "1150",
-            "1154",
-            "1159",
-            "1164",
-            "1172",
-            "1179",
-            "1187",
-            "1190",
-            "1193",
-            "1207",
-            "1210",
-            "1216",
-            "1221",
-            "1225",
-            "1226",
-            "1231",
-            "1236",
-            "1251",
-            "1254",
-            "1257",
-            "1258",
-            "1259",
-            "1278",
-        ]
-
-        self.pairs = [
-            (case_id, tp_x, tp_y)
-            for case_id, tp_x, tp_y in self.pairs
-            if case_id not in cases_to_remove
-        ]
 
     def __len__(self) -> int:
         return len(self.pairs)

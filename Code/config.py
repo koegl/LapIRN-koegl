@@ -30,9 +30,8 @@ class TrainingConfig:
     use_cache_valid: bool = True
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
-    use_poly_affine: bool = True
-
-    # direct lables
+    use_poly_affine: bool = False
+    use_synthetic: bool = False
     use_labels_directly: bool = False
     use_tubingen: bool = True
 
@@ -66,7 +65,6 @@ class TrainingConfig:
     aug_max_crop_z_head_asym: int = 10  # smaller than symmetric (40)
     aug_max_crop_z_feet_asym: int = 10
     aug_seed: int = 42
-    use_synthetic: bool = False
     synthetic_repeat: int = 1
 
     range_flow: float = 0.4
@@ -83,8 +81,8 @@ class TrainingConfig:
     start_channel: int = 7
 
     # train val
-    total_steps_lvl1: int = 35000
-    total_steps_lvl2: int = 45000
+    total_steps_lvl1: int = 45000
+    total_steps_lvl2: int = 50000
     total_steps_lvl3: int = 30000
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
