@@ -1064,6 +1064,8 @@ class TubingenDataset(torch_data.Dataset):
 
         self.pairs = pairs
 
+        self._remove_badly_preregistered_pairs()
+
         if self.cfg.overfit:
             print("warning temp reduce size")
             # self.pairs = [self.pairs[0], self.pairs[2]]
@@ -1110,6 +1112,68 @@ class TubingenDataset(torch_data.Dataset):
             )
         else:
             self.intensity_transform = build_val_transform()
+
+    def _remove_badly_preregistered_pairs(self) -> None:
+
+        cases_to_remove = [
+            "1006",
+            "1009",
+            "1014",
+            "1015",
+            "1016",
+            "1025",
+            "1038",
+            "1039",
+            "1043",
+            "1044",
+            "1051",
+            "1059",
+            "1070",
+            "1072",
+            "1073",
+            "1076",
+            "1086",
+            "1096",
+            "1098",
+            "1107",
+            "1125",
+            "1130",
+            "1133",
+            "1135",
+            "1136",
+            "1139",
+            "1141",
+            "1148",
+            "1150",
+            "1154",
+            "1159",
+            "1164",
+            "1172",
+            "1179",
+            "1187",
+            "1190",
+            "1193",
+            "1207",
+            "1210",
+            "1216",
+            "1221",
+            "1225",
+            "1226",
+            "1231",
+            "1236",
+            "1251",
+            "1254",
+            "1257",
+            "1258",
+            "1259",
+            "1278",
+        ]
+
+        self.pairs = [
+            (case_id, tp_x, tp_y)
+            for case_id, tp_x, tp_y in self.pairs
+            if case_id not in cases_to_remove
+        ]
 
     def __len__(self) -> int:
         return len(self.pairs)
@@ -1161,77 +1225,11 @@ class TubingenDataset(torch_data.Dataset):
                 data = apply_flip(data, all_spatial_keys)
                 flipped = True
 
-            # --- Z-axis FOV crop --------------------------------------------
-            # for tubingen we dont crop because they are already very heterogeneous
-            if False:
-                if self.cfg.aug_use_z_crop:
-                    crop_head = int(
-                        np.random.randint(0, self.cfg.aug_max_crop_z_head + 1)
-                    )
-                    crop_feet = int(
-                        np.random.randint(0, self.cfg.aug_max_crop_z_feet + 1)
-                    )
-                    data = apply_z_crop(data, all_spatial_keys, crop_head, crop_feet)
-
-                    # --- Asymmetric Z-axis FOV crop (independent fixed/moving) ----
-                if self.cfg.aug_use_z_crop_asym:
-                    crop_head_moving = int(
-                        np.random.randint(0, self.cfg.aug_max_crop_z_head_asym + 1)
-                    )
-                    crop_feet_moving = int(
-                        np.random.randint(0, self.cfg.aug_max_crop_z_feet_asym + 1)
-                    )
-                    crop_head_fixed = int(
-                        np.random.randint(0, self.cfg.aug_max_crop_z_head_asym + 1)
-                    )
-                    crop_feet_fixed = int(
-                        np.random.randint(0, self.cfg.aug_max_crop_z_feet_asym + 1)
-                    )
-
-                    data = apply_z_crop(
-                        data, moving_keys, crop_head_moving, crop_feet_moving
-                    )
-                    data = apply_z_crop(
-                        data, fixed_keys, crop_head_fixed, crop_feet_fixed
-                    )
-
         # Intensity augmentation (MONAI) + channel stacking
         data = self.intensity_transform(data)
 
         # --- SDT label channels (global switch) ----------------------------
         if self.cfg.use_labels_directly:
-            """
-            save_volume(
-                data["y_sdt"][0],
-                out_dir=Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/temp_output"),
-                epoch=0,
-                name="fixed_lbl_0",
-            )
-            save_volume(
-                data["y_sdt"][1],
-                out_dir=Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/temp_output"),
-                epoch=0,
-                name="fixed_lbl_1",
-            )
-            save_volume(
-                data["y_sdt"][2],
-                out_dir=Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/temp_output"),
-                epoch=0,
-                name="fixed_lbl_2",
-            )
-            save_volume(
-                data["y_sdt"][3],
-                out_dir=Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/temp_output"),
-                epoch=0,
-                name="fixed_lbl_3",
-            )
-            save_volume(
-                data["y"][0],
-                out_dir=Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/temp_output"),
-                epoch=0,
-                name="fixed",
-            )
-            """
             data["x"] = torch.cat([data["x"], data["x_sdt"]], dim=0)
             data["y"] = torch.cat([data["y"], data["y_sdt"]], dim=0)
             x = 0
