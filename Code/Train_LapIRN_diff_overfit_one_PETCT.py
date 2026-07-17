@@ -122,14 +122,14 @@ def main() -> None:
                 #     config, path_model_level_2, train_generator, train_generator
                 # )
             else:
-                # paths_model_level1 = level1.train_lvl1(
-                #     config, train_generator, valid_generator
-                # )
-                # path_model_level_1 = paths_model_level1["best"]
-                print("skipping level 1, already trained")
-                path_model_level_1 = Path(
-                    "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_stylish-kite-38590187_stagelvl1_best.pth"
+                paths_model_level1 = level1.train_lvl1(
+                    config, train_generator, valid_generator
                 )
+                path_model_level_1 = paths_model_level1["best"]
+                # print("skipping level 1, already trained")
+                # path_model_level_1 = Path(
+                #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_stylish-kite-38590187_stagelvl1_best.pth"
+                # )
                 # print("skipping level 2, already trained")
                 paths_model_level2 = level2.train_lvl2(
                     config, path_model_level_1, train_generator, valid_generator
