@@ -30,7 +30,7 @@ class TrainingConfig:
     use_cache_valid: bool = True
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
-    use_poly_affine: bool = False
+    use_poly_affine: bool = True
 
     # direct lables
     use_labels_directly: bool = False
@@ -64,7 +64,7 @@ class TrainingConfig:
     aug_max_crop_z_head_asym: int = 10  # smaller than symmetric (40)
     aug_max_crop_z_feet_asym: int = 10
     aug_seed: int = 42
-    use_synthetic: bool = True
+    use_synthetic: bool = False
     synthetic_repeat: int = 1
 
     range_flow: float = 0.4
