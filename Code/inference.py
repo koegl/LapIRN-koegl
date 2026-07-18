@@ -14,6 +14,7 @@ import ndv_official
 import nibabel as nib
 import numpy as np
 import pandas as pd
+import poly_affine_reg
 import torch
 import torch.nn.functional as F
 import tqdm
@@ -468,6 +469,7 @@ def evaluate_split(
     device: torch.device,
     use_io: bool,
     use_class_weights: bool,
+    use_polyaffine: bool,
     ct_label_dir: Path,
     pet_label_dir: Path,
     io_lr: float,
@@ -503,6 +505,7 @@ def evaluate_split(
             seg_template=seg_template,
             use_io=use_io,
             use_class_weights=use_class_weights,
+            use_polyaffine=use_polyaffine,
             ct_label_dir=ct_label_dir,
             pet_label_dir=pet_label_dir,
             ct_label_template=ct_label_template,
@@ -545,6 +548,7 @@ def process_subject(
     seg_template: str = "{case_id}_{tp}",
     use_io: bool = False,
     use_class_weights: bool = False,
+    use_polyaffine: bool = False,
     ct_label_dir: Optional[Path] = None,
     pet_label_dir: Optional[Path] = None,
     ct_label_template: str = "ct_{case_id}_{tp}",
@@ -556,16 +560,22 @@ def process_subject(
     X = pair["x"].unsqueeze(0).to(device).float()
     Y = pair["y"].unsqueeze(0).to(device).float()
 
-    dvf = affine_reg.get_affine_dvf(
-        case_id=case_id,
-        tp_x="01",
-        tp_y="00",
-        fixed_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_00.nii.gz",
-        moving_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_01.nii.gz",
-        make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
-        preprocess_ct_fn=affine_reg.preprocess_ct,
-        ants_affine_to_fullres_voxel_disp_fn=affine_reg.ants_affine_to_fullres_voxel_disp,
-    )
+    fixed_ct_path = val_image_dir / f"PSMARegPSMA_{case_id}_0000_00.nii.gz"
+    moving_ct_path = val_image_dir / f"PSMARegPSMA_{case_id}_0000_01.nii.gz"
+
+    def get_affine_dvf_canon() -> np.ndarray:
+        return affine_reg.get_affine_dvf(
+            case_id=case_id,
+            tp_x="01",
+            tp_y="00",
+            fixed_ct_path=fixed_ct_path,
+            moving_ct_path=moving_ct_path,
+            make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
+            preprocess_ct_fn=affine_reg.preprocess_ct,
+            ants_affine_to_fullres_voxel_disp_fn=affine_reg.ants_affine_to_fullres_voxel_disp,
+        )
+
+    dvf = get_affine_dvf_canon()
     dvf = affine_reg.apply_augmentation_to_dvf(
         dvf=dvf, flipped=False, crop_head=0, crop_feet=0
     )
@@ -575,6 +585,35 @@ def process_subject(
     d_w = dvf_tensor[:, 1] / (w / 2.0)
     d_d = dvf_tensor[:, 2] / (d / 2.0)
     flow_affine = torch.stack([d_d, d_w, d_h], dim=1).permute(0, 2, 3, 4, 1)
+
+    if use_polyaffine:
+
+        def resolve_seg_path(tp: str) -> Path:
+            stem = seg_template.format(case_id=case_id, tp=tp)
+            path = seg_dir / f"{stem}.nii"
+            if not path.exists():
+                path = seg_dir / f"{stem}.nii.gz"
+            return path
+
+        poly_dvf = poly_affine_reg.get_polyaffine_dvf(
+            case_id=case_id,
+            tp_x="01",
+            tp_y="00",
+            fixed_seg_path=resolve_seg_path("00"),
+            moving_seg_path=resolve_seg_path("01"),
+            get_affine_dvf_fn=get_affine_dvf_canon,
+            cfg=cfg,
+            device=device,
+        )
+        flow_poly = poly_affine_reg.create_polyaffine_flow(
+            poly_dvf=poly_dvf,
+            aug_flipped=False,
+            aug_crop_head=0,
+            aug_crop_feet=0,
+            cfg=cfg,
+            device=device,
+        )
+        flow_affine = poly_affine_reg.compose_flows(flow_affine, flow_poly, grid_full)
 
     X_affine = transform(X, flow_affine, grid_full)
 
@@ -793,7 +832,7 @@ def main() -> None:
     eval_official: bool = True
     eval_my_val: bool = False
 
-    model_ori_name = "bustling-whale-447"
+    model_ori_name = "victorious-flea-38622412"
 
     model_path = Path(
         f"/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_{model_ori_name}_stagelvl3_best.pth"
@@ -802,7 +841,7 @@ def main() -> None:
 
     out_dir = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results")
     official_seg_dir = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/segmentations"
+        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/segmentations_fast"
     )
 
     model = create_model(device, cfg, model_path)
@@ -820,17 +859,22 @@ def main() -> None:
     ct_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_ct")
     pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
-    use_io: bool = True
-    use_class_weights = True
+    use_io: bool = False
+    use_class_weights = False
+    use_polyaffine: bool = True
     io_lr: float = 5e-1
     io_it: float = 60
     if use_io:
         model_name += "_IO_"
-        model_name += f"lr{io_lr:.1e}_it{io_it}_wncc{cfg.w_ct:.2f}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct_lvl3:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_jacobian_tumor:.2f}"
+        model_name += f"lr{io_lr:.1e}_it{io_it}_wncc{cfg.w_ct:.2f}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct_lvl3:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_jacobian_tumor:.2f}_wBoneRigid{cfg.w_bone_rigid:.2f} "
         print("warning using IO")
         if use_class_weights:
             model_name += "_classweights"
             print("warning using class weights")
+
+    if use_polyaffine:
+        model_name += "_polyaffine"
+        print("warning using polyaffine prereg")
 
     if eval_official:
         # print("warning: reducing number of my val subjects")
@@ -854,6 +898,7 @@ def main() -> None:
             device=device,
             use_io=use_io,
             use_class_weights=use_class_weights,
+            use_polyaffine=use_polyaffine,
             ct_label_dir=ct_label_dir,
             pet_label_dir=pet_label_dir,
             io_lr=io_lr,
@@ -890,6 +935,7 @@ def main() -> None:
             device=device,
             use_io=use_io,
             use_class_weights=use_class_weights,
+            use_polyaffine=use_polyaffine,
             io_it=io_it,
             ct_label_dir=my_val_seg_dir,
             pet_label_dir=my_val_seg_dir,
