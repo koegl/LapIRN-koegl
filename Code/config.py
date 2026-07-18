@@ -13,7 +13,9 @@ else:
 
 @dataclass
 class TrainingConfig:
-    save_dir: Path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/saved")
+    repo_dir: Path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl")
+    save_dir: Path = repo_dir / "saved"
+    # save_dir: Path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/saved")
     model_save_dir: Path = DATA_PATH / "PSMAReg/models"
 
     # overfit
@@ -23,7 +25,7 @@ class TrainingConfig:
     data_dir = DATA_PATH / "PSMAReg/PSMAReg_dataset"
     cache_dir = DATA_PATH / "PSMAReg/affine_cache"
     cache_dir_poly = DATA_PATH / "PSMAReg/poly_cache"
-    split_path = DATA_PATH / "PSMAReg/PSMAReg_dataset/split.json"
+    split_path = repo_dir / "split.json"
     val_fraction: float = 0.15
     use_cache_train_real: bool = True
     use_cache_train_synthetic: bool = True
