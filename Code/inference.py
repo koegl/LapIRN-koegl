@@ -910,7 +910,9 @@ def main() -> None:
             hd95_csv=results_csv_official_hd95,
             per_label_csv=per_label_dice_csv,
         )
-        compress_to_zip(out_dir / "submission", out_dir / "submission.zip")
+        compress_to_zip(
+            out_dir / "submission", out_dir / f"submission_{model_name}.zip"
+        )
 
     if eval_my_val:
         per_label_dice_csv = results_csv_my_val_dice_per_label.with_stem(
