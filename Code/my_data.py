@@ -1187,6 +1187,6 @@ class TubingenDataset(torch_data.Dataset):
         data["tp_y"] = tp_y
 
         data["is_synthetic"] = False
-        data["is_tubingen"] = False
+        data["is_tubingen"] = True
 
         return data
