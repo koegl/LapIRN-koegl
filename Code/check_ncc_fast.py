@@ -1,15 +1,21 @@
-"""Sanity-check NCC_fast / multi_resolution_NCC_fast against the reference
-NCC / multi_resolution_NCC: agreement in value, in gradient, and speedup.
+"""Compare the fast NCC against the reference at every level used in training:
+
+    lvl1  NCC              win=lvl1_ncc_win            img_shape_4
+    lvl2  multi_res scale2 win=lvl2_ncc_win            img_shape_2
+    lvl3  multi_res scale3 win=lvl3_ncc_win            img_shape
+
+Reports value agreement, gradient agreement and speedup per level.
 
 Run:  python Code/check_ncc_fast.py
 """
 
 from pathlib import Path
 from time import time
-from typing import Tuple
+from typing import Callable, List, Optional, Tuple
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from config import TrainingConfig
 from miccai2020_model_stage import (
     NCC,
@@ -18,27 +24,62 @@ from miccai2020_model_stage import (
     multi_resolution_NCC_fast,
 )
 
+# a real preprocessed pair; mostly air, which is where the single-pass
+# variance formula is weakest. falls back to synthetic data if missing.
+real_fixed = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTr/PSMARegPSMA_0002_0000_00.nii.gz"
+)
+real_moving = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTr/PSMARegPSMA_0002_0001_00.nii.gz"
+)
 
-def make_inputs(
-    shape: Tuple[int, int, int],
-    device: torch.device,
-    seed: int = 0,
+n_iter = 20
+
+
+class LevelSpec:
+    def __init__(
+        self,
+        name: str,
+        shape: Tuple[int, int, int],
+        win: int,
+        scale: Optional[int],
+    ) -> None:
+        self.name = name
+        self.shape = shape
+        self.win = win
+        # scale None -> single-scale NCC / NCC_fast, as level1 uses
+        self.scale = scale
+
+    def build(self) -> Tuple[torch.nn.Module, torch.nn.Module]:
+        if self.scale is None:
+            return NCC(win=self.win), NCC_fast(win=self.win)
+        return (
+            multi_resolution_NCC(win=self.win, scale=self.scale),
+            multi_resolution_NCC_fast(win=self.win, scale=self.scale),
+        )
+
+    def describe(self) -> str:
+        kind = "NCC" if self.scale is None else f"multi_res scale={self.scale}"
+        return f"{self.name}: {kind}, win={self.win}, shape={self.shape}"
+
+
+def make_synthetic(
+    shape: Tuple[int, int, int], device: torch.device, seed: int = 0
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Smooth, correlated volumes — closer to real CT than white noise, which
-    has near-zero local variance and hides normalisation bugs."""
     torch.manual_seed(seed)
     base = torch.rand(1, 1, *shape, device=device)
-    base = torch.nn.functional.avg_pool3d(base, 5, stride=1, padding=2)
+    base = F.avg_pool3d(base, 5, stride=1, padding=2)
     I = base + 0.1 * torch.rand(1, 1, *shape, device=device)
     J = base.roll(shifts=2, dims=2) + 0.1 * torch.rand(1, 1, *shape, device=device)
     return I.contiguous(), J.contiguous()
 
 
 def load_real_pair(
-    fixed_path: Path, moving_path: Path, device: torch.device
-) -> Tuple[torch.Tensor, torch.Tensor]:
-    """A real preprocessed pair — mostly air, which is the regime where the
-    single-pass variance formula is weakest."""
+    device: torch.device,
+) -> Optional[Tuple[torch.Tensor, torch.Tensor]]:
+    if not (real_fixed.exists() and real_moving.exists()):
+        return None
+
     import my_data
 
     def load(path: Path) -> torch.Tensor:
@@ -46,154 +87,121 @@ def load_real_pair(
         arr = my_data.norm_ct(arr)
         return torch.from_numpy(arr)[None, None].to(device).float()
 
-    return load(moving_path), load(fixed_path)
+    return load(real_moving), load(real_fixed)
 
 
-def report_pair(I: torch.Tensor, J: torch.Tensor, win: int, label: str) -> None:
-    print(f"\n=== {label} ===")
-    frac_air = (I < 0.01).float().mean().item()
-    print(f"shape={tuple(I.shape[2:])}  fraction of near-zero voxels={frac_air:.3f}")
-
-    ref = multi_resolution_NCC(win=win, scale=3)(I, J).item()
-    fast = multi_resolution_NCC_fast(win=win, scale=3).loss(I, J).item()
-    rel = abs(ref - fast) / max(abs(ref), 1e-12)
-    print(f"loss   ref={ref:+.8f}  fast={fast:+.8f}  rel_diff={rel:.3e}")
-
-    a = I.clone().requires_grad_(True)
-    multi_resolution_NCC(win=win, scale=3)(a, J).backward()
-    g_ref = a.grad.detach()
-
-    b = I.clone().requires_grad_(True)
-    multi_resolution_NCC_fast(win=win, scale=3).loss(b, J).backward()
-    g_fast = b.grad.detach()
-
-    cos = torch.nn.functional.cosine_similarity(
-        g_ref.flatten(), g_fast.flatten(), dim=0
-    ).item()
-    ratio = (g_fast.abs().max() / g_ref.abs().max().clamp(min=1e-12)).item()
-    print(f"grad   cosine={cos:.8f}  max|g_fast|/max|g_ref|={ratio:.4f}")
+def to_shape(vol: torch.Tensor, shape: Tuple[int, int, int]) -> torch.Tensor:
+    if tuple(vol.shape[2:]) == shape:
+        return vol
+    return F.interpolate(vol, size=shape, mode="trilinear", align_corners=False)
 
 
-def compare_values(shape: Tuple[int, int, int], device: torch.device) -> None:
-    print(f"\n=== single-scale NCC vs NCC_fast  (shape={shape}) ===")
-    I, J = make_inputs(shape, device)
-    for win in (5, 7, 9):
-        ref = NCC(win=win)(I, J).item()
-        fast = NCC_fast(win=win).loss(I, J).item()
-        rel = abs(ref - fast) / max(abs(ref), 1e-12)
-        print(f"win={win}:  ref={ref:+.8f}  fast={fast:+.8f}  rel_diff={rel:.3e}")
-
-
-def compare_multires(
-    shape: Tuple[int, int, int], win: int, device: torch.device
+def compare(
+    ref: torch.nn.Module,
+    fast: torch.nn.Module,
+    I: torch.Tensor,
+    J: torch.Tensor,
 ) -> None:
-    print(f"\n=== multi_resolution (win={win}, scale=3, shape={shape}) ===")
-    I, J = make_inputs(shape, device)
-    ref = multi_resolution_NCC(win=win, scale=3)(I, J).item()
-    fast = multi_resolution_NCC_fast(win=win, scale=3).loss(I, J).item()
-    rel = abs(ref - fast) / max(abs(ref), 1e-12)
-    print(f"ref={ref:+.8f}  fast={fast:+.8f}  rel_diff={rel:.3e}")
-
-
-def compare_grads(shape: Tuple[int, int, int], win: int, device: torch.device) -> None:
-    """Values matching is not enough — the loss is only useful via its gradient."""
-    print(f"\n=== gradient wrt moving image (win={win}, scale=3) ===")
-    I, J = make_inputs(shape, device)
+    v_ref = ref(I, J).item()
+    v_fast = fast(I, J).item()
+    rel = abs(v_ref - v_fast) / max(abs(v_ref), 1e-12)
+    print(f"  loss   ref={v_ref:+.8f}  fast={v_fast:+.8f}  rel_diff={rel:.3e}")
 
     a = I.clone().requires_grad_(True)
-    multi_resolution_NCC(win=win, scale=3)(a, J).backward()
+    ref(a, J).backward()
     g_ref = a.grad.detach()
 
     b = I.clone().requires_grad_(True)
-    multi_resolution_NCC_fast(win=win, scale=3).loss(b, J).backward()
+    fast(b, J).backward()
     g_fast = b.grad.detach()
 
-    denom = g_ref.abs().max().clamp(min=1e-12)
-    max_abs = (g_ref - g_fast).abs().max().item()
-    cos = torch.nn.functional.cosine_similarity(
-        g_ref.flatten(), g_fast.flatten(), dim=0
-    ).item()
-    print(f"max|dg|={max_abs:.3e}  (rel to max|g_ref|={denom.item():.3e})")
-    print(f"cosine similarity={cos:.8f}")
+    cos = F.cosine_similarity(g_ref.flatten(), g_fast.flatten(), dim=0).item()
+    ratio = (g_fast.abs().max() / g_ref.abs().max().clamp(min=1e-12)).item()
+    print(f"  grad   cosine={cos:.8f}  max|g_fast|/max|g_ref|={ratio:.4f}")
+
+
+def time_fn(
+    fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+    I: torch.Tensor,
+    J: torch.Tensor,
+    backward: bool,
+    device: torch.device,
+) -> float:
+    for _ in range(3):  # warmup
+        out = fn(I, J)
+        if backward:
+            out.backward()
+            I.grad = None
+    if device.type == "cuda":
+        torch.cuda.synchronize()
+
+    start = time()
+    for _ in range(n_iter):
+        out = fn(I, J)
+        if backward:
+            out.backward()
+            I.grad = None
+    if device.type == "cuda":
+        torch.cuda.synchronize()
+    return (time() - start) / n_iter
 
 
 def benchmark(
-    shape: Tuple[int, int, int],
-    win: int,
+    ref: torch.nn.Module,
+    fast: torch.nn.Module,
+    I: torch.Tensor,
+    J: torch.Tensor,
     device: torch.device,
-    n_iter: int = 20,
 ) -> None:
-    print(f"\n=== timing (win={win}, scale=3, shape={shape}, n={n_iter}) ===")
-    I, J = make_inputs(shape, device)
-    I = I.requires_grad_(True)
-
-    ref = multi_resolution_NCC(win=win, scale=3)
-    fast = multi_resolution_NCC_fast(win=win, scale=3)
-
-    def run(fn, backward: bool) -> float:
-        for _ in range(3):  # warmup
-            out = fn(I, J)
-            if backward:
-                out.backward()
-                I.grad = None
-        if device.type == "cuda":
-            torch.cuda.synchronize()
-        start = time()
-        for _ in range(n_iter):
-            out = fn(I, J)
-            if backward:
-                out.backward()
-                I.grad = None
-        if device.type == "cuda":
-            torch.cuda.synchronize()
-        return (time() - start) / n_iter
-
+    I = I.clone().requires_grad_(True)
     for backward in (False, True):
         tag = "fwd+bwd" if backward else "fwd"
-        t_ref = run(lambda a, b: ref(a, b), backward)
-        t_fast = run(lambda a, b: fast.loss(a, b), backward)
+        t_ref = time_fn(ref, I, J, backward, device)
+        t_fast = time_fn(fast, I, J, backward, device)
         print(
-            f"{tag:8s}  ref={t_ref * 1e3:8.2f} ms   "
-            f"fast={t_fast * 1e3:8.2f} ms   speedup={t_ref / t_fast:.2f}x"
+            f"  {tag:8s} ref={t_ref * 1e3:8.2f} ms  "
+            f"fast={t_fast * 1e3:8.2f} ms  speedup={t_ref / t_fast:.2f}x"
         )
 
 
 def main() -> None:
     cfg = TrainingConfig()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print(f"device={device}  lvl3_ncc_win={cfg.lvl3_ncc_win}")
 
-    small = (48, 48, 64)
-    full = tuple(int(s) for s in cfg.img_shape)
+    levels: List[LevelSpec] = [
+        LevelSpec(
+            "lvl1", tuple(int(s) for s in cfg.img_shape_4), cfg.lvl1_ncc_win, None
+        ),
+        LevelSpec("lvl2", tuple(int(s) for s in cfg.img_shape_2), cfg.lvl2_ncc_win, 2),
+        LevelSpec("lvl3", tuple(int(s) for s in cfg.img_shape), cfg.lvl3_ncc_win, 3),
+    ]
 
-    compare_values(small, device)
-    compare_multires(small, cfg.lvl3_ncc_win, device)
-    compare_grads(small, cfg.lvl3_ncc_win, device)
+    real = load_real_pair(device)
+    source = "real pair" if real is not None else "synthetic"
+    print(f"device={device}  data={source}  n_iter={n_iter}")
+    if real is None:
+        print(f"  (real pair not found at {real_fixed})")
 
-    # the one that counts: a real, mostly-air NLST pair at full resolution
-    fixed = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTr/PSMARegPSMA_0002_0000_00.nii.gz"
-    )
-    moving = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTr/PSMARegPSMA_0002_0001_00.nii.gz"
-    )
-    if fixed.exists() and moving.exists():
-        I, J = load_real_pair(fixed, moving, device)
-        report_pair(I, J, cfg.lvl3_ncc_win, "real NLST pair (full res)")
-    else:
-        print(f"\nskipping real-data check, not found: {fixed}")
+    for spec in levels:
+        print(f"\n=== {spec.describe()} ===")
 
-    if device.type == "cuda":
-        benchmark(full, cfg.lvl3_ncc_win, device)
-    else:
-        print("\nskipping full-resolution benchmark on cpu")
+        if real is not None:
+            I = to_shape(real[0], spec.shape)
+            J = to_shape(real[1], spec.shape)
+        else:
+            I, J = make_synthetic(spec.shape, device)
+        print(f"  fraction of near-zero voxels={(I < 0.01).float().mean().item():.3f}")
 
-    print(
-        "\nnote: the reference NCC clamps I_var/J_var to >=0 and cc to <=1;\n"
-        "NCC_fast does neither, so exact agreement is not expected. Large\n"
-        "gradient differences (cosine << 1) mean the clamps are actually\n"
-        "firing on your data and the fast version is not a drop-in swap."
-    )
+        ref, fast = spec.build()
+        ref = ref.to(device)
+        fast = fast.to(device)
+
+        compare(ref, fast, I, J)
+
+        if device.type == "cuda":
+            benchmark(ref, fast, I, J, device)
+        else:
+            print("  skipping timing on cpu")
 
 
 if __name__ == "__main__":
