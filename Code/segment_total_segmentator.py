@@ -6,7 +6,8 @@ from tqdm import tqdm
 
 
 def find_ct_images(input_dir: Path) -> List[Path]:
-    images = sorted(input_dir.glob("PSMARegPSMA_*_0000_*.nii.gz"))
+    images = sorted(input_dir.glob("*.nii.gz"))
+    # images = sorted(input_dir.glob("PSMARegPSMA_*_0000_*.nii.gz"))
     return images
 
 
@@ -20,16 +21,21 @@ def segment(image: Path, output: Path, fast: bool = True) -> None:
     cmd = ["TotalSegmentator", "-i", str(image), "-o", str(output), "--ml"]
     if fast:
         cmd.append("-f")
-    subprocess.run(cmd, check=True)
+
+    # swallow TotalSegmentator's chatter so it does not break up the progress
+    # bar, but surface it if the run actually failed
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        tqdm.write(result.stdout)
+        tqdm.write(result.stderr)
+        raise subprocess.CalledProcessError(
+            result.returncode, cmd, result.stdout, result.stderr
+        )
 
 
 def main() -> None:
-    input_dir = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTr_tubingen"
-    )
-    output_dir = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTr_tubingen"
-    )
+    input_dir = Path("/home/iml/fryderyk.koegl/data/NLST_l2r_2023/imagesTr")
+    output_dir = Path("/home/iml/fryderyk.koegl/data/NLST_l2r_2023/labelsTr_totalseg")
     skip_existing = True
     fast = False
 
@@ -46,7 +52,6 @@ def main() -> None:
             continue
 
         segment(image, output, fast=fast)
-        tqdm.write(f"done {output.name}")
 
 
 if __name__ == "__main__":

@@ -112,6 +112,7 @@ def get_polyaffine_dvf(
         seg_moving_affine[0, 0].round().long().cpu().numpy().astype(np.int16)
     )
 
+    print(f"Bone ICP case id: {case_id}")
     velocity = build_polyaffine_velocity(
         seg_fixed_np=seg_fixed_np,
         seg_moving_np=seg_moving_affine_np,
