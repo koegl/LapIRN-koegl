@@ -35,7 +35,7 @@ class TrainingConfig:
     use_poly_affine: bool = False
     use_synthetic: bool = False
     use_labels_directly: bool = False
-    use_tubingen: bool = True
+    use_tubingen: bool = False
 
     label_groups: List[List[int]] = field(
         default_factory=lambda: [
@@ -75,17 +75,17 @@ class TrainingConfig:
     n_classes: int = 3
     lr_lvl1: float = 0.0003
     lr_lvl2: float = 0.0002
-    lr_lvl3: float = 0.0001
+    lr_lvl3: float = 0.00025
     # linear LR warmup (0 -> full lr) applied at the start of every level,
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
-    warmup_epochs: float = 5
+    warmup_epochs: float = 0
     start_channel: int = 7
 
     # train val
     total_steps_lvl1: int = 45000
     total_steps_lvl2: int = 55000
-    total_steps_lvl3: int = 35000
+    total_steps_lvl3: int = 50000
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
@@ -115,7 +115,7 @@ class TrainingConfig:
 
     lvl1_ncc_win: int = 5
     lvl2_ncc_win: int = 7
-    lvl3_ncc_win: int = 9
+    lvl3_ncc_win: int = 7
 
     mlflow_tracking_uri: str = "sqlite:////home/iml/fryderyk.koegl/code/mlruns.db"
     mlflow_experiment: str = "PSMAReg_LapIRN"
