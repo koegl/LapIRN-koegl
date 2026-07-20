@@ -294,6 +294,7 @@ def train_lvl3(
     train_generator: torch_data.DataLoader,
     valid_generator: torch_data.DataLoader,
     valid_tubingen_generator: Optional[torch_data.DataLoader] = None,
+    valid_nlst_generator: Optional[torch_data.DataLoader] = None,
     resume_model_path: Optional[Path] = None,
     resume_optimizer_path: Optional[Path] = None,
 ) -> Dict[str, Path]:
@@ -578,7 +579,7 @@ def train_lvl3(
             saved_initial = True
 
         if config.overfit is True and (
-            (is_epoch_start and (epoch == 0 or epoch % 20 == 0)) or is_last_step
+            (is_epoch_start and (epoch == 0 or epoch % 40 == 0)) or is_last_step
         ):
             ct = X_Y[:, 0:1, :, :, :]
             my_data.save_volume(
@@ -811,6 +812,7 @@ def train_lvl3(
                 },
                 step=global_step,
             )
+
             if valid_tubingen_generator is not None:
                 val_losses_tubingen = evaluate_lvl3(
                     model=model,
@@ -832,6 +834,32 @@ def train_lvl3(
                     {
                         f"valid_lvl3/val_{key}_tubingen": value
                         for key, value in val_losses_tubingen.items()
+                        if not (isinstance(value, float) and np.isnan(value))
+                    },
+                    step=global_step,
+                )
+
+            if valid_nlst_generator is not None:
+                val_losses_nlst = evaluate_lvl3(
+                    model=model,
+                    val_generator=valid_nlst_generator,
+                    config=config,
+                    device=device,
+                    loss_similarity_ct=loss_similarity_ct,
+                    loss_similarity_pet=loss_similarity_pet,
+                    loss_smooth=loss_smooth,
+                    loss_Jdet=loss_Jdet,
+                    transform=transform,
+                    grid=grid,
+                    epoch=epoch,
+                    val_interval=config.val_interval,
+                    saved_initial=saved_initial,
+                    is_last=is_last_step,
+                )
+                mlflow.log_metrics(
+                    {
+                        f"valid_lvl3/val_{key}_nlst": value
+                        for key, value in val_losses_nlst.items()
                         if not (isinstance(value, float) and np.isnan(value))
                     },
                     step=global_step,

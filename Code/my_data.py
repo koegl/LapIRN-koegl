@@ -186,12 +186,31 @@ def remove_tubingen(
     return split_train_filtered, split_valid_filtered
 
 
+def remove_nlst(
+    split_train: List[str], split_valid: List[str]
+) -> Tuple[List[str], List[str]]:
+    split_train_filtered = [cid for cid in split_train if not cid.startswith("2")]
+    split_valid_filtered = [cid for cid in split_valid if not cid.startswith("2")]
+
+    return split_train_filtered, split_valid_filtered
+
+
 def remove_non_tubingen(
     split_train: List[str], split_valid: List[str]
 ) -> Tuple[List[str], List[str]]:
 
     split_train_filtered = [cid for cid in split_train if cid.startswith("1")]
     split_valid_filtered = [cid for cid in split_valid if cid.startswith("1")]
+
+    return split_train_filtered, split_valid_filtered
+
+
+def remove_non_nlst(
+    split_train: List[str], split_valid: List[str]
+) -> Tuple[List[str], List[str]]:
+
+    split_train_filtered = [cid for cid in split_train if cid.startswith("2")]
+    split_valid_filtered = [cid for cid in split_valid if cid.startswith("2")]
 
     return split_train_filtered, split_valid_filtered
 
@@ -203,16 +222,24 @@ def get_train_val_split(
     seed: int = 0,
     min_timepoints: int = 2,
     tubingen: bool = False,
+    nlst: bool = False,
 ) -> Tuple[List[str], List[str]]:
     """Get or create a patient-level train/val split."""
     if split_path.exists():
         with open(split_path, "r") as f:
             split = json.load(f)
 
+        train, val = split["train"], split["val"]
+
         if tubingen:
-            train, val = remove_non_tubingen(split["train"], split["val"])
+            train, val = remove_non_tubingen(train, val)
         else:
-            train, val = remove_tubingen(split["train"], split["val"])
+            train, val = remove_tubingen(train, val)
+
+        if nlst:
+            train, val = remove_non_nlst(train, val)
+        else:
+            train, val = remove_nlst(train, val)
 
         return train, val
 
@@ -1030,6 +1057,169 @@ class PSMARegDataset(torch_data.Dataset):
 
 
 class TubingenDataset(torch_data.Dataset):
+    def __init__(
+        self,
+        cfg: config.TrainingConfig,
+        case_ids: Optional[List[str]] = None,
+        overfit: Optional[str] = None,
+        use_cache: bool = False,
+        cache_rate: float = 1.0,
+        num_workers: int = 4,
+        augment: bool = False,
+    ) -> None:
+        self.data_dir = cfg.data_dir
+
+        self.cfg = cfg
+        self.augment = augment
+
+        case_timepoints = list_case_timepoints(cfg.data_dir)
+
+        if overfit is not None:
+            if overfit not in case_timepoints or len(case_timepoints[overfit]) < 2:
+                raise ValueError(
+                    f"Patient {overfit!r} must have at least two timepoints."
+                )
+            pairs = build_registration_pairs(
+                case_timepoints,
+                case_ids=[overfit],
+            )
+        else:
+            pairs = build_registration_pairs(
+                case_timepoints,
+                case_ids=case_ids,
+            )
+
+        self.pairs = pairs
+
+        if self.cfg.overfit:
+            i = 0
+            print("warning temp reduce size")
+            # self.pairs = [self.pairs[0], self.pairs[2]]
+            self.pairs = [self.pairs[i]]
+
+        data_dicts = [
+            {"case_id": case_id, "tp_x": tp_x, "tp_y": tp_y}
+            for case_id, tp_x, tp_y in self.pairs
+        ]
+
+        if self.cfg.use_labels_directly:
+            load_transform = Compose(
+                [
+                    LoadPairToDict(self.data_dir, tubingen=True),
+                    ComputeSDTChannelsd(
+                        "x_label_ct", "x_sdt", cfg.label_groups, cfg.sdt_clip_vox
+                    ),
+                    ComputeSDTChannelsd(
+                        "y_label_ct", "y_sdt", cfg.label_groups, cfg.sdt_clip_vox
+                    ),
+                ]
+            )
+        else:
+            load_transform = Compose([LoadPairToDict(self.data_dir, tubingen=True)])
+
+        if use_cache:
+            self.dataset = monai_data.CacheDataset(
+                data=data_dicts,
+                transform=load_transform,
+                cache_rate=cache_rate,
+                num_workers=num_workers,
+            )
+        else:
+            self.dataset = monai_data.Dataset(data=data_dicts, transform=load_transform)
+
+        # Intensity transform (MONAI) — spatial augmentation is done manually below
+        if augment:
+            self.intensity_transform = build_intensity_transform(
+                ct_shift_range=cfg.aug_ct_shift_range,
+                ct_scale_range=cfg.aug_ct_scale_range,
+                pet_scale_range=cfg.aug_pet_scale_range,
+                use_ct_intensity=cfg.aug_use_ct_intensity,
+                use_pet_intensity=cfg.aug_use_pet_intensity,
+            )
+        else:
+            self.intensity_transform = build_val_transform()
+
+    def __len__(self) -> int:
+        return len(self.pairs)
+
+    def __getitem__(self, index: int) -> dict:
+        # shallow-copy so augmentation key-reassignments do not mutate the
+        # cached sample in place (CacheDataset returns a shared reference)
+        data = dict(self.dataset[index])
+
+        data["x_pet"] = torch.zeros_like(data["x_ct"])
+        data["y_pet"] = torch.zeros_like(data["y_ct"])
+        data["x_label_pet"] = torch.zeros_like(data["x_label_ct"])
+        data["y_label_pet"] = torch.zeros_like(data["y_label_ct"])
+
+        all_spatial_keys = [
+            "x_ct",
+            "x_pet",
+            "y_ct",
+            "y_pet",
+            "x_label_ct",
+            "x_label_pet",
+            "y_label_ct",
+            "y_label_pet",
+            "y_body_mask",
+        ]
+
+        moving_keys = ["x_ct", "x_pet", "x_label_ct", "x_label_pet"]
+        fixed_keys = ["y_ct", "y_pet", "y_label_ct", "y_label_pet", "y_body_mask"]
+
+        if self.cfg.use_labels_directly:
+            all_spatial_keys += ["x_sdt", "y_sdt"]
+
+            moving_keys += ["x_sdt"]
+            fixed_keys += ["y_sdt"]
+
+        # Augmentation parameters — always initialised so training loop can
+        # use them unconditionally regardless of whether augment=True/False
+        flipped = False
+        crop_head = 0
+        crop_feet = 0
+        crop_head_moving = 0
+        crop_feet_moving = 0
+        crop_head_fixed = 0
+        crop_feet_fixed = 0
+
+        if self.augment:
+            # --- Left-right flip --------------------------------------------
+            if self.cfg.aug_use_flip and np.random.random() < self.cfg.aug_flip_prob:
+                data = apply_flip(data, all_spatial_keys)
+                flipped = True
+
+        # Intensity augmentation (MONAI) + channel stacking
+        data = self.intensity_transform(data)
+
+        # --- SDT label channels (global switch) ----------------------------
+        if self.cfg.use_labels_directly:
+            data["x"] = torch.cat([data["x"], data["x_sdt"]], dim=0)
+            data["y"] = torch.cat([data["y"], data["y_sdt"]], dim=0)
+            x = 0
+        # Attach augmentation parameters for DVF consistency in training loop
+        data["aug_flipped"] = flipped
+
+        data["aug_crop_head"] = crop_head
+        data["aug_crop_feet"] = crop_feet
+
+        data["aug_crop_head_moving"] = crop_head_moving
+        data["aug_crop_feet_moving"] = crop_feet_moving
+        data["aug_crop_head_fixed"] = crop_head_fixed
+        data["aug_crop_feet_fixed"] = crop_feet_fixed
+
+        case_id, tp_x, tp_y = self.pairs[index]
+        data["case_id"] = case_id
+        data["tp_x"] = tp_x
+        data["tp_y"] = tp_y
+
+        data["is_synthetic"] = False
+        data["is_tubingen"] = True
+
+        return data
+
+
+class NLSTDataset(torch_data.Dataset):
     def __init__(
         self,
         cfg: config.TrainingConfig,

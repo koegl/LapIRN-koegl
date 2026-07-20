@@ -1,8 +1,9 @@
 import contextlib
 import os
-from typing import Callable
+from typing import Callable, Tuple
 
 import mlflow
+import my_data
 import numpy as np
 import torch
 import tqdm
@@ -10,6 +11,146 @@ from config import TrainingConfig
 from miccai2020_model_stage import (
     SpatialTransform_unit,
 )
+from torch.utils import data as torch_data
+
+
+def create_datasets(
+    config: TrainingConfig,
+) -> Tuple[
+    torch_data.ConcatDataset,
+    my_data.PSMARegDataset,
+    my_data.SyntheticSourceDataset | None,
+    my_data.TubingenDataset | None,
+    my_data.NLSTDataset | None,
+    my_data.PSMARegDataset,
+    my_data.TubingenDataset | None,
+    my_data.NLSTDataset | None,
+    dict,
+]:
+
+    train_ids, val_ids = my_data.get_train_val_split(
+        data_dir=config.data_dir,
+        split_path=config.split_path,
+        val_fraction=config.val_fraction,
+        tubingen=False,
+        nlst=False,
+    )
+    synth_ids = [
+        c
+        for c, _ in my_data.list_single_session_sources(
+            config.data_dir, exclude_case_ids=train_ids + val_ids
+        )
+    ]
+    train_ids_tubingen, val_ids_tubingen = my_data.get_train_val_split(
+        data_dir=config.data_dir,
+        split_path=config.split_path,
+        val_fraction=config.val_fraction,
+        tubingen=True,
+        nlst=False,
+    )
+    train_ids_nlst, val_ids_nlst = my_data.get_train_val_split(
+        data_dir=config.data_dir,
+        split_path=config.split_path,
+        val_fraction=config.val_fraction,
+        tubingen=False,
+        nlst=True,
+    )
+
+    config_to_log = config.to_mlflow_params()
+    config_to_log["train_indices"] = train_ids
+    config_to_log["train_indices_synthetic"] = synth_ids
+    config_to_log["train_indices_tubingen"] = train_ids_tubingen
+    config_to_log["train_indices_nlst"] = train_ids_nlst
+
+    config_to_log["val_indices"] = val_ids
+    config_to_log["val_indices_tubingen"] = val_ids_tubingen
+    config_to_log["val_indices_nlst"] = val_ids_nlst
+
+    val_dataset_tubingen = None
+    val_dataset_nlst = None
+    train_dataset_synthetic = None
+    train_dataset_tubingen = None
+    train_dataset_nlst = None
+
+    val_dataset = my_data.PSMARegDataset(
+        case_ids=val_ids,
+        cfg=config,
+        augment=False,
+        use_cache=config.use_cache_valid,
+        include_intermediate_pairs=False,
+        num_workers=config.num_workers,
+    )
+
+    train_dataset = my_data.PSMARegDataset(
+        case_ids=train_ids,
+        cfg=config,
+        augment=config.augment,
+        use_cache=config.use_cache_train_real,
+        include_intermediate_pairs=True,
+        num_workers=config.num_workers,
+    )
+    all_train_datasets = [train_dataset]
+
+    if config.use_synthetic:
+        train_dataset_synthetic = my_data.SyntheticSourceDataset(
+            cfg=config,
+            source_ids=synth_ids,
+            repeat=config.synthetic_repeat,
+            use_cache=config.use_cache_train_synthetic,
+            num_workers=config.num_workers,
+            augment=config.augment,
+        )
+        all_train_datasets.append(train_dataset_synthetic)
+
+    if config.use_tubingen:
+        train_dataset_tubingen = my_data.TubingenDataset(
+            case_ids=train_ids_tubingen,
+            cfg=config,
+            augment=config.augment,
+            use_cache=config.use_cache_train_real,
+            num_workers=config.num_workers,
+        )
+        all_train_datasets.append(train_dataset_tubingen)
+
+        val_dataset_tubingen = my_data.TubingenDataset(
+            case_ids=val_ids_tubingen,
+            cfg=config,
+            augment=False,
+            use_cache=config.use_cache_valid,
+            num_workers=config.num_workers,
+        )
+
+    if config.use_nlst:
+        train_dataset_nlst = my_data.NLSTDataset(
+            case_ids=train_ids_nlst,
+            cfg=config,
+            augment=config.augment,
+            use_cache=config.use_cache_train_real,
+            num_workers=config.num_workers,
+        )
+        all_train_datasets.append(train_dataset_nlst)
+
+        val_dataset_nlst = my_data.NLSTDataset(
+            case_ids=val_ids_nlst,
+            cfg=config,
+            augment=False,
+            use_cache=config.use_cache_valid,
+            num_workers=config.num_workers,
+        )
+
+    train_combined = torch_data.ConcatDataset(all_train_datasets)
+
+    return (
+        train_combined,
+        train_dataset,
+        train_dataset_synthetic,
+        train_dataset_tubingen,
+        train_dataset_nlst,
+        val_dataset,
+        val_dataset_tubingen,
+        val_dataset_nlst,
+        config_to_log,
+    )
 
 
 def warmup_lr_factor(global_step: int, warmup_steps: int) -> float:
