@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
@@ -8,7 +7,6 @@ import mlflow
 import my_data
 import numpy as np
 import poly_affine_reg
-import psutil
 import synthetic
 import torch
 import torch.nn.functional as F
@@ -21,8 +19,8 @@ from Functions import (
     transform_unit_flow_to_flow_cuda,
 )
 from miccai2020_model_stage import (
-    NCC,
     Miccai2020_LDR_laplacian_unit_add_lvl1,
+    NCC_fast,
     SpatialTransform_unit,
     SpatialTransformNearest_unit,
     smoothloss,
@@ -35,8 +33,8 @@ def evaluate_lvl1(
     val_generator: torch_data.DataLoader,
     config: TrainingConfig,
     device: torch.device,
-    loss_similarity_ct: NCC,
-    loss_similarity_pet: NCC,
+    loss_similarity_ct: NCC_fast,
+    loss_similarity_pet: NCC_fast,
     loss_smooth: Callable,
     loss_Jdet: Callable,
     transform: SpatialTransform_unit,
@@ -276,7 +274,6 @@ def train_lvl1(
     resume_optimizer_path: Optional[Path] = None,
 ) -> Dict[str, Path]:
     print("Training lvl1...")
-    proc = psutil.Process(os.getpid())
 
     steps_per_epoch = len(train_generator)
     total_steps = config.total_steps_lvl1
@@ -315,8 +312,8 @@ def train_lvl1(
         range_flow=config.range_flow,
     ).to(device)
 
-    loss_similarity_ct = NCC(win=config.lvl1_ncc_win)
-    loss_similarity_pet = NCC(win=config.lvl1_ncc_win)
+    loss_similarity_ct = NCC_fast(win=config.lvl1_ncc_win)
+    loss_similarity_pet = NCC_fast(win=config.lvl1_ncc_win)
     loss_smooth = smoothloss
     loss_Jdet = jacobian.non_diff_volume_loss
 

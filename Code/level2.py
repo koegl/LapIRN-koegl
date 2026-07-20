@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
@@ -8,7 +7,6 @@ import mlflow
 import my_data
 import numpy as np
 import poly_affine_reg
-import psutil
 import synthetic
 import torch
 import torch.nn.functional as F
@@ -25,7 +23,7 @@ from miccai2020_model_stage import (
     Miccai2020_LDR_laplacian_unit_add_lvl2,
     SpatialTransform_unit,
     SpatialTransformNearest_unit,
-    multi_resolution_NCC,
+    multi_resolution_NCC_fast,
     smoothloss,
 )
 from torch.utils import data as torch_data
@@ -36,8 +34,8 @@ def evaluate_lvl2(
     valid_generator: torch_data.DataLoader,
     config: TrainingConfig,
     device: torch.device,
-    loss_similarity_ct: multi_resolution_NCC,
-    loss_similarity_pet: multi_resolution_NCC,
+    loss_similarity_ct: multi_resolution_NCC_fast,
+    loss_similarity_pet: multi_resolution_NCC_fast,
     loss_smooth: Callable,
     loss_Jdet: Callable,
     transform: SpatialTransform_unit,
@@ -284,7 +282,6 @@ def train_lvl2(
     resume_optimizer_path: Optional[Path] = None,
 ) -> Dict[str, Path]:
     print("Training lvl2...")
-    proc = psutil.Process(os.getpid())
 
     steps_per_epoch = len(train_generator)
     total_steps = config.total_steps_lvl2
@@ -340,8 +337,8 @@ def train_lvl2(
         model_lvl1=model_lvl1,
     ).to(device)
 
-    loss_similarity_ct = multi_resolution_NCC(win=config.lvl2_ncc_win, scale=2)
-    loss_similarity_pet = multi_resolution_NCC(win=config.lvl2_ncc_win, scale=2)
+    loss_similarity_ct = multi_resolution_NCC_fast(win=config.lvl2_ncc_win, scale=2)
+    loss_similarity_pet = multi_resolution_NCC_fast(win=config.lvl2_ncc_win, scale=2)
     loss_smooth = smoothloss
     loss_Jdet = jacobian.non_diff_volume_loss
 

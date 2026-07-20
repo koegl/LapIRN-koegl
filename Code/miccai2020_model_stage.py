@@ -1,3 +1,5 @@
+import math
+
 import config
 import numpy as np
 import torch
@@ -2442,6 +2444,105 @@ def jacobian_determinant(flow: torch.Tensor) -> torch.Tensor:
     return det.unsqueeze(1)  # (B, 1, D, H, W)
 
 
+class NCC_fast(torch.nn.Module):
+    """
+    Local (over window) normalized cross correlation loss.
+    """
+
+    def __init__(self, win=None):
+        super(NCC_fast, self).__init__()
+        self.win = win
+
+    def forward(self, y_true, y_pred):
+
+        Ii = y_true
+        Ji = y_pred
+
+        # get dimension of volume
+        # assumes Ii, Ji are sized [batch_size, *vol_shape, nb_feats]
+        ndims = len(list(Ii.size())) - 2
+        assert ndims in [1, 2, 3], (
+            "volumes should be 1 to 3 dimensions. found: %d" % ndims
+        )
+
+        # set window size; accept an int (as multi_resolution_NCC_fast passes)
+        # or an explicit per-dimension list
+        if self.win is None:
+            win = [9] * ndims
+        elif isinstance(self.win, int):
+            win = [self.win] * ndims
+        else:
+            win = list(self.win)
+
+        # the grouped conv below packs 5 single-channel volumes into the
+        # channel dim, so it only works for single-channel inputs
+        assert Ii.shape[1] == 1, f"expected 1 channel, got {Ii.shape[1]}"
+
+        # compute filters
+        # sum_filt = torch.ones([1, 1, *win]).to("cuda")
+        sum_filt = torch.ones([5, 1, *win], device=Ii.device, dtype=Ii.dtype)
+
+        pad_no = math.floor(win[0] / 2)
+
+        if ndims == 1:
+            stride = 1
+            padding = pad_no
+        elif ndims == 2:
+            stride = (1, 1)
+            padding = (pad_no, pad_no)
+        else:
+            stride = (1, 1, 1)
+            padding = (pad_no, pad_no, pad_no)
+
+        # get convolution function
+        conv_fn = getattr(F, "conv%dd" % ndims)
+
+        # compute CC squares
+        I2 = Ii * Ii
+        J2 = Ji * Ji
+        IJ = Ii * Ji
+
+        all_five = torch.cat((Ii, Ji, I2, J2, IJ), dim=1)
+        all_five_conv = conv_fn(
+            all_five, sum_filt, stride=stride, padding=padding, groups=5
+        )
+        I_sum, J_sum, I2_sum, J2_sum, IJ_sum = torch.split(all_five_conv, 1, dim=1)
+
+        # I_sum = conv_fn(Ii, sum_filt, stride=stride, padding=padding)
+        # J_sum = conv_fn(Ji, sum_filt, stride=stride, padding=padding)
+        # I2_sum = conv_fn(I2, sum_filt, stride=stride, padding=padding)
+        # J2_sum = conv_fn(J2, sum_filt, stride=stride, padding=padding)
+        # IJ_sum = conv_fn(IJ, sum_filt, stride=stride, padding=padding)
+
+        # compute cross correlation
+        # win_size = np.prod(win)
+        # u_I = I_sum / win_size
+        # u_J = J_sum / win_size
+
+        # cross = IJ_sum - u_J * I_sum - u_I * J_sum + u_I * u_J * win_size
+        # I_var = I2_sum - 2 * u_I * I_sum + u_I * u_I * win_size
+        # J_var = J2_sum - 2 * u_J * J_sum + u_J * u_J * win_size
+
+        # compute cross correlation
+        # note: `win`, not `self.win` — self.win may be a scalar
+        win_size = np.prod(win)
+
+        cross = IJ_sum - J_sum / win_size * I_sum
+        I_var = I2_sum - I_sum / win_size * I_sum
+        J_var = J2_sum - J_sum / win_size * J_sum
+
+        # match the reference NCC: the single-pass variance can go slightly
+        # negative in near-constant regions (i.e. most of a mostly-air volume),
+        # which sends cc far above 1 and produces a huge spurious gradient
+        I_var = torch.clamp(I_var, min=0.0)
+        J_var = torch.clamp(J_var, min=0.0)
+
+        cc = cross * cross / (I_var * J_var + 1e-5)
+        cc = torch.clamp(cc, max=1.0)
+
+        return -torch.mean(cc)
+
+
 class NCC(torch.nn.Module):
     """
     local (over window) normalized cross correlation
@@ -2501,6 +2602,36 @@ class NCC(torch.nn.Module):
         cc = torch.clamp(cc, max=1.0)
 
         return -1.0 * torch.mean(cc)
+
+
+class multi_resolution_NCC_fast(torch.nn.Module):
+    """
+    local (over window) normalized cross correlation
+    """
+
+    def __init__(self, win=None, eps=1e-5, scale=3):
+        super(multi_resolution_NCC_fast, self).__init__()
+        self.num_scale = scale
+        self.similarity_metric = []
+
+        for i in range(scale):
+            self.similarity_metric.append(NCC_fast(win=win - (i * 2)))
+
+    def forward(self, I, J):
+        total_NCC = []
+
+        for i in range(self.num_scale):
+            current_NCC = self.similarity_metric[i](I, J)
+            total_NCC.append(current_NCC / (2**i))
+
+            I = nn.functional.avg_pool3d(
+                I, kernel_size=3, stride=2, padding=1, count_include_pad=False
+            )
+            J = nn.functional.avg_pool3d(
+                J, kernel_size=3, stride=2, padding=1, count_include_pad=False
+            )
+
+        return sum(total_NCC)
 
 
 class multi_resolution_NCC(torch.nn.Module):
