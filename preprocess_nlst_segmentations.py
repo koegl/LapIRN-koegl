@@ -15,7 +15,7 @@ from typing import Dict
 import SimpleITK as sitk
 from tqdm import tqdm
 
-from preprocess_nlst import compute_offset, resample_with_offset
+from preprocess_nlst import compute_offset, flip_ap, resample_with_offset
 
 mapping_path = Path(
     "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/mapping_nlst.json"
@@ -70,10 +70,13 @@ def main() -> None:
         if not seg_orig_path.exists():
             segment(orig_path, seg_orig_path, fast=fast)
 
-        seg = sitk.ReadImage(seg_orig_path.as_posix())
-        # the offset is a pure function of the original CT, so recomputing it
-        # here reproduces exactly what preprocess_nlst.py applied to the image
-        offset = compute_offset(sitk.ReadImage(orig_path.as_posix()))
+        # match the AP flip that preprocess_nlst.py applies to the images: both
+        # the label map and the CT used for the offset must be flipped the same
+        # way, since the anchor depends on the (now flipped) foreground.
+        seg = flip_ap(sitk.ReadImage(seg_orig_path.as_posix()))
+        # the offset is a pure function of the (flipped) original CT, so
+        # recomputing it here reproduces exactly what preprocess_nlst.py applied
+        offset = compute_offset(flip_ap(sitk.ReadImage(orig_path.as_posix())))
 
         resampled = resample_with_offset(
             seg,
