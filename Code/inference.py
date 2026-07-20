@@ -482,6 +482,7 @@ def evaluate_split(
     per_label_csv: Path,
     ct_label_template: str = "ct_{case_id}_{tp}",
     pet_label_template: str = "pet_{case_id}_{tp}",
+    skip_model: bool = False,
 ) -> None:
     dices: Dict[str, float] = {}
     dices_before: Dict[str, float] = {}
@@ -502,10 +503,12 @@ def evaluate_split(
             device,
             transform_nearest,
             seg_dir,
+            model_name=model_name,
             seg_template=seg_template,
             use_io=use_io,
             use_class_weights=use_class_weights,
             use_polyaffine=use_polyaffine,
+            skip_model=skip_model,
             ct_label_dir=ct_label_dir,
             pet_label_dir=pet_label_dir,
             ct_label_template=ct_label_template,
@@ -545,10 +548,12 @@ def process_subject(
     device: torch.device,
     transform_nearest: torch.nn.Module,
     seg_dir: Path,
+    model_name: str,
     seg_template: str = "{case_id}_{tp}",
     use_io: bool = False,
     use_class_weights: bool = False,
     use_polyaffine: bool = False,
+    skip_model: bool = False,
     ct_label_dir: Optional[Path] = None,
     pet_label_dir: Optional[Path] = None,
     ct_label_template: str = "ct_{case_id}_{tp}",
@@ -617,10 +622,15 @@ def process_subject(
 
     X_affine = transform(X, flow_affine, grid_full)
 
-    with torch.no_grad():
-        F_X_Y, warped, _, _, _, _, _ = model(X_affine, Y)
+    if skip_model:
+        # affine-only / polyaffine-only baseline: identity deformable field
+        F_X_Y = torch.zeros_like(flow_affine.permute(0, 4, 1, 2, 3))
+        warped = X_affine
+    else:
+        with torch.no_grad():
+            F_X_Y, warped, _, _, _, _, _ = model(X_affine, Y)
 
-    if use_io:
+    if use_io and not skip_model:
         x_lbl_ct, x_lbl_pet, y_lbl_ct, y_lbl_pet = load_io_labels(
             ct_label_dir,
             pet_label_dir,
@@ -791,7 +801,7 @@ def process_subject(
         )
         # --- END DEBUG ---
 
-    if False:
+    if True:
         # --- DEBUG: save X, Y, warped X, ct label, warped ct label ---
         debug_dir = out_dir / "overlap_debug"
         debug_dir.mkdir(parents=True, exist_ok=True)
@@ -810,12 +820,15 @@ def process_subject(
             pet_template=pet_label_template,
         )
 
-        save_ct(X, f"{case_id}_X")
-        save_ct(Y, f"{case_id}_Y")
-        save_ct(warped, f"{case_id}_warped_X")
-        save_ct(x_lbl_ct, f"{case_id}_ct_label_moving")
-        save_ct(y_lbl_ct, f"{case_id}_ct_label_fixed")
-        save_ct(seg_their.round(), f"{case_id}_ct_label_moving_warped")
+        save_ct(X, f"{case_id}_X_{model_name.replace('.', '_')}")
+        save_ct(Y, f"{case_id}_Y_{model_name.replace('.', '_')}")
+        save_ct(warped, f"{case_id}_warped_X_{model_name.replace('.', '_')}")
+        save_ct(x_lbl_ct, f"{case_id}_ct_label_moving_{model_name.replace('.', '_')}")
+        save_ct(y_lbl_ct, f"{case_id}_ct_label_fixed_{model_name.replace('.', '_')}")
+        save_ct(
+            seg_their.round(),
+            f"{case_id}_ct_label_moving_warped_{model_name.replace('.', '_')}",
+        )
 
     save_disp(disp_half, out_dir / "submission", case_id)
 
@@ -862,11 +875,11 @@ def main() -> None:
     use_io: bool = False
     use_class_weights = False
     use_polyaffine: bool = True
-    io_lr: float = 5e-1
+    io_lr: float = 2e-1
     io_it: float = 60
     if use_io:
         model_name += "_IO_"
-        model_name += f"lr{io_lr:.1e}_it{io_it}_wncc{cfg.w_ct:.2f}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct_lvl3:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_jacobian_tumor:.2f}_wBoneRigid{cfg.w_bone_rigid:.2f} "
+        model_name += f"lr{io_lr:.1e}_it{io_it}_wncc{cfg.w_ct:.2f}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct_lvl3:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_jacobian_tumor:.2f}_wBoneRigid{cfg.w_bone_rigidity:.2f} "
         print("warning using IO")
         if use_class_weights:
             model_name += "_classweights"
@@ -875,6 +888,91 @@ def main() -> None:
     if use_polyaffine:
         model_name += "_polyaffine"
         print("warning using polyaffine prereg")
+
+    # --- baselines: affine-only and affine+polyaffine, no model inference.
+    # each runs once, only if its per-label csv is missing.
+    def run_baseline(baseline_name: str, baseline_polyaffine: bool) -> None:
+        if eval_official:
+            per_label_csv = results_csv_official_val_dice_per_label.with_stem(
+                results_csv_official_val_dice_per_label.stem + baseline_name
+            )
+            if per_label_csv.exists():
+                print(f"skipping baseline '{baseline_name}' (official val): exists")
+            else:
+                print(f"running baseline '{baseline_name}' on official val")
+                evaluate_split(
+                    subjects=val_subjects,
+                    image_dir=val_image_dir,
+                    seg_dir=official_seg_dir,
+                    seg_template="{case_id}_{tp}",
+                    results_csv=results_csv_official_val_dice,
+                    model_name=baseline_name,
+                    out_dir=out_dir / f"baseline_{baseline_name}",
+                    model=model,
+                    transform=transform,
+                    transform_nearest=transform_nearest,
+                    grid_full=grid_full,
+                    cfg=cfg,
+                    device=device,
+                    use_io=False,
+                    use_class_weights=False,
+                    use_polyaffine=baseline_polyaffine,
+                    skip_model=True,
+                    ct_label_dir=ct_label_dir,
+                    pet_label_dir=pet_label_dir,
+                    io_lr=io_lr,
+                    io_it=io_it,
+                    desc=f"official val [{baseline_name}]",
+                    mtv_csv=results_csv_official_mtv,
+                    tlg_csv=results_csv_official_tlg,
+                    ndv_csv=results_csv_official_ndv,
+                    hd95_csv=results_csv_official_hd95,
+                    per_label_csv=per_label_csv,
+                )
+
+        if eval_my_val:
+            per_label_csv = results_csv_my_val_dice_per_label.with_stem(
+                results_csv_my_val_dice_per_label.stem + baseline_name
+            )
+            if per_label_csv.exists():
+                print(f"skipping baseline '{baseline_name}' (my val): exists")
+            else:
+                print(f"running baseline '{baseline_name}' on my val")
+                _, my_val_subjects = load_split(split_path)
+                evaluate_split(
+                    subjects=my_val_subjects,
+                    image_dir=my_val_image_dir,
+                    seg_dir=my_val_seg_dir,
+                    seg_template="PSMARegPSMA_{case_id}_0000_{tp}",
+                    results_csv=results_csv_my_val_dice,
+                    model_name=baseline_name,
+                    out_dir=out_dir / "my_val" / f"baseline_{baseline_name}",
+                    model=model,
+                    transform=transform,
+                    transform_nearest=transform_nearest,
+                    grid_full=grid_full,
+                    cfg=cfg,
+                    device=device,
+                    use_io=False,
+                    use_class_weights=False,
+                    use_polyaffine=baseline_polyaffine,
+                    skip_model=True,
+                    ct_label_dir=my_val_seg_dir,
+                    pet_label_dir=my_val_seg_dir,
+                    ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
+                    pet_label_template="PSMARegPSMA_{case_id}_0001_{tp}",
+                    io_lr=io_lr,
+                    io_it=io_it,
+                    desc=f"my val [{baseline_name}]",
+                    mtv_csv=results_csv_my_val_mtv,
+                    tlg_csv=results_csv_my_val_tlg,
+                    ndv_csv=results_csv_my_val_ndv,
+                    hd95_csv=results_csv_my_val_hd95,
+                    per_label_csv=per_label_csv,
+                )
+
+    run_baseline("affine", baseline_polyaffine=False)
+    run_baseline("polyaffine", baseline_polyaffine=True)
 
     if eval_official:
         # print("warning: reducing number of my val subjects")
