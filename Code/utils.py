@@ -95,7 +95,7 @@ def create_datasets(
     train_dataset_synthetic = None
     train_dataset_tubingen = None
     train_dataset_nlst = None
-    val_dataset_abdomen = None
+    train_dataset_abdomen = None
 
     val_dataset = my_data.PSMARegDataset(
         case_ids=val_ids,
