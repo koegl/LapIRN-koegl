@@ -82,7 +82,7 @@ class TrainingConfig:
     # linear LR warmup (0 -> full lr) applied at the start of every level,
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
-    warmup_epochs: float = 0
+    warmup_epochs: float = 5
     start_channel: int = 7
 
     # train val
