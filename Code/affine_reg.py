@@ -199,7 +199,8 @@ def compute_affine_dvf(
 
 
 def get_affine_dvf(
-    case_id: str,
+    case_id_x: str,
+    case_id_y: str,
     tp_x: str,
     tp_y: str,
     fixed_ct_path: Path,
@@ -225,6 +226,11 @@ def get_affine_dvf(
     Returns:
         DVF of shape (H, W, D, 3), float32, voxel displacements.
     """
+
+    if case_id_x == case_id_y:
+        case_id = case_id_x
+    else:
+        case_id = f"{case_id_x}_{case_id_y}"
 
     mem_key = f"{case_id}_{tp_x}_{tp_y}"
     if mem_key in _DVF_CACHE:
@@ -390,7 +396,8 @@ def dvf_to_tensor(dvf: np.ndarray, device: torch.device) -> torch.Tensor:
 def create_affine_flow(
     config: TrainingConfig,
     device: torch.device,
-    case_id: str,
+    case_id_x: str,
+    case_id_y: str,
     tp_x: str,
     tp_y: str,
     aug_flipped: bool,
@@ -421,15 +428,16 @@ def create_affine_flow(
     """
 
     dvf = get_affine_dvf(
-        case_id=case_id,
+        case_id_x=case_id_x,
+        case_id_y=case_id_y,
         tp_x=tp_x,
         tp_y=tp_y,
         fixed_ct_path=config.data_dir
         / "imagesTr"
-        / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
+        / f"PSMARegPSMA_{case_id_y}_0000_{tp_y}.nii.gz",
         moving_ct_path=config.data_dir
         / "imagesTr"
-        / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
+        / f"PSMARegPSMA_{case_id_x}_0000_{tp_x}.nii.gz",
         make_lowres_ants_image_fn=make_lowres_ants_image,
         preprocess_ct_fn=preprocess_ct,
         ants_affine_to_fullres_voxel_disp_fn=ants_affine_to_fullres_voxel_disp,

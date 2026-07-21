@@ -195,6 +195,15 @@ def remove_nlst(
     return split_train_filtered, split_valid_filtered
 
 
+def remove_abdomen(
+    split_train: List[str], split_valid: List[str]
+) -> Tuple[List[str], List[str]]:
+    split_train_filtered = [cid for cid in split_train if not cid.startswith("3")]
+    split_valid_filtered = [cid for cid in split_valid if not cid.startswith("3")]
+
+    return split_train_filtered, split_valid_filtered
+
+
 def remove_non_tubingen(
     split_train: List[str], split_valid: List[str]
 ) -> Tuple[List[str], List[str]]:
@@ -215,6 +224,16 @@ def remove_non_nlst(
     return split_train_filtered, split_valid_filtered
 
 
+def remove_non_abdomen(
+    split_train: List[str], split_valid: List[str]
+) -> Tuple[List[str], List[str]]:
+
+    split_train_filtered = [cid for cid in split_train if cid.startswith("3")]
+    split_valid_filtered = [cid for cid in split_valid if cid.startswith("3")]
+
+    return split_train_filtered, split_valid_filtered
+
+
 def get_train_val_split(
     data_dir: Path,
     split_path: Path,
@@ -223,6 +242,7 @@ def get_train_val_split(
     min_timepoints: int = 2,
     tubingen: bool = False,
     nlst: bool = False,
+    abdomen: bool = False,
 ) -> Tuple[List[str], List[str]]:
     """Get or create a patient-level train/val split."""
     if split_path.exists():
@@ -240,6 +260,11 @@ def get_train_val_split(
             train, val = remove_non_nlst(train, val)
         else:
             train, val = remove_nlst(train, val)
+
+        if abdomen:
+            train, val = remove_non_abdomen(train, val)
+        else:
+            train, val = remove_abdomen(train, val)
 
         return train, val
 
@@ -489,22 +514,34 @@ class LoadPairToDict(Transform):
     to be applied independently per modality.
     """
 
-    def __init__(self, data_dir: Path, tubingen: bool = False) -> None:
+    def __init__(
+        self, data_dir: Path, ignore_pet: bool = False, abdomen: bool = False
+    ) -> None:
         self.data_dir = data_dir
-        self.tubingen = tubingen
+        self.ignore_pet = ignore_pet
+        self.abdomen = abdomen
 
     def __call__(self, data: dict) -> dict:
-        return load_pair_to_dict(
-            self.data_dir,
-            data["case_id"],
-            data["tp_x"],
-            data["tp_y"],
-            tubingen=self.tubingen,
-        )
+
+        if self.abdomen:
+            return load_abdomen_pair_to_dict(
+                self.data_dir,
+                data["case_id"],
+                data["tp_x"],
+                data["tp_y"],
+            )
+        else:
+            return load_pair_to_dict(
+                self.data_dir,
+                data["case_id"],
+                data["tp_x"],
+                data["tp_y"],
+                ignore_pet=self.ignore_pet,
+            )
 
 
 def load_pair_to_dict(
-    data_dir: Path, case_id: str, tp_x: str, tp_y: str, tubingen: bool = False
+    data_dir: Path, case_id: str, tp_x: str, tp_y: str, ignore_pet: bool = False
 ) -> dict:
     """Load and normalize one longitudinal CT/PET pair into a dict of tensors.
 
@@ -547,7 +584,7 @@ def load_pair_to_dict(
         y_ct_raw, y_mask, fill_value=float(np.percentile(y_ct_raw, 0.5))
     )
 
-    if tubingen:
+    if ignore_pet:
         return {
             "x_ct": t(norm_ct(x_ct_raw)).float(),
             "y_ct": t(norm_ct(y_ct_raw)).float(),
@@ -586,6 +623,54 @@ def load_pair_to_dict(
             "y_label_pet": t(y_label_pet),
             "y_body_mask": t(y_mask.astype(np.float32)).float(),
         }
+
+
+def load_abdomen_pair_to_dict(
+    data_dir: Path, case_id: str, tp_x: str, tp_y: str
+) -> dict:
+
+    case_id_1, case_id_2 = case_id.split("_")
+
+    image_dir = data_dir / "imagesTr"
+    label_dir = data_dir / "labelsTr"
+
+    def load_vol(path: Path) -> np.ndarray:
+        return nib.load(path).get_fdata().astype(np.float32)
+
+    def load_lbl(path: Path) -> np.ndarray:
+        return nib.load(path).get_fdata().astype(np.uint8)
+
+    def t(arr: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(arr).unsqueeze(0)
+
+    # Load raw CT in HU (before normalization) to compute body masks
+    x_ct_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id_2}_0000_{tp_y}.nii.gz")
+    y_ct_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id_1}_0000_{tp_x}.nii.gz")
+
+    x_mask = get_body_mask(x_ct_raw)
+    y_mask = get_body_mask(y_ct_raw)
+
+    # Apply mask before normalization:
+    #   CT: fill outside with 0.5th percentile of raw HU (original remove_bed behaviour)
+    #   PET: fill outside with 0.0 (SUV=0 is correct background)
+    x_ct_raw = apply_body_mask(
+        x_ct_raw, x_mask, fill_value=float(np.percentile(x_ct_raw, 0.5))
+    )
+    y_ct_raw = apply_body_mask(
+        y_ct_raw, y_mask, fill_value=float(np.percentile(y_ct_raw, 0.5))
+    )
+
+    return {
+        "x_ct": t(norm_ct(x_ct_raw)).float(),
+        "y_ct": t(norm_ct(y_ct_raw)).float(),
+        "x_label_ct": t(
+            load_lbl(label_dir / f"PSMARegPSMA_{case_id_2}_0000_{tp_y}.nii.gz")
+        ),
+        "y_label_ct": t(
+            load_lbl(label_dir / f"PSMARegPSMA_{case_id_1}_0000_{tp_x}.nii.gz")
+        ),
+        "y_body_mask": t(y_mask.astype(np.float32)).float(),
+    }
 
 
 def build_intensity_transform(
@@ -794,6 +879,8 @@ class SyntheticSourceDataset(torch_data.Dataset):
             "aug_crop_feet_fixed": 0,
             "is_synthetic": True,
             "is_tubingen": False,
+            "is_nlst": False,
+            "is_abdomen": False,
             "case_id": case_id,
             "tp_x": tp,
             "tp_y": tp,
@@ -1052,6 +1139,8 @@ class PSMARegDataset(torch_data.Dataset):
 
         data["is_synthetic"] = False
         data["is_tubingen"] = False
+        data["is_nlst"] = False
+        data["is_abdomen"] = False
 
         return data
 
@@ -1105,7 +1194,7 @@ class TubingenDataset(torch_data.Dataset):
         if self.cfg.use_labels_directly:
             load_transform = Compose(
                 [
-                    LoadPairToDict(self.data_dir, tubingen=True),
+                    LoadPairToDict(self.data_dir, ignore_pet=True),
                     ComputeSDTChannelsd(
                         "x_label_ct", "x_sdt", cfg.label_groups, cfg.sdt_clip_vox
                     ),
@@ -1115,7 +1204,7 @@ class TubingenDataset(torch_data.Dataset):
                 ]
             )
         else:
-            load_transform = Compose([LoadPairToDict(self.data_dir, tubingen=True)])
+            load_transform = Compose([LoadPairToDict(self.data_dir, ignore_pet=True)])
 
         if use_cache:
             self.dataset = monai_data.CacheDataset(
@@ -1215,6 +1304,8 @@ class TubingenDataset(torch_data.Dataset):
 
         data["is_synthetic"] = False
         data["is_tubingen"] = True
+        data["is_nlst"] = False
+        data["is_abdomen"] = False
 
         return data
 
@@ -1268,7 +1359,7 @@ class NLSTDataset(torch_data.Dataset):
         if self.cfg.use_labels_directly:
             load_transform = Compose(
                 [
-                    LoadPairToDict(self.data_dir, tubingen=True),
+                    LoadPairToDict(self.data_dir, ignore_pet=True),
                     ComputeSDTChannelsd(
                         "x_label_ct", "x_sdt", cfg.label_groups, cfg.sdt_clip_vox
                     ),
@@ -1278,7 +1369,7 @@ class NLSTDataset(torch_data.Dataset):
                 ]
             )
         else:
-            load_transform = Compose([LoadPairToDict(self.data_dir, tubingen=True)])
+            load_transform = Compose([LoadPairToDict(self.data_dir, ignore_pet=True)])
 
         if use_cache:
             self.dataset = monai_data.CacheDataset(
@@ -1377,6 +1468,187 @@ class NLSTDataset(torch_data.Dataset):
         data["tp_y"] = tp_y
 
         data["is_synthetic"] = False
-        data["is_tubingen"] = True
+        data["is_tubingen"] = False
+        data["is_nlst"] = True
+        data["is_abdomen"] = False
+
+        return data
+
+
+class AbdomenDataset(torch_data.Dataset):
+    def __init__(
+        self,
+        cfg: config.TrainingConfig,
+        case_ids: Optional[List[str]] = None,
+        overfit: Optional[str] = None,
+        use_cache: bool = False,
+        cache_rate: float = 1.0,
+        num_workers: int = 4,
+        augment: bool = False,
+    ) -> None:
+        self.data_dir = cfg.data_dir
+        self.cfg = cfg
+        self.augment = augment
+        self.case_ids = case_ids
+
+        self.pairs = self._build_registration_pairs()
+
+        if self.cfg.overfit:
+            i = 0
+            print("warning temp reduce size")
+            # self.pairs = [self.pairs[0], self.pairs[2]]
+            self.pairs = [self.pairs[i]]
+
+        data_dicts = [
+            {"case_id": case_id, "tp_x": tp_x, "tp_y": tp_y}
+            for case_id, tp_x, tp_y in self.pairs
+        ]
+
+        if self.cfg.use_labels_directly:
+            load_transform = Compose(
+                [
+                    LoadPairToDict(self.data_dir, abdomen=True),
+                    ComputeSDTChannelsd(
+                        "x_label_ct", "x_sdt", cfg.label_groups, cfg.sdt_clip_vox
+                    ),
+                    ComputeSDTChannelsd(
+                        "y_label_ct", "y_sdt", cfg.label_groups, cfg.sdt_clip_vox
+                    ),
+                ]
+            )
+        else:
+            load_transform = Compose([LoadPairToDict(self.data_dir, abdomen=True)])
+
+        if use_cache:
+            self.dataset = monai_data.CacheDataset(
+                data=data_dicts,
+                transform=load_transform,
+                cache_rate=cache_rate,
+                num_workers=num_workers,
+            )
+        else:
+            self.dataset = monai_data.Dataset(data=data_dicts, transform=load_transform)
+
+        # Intensity transform (MONAI) — spatial augmentation is done manually below
+        if augment:
+            self.intensity_transform = build_intensity_transform(
+                ct_shift_range=cfg.aug_ct_shift_range,
+                ct_scale_range=cfg.aug_ct_scale_range,
+                pet_scale_range=cfg.aug_pet_scale_range,
+                use_ct_intensity=cfg.aug_use_ct_intensity,
+                use_pet_intensity=cfg.aug_use_pet_intensity,
+            )
+        else:
+            self.intensity_transform = build_val_transform()
+
+    def _build_registration_pairs(self, seed: int = 42) -> List[Tuple[str, str]]:
+        n = len(self.case_ids)
+        base_pairs = [(self.case_ids[i], self.case_ids[(i + 1) % n]) for i in range(n)]
+
+        total = self.cfg.use_abdomen * n
+        n_extra = total - len(base_pairs)
+
+        used = set(base_pairs)
+        all_valid = [
+            (a, b)
+            for a in self.case_ids
+            for b in self.case_ids
+            if a != b and (a, b) not in used
+        ]
+
+        generator = torch.Generator().manual_seed(seed)
+        perm = torch.randperm(len(all_valid), generator=generator)
+        extra_pairs = [all_valid[i] for i in perm[:n_extra].tolist()]
+
+        case_pairs = base_pairs + extra_pairs
+
+        pairs = []
+        for pair in case_pairs:
+            case_id = f"{pair[0]}_{pair[1]}"
+            tp_x = f"{int(pair[0][1:]):02d}"
+            tp_y = f"{int(pair[1][1:]):02d}"
+
+            pairs.append((case_id, tp_x, tp_y))
+
+        return pairs
+
+    def __len__(self) -> int:
+        return len(self.pairs)
+
+    def __getitem__(self, index: int) -> dict:
+        # shallow-copy so augmentation key-reassignments do not mutate the
+        # cached sample in place (CacheDataset returns a shared reference)
+        data = dict(self.dataset[index])
+
+        data["x_pet"] = torch.zeros_like(data["x_ct"])
+        data["y_pet"] = torch.zeros_like(data["y_ct"])
+        data["x_label_pet"] = torch.zeros_like(data["x_label_ct"])
+        data["y_label_pet"] = torch.zeros_like(data["y_label_ct"])
+
+        all_spatial_keys = [
+            "x_ct",
+            "x_pet",
+            "y_ct",
+            "y_pet",
+            "x_label_ct",
+            "x_label_pet",
+            "y_label_ct",
+            "y_label_pet",
+            "y_body_mask",
+        ]
+
+        moving_keys = ["x_ct", "x_pet", "x_label_ct", "x_label_pet"]
+        fixed_keys = ["y_ct", "y_pet", "y_label_ct", "y_label_pet", "y_body_mask"]
+
+        if self.cfg.use_labels_directly:
+            all_spatial_keys += ["x_sdt", "y_sdt"]
+
+            moving_keys += ["x_sdt"]
+            fixed_keys += ["y_sdt"]
+
+        # Augmentation parameters — always initialised so training loop can
+        # use them unconditionally regardless of whether augment=True/False
+        flipped = False
+        crop_head = 0
+        crop_feet = 0
+        crop_head_moving = 0
+        crop_feet_moving = 0
+        crop_head_fixed = 0
+        crop_feet_fixed = 0
+
+        if self.augment:
+            # --- Left-right flip --------------------------------------------
+            if self.cfg.aug_use_flip and np.random.random() < self.cfg.aug_flip_prob:
+                data = apply_flip(data, all_spatial_keys)
+                flipped = True
+
+        # Intensity augmentation (MONAI) + channel stacking
+        data = self.intensity_transform(data)
+
+        # --- SDT label channels (global switch) ----------------------------
+        if self.cfg.use_labels_directly:
+            data["x"] = torch.cat([data["x"], data["x_sdt"]], dim=0)
+            data["y"] = torch.cat([data["y"], data["y_sdt"]], dim=0)
+            x = 0
+        # Attach augmentation parameters for DVF consistency in training loop
+        data["aug_flipped"] = flipped
+
+        data["aug_crop_head"] = crop_head
+        data["aug_crop_feet"] = crop_feet
+
+        data["aug_crop_head_moving"] = crop_head_moving
+        data["aug_crop_feet_moving"] = crop_feet_moving
+        data["aug_crop_head_fixed"] = crop_head_fixed
+        data["aug_crop_feet_fixed"] = crop_feet_fixed
+
+        case_id, tp_x, tp_y = self.pairs[index]
+        data["case_id"] = case_id
+        data["tp_x"] = tp_x
+        data["tp_y"] = tp_y
+
+        data["is_synthetic"] = False
+        data["is_tubingen"] = False
+        data["is_nlst"] = False
+        data["is_abdomen"] = True
 
         return data

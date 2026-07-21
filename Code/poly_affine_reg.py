@@ -59,7 +59,8 @@ def affine_dvf_to_unit_flow(
 
 
 def get_polyaffine_dvf(
-    case_id: str,
+    case_id_x: str,
+    case_id_y: str,
     tp_x: str,
     tp_y: str,
     fixed_seg_path: Path,
@@ -79,6 +80,12 @@ def get_polyaffine_dvf(
     """Canonical polyaffine residual DVF (H, W, D, 3), voxel units, (i, j, k)
     order. Cached in memory and on disk. `get_affine_dvf_fn` returns the
     canonical affine DVF and is only called on a cache miss."""
+
+    if case_id_x == case_id_y:
+        case_id = case_id_x
+    else:
+        case_id = f"{case_id_x}_{case_id_y}"
+
     mem_key = f"{case_id}_{tp_x}_{tp_y}"
     if mem_key in _POLY_DVF_CACHE:
         return _POLY_DVF_CACHE[mem_key].astype(np.float32)
@@ -162,22 +169,22 @@ def create_polyaffine_flow(
 
 
 def load_val_pair(
-    val_image_dir: Path, case_id: str, tp_x: str, tp_y: str
+    val_image_dir: Path, case_id_x: str, case_id_y: str, tp_x: str, tp_y: str
 ) -> Dict[str, torch.Tensor]:
     """Load fixed (00) + moving (01) CT+PET pair, body-masked and normalized."""
 
-    def load_ct(tp: str) -> np.ndarray:
+    def load_ct(tp: str, case_id: str) -> np.ndarray:
         path = val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp}.nii.gz"
         arr = my_data.nib.load(str(path)).get_fdata().astype(np.float32)
         return arr
 
-    def load_pet(tp: str) -> np.ndarray:
+    def load_pet(tp: str, case_id: str) -> np.ndarray:
         path = val_image_dir / f"PSMARegPSMA_{case_id}_0001_{tp}.nii.gz"
         arr = my_data.nib.load(str(path)).get_fdata().astype(np.float32)
         return arr
 
-    x_ct_raw = load_ct(tp_x)
-    y_ct_raw = load_ct(tp_y)
+    x_ct_raw = load_ct(tp_x, case_id_x)
+    y_ct_raw = load_ct(tp_y, case_id_y)
 
     x_mask = my_data.get_body_mask(x_ct_raw)
     y_mask = my_data.get_body_mask(y_ct_raw)
@@ -189,8 +196,12 @@ def load_val_pair(
         y_ct_raw, y_mask, fill_value=float(np.percentile(y_ct_raw, 0.5))
     )
 
-    x_pet_raw = my_data.apply_body_mask(load_pet(tp_x), x_mask, fill_value=0.0)
-    y_pet_raw = my_data.apply_body_mask(load_pet(tp_y), y_mask, fill_value=0.0)
+    x_pet_raw = my_data.apply_body_mask(
+        load_pet(tp_x, case_id_x), x_mask, fill_value=0.0
+    )
+    y_pet_raw = my_data.apply_body_mask(
+        load_pet(tp_y, case_id_y), y_mask, fill_value=0.0
+    )
 
     def t(arr: np.ndarray) -> torch.Tensor:
         return torch.from_numpy(arr).unsqueeze(0)
@@ -215,7 +226,8 @@ def load_seg(
 
 
 def create_affine_flow(
-    case_id: str,
+    case_id_x: str,
+    case_id_y: str,
     val_image_dir: Path,
     cfg: TrainingConfig,
     device: torch.device,
@@ -226,11 +238,12 @@ def create_affine_flow(
     inference script)."""
     # tp_x is moving, tp_y is fixed (matches training / get_affine_dvf docstring)
     dvf = affine_reg.get_affine_dvf(
-        case_id=case_id,
+        case_id_x=case_id_x,
+        case_id_y=case_id_y,
         tp_x=tp_x,
         tp_y=tp_y,
-        fixed_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
-        moving_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
+        fixed_ct_path=val_image_dir / f"PSMARegPSMA_{case_id_y}_0000_{tp_y}.nii.gz",
+        moving_ct_path=val_image_dir / f"PSMARegPSMA_{case_id_x}_0000_{tp_x}.nii.gz",
         make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
         preprocess_ct_fn=affine_reg.preprocess_ct,
         ants_affine_to_fullres_voxel_disp_fn=(
@@ -491,7 +504,8 @@ def print_dice_comparison(dice_a: Dict[int, float], dice_b: Dict[int, float]) ->
 
 
 def run_pair(
-    case_id: str,
+    case_id_x: str,
+    case_id_y: str,
     tp_x: str,
     tp_y: str,
     val_image_dir: Path,
@@ -533,11 +547,13 @@ def run_pair(
     def affine_dvf_fn() -> np.ndarray:
         # tp_x is moving, tp_y is fixed (matches training / get_affine_dvf)
         return affine_reg.get_affine_dvf(
-            case_id=case_id,
+            case_id_x=case_id_x,
+            case_id_y=case_id_y,
             tp_x=tp_x,
             tp_y=tp_y,
-            fixed_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
-            moving_ct_path=val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
+            fixed_ct_path=val_image_dir / f"PSMARegPSMA_{case_id_y}_0000_{tp_y}.nii.gz",
+            moving_ct_path=val_image_dir
+            / f"PSMARegPSMA_{case_id_x}_0000_{tp_x}.nii.gz",
             make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
             preprocess_ct_fn=affine_reg.preprocess_ct,
             ants_affine_to_fullres_voxel_disp_fn=(
@@ -546,7 +562,8 @@ def run_pair(
         )
 
     poly_dvf = get_polyaffine_dvf(
-        case_id=case_id,
+        case_id_x=case_id_x,
+        case_id_y=case_id_y,
         tp_x=tp_x,
         tp_y=tp_y,
         fixed_seg_path=seg_path(tp_y),
@@ -639,9 +656,14 @@ def main() -> None:
     n_poly_worse = 0
 
     for case_id, tp_x, tp_y in tqdm.tqdm(pairs, desc="prereg dice sweep"):
+        if "_" in case_id:
+            case_id_x, case_id_y = case_id.split("_", 1)
+        else:
+            case_id_x = case_id_y = case_id
         try:
             dice_ori, dice_affine, dice_poly = run_pair(
-                case_id=case_id,
+                case_id_x=case_id_x,
+                case_id_y=case_id_y,
                 tp_x=tp_x,
                 tp_y=tp_y,
                 val_image_dir=val_image_dir,

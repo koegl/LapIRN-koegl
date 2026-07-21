@@ -1,7 +1,7 @@
 import socket
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 COMPUTER_NAME = socket.gethostname()
 
@@ -38,6 +38,7 @@ class TrainingConfig:
     use_synthetic: bool = True
     use_tubingen: bool = True
     use_nlst: bool = True
+    use_abdomen: Optional[int] = 3
 
     label_groups: List[List[int]] = field(
         default_factory=lambda: [
@@ -85,9 +86,9 @@ class TrainingConfig:
     start_channel: int = 7
 
     # train val
-    total_steps_lvl1: int = 45000
-    total_steps_lvl2: int = 55000
-    total_steps_lvl3: int = 50000
+    total_steps_lvl1: int = 70000
+    total_steps_lvl2: int = 90000
+    total_steps_lvl3: int = 70000
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2

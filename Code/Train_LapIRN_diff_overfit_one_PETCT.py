@@ -34,9 +34,11 @@ def main() -> None:
             train_dataset_synthetic,
             train_dataset_tubingen,
             train_dataset_nlst,
+            train_dataset_abdomen,
             val_dataset,
             val_dataset_tubingen,
             val_dataset_nlst,
+            val_dataset_abdomen,
             config_to_log,
         ) = utils.create_datasets(
             config,
@@ -76,6 +78,15 @@ def main() -> None:
                 shuffle=False,
             )
         )
+        valid_abdomen_generator = (
+            None
+            if val_dataset_abdomen is None
+            else torch_data.DataLoader(
+                val_dataset_abdomen,
+                batch_size=config.batch_size,
+                shuffle=False,
+            )
+        )
 
         with utils.track_peak_memory("training"):
             Path()
@@ -88,7 +99,7 @@ def main() -> None:
                     "Warning: Overfitting mode is enabled. This is for debugging purposes only."
                 )
                 train_generator = torch_data.DataLoader(
-                    train_dataset_nlst,
+                    train_dataset_abdomen,
                     batch_size=config.batch_size,
                     shuffle=config.shuffle,
                 )
@@ -123,6 +134,7 @@ def main() -> None:
                     valid_generator,
                     valid_tubingen_generator,
                     valid_nlst_generator,
+                    valid_abdomen_generator,
                 )
                 path_model_level_1 = paths_model_level1["best"]
                 # print("skipping level 1, already trained")
@@ -137,6 +149,7 @@ def main() -> None:
                     valid_generator,
                     valid_tubingen_generator,
                     valid_nlst_generator,
+                    valid_abdomen_generator,
                 )
                 path_model_level_2 = paths_model_level2["best"]
                 # path_model_level_2 = Path(
@@ -152,6 +165,7 @@ def main() -> None:
                     valid_generator,
                     valid_tubingen_generator,
                     valid_nlst_generator,
+                    valid_abdomen_generator,
                 )
 
         # print(f"Final model path: {path_model_level3}")

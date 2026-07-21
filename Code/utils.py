@@ -22,9 +22,11 @@ def create_datasets(
     my_data.SyntheticSourceDataset | None,
     my_data.TubingenDataset | None,
     my_data.NLSTDataset | None,
+    my_data.AbdomenDataset | None,
     my_data.PSMARegDataset,
     my_data.TubingenDataset | None,
     my_data.NLSTDataset | None,
+    my_data.AbdomenDataset | None,
     dict,
 ]:
 
@@ -34,6 +36,7 @@ def create_datasets(
         val_fraction=config.val_fraction,
         tubingen=False,
         nlst=False,
+        abdomen=False,
     )
     synth_ids = [
         c
@@ -47,6 +50,7 @@ def create_datasets(
         val_fraction=config.val_fraction,
         tubingen=True,
         nlst=False,
+        abdomen=False,
     )
     train_ids_nlst, val_ids_nlst = my_data.get_train_val_split(
         data_dir=config.data_dir,
@@ -54,6 +58,15 @@ def create_datasets(
         val_fraction=config.val_fraction,
         tubingen=False,
         nlst=True,
+        abdomen=False,
+    )
+    train_ids_abdomen, val_ids_abdomen = my_data.get_train_val_split(
+        data_dir=config.data_dir,
+        split_path=config.split_path,
+        val_fraction=config.val_fraction,
+        tubingen=False,
+        nlst=False,
+        abdomen=True,
     )
 
     config_to_log = config.to_mlflow_params()
@@ -61,16 +74,20 @@ def create_datasets(
     config_to_log["train_indices_synthetic"] = synth_ids
     config_to_log["train_indices_tubingen"] = train_ids_tubingen
     config_to_log["train_indices_nlst"] = train_ids_nlst
+    config_to_log["train_indices_abdomen"] = train_ids_abdomen
 
     config_to_log["val_indices"] = val_ids
     config_to_log["val_indices_tubingen"] = val_ids_tubingen
     config_to_log["val_indices_nlst"] = val_ids_nlst
+    config_to_log["val_indices_abdomen"] = val_ids_abdomen
 
     val_dataset_tubingen = None
     val_dataset_nlst = None
+    val_dataset_abdomen = None
     train_dataset_synthetic = None
     train_dataset_tubingen = None
     train_dataset_nlst = None
+    val_dataset_abdomen = None
 
     val_dataset = my_data.PSMARegDataset(
         case_ids=val_ids,
@@ -138,6 +155,24 @@ def create_datasets(
             num_workers=config.num_workers,
         )
 
+    if config.use_abdomen is not None:
+        train_dataset_abdomen = my_data.AbdomenDataset(
+            case_ids=train_ids_abdomen,
+            cfg=config,
+            augment=config.augment,
+            use_cache=config.use_cache_train_real,
+            num_workers=config.num_workers,
+        )
+        all_train_datasets.append(train_dataset_abdomen)
+
+        val_dataset_abdomen = my_data.AbdomenDataset(
+            case_ids=val_ids_abdomen,
+            cfg=config,
+            augment=False,
+            use_cache=config.use_cache_valid,
+            num_workers=config.num_workers,
+        )
+
     train_combined = torch_data.ConcatDataset(all_train_datasets)
 
     return (
@@ -146,9 +181,11 @@ def create_datasets(
         train_dataset_synthetic,
         train_dataset_tubingen,
         train_dataset_nlst,
+        train_dataset_abdomen,
         val_dataset,
         val_dataset_tubingen,
         val_dataset_nlst,
+        val_dataset_abdomen,
         config_to_log,
     )
 

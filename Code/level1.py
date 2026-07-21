@@ -83,14 +83,20 @@ def evaluate_lvl1(
             Y_lbl_ct = batch["y_label_ct"].to(device)
             Y_lbl_pet = batch["y_label_pet"].to(device)
 
-            case_id: str = batch["case_id"][0]
+            if "_" in batch["case_id"][0]:
+                case_id_x, case_id_y = batch["case_id"][0].split("_")
+            else:
+                case_id_x = batch["case_id"][0]
+                case_id_y = batch["case_id"][0]
+
             tp_y: str = batch["tp_y"][0]
             tp_x: str = batch["tp_x"][0]
 
             flow_prereg = affine_reg.create_affine_flow(
                 config=config,
                 device=device,
-                case_id=case_id,
+                case_id_x=case_id_x,
+                case_id_y=case_id_y,
                 tp_x=tp_x,
                 tp_y=tp_y,
                 aug_flipped=batch["aug_flipped"],
@@ -100,29 +106,31 @@ def evaluate_lvl1(
                 aug_crop_feet_fixed=batch["aug_crop_feet_fixed"],
             )
 
-            if config.use_poly_affine is False:
+            if config.use_poly_affine is False or batch["is_abdomen"] is True:
                 X_prereg = transform(X, flow_prereg, grid_full)
             else:
                 poly_dvf = poly_affine_reg.get_polyaffine_dvf(
-                    case_id=case_id,
+                    case_id_x=case_id_x,
+                    case_id_y=case_id_y,
                     tp_x=tp_x,
                     tp_y=tp_y,
                     fixed_seg_path=config.data_dir
                     / "labelsTr"
-                    / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
+                    / f"PSMARegPSMA_{case_id_y}_0000_{tp_y}.nii.gz",
                     moving_seg_path=config.data_dir
                     / "labelsTr"
-                    / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
+                    / f"PSMARegPSMA_{case_id_x}_0000_{tp_x}.nii.gz",
                     get_affine_dvf_fn=lambda: affine_reg.get_affine_dvf(
-                        case_id=case_id,
+                        case_id_x=case_id_x,
+                        case_id_y=case_id_y,
                         tp_x=tp_x,
                         tp_y=tp_y,
                         fixed_ct_path=config.data_dir
                         / "imagesTr"
-                        / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
+                        / f"PSMARegPSMA_{case_id_y}_0000_{tp_y}.nii.gz",
                         moving_ct_path=config.data_dir
                         / "imagesTr"
-                        / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
+                        / f"PSMARegPSMA_{case_id_x}_0000_{tp_x}.nii.gz",
                         make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
                         preprocess_ct_fn=affine_reg.preprocess_ct,
                         ants_affine_to_fullres_voxel_disp_fn=(
@@ -271,6 +279,7 @@ def train_lvl1(
     valid_generator: torch_data.DataLoader,
     valid_tubingen_generator: Optional[torch_data.DataLoader] = None,
     valid_nlst_generator: Optional[torch_data.DataLoader] = None,
+    valid_abdomen_generator: Optional[torch_data.DataLoader] = None,
     resume_model_path: Optional[Path] = None,
     resume_optimizer_path: Optional[Path] = None,
 ) -> Dict[str, Path]:
@@ -435,14 +444,20 @@ def train_lvl1(
             X_lbl_pet = batch["x_label_pet"].to(device)
             gt_unit = None
 
-            case_id: str = batch["case_id"][0]
+            if "_" in batch["case_id"][0]:
+                case_id_x, case_id_y = batch["case_id"][0].split("_")
+            else:
+                case_id_x = batch["case_id"][0]
+                case_id_y = batch["case_id"][0]
+
             tp_y: str = batch["tp_y"][0]
             tp_x: str = batch["tp_x"][0]
 
             flow_prereg = affine_reg.create_affine_flow(
                 config=config,
                 device=device,
-                case_id=case_id,
+                case_id_x=case_id_x,
+                case_id_y=case_id_y,
                 tp_x=tp_x,
                 tp_y=tp_y,
                 aug_flipped=batch["aug_flipped"],
@@ -452,29 +467,31 @@ def train_lvl1(
                 aug_crop_feet_fixed=batch["aug_crop_feet_fixed"],
             )
 
-            if config.use_poly_affine is False:
+            if config.use_poly_affine is False or batch["is_abdomen"] is True:
                 X_prereg = transform(X, flow_prereg, grid_full)
             else:
                 poly_dvf = poly_affine_reg.get_polyaffine_dvf(
-                    case_id=case_id,
+                    case_id_x=case_id_x,
+                    case_id_y=case_id_y,
                     tp_x=tp_x,
                     tp_y=tp_y,
                     fixed_seg_path=config.data_dir
                     / "labelsTr"
-                    / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
+                    / f"PSMARegPSMA_{case_id_y}_0000_{tp_y}.nii.gz",
                     moving_seg_path=config.data_dir
                     / "labelsTr"
-                    / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
+                    / f"PSMARegPSMA_{case_id_x}_0000_{tp_x}.nii.gz",
                     get_affine_dvf_fn=lambda: affine_reg.get_affine_dvf(
-                        case_id=case_id,
+                        case_id_x=case_id_x,
+                        case_id_y=case_id_y,
                         tp_x=tp_x,
                         tp_y=tp_y,
                         fixed_ct_path=config.data_dir
                         / "imagesTr"
-                        / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
+                        / f"PSMARegPSMA_{case_id_y}_0000_{tp_y}.nii.gz",
                         moving_ct_path=config.data_dir
                         / "imagesTr"
-                        / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
+                        / f"PSMARegPSMA_{case_id_x}_0000_{tp_x}.nii.gz",
                         make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
                         preprocess_ct_fn=affine_reg.preprocess_ct,
                         ants_affine_to_fullres_voxel_disp_fn=(
@@ -807,6 +824,32 @@ def train_lvl1(
                     {
                         f"valid_lvl1/val_{key}_nlst": value
                         for key, value in val_losses_nlst.items()
+                        if not (isinstance(value, float) and np.isnan(value))
+                    },
+                    step=global_step,
+                )
+
+            if valid_abdomen_generator is not None:
+                val_losses_abdomen = evaluate_lvl1(
+                    model=model,
+                    val_generator=valid_abdomen_generator,
+                    config=config,
+                    device=device,
+                    loss_similarity_ct=loss_similarity_ct,
+                    loss_similarity_pet=loss_similarity_pet,
+                    loss_smooth=loss_smooth,
+                    loss_Jdet=loss_Jdet,
+                    transform=transform,
+                    grid_4=grid_4,
+                    epoch=epoch,
+                    val_interval=config.val_interval,
+                    saved_initial=saved_initial,
+                    is_last=is_last_step,
+                )
+                mlflow.log_metrics(
+                    {
+                        f"valid_lvl1/val_{key}_abdomen": value
+                        for key, value in val_losses_abdomen.items()
                         if not (isinstance(value, float) and np.isnan(value))
                     },
                     step=global_step,
