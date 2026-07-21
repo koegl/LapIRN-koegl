@@ -35,10 +35,10 @@ class TrainingConfig:
     use_poly_affine: bool = False
     use_labels_directly: bool = False
 
-    use_synthetic: bool = True
-    use_tubingen: bool = True
-    use_nlst: bool = True
-    use_abdomen: Optional[int] = 3
+    use_synthetic: bool = False
+    use_tubingen: bool = False
+    use_nlst: bool = False
+    use_abdomen: Optional[int] = None
 
     label_groups: List[List[int]] = field(
         default_factory=lambda: [
