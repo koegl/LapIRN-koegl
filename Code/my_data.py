@@ -828,6 +828,7 @@ class SyntheticSourceDataset(torch_data.Dataset):
         load_transform = Compose([LoadSingleToDict(self.data_dir)])
 
         if use_cache:
+            print("Loading synthetic")
             self.dataset = monai_data.CacheDataset(
                 data=data_dicts,
                 transform=load_transform,
@@ -989,6 +990,7 @@ class PSMARegDataset(torch_data.Dataset):
             load_transform = Compose([LoadPairToDict(self.data_dir)])
 
         if use_cache:
+            print("Loading PSMAReg")
             self.dataset = monai_data.CacheDataset(
                 data=data_dicts,
                 transform=load_transform,
@@ -1207,6 +1209,7 @@ class TubingenDataset(torch_data.Dataset):
             load_transform = Compose([LoadPairToDict(self.data_dir, ignore_pet=True)])
 
         if use_cache:
+            print("Loading Tubingen")
             self.dataset = monai_data.CacheDataset(
                 data=data_dicts,
                 transform=load_transform,
@@ -1372,6 +1375,7 @@ class NLSTDataset(torch_data.Dataset):
             load_transform = Compose([LoadPairToDict(self.data_dir, ignore_pet=True)])
 
         if use_cache:
+            print("Loading NLST")
             self.dataset = monai_data.CacheDataset(
                 data=data_dicts,
                 transform=load_transform,
@@ -1520,6 +1524,7 @@ class AbdomenDataset(torch_data.Dataset):
             load_transform = Compose([LoadPairToDict(self.data_dir, abdomen=True)])
 
         if use_cache:
+            print("Loading Abdomen")
             self.dataset = monai_data.CacheDataset(
                 data=data_dicts,
                 transform=load_transform,
