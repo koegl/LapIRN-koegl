@@ -38,12 +38,6 @@ def create_datasets(
         nlst=False,
         abdomen=False,
     )
-    synth_ids = [
-        c
-        for c, _ in my_data.list_single_session_sources(
-            config.data_dir, exclude_case_ids=train_ids + val_ids
-        )
-    ]
     train_ids_tubingen, val_ids_tubingen = my_data.get_train_val_split(
         data_dir=config.data_dir,
         split_path=config.split_path,
@@ -68,6 +62,20 @@ def create_datasets(
         nlst=False,
         abdomen=True,
     )
+    synth_ids = [
+        c
+        for c, _ in my_data.list_single_session_sources(
+            config.data_dir,
+            exclude_case_ids=train_ids
+            + val_ids
+            + train_ids_tubingen
+            + val_ids_tubingen
+            + train_ids_nlst
+            + val_ids_nlst
+            + train_ids_abdomen
+            + val_ids_abdomen,
+        )
+    ]
 
     config_to_log = config.to_mlflow_params()
     config_to_log["train_indices"] = train_ids
@@ -107,17 +115,6 @@ def create_datasets(
         num_workers=config.num_workers,
     )
     all_train_datasets = [train_dataset]
-
-    if config.use_synthetic:
-        train_dataset_synthetic = my_data.SyntheticSourceDataset(
-            cfg=config,
-            source_ids=synth_ids,
-            repeat=config.synthetic_repeat,
-            use_cache=config.use_cache_train_synthetic,
-            num_workers=config.num_workers,
-            augment=config.augment,
-        )
-        all_train_datasets.append(train_dataset_synthetic)
 
     if config.use_tubingen:
         train_dataset_tubingen = my_data.TubingenDataset(
@@ -172,6 +169,17 @@ def create_datasets(
             use_cache=config.use_cache_valid,
             num_workers=config.num_workers,
         )
+
+    if config.use_synthetic:
+        train_dataset_synthetic = my_data.SyntheticSourceDataset(
+            cfg=config,
+            source_ids=synth_ids,
+            repeat=config.synthetic_repeat,
+            use_cache=config.use_cache_train_synthetic,
+            num_workers=config.num_workers,
+            augment=config.augment,
+        )
+        all_train_datasets.append(train_dataset_synthetic)
 
     train_combined = torch_data.ConcatDataset(all_train_datasets)
 
