@@ -34,8 +34,8 @@ def segment(image: Path, output: Path, fast: bool = True) -> None:
 
 
 def main() -> None:
-    input_dir = Path("/home/iml/fryderyk.koegl/data/NLST_l2r_2023/imagesTr")
-    output_dir = Path("/home/iml/fryderyk.koegl/data/NLST_l2r_2023/labelsTr_totalseg")
+    input_dir = Path("/home/iml/fryderyk.koegl/data/AbdomenCTCT/images_all")
+    output_dir = Path("/home/iml/fryderyk.koegl/data/AbdomenCTCT/labels_all_totalseg")
     skip_existing = True
     fast = False
 

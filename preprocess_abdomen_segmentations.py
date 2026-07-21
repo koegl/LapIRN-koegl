@@ -11,18 +11,17 @@ import json
 from pathlib import Path
 from typing import Dict
 
+import numpy as np
 import SimpleITK as sitk
 from tqdm import tqdm
 
-from preprocess_nlst import compute_offset, flip_ap, resample_with_offset
+from preprocess_abdomen import compute_offset, resample_with_offset
 
-mapping_path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/mapping_nlst.json")
-orig_dir = Path("/home/iml/fryderyk.koegl/data/NLST_l2r_2023/imagesTr")
-# full-resolution segmentations of the originals (kept as a cache)
-seg_orig_dir = Path("/home/iml/fryderyk.koegl/data/NLST_l2r_2023/masksTr")
-out_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTr_nlst")
+mapping_path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/mapping_abdomen.json")
+orig_dir = Path("/home/iml/fryderyk.koegl/data/AbdomenCTCT/imagesTr")
+seg_orig_dir = Path("/home/iml/fryderyk.koegl/data/AbdomenCTCT/labelsTr")
+out_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTr_abdomen")
 
-fast = False
 skip_existing = True
 
 
@@ -45,7 +44,7 @@ def main() -> None:
         if not orig.startswith("PSMARegPSMA_")
     }
 
-    pbar = tqdm(sorted(cases.items()), desc="NLST segmentations", unit="case")
+    pbar = tqdm(sorted(cases.items()), desc="Abdomen segmentations", unit="case")
     for orig_name, new_name in pbar:
         pbar.set_postfix_str(new_name)
 
@@ -57,13 +56,19 @@ def main() -> None:
         orig_path = orig_dir / orig_name
         seg_orig_path = seg_orig_dir / orig_name
 
-        # match the AP flip that preprocess_nlst.py applies to the images: both
-        # the label map and the CT used for the offset must be flipped the same
-        # way, since the anchor depends on the (now flipped) foreground.
-        seg = flip_ap(sitk.ReadImage(seg_orig_path.as_posix()))
-        # the offset is a pure function of the (flipped) original CT, so
-        # recomputing it here reproduces exactly what preprocess_nlst.py applied
-        offset = compute_offset(flip_ap(sitk.ReadImage(orig_path.as_posix())))
+        seg = sitk.ReadImage(seg_orig_path.as_posix())
+
+        # remove labels 4,5,12,13
+        seg_arr = sitk.GetArrayViewFromImage(seg)
+        labels_to_remove = (4, 5, 12, 13)
+        new_arr = np.where(np.isin(seg_arr, labels_to_remove), 0, seg_arr)
+        seg_clean = sitk.GetImageFromArray(new_arr)
+        seg_clean.CopyInformation(seg)  # preserve spacing/origin/direction
+        seg = seg_clean
+
+        # the offset is a pure function of the original CT, so
+        # recomputing it here reproduc  es exactly what preprocess_nlst.py applied
+        offset = compute_offset(sitk.ReadImage(orig_path.as_posix()))
 
         resampled = resample_with_offset(
             seg,
