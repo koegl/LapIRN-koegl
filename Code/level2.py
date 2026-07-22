@@ -809,7 +809,7 @@ def train_lvl2(
             if valid_tubingen_generator is not None:
                 val_losses_tubingen = evaluate_lvl2(
                     model=model,
-                    valid_generator=valid_generator,
+                    valid_generator=valid_tubingen_generator,
                     config=config,
                     device=device,
                     loss_similarity_ct=loss_similarity_ct,
