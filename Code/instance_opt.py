@@ -198,6 +198,14 @@ def build_class_weights(
             continue
         dice = (2.0 * (p & t).sum() / volume_sum).item()
         weights[lbl] = 1.0 - dice
+
+    # ribs are (zero based index) from 91 to includuing 114 - sett all others to zero and those to 1.0
+    for lbl in range(1, n_labels):
+        if lbl < 91 or lbl > 114:
+            weights[lbl] = 0.0
+        else:
+            weights[lbl] = 1.0 - weights[lbl]
+
     return weights
 
 

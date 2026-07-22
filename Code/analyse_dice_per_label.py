@@ -94,7 +94,7 @@ def fmt_labels(ids: pd.Index, names: pd.Series) -> List[str]:
 
 
 def main() -> None:
-    csv_path = "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/results_official_val_dice_per_labelPSMAReg_LapIRN_vaunted-steed-116_stagelvl3_best_IO_lr4.0e-01_it100_wncc3.00_wJac3.00_wSmooth3.00_wCT3.00_wPET0.00_wDiceCT3.00_wDicePET0.00_wTLG0.70_wMaskedJac0.60_classweights.csv"
+    csv_path = "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/results_official_val_dice_per_labelPSMAReg_LapIRN_resilient-shrike-38730428_stagelvl3_best.csv"
     out_dir = "/home/iml/fryderyk.koegl/data/PSMAReg/dice_per_label_analysis_figs"
     names_path = (
         "/home/iml/fryderyk.koegl/code/LapIRN-koegl/total_segmentator_labels.csv"
