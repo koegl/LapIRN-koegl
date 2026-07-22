@@ -99,7 +99,7 @@ def main() -> None:
                     "Warning: Overfitting mode is enabled. This is for debugging purposes only."
                 )
                 train_generator = torch_data.DataLoader(
-                    train_dataset_abdomen,
+                    train_dataset,
                     batch_size=config.batch_size,
                     shuffle=config.shuffle,
                 )
@@ -120,7 +120,6 @@ def main() -> None:
                 )
                 path_model_level_2 = paths_model_level2["final"]
 
-                return
                 path_model_level3 = level3.train_lvl3(
                     config,
                     path_model_level_2,
@@ -128,36 +127,36 @@ def main() -> None:
                     valid_generator,
                 )
             else:
-                paths_model_level1 = level1.train_lvl1(
-                    config,
-                    train_generator,
-                    valid_generator,
-                    valid_tubingen_generator,
-                    valid_nlst_generator,
-                    valid_abdomen_generator,
-                )
-                path_model_level_1 = paths_model_level1["best"]
-                # print("skipping level 1, already trained")
+                # paths_model_level1 = level1.train_lvl1(
+                #     config,
+                #     train_generator,
+                #     valid_generator,
+                #     valid_tubingen_generator,
+                #     valid_nlst_generator,
+                #     valid_abdomen_generator,
+                # )
+                # path_model_level_1 = paths_model_level1["best"]
+                print("skipping level 1, already trained")
                 # path_model_level_1 = Path(
                 #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_stylish-kite-38590187_stagelvl1_best.pth"
                 # )
-                paths_model_level2 = level2.train_lvl2(
-                    config,
-                    path_model_level_1,
-                    train_generator,
-                    valid_generator,
-                    valid_tubingen_generator,
-                    valid_nlst_generator,
-                    valid_abdomen_generator,
-                )
-                path_model_level_2 = paths_model_level2["best"]
-                # print("skipping level 2, already trained")
+                # paths_model_level2 = level2.train_lvl2(
+                #     config,
+                #     path_model_level_1,
+                #     train_generator,
+                #     valid_generator,
+                #     valid_tubingen_generator,
+                #     valid_nlst_generator,
+                #     valid_abdomen_generator,
+                # )
+                # path_model_level_2 = paths_model_level2["best"]
+                print("skipping level 2, already trained")
                 # path_model_level_2 = Path(
                 #     "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_nosy-shrike-707_stagelvl2_best.pth"
                 # )
-                # path_model_level_2 = Path(
-                #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_nimble-perch-653_stagelvl2_best.pth"
-                # )
+                path_model_level_2 = Path(
+                    "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_nimble-perch-653_stagelvl2_best.pth"
+                )
                 path_model_level3 = level3.train_lvl3(
                     config,
                     path_model_level_2,

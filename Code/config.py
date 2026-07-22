@@ -36,9 +36,9 @@ class TrainingConfig:
     use_labels_directly: bool = False
 
     use_synthetic: bool = False
-    use_tubingen: bool = True
-    use_nlst: bool = True
-    use_abdomen: Optional[int] = 3
+    use_tubingen: bool = False
+    use_nlst: bool = False
+    use_abdomen: Optional[int] = None
 
     label_groups: List[List[int]] = field(
         default_factory=lambda: [
@@ -109,6 +109,32 @@ class TrainingConfig:
     w_jacobian_tumor: float = 2.0
     w_bone_rigidity: float = 2.0
     w_dvf: float = 100.0
+
+    # meta-learned / unrolled instance optimization (IO)
+    # During lvl3 training, after the net emits F_X_Y we run a few differentiable
+    # IO steps (same half-res SVF re-parametrization as run_io) and add the loss
+    # on the *refined* field to the objective, so the net is trained to be a good
+    # seed for IO rather than a good final answer on its own.
+    use_unrolled_io: bool = True
+    # number of inner IO steps to unroll (small on purpose: 3-8)
+    unroll_K: int = 3
+    # inner-loop step size (plain gradient descent, not Adam; needs its own tune,
+    # Adam lr=0.1 in run_io is NOT the same as GD lr here)
+    unroll_inner_lr: float = 0.1
+    # scaling-and-squaring integration steps for the inner SVF
+    unroll_n_integration: int = 7
+    # "full"  : differentiate through the whole K-step trajectory (K x memory,
+    #           double-backward). Best signal, heaviest.
+    # "fomaml": first-order approximation - run the inner loop without retaining
+    #           the trajectory graph, then backprop only through the final
+    #           `base + refinement` construction. ~1x memory, most of the benefit.
+    unroll_mode: str = "fomaml"
+    # start unrolling only after this many epochs (let the feed-forward head warm
+    # up first; 0 = from the beginning)
+    unroll_start_epoch: int = 0
+    # weight of the unrolled (post-IO) loss term, added on top of the normal
+    # feed-forward lvl3 loss
+    w_unrolled: float = 1.0
 
     dice_pet_iou_threshold: float = 0.1
 

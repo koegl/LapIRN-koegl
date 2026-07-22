@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Callable, Dict, Optional
 
 import affine_reg
+import instance_opt
 import jacobian
 import mlflow
 import my_data
@@ -18,6 +19,7 @@ from Functions import (
     transform_unit_flow_to_flow_cuda,
 )
 from miccai2020_model_stage import (
+    NCC,
     Miccai2020_LDR_laplacian_unit_add_lvl1,
     Miccai2020_LDR_laplacian_unit_add_lvl2,
     Miccai2020_LDR_laplacian_unit_add_lvl3,
@@ -382,6 +384,10 @@ def train_lvl3(
     loss_smooth = smoothloss
     loss_Jdet = jacobian.non_diff_volume_loss
 
+    # single-resolution NCC used by the unrolled-IO objective, matching the loss
+    # that test-time run_io optimizes (compute_io_loss)
+    loss_ncc_io = NCC(config.lvl3_ncc_win)
+
     transform = SpatialTransform_unit().to(device)
     transform_nearest = SpatialTransformNearest_unit().to(device)
 
@@ -718,6 +724,44 @@ def train_lvl3(
             loss = loss + config.w_tlg * loss_tlg
             loss_dvf = torch.zeros((), device=device)
 
+        # meta-learned / unrolled IO: run a few differentiable IO steps starting
+        # from the net's output and add the loss on the *refined* field. This
+        # trains F_X_Y to be a good seed for the deployed run_io optimizer rather
+        # than a good final answer on its own. X_lbl_ct is already in the affine
+        # (moving) frame here for both branches; X_prereg / Y are full-res.
+        if config.use_unrolled_io and epoch >= config.unroll_start_epoch:
+            x_ct_io = X_prereg[:, 0:1]
+            y_ct_io = Y[:, 0:1]
+
+            def io_loss_fn(disp_unit: torch.Tensor) -> torch.Tensor:
+                return instance_opt.unrolled_io_loss(
+                    disp_unit,
+                    y_ct_io,
+                    x_ct_io,
+                    X_lbl_ct,
+                    Y_lbl_ct,
+                    transform,
+                    grid_full,
+                    config,
+                    loss_ncc_io,
+                    ncc_weight=config.w_ct,
+                )
+
+            refined_disp = instance_opt.unrolled_refine(
+                F_X_Y,
+                io_loss_fn,
+                config,
+                device,
+                n_steps=config.unroll_K,
+                inner_lr=config.unroll_inner_lr,
+                n_integration=config.unroll_n_integration,
+                mode=config.unroll_mode,
+            )
+            loss_unrolled = io_loss_fn(refined_disp)
+            loss = loss + config.w_unrolled * loss_unrolled
+        else:
+            loss_unrolled = torch.zeros((), device=device)
+
         loss_scaled = loss / config.accumulation_steps
         is_step = (global_step + 1) % config.accumulation_steps == 0 or is_last_step
 
@@ -806,10 +850,10 @@ def train_lvl3(
             if config.overfit:
                 print(
                     f"ep: {epoch}\t"
-                    f"lr: {current_lr:.6f}\t"
-                    f"ncc={epoch_metrics['train_lvl3/ncc_ct']:.4f}; ncc_weighted={epoch_metrics['train_lvl3/ncc_ct'] * config.w_ct:.4f}\t"
-                    f"dice={epoch_metrics['train_lvl3/dice_ct']:.4f}; dice_weighted={epoch_metrics['train_lvl3/dice_ct'] * config.w_dice_ct_lvl1:.4f}\t"
-                    f"jacob={epoch_metrics['train_lvl3/jacob']:.6f}; jacob_weighted={epoch_metrics['train_lvl3/jacob'] * config.w_jacobian:.6f} "
+                    f"ncc={epoch_metrics['train_lvl3/ncc_ct']:.4f}\t"
+                    f"dice={epoch_metrics['train_lvl3/dice_ct']:.4f}\t"
+                    f"jacob={epoch_metrics['train_lvl3/jacob']:.6f}\t"
+                    f"unrolled={epoch_metrics['train_lvl3/unrolled_io']:.4f}\t"
                 )
         if config.overfit is False and (
             global_step % val_step_interval == 0 or is_last_step

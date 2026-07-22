@@ -1,5 +1,5 @@
 import time
-from typing import Dict, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple
 
 import config
 import Functions
@@ -209,6 +209,129 @@ def build_class_weights(
     return weights
 
 
+# ---------------------------------------------------------------------------
+# Shared IO refinement operator
+#
+# Both test-time IO (run_io) and training-time unrolled IO parametrize the
+# refinement as a half-resolution stationary velocity field, integrate it with
+# scaling-and-squaring, upsample to full resolution and add it to the network's
+# output `base`. Keeping the parametrization in one place guarantees that what
+# we train against is exactly what we deploy.
+# ---------------------------------------------------------------------------
+
+
+def svf_to_disp(
+    base: torch.Tensor,
+    velocity: torch.Tensor,
+    identity_vox_half: torch.Tensor,
+    cfg: config.TrainingConfig,
+    n_integration: int,
+) -> torch.Tensor:
+    """base (unit flow) + refinement decoded from a half-res velocity field.
+
+    Returns a full-resolution unit-flow displacement. Fully differentiable in
+    both `velocity` (inner loop) and `base` (network output)."""
+    disp_res_half = synthetic.integrate_svf(velocity, identity_vox_half, n_integration)
+    disp_res_full = torch.nn.functional.interpolate(
+        disp_res_half, scale_factor=2, mode="trilinear", align_corners=False
+    )
+    disp_res_unit = synthetic.unit_flow_from_voxel_disp(
+        disp_res_full, cfg.img_shape
+    ).flip(1)
+    return base + disp_res_unit
+
+
+def unrolled_io_loss(
+    disp_unit: torch.Tensor,
+    y_ct: torch.Tensor,
+    x_ct: torch.Tensor,
+    x_lbl_ct: torch.Tensor,
+    y_lbl_ct: torch.Tensor,
+    transform: torch.nn.Module,
+    grid: torch.Tensor,
+    cfg: config.TrainingConfig,
+    loss_ncc: NCC,
+    ncc_weight: float,
+    class_weights: torch.Tensor | None = None,
+) -> torch.Tensor:
+    """CT-only IO objective used for training-time unrolling.
+
+    A differentiable subset of compute_io_loss (label dice + CT NCC + Jacobian
+    volume penalty). PET/MTV/TLG/rigidity terms are dropped because they are
+    gated off during lvl3 training anyway, and the measured amortization gap is
+    a label-dice gap, so this is the objective the net should be seeded for."""
+    disp_flow = disp_unit.permute(0, 2, 3, 4, 1)
+    disp_voxel = Functions.transform_unit_flow_to_flow_cuda(disp_flow.clone())
+    loss_jac = jacobian.non_diff_volume_loss(disp_voxel)
+
+    x_y_ct = transform(x_ct, disp_flow, grid)
+    loss_ncc_ct = loss_ncc(x_y_ct, y_ct)
+
+    loss_dice_ct = dice_loss_with_grad(
+        x_lbl_ct, y_lbl_ct, disp_unit, grid, transform, class_weights=None
+    )
+
+    loss = ncc_weight * loss_ncc_ct + cfg.w_jacobian * loss_jac
+    if loss_dice_ct is not None:
+        loss = loss + cfg.w_dice_ct_lvl3 * loss_dice_ct
+    return loss
+
+
+def unrolled_refine(
+    base: torch.Tensor,
+    loss_fn: Callable[[torch.Tensor], torch.Tensor],
+    cfg: config.TrainingConfig,
+    device: torch.device,
+    n_steps: int,
+    inner_lr: float,
+    n_integration: int = 7,
+    mode: str = "fomaml",
+) -> torch.Tensor:
+    """Run `n_steps` differentiable gradient-descent IO steps starting from the
+    network output `base`, and return the refined full-res unit flow.
+
+    The returned tensor stays connected to `base` (and hence the network
+    weights) so the caller can backprop a loss on the refined field into the
+    net - the meta-learning signal "how should my output change so that a few IO
+    steps get further".
+
+    mode:
+      "full"   - keep the whole inner trajectory in the graph and differentiate
+                 through every step (create_graph=True). K x memory.
+      "fomaml" - first-order: take the inner steps without retaining their graph,
+                 then rebuild the final field so gradient reaches `base` only
+                 through the explicit `base + refinement` term. ~1x memory.
+    """
+    if mode not in ("full", "fomaml"):
+        raise ValueError(f"unknown unroll mode: {mode!r}")
+
+    half_shape = tuple(s // 2 for s in cfg.img_shape)
+    identity_vox_half = synthetic.build_identity_grid(half_shape, device)
+    velocity = torch.zeros((1, 3) + half_shape, device=device, requires_grad=True)
+
+    create_graph = mode == "full"
+    # In fomaml the inner loop must not see gradients flowing back into `base`,
+    # otherwise we'd still pay the full unrolled memory cost.
+    inner_base = base if create_graph else base.detach()
+
+    for _ in range(n_steps):
+        disp_unit = svf_to_disp(
+            inner_base, velocity, identity_vox_half, cfg, n_integration
+        )
+        loss = loss_fn(disp_unit)
+        (grad,) = torch.autograd.grad(loss, velocity, create_graph=create_graph)
+        if create_graph:
+            velocity = velocity - inner_lr * grad
+        else:
+            # detach so each inner step frees its graph (cheap, first-order)
+            velocity = (velocity - inner_lr * grad).detach().requires_grad_(True)
+
+    # Final field. In "full" this closes the K-step graph; in "fomaml" the
+    # velocity is frozen and gradient reaches the net only via `base`.
+    final_velocity = velocity if create_graph else velocity.detach()
+    return svf_to_disp(base, final_velocity, identity_vox_half, cfg, n_integration)
+
+
 def run_io(
     y: torch.Tensor,
     f_x_y: torch.Tensor,
@@ -263,16 +386,7 @@ def run_io(
     for i in pbar:
         start_time = time.time()
         optimizer.zero_grad()
-        disp_res_half = synthetic.integrate_svf(
-            velocity, identity_vox_half, n_integration
-        )
-        disp_res_full = torch.nn.functional.interpolate(
-            disp_res_half, scale_factor=2, mode="trilinear", align_corners=False
-        )
-        disp_res_unit = synthetic.unit_flow_from_voxel_disp(
-            disp_res_full, cfg.img_shape
-        ).flip(1)
-        disp_unit = base + disp_res_unit
+        disp_unit = svf_to_disp(base, velocity, identity_vox_half, cfg, n_integration)
         loss, logs = compute_io_loss(
             disp_unit,
             y,
