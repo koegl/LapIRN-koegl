@@ -410,23 +410,38 @@ def dice_loss_with_grad(
     transform: SpatialTransform_unit,
     eps: float = 1e-5,
     return_each: bool = False,
+    class_weights: torch.Tensor | None = None,
+    chunk_size: int = 16,
 ) -> torch.Tensor | None:
     """Per-class soft dice loss with gradients flowing through disp.
 
-    Builds one-hot only for classes present in fixed_label, warps each
-    moving one-hot channel with bilinear interpolation, then computes
-    dice per class and averages. Robust to variable class sets across subjects.
+    Builds one-hot only for classes present in *both* labels, warps the moving
+    one-hot channels with bilinear interpolation, then computes dice per class
+    and averages. Robust to variable class sets across subjects.
+
+    Memory note: the sampling grid `grid + flow` is identical for every class,
+    so it is built once and shared. Warping one class at a time via
+    SpatialTransform_unit would instead rebuild it per class and keep every
+    full-resolution copy alive for backward (~122 MiB each at 192x192x288,
+    i.e. many GB for a ~117-label volume). Classes are processed in chunks of
+    `chunk_size` channels so the one-hot tensors stay bounded too.
 
     Args:
         moving_label: (B, 1, D, H, W) integer tensor, moving labels.
         fixed_label: (B, 1, D, H, W) integer tensor, fixed labels.
         disp: (B, 3, D, H, W) displacement field (gradients flow through this).
         grid: level grid for SpatialTransform_unit.
-        transform: SpatialTransform_unit instance.
+        transform: kept for API compatibility; the bilinear warp is inlined
+            here so the sampling grid can be hoisted out of the class loop.
         eps: Smoothing term.
+        return_each: return the per-class losses instead of their mean.
+        class_weights: optional per-label weights, indexed by integer label
+            value. Renormalized over the classes actually used so the loss
+            scale stays comparable across subjects.
+        chunk_size: number of label channels warped per grid_sample call.
 
     Returns:
-        Scalar 1 - mean_foreground_dice.
+        Scalar 1 - mean_foreground_dice, or None if no class is usable.
     """
 
     classes = fixed_label.unique()
@@ -435,34 +450,48 @@ def dice_loss_with_grad(
     if classes.numel() == 0:
         return None
 
-    flow = disp.permute(0, 2, 3, 4, 1)  # (B, D, H, W, 3)
-
-    dice_scores = []
-    for c in classes:
-        moving_c = (moving_label == c).float()
-        fixed_c = (fixed_label == c).float()
-
-        # skip if either label is empty: a class present in only one image
-        # (e.g. cropped out of the moving by augmentation) yields dice~0 with
-        # no usable registration gradient and only biases the mean.
-        if fixed_c.sum() == 0 or moving_c.sum() == 0:
-            continue
-
-        warped_c = transform(moving_c, flow, grid)
-
-        intersection = (warped_c * fixed_c).sum()
-        cardinality = warped_c.sum() + fixed_c.sum()
-
-        dice_scores.append((2.0 * intersection + eps) / (cardinality + eps))
-
-    # every class was skipped (no overlapping labels present)
-    if len(dice_scores) == 0:
+    # Drop classes absent from the moving image: a class present in only one
+    # image (e.g. cropped out of the moving by augmentation) yields dice~0 with
+    # no usable registration gradient and only biases the mean. Testing this
+    # with unique() is far cheaper than materializing a one-hot per class.
+    classes = classes[torch.isin(classes, moving_label.unique())]
+    if classes.numel() == 0:
         return None
 
+    flow = disp.permute(0, 2, 3, 4, 1)  # (B, D, H, W, 3)
+    sample_grid = grid + flow  # built once, reused by every chunk
+
+    dims = (0, 2, 3, 4)  # sum over batch and space, keep the class channel
+    dice_scores = []
+    for start in range(0, classes.numel(), chunk_size):
+        chunk = classes[start : start + chunk_size].view(1, -1, 1, 1, 1)
+
+        moving_c = (moving_label == chunk).float()  # (B, C, D, H, W)
+        fixed_c = (fixed_label == chunk).float()
+
+        warped_c = torch.nn.functional.grid_sample(
+            moving_c,
+            sample_grid,
+            mode="bilinear",
+            padding_mode="border",
+            align_corners=False,
+        )
+
+        intersection = (warped_c * fixed_c).sum(dim=dims)
+        cardinality = warped_c.sum(dim=dims) + fixed_c.sum(dim=dims)
+        dice_scores.append((2.0 * intersection + eps) / (cardinality + eps))
+
+    dice_stack = torch.cat(dice_scores)
+
+    if class_weights is not None:
+        w = class_weights[classes.round().long()]
+        w = w / (w.mean() + eps)
+        return 1.0 - (w * dice_stack).sum() / w.sum()
+
     if return_each:
-        return 1.0 - torch.stack(dice_scores)
+        return 1.0 - dice_stack
     else:
-        return 1.0 - torch.stack(dice_scores).mean()
+        return 1.0 - dice_stack.mean()
 
 
 def mtv_bias_loss(

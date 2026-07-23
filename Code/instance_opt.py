@@ -33,36 +33,26 @@ def dice_loss_with_grad(
     transform: SpatialTransform_unit,
     class_weights: torch.Tensor | None = None,
     eps: float = 1e-5,
+    chunk_size: int = 16,
 ) -> torch.Tensor | None:
     """Per-class soft dice loss. If class_weights is given (one weight per
     class value, indexed by the integer label), the per-class dice terms are
     weighted before averaging; weights are renormalized over the classes
-    actually used so the loss scale stays comparable across subjects."""
-    classes = fixed_label.unique()
-    classes = classes[classes != 0]
-    if classes.numel() == 0:
-        return None
-    flow = disp.permute(0, 2, 3, 4, 1)
-    dice_scores = []
-    weights = []
-    for c in classes:
-        moving_c = (moving_label == c).float()
-        fixed_c = (fixed_label == c).float()
-        warped_c = transform(moving_c, flow, grid)
-        intersection = (warped_c * fixed_c).sum()
-        cardinality = warped_c.sum() + fixed_c.sum()
-        dice_c = (2.0 * intersection + eps) / (cardinality + eps)
-        dice_scores.append(dice_c)
-        if class_weights is not None:
-            weights.append(class_weights[int(c.item())])
-    dice_stack = torch.stack(dice_scores)
-    if class_weights is not None:
-        w = torch.stack(weights)
-        w = w / (w.mean() + eps)
-        loss = 1.0 - (w * dice_stack).sum() / w.sum()
-    else:
-        loss = 1.0 - dice_stack.mean()
-    return loss
+    actually used so the loss scale stays comparable across subjects.
+
+    Thin wrapper over utils.dice_loss_with_grad so IO and training share one
+    implementation (chunked warps with a hoisted sampling grid, and skipping of
+    classes missing from either label)."""
+    return utils.dice_loss_with_grad(
+        moving_label,
+        fixed_label,
+        disp,
+        grid,
+        transform,
+        eps=eps,
+        class_weights=class_weights,
+        chunk_size=chunk_size,
+    )
 
 
 import numpy as np
