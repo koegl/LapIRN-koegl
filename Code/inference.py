@@ -846,7 +846,7 @@ def main() -> None:
     eval_official: bool = True
     eval_my_val: bool = False
 
-    model_ori_name = "resilient-shrike-38730428"
+    model_ori_name = "exultant-hawk-38756587"
 
     model_path = Path(
         f"/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_{model_ori_name}_stagelvl3_best.pth"
@@ -874,7 +874,7 @@ def main() -> None:
     pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
     use_io: bool = True
-    use_class_weights = True
+    use_class_weights = False
     use_polyaffine: bool = False
     io_lr: float = 2e-1
     io_it: float = 60
