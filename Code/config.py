@@ -72,7 +72,7 @@ class TrainingConfig:
     aug_seed: int = 42
     synthetic_repeat: int = 1
 
-    range_flow: float = 0.4
+    range_flow: float = 0.8
 
     in_channel: int = field(init=False)
     n_classes: int = 3
@@ -86,8 +86,8 @@ class TrainingConfig:
     start_channel: int = 7
 
     # train val
-    total_steps_lvl1: int = 70000
-    total_steps_lvl2: int = 90000
+    total_steps_lvl1: int = 50000
+    total_steps_lvl2: int = 50000
     total_steps_lvl3: int = 100000
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
@@ -115,7 +115,7 @@ class TrainingConfig:
     # IO steps (same half-res SVF re-parametrization as run_io) and add the loss
     # on the *refined* field to the objective, so the net is trained to be a good
     # seed for IO rather than a good final answer on its own.
-    use_unrolled_io: bool = True
+    use_unrolled_io: bool = False
     # number of inner IO steps to unroll (small on purpose: 3-8)
     unroll_K: int = 3
     # inner-loop step size (plain gradient descent, not Adam; needs its own tune,
