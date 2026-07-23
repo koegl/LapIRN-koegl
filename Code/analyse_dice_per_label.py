@@ -42,24 +42,27 @@ def plot_heatmap(
     mask_below: float = 0.5,
     vmin: float = 0.5,
     volumes: Optional[pd.Series] = None,
+    sort_by_volume: bool = False,
 ) -> None:
     """Heatmap of all labels x cases, with a mean column.
 
     Rows are ordered by label id, or by average label volume (largest first)
-    when `volumes` is given.
+    when `sort_by_volume` is set. The volumes are shown in the row labels
+    whenever `volumes` is given, independent of the ordering.
 
     Cells with Dice < mask_below are shown gray; vmin sets the color floor.
     The final 'mean' column (average over cases) is never masked.
     """
-    sub = labels.loc[sort_labels(labels.index, volumes)]
+    sub = labels.loc[sort_labels(labels.index, volumes if sort_by_volume else None)]
     sub["mean"] = sub.mean(axis=1)
     sub.index = fmt_labels(sub.index, names, volumes)
 
     mask = sub < mask_below
     mask["mean"] = False  # keep the mean column always colored
 
+    # the extra width leaves room for the colorbar and its tick labels
     fig, ax = plt.subplots(
-        figsize=(max(8, sub.shape[1] * 0.5), max(4, sub.shape[0] * 0.18))
+        figsize=(max(8, sub.shape[1] * 0.5) + 2.5, max(4, sub.shape[0] * 0.18))
     )
     ax.set_facecolor("lightgray")
     sns.heatmap(
@@ -76,13 +79,13 @@ def plot_heatmap(
     )
     ax.axvline(sub.shape[1] - 1, color="black", linewidth=1.5)
     ax.set_xlabel("Case ID")
-    ax.set_ylabel("Label ID" if volumes is None else "Label ID (by volume)")
+    ax.set_ylabel("Label" if not sort_by_volume else "Label (by volume)")
     title = "Dice Heatmap: All Labels x Cases"
-    if volumes is not None:
+    if sort_by_volume:
         title += " (sorted by mean volume)"
     ax.set_title(title)
     fig.tight_layout()
-    fig.savefig(out_path, dpi=150)
+    fig.savefig(out_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -142,7 +145,7 @@ def main() -> None:
     min_present = 15
 
     # order the heatmap rows by average label volume instead of by label id
-    sort_by_volume: bool = True
+    sort_by_volume: bool = False
 
     model_name = (
         csv_path.split("/")[-1].split(".csv")[0].split("LapIRN_")[-1].split("_stage")[0]
@@ -151,7 +154,7 @@ def main() -> None:
     os.makedirs(out_dir, exist_ok=True)
     labels, _ = load_scores(csv_path)
     names = load_label_names(names_path)
-    volumes = load_label_volumes(volumes_path) if sort_by_volume else None
+    volumes = load_label_volumes(volumes_path)
     stats = compute_stats(labels, present_eps)
     stats = stats[stats["n_present"] >= min_present]
     stats.insert(0, "name", [names.get(i, "?") for i in stats.index])
@@ -171,7 +174,13 @@ def main() -> None:
         (
             f"worst_labels_heatmap_{model_name}{suffix}.png",
             lambda p: plot_heatmap(
-                labels, names, p, mask_below=0.5, vmin=0.5, volumes=volumes
+                labels,
+                names,
+                p,
+                mask_below=0.0,
+                vmin=0.5,
+                volumes=volumes,
+                sort_by_volume=sort_by_volume,
             ),
         )
     ]
