@@ -13,10 +13,8 @@ Step 1 (order doesn't matter)
     - segment_ribs.py
     - segment_total_segmentator.py
 Step 2
-    - remove ribs from total segmentator labels and replace with rib segmentations
-Step 3
     - process_klinikum_segmentations.py
-
+        - remove ribs from total segmentator labels and replace with rib segmentations
 """
 
 SELECTED_FILES = {
