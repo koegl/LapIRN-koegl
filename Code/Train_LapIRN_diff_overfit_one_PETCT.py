@@ -1,16 +1,13 @@
-import json
 import os
 
 os.environ["MLFLOW_ALLOW_FILE_STORE"] = "true"
 
 
-import os
 from pathlib import Path
 
 import level1
 import level2
 import level3
-import mlflow
 import torch
 import utils
 from config import TrainingConfig
@@ -23,11 +20,7 @@ def main() -> None:
 
     config = TrainingConfig()
 
-    mlflow.set_tracking_uri("file:///home/iml/fryderyk.koegl/code/mlruns")
-    mlflow.set_experiment("PSMAReg_LapIRN")
-    with mlflow.start_run():
-        utils.add_jobid_to_mlflow_run()
-
+    with utils.start_logging_run(config):
         (
             train_combined,
             train_dataset,
@@ -44,11 +37,7 @@ def main() -> None:
             config,
         )
 
-        mlflow.log_params(config_to_log)
-        mlflow.log_text(
-            json.dumps(config_to_log, indent=2),
-            artifact_file="config.json",
-        )
+        utils.log_config(config_to_log)
 
         train_generator = torch_data.DataLoader(
             train_combined,

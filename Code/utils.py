@@ -1,6 +1,8 @@
 import contextlib
+import json
 import os
-from typing import Callable, Tuple
+from contextlib import ExitStack
+from typing import Any, Callable, Dict, Iterator, Tuple
 
 import mlflow
 import my_data
@@ -12,6 +14,116 @@ from miccai2020_model_stage import (
     SpatialTransform_unit,
 )
 from torch.utils import data as torch_data
+
+import wandb
+
+_ACTIVE_RUN_NAME: str | None = None
+_WANDB_RUN = None
+
+
+def _enabled_logger_backends(config: TrainingConfig) -> set[str]:
+    backend = config.logger_backend.lower()
+    if backend == "none":
+        return set()
+    if backend == "both":
+        return {"mlflow", "wandb"}
+    if backend not in {"mlflow", "wandb"}:
+        raise ValueError(
+            f"Unknown logger_backend={config.logger_backend!r}; "
+            'expected "mlflow", "wandb", "both", or "none".'
+        )
+    return {backend}
+
+
+def get_slurm_job_id() -> str:
+    return os.environ.get("SLURM_JOB_ID", "local")
+
+
+def get_run_name_with_job_id(base_name: str) -> str:
+    job_id = get_slurm_job_id()
+    if base_name.endswith(f"-{job_id}"):
+        return base_name
+    base_name_no_id = base_name.rsplit("-", 1)[0]
+    return f"{base_name_no_id}-{job_id}"
+
+
+@contextlib.contextmanager
+def start_logging_run(config: TrainingConfig) -> Iterator[None]:
+    """Start the configured experiment logger(s)."""
+    global _ACTIVE_RUN_NAME, _WANDB_RUN
+
+    backends = _enabled_logger_backends(config)
+    previous_run_name = _ACTIVE_RUN_NAME
+    previous_wandb_run = _WANDB_RUN
+    _ACTIVE_RUN_NAME = None
+    _WANDB_RUN = None
+
+    with ExitStack() as stack:
+        if not backends:
+            _ACTIVE_RUN_NAME = f"{config.mlflow_experiment}-{get_slurm_job_id()}"
+
+        if "mlflow" in backends:
+            mlflow.set_tracking_uri(config.mlflow_tracking_uri)
+            mlflow.set_experiment(config.mlflow_experiment)
+            stack.enter_context(mlflow.start_run())
+            add_jobid_to_mlflow_run()
+            _ACTIVE_RUN_NAME = get_mlflow_run_name()
+
+        if "wandb" in backends:
+            if config.wandb_mode is not None:
+                os.environ["WANDB_MODE"] = config.wandb_mode
+
+            run_name = (
+                _ACTIVE_RUN_NAME or f"{config.wandb_project}-{get_slurm_job_id()}"
+            )
+            _WANDB_RUN = wandb.init(
+                project=config.wandb_project,
+                entity=config.wandb_entity,
+                name=run_name,
+                group=get_slurm_job_id(),
+            )
+            _WANDB_RUN.define_metric("global_step")
+            _WANDB_RUN.define_metric("*", step_metric="global_step")
+            _ACTIVE_RUN_NAME = _WANDB_RUN.name
+
+        try:
+            yield
+        finally:
+            if _WANDB_RUN is not None:
+                _WANDB_RUN.finish()
+            _ACTIVE_RUN_NAME = previous_run_name
+            _WANDB_RUN = previous_wandb_run
+
+
+def log_params(params: Dict[str, Any]) -> None:
+    if mlflow.active_run() is not None:
+        mlflow.log_params(params)
+    if _WANDB_RUN is not None:
+        _WANDB_RUN.config.update(params, allow_val_change=True)
+
+
+def log_text(text: str, artifact_file: str) -> None:
+    if mlflow.active_run() is not None:
+        mlflow.log_text(text, artifact_file=artifact_file)
+    if _WANDB_RUN is not None:
+        import wandb
+
+        _WANDB_RUN.log({artifact_file: wandb.Html(f"<pre>{text}</pre>")})
+
+
+def log_config(params: Dict[str, Any]) -> None:
+    log_params(params)
+    log_text(json.dumps(params, indent=2), artifact_file="config.json")
+
+
+def log_metrics(metrics: Dict[str, float], step: int | None = None) -> None:
+    if mlflow.active_run() is not None:
+        mlflow.log_metrics(metrics, step=step)
+    if _WANDB_RUN is not None:
+        wandb_metrics = dict(metrics)
+        if step is not None:
+            wandb_metrics["global_step"] = step
+        _WANDB_RUN.log(wandb_metrics)
 
 
 def create_datasets(
@@ -224,16 +336,13 @@ def add_jobid_to_mlflow_run() -> None:
     job_id = os.environ.get("SLURM_JOB_ID", "local")
 
     auto_name = str(mlflow.active_run().info.run_name)
-    auto_name_no_id = auto_name.rsplit("-", 1)[0]
-
-    new_name = f"{auto_name_no_id}-{job_id}"
+    new_name = get_run_name_with_job_id(auto_name)
 
     mlflow.set_tag("mlflow.runName", new_name)
     mlflow.set_tag("slurm_job_id", job_id)
 
 
-def get_run_name() -> str:
-
+def get_mlflow_run_name() -> str:
     run_id = mlflow.active_run().info.run_id
     run_name = mlflow.get_run(run_id).info.run_name
 
@@ -241,6 +350,14 @@ def get_run_name() -> str:
         raise ValueError("MLflow run name is None. Please ensure an active run exists.")
 
     return run_name
+
+
+def get_run_name() -> str:
+    if _ACTIVE_RUN_NAME is not None:
+        return _ACTIVE_RUN_NAME
+    if mlflow.active_run() is not None:
+        return get_mlflow_run_name()
+    raise ValueError("No active logger run. Please ensure a logging run exists.")
 
 
 def optimizer_step_with_guard(
@@ -265,9 +382,7 @@ def optimizer_step_with_guard(
             total_norm = torch.nn.utils.clip_grad_norm_(
                 model.parameters(), max_norm=5.0
             )
-            mlflow.log_metrics(
-                {f"lvl{level}/grad_norm": total_norm.item()}, step=global_step
-            )
+            log_metrics({f"lvl{level}/grad_norm": total_norm.item()}, step=global_step)
             if not torch.isfinite(total_norm):
                 tqdm.tqdm.write(
                     f"[lvl{level}] step {global_step}: non-finite grad_norm "

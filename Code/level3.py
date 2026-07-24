@@ -4,7 +4,6 @@ from typing import Callable, Dict, Optional
 import affine_reg
 import instance_opt
 import jacobian
-import mlflow
 import my_data
 import numpy as np
 import poly_affine_reg
@@ -834,13 +833,13 @@ def train_lvl3(
             train_metrics["train_lvl3/w_dice_pet"] = (
                 config.w_dice_pet * loss_dice_pet.item()
             )
-        mlflow.log_metrics(train_metrics, step=global_step)
+        utils.log_metrics(train_metrics, step=global_step)
 
         for key, value in train_metrics.items():
             epoch_metrics[key] = epoch_metrics.get(key, 0.0) + value
 
         if is_epoch_end:
-            mlflow.log_metrics(
+            utils.log_metrics(
                 {
                     f"{key}_epoch": value / steps_per_epoch
                     for key, value in epoch_metrics.items()
@@ -875,7 +874,7 @@ def train_lvl3(
                 is_last=is_last_step,
             )
             saved_initial = True
-            mlflow.log_metrics(
+            utils.log_metrics(
                 {
                     f"valid_lvl3/val_{key}": value
                     for key, value in val_losses.items()
@@ -901,7 +900,7 @@ def train_lvl3(
                     saved_initial=saved_initial,
                     is_last=is_last_step,
                 )
-                mlflow.log_metrics(
+                utils.log_metrics(
                     {
                         f"valid_lvl3/val_{key}_tubingen": value
                         for key, value in val_losses_tubingen.items()
@@ -927,7 +926,7 @@ def train_lvl3(
                     saved_initial=saved_initial,
                     is_last=is_last_step,
                 )
-                mlflow.log_metrics(
+                utils.log_metrics(
                     {
                         f"valid_lvl3/val_{key}_nlst": value
                         for key, value in val_losses_nlst.items()
@@ -953,7 +952,7 @@ def train_lvl3(
                     saved_initial=saved_initial,
                     is_last=is_last_step,
                 )
-                mlflow.log_metrics(
+                utils.log_metrics(
                     {
                         f"valid_lvl3/val_{key}_abdomen": value
                         for key, value in val_losses_abdomen.items()

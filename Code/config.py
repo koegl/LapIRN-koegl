@@ -148,6 +148,10 @@ class TrainingConfig:
 
     mlflow_tracking_uri: str = "sqlite:////home/iml/fryderyk.koegl/code/mlruns.db"
     mlflow_experiment: str = "PSMAReg_LapIRN"
+    logger_backend: str = "both"  # one of: "mlflow", "wandb", "both", "none"
+    wandb_project: str = "PSMAReg_LapIRN"
+    wandb_entity: Optional[str] = None
+    wandb_mode: Optional[str] = None  # e.g. "offline" on clusters without internet
 
     @property
     def img_shape_2(self) -> Tuple[int, int, int]:
