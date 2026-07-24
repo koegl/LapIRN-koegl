@@ -1,8 +1,120 @@
+import json
 from pathlib import Path
-from typing import Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 import SimpleITK as sitk
+from tqdm import tqdm
+
+"""
+Step ANY: preprocess_klinikum.py (can be done at any time)
+
+Step 1 (order doesn't matter)
+    - segment_ribs.py
+    - segment_total_segmentator.py
+Step 2
+    - remove ribs from total segmentator labels and replace with rib segmentations
+Step 3
+    - process_klinikum_segmentations.py
+
+"""
+
+SELECTED_FILES = {
+    "sub-0L4e4-f1XHo": {
+        "ses-20180604": "sub-0L4e4-f1XHo_ses-20180604_sequ-6_acq-cor_ce-ContrastAgent_part-axial_ct.nii.gz",
+        "ses-20180919": "sub-0L4e4-f1XHo_ses-20180919_sequ-6_acq-cor_ce-ContrastAgent_part-axial_ct.nii.gz",
+    },
+    "sub-1ama2imoYR4": {
+        "ses-20171011": "sub-1ama2imoYR4_ses-20171011_sequ-7_acq-cor_part-axial_ct.nii.gz",
+        "ses-20180208": "",
+    },
+}
+
+
+# Whole-body axial reconstructions, best first. Everything else in a session is
+# a topogram, a thorax-only breath-hold, or a derived cor/sag MPR.
+WHOLE_BODY_SERIES_BY_PRIORITY = (
+    "TK Diagn EFoV",
+    "TK Nativ EFoV",
+    "CT ax 3mm SAF",
+)
+
+
+def select_ct(ct_dir: Path) -> Path:
+    """Return the whole-body axial CT of a session's ``ct`` folder."""
+    all_sidecars = sorted(ct_dir.glob("*_ct.json"))
+    volumetric_sidecars = [p for p in all_sidecars if "part-localizer" not in p.name]
+
+    candidates_by_series: Dict[str, List[Tuple[Path, float]]] = {}
+    for sidecar in volumetric_sidecars:
+        metadata = json.loads(sidecar.read_text())
+
+        series_description = (metadata.get("SeriesDescription") or "").strip()
+        if series_description not in WHOLE_BODY_SERIES_BY_PRIORITY:
+            continue
+
+        grid = metadata.get("grid") or {}
+        shape, spacing = grid.get("shape"), grid.get("spacing")
+        if not shape or not spacing:
+            continue
+
+        z_extent_mm = shape[2] * spacing[2]
+        candidates_by_series.setdefault(series_description, []).append(
+            (sidecar, z_extent_mm)
+        )
+
+    for series_description in WHOLE_BODY_SERIES_BY_PRIORITY:
+        candidates = candidates_by_series.get(series_description)
+        if not candidates:
+            continue
+
+        best_sidecar, _ = max(candidates, key=lambda candidate: candidate[1])
+        selected_volume = best_sidecar.with_name(
+            best_sidecar.name.removesuffix(".json") + ".nii.gz"
+        )
+        if not selected_volume.exists():
+            raise FileNotFoundError(f"Missing volume for sidecar {best_sidecar}")
+        return selected_volume
+
+    raise FileNotFoundError(f"No whole-body axial CT found in {ct_dir}")
+
+
+def automatically_find_pairs(data_dir: Path) -> List[Dict[str, Path]]:
+
+    files = []
+
+    for patient in data_dir.iterdir():
+        if not patient.is_dir():
+            continue
+
+        pair = {"fixed": Path(), "moving": Path()}
+
+        sessions = [s for s in patient.iterdir() if s.is_dir()]
+        sessions.sort(key=lambda s: s.name)
+
+        session_fixed = sessions[0]
+        session_moving = sessions[1]
+
+        path_fixed = select_ct(session_fixed / "ct")
+        path_moving = select_ct(session_moving / "ct")
+
+        pair["fixed"] = path_fixed
+        pair["moving"] = path_moving
+
+        files.append(pair)
+
+    return files
+
+
+def find_files_from_manual_selection(data_dir: Path) -> list[Path]:
+    files = []
+    for pid, sessions in SELECTED_FILES.items():
+        for ses, filename in sessions.items():
+            path = data_dir / pid / ses / "ct" / filename
+            if not path.exists():
+                raise FileNotFoundError(f"File {path} does not exist")
+            files.append(path)
+    return files
 
 
 def foreground_anchor(
@@ -158,27 +270,38 @@ def main() -> None:
 
     mapping = {}
 
-    out_dir = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/lisa/preprocessed")
+    in_dir = Path("/home/iml/fryderyk.koegl/data/PET_CT_bone/raw_data")
+
+    out_dir = Path(
+        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTr_klinikum"
+    )
     out_dir.mkdir(parents=True, exist_ok=True)
 
     mapping_path = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/mapping_nlst.json"
+        "/home/iml/fryderyk.koegl/code/LapIRN-koegl/mapping_klinikum.json"
     )
-    if mapping_path.exists():
-        mapping_path.unlink()
+    # if mapping_path.exists():
+    #     mapping_path.unlink()
 
-    path_fixed = Path(
-        "/home/iml/fryderyk.koegl/code/LapIRN-koegl/lisa/sub-0L4e4-f1XHo_ses-20180604_sequ-6_acq-cor_ce-ContrastAgent_part-axial_ct.nii.gz"
-    )
-    path_moving = Path(
-        "/home/iml/fryderyk.koegl/code/LapIRN-koegl/lisa/sub-0L4e4-f1XHo_ses-20180919_sequ-6_acq-cor_ce-ContrastAgent_part-axial_ct.nii.gz"
-    )
+    path_pairs = automatically_find_pairs(in_dir)
 
-    new_name_fix = path_fixed.name
-    new_name_mov = path_moving.name
+    for idx, pair in enumerate(tqdm(path_pairs)):
+        path_fixed = pair["fixed"]
+        path_moving = pair["moving"]
 
-    preprocess_file(path_fixed, out_dir / new_name_fix)
-    preprocess_file(path_moving, out_dir / new_name_mov)
+        new_name_fix = f"PSMARegPSMA_4{idx:03d}_0000_00.nii.gz"
+        new_name_mov = f"PSMARegPSMA_4{idx:03d}_0000_01.nii.gz"
+
+        preprocess_file(path_fixed, out_dir / new_name_fix)
+        preprocess_file(path_moving, out_dir / new_name_mov)
+
+        mapping[path_fixed.name] = new_name_fix
+        mapping[new_name_fix] = path_fixed.name
+        mapping[path_moving.name] = new_name_mov
+        mapping[new_name_mov] = path_moving.name
+
+    with open(mapping_path, "w") as f:
+        json.dump(mapping, f, indent=4)
 
 
 if __name__ == "__main__":

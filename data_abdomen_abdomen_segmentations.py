@@ -15,7 +15,7 @@ import numpy as np
 import SimpleITK as sitk
 from tqdm import tqdm
 
-from preprocess_abdomen import compute_offset, resample_with_offset
+from data_abdomen_preprocess import compute_offset, resample_with_offset
 
 mapping_path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/mapping_abdomen.json")
 orig_dir = Path("/home/iml/fryderyk.koegl/data/AbdomenCTCT/imagesTr")

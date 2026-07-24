@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 import SimpleITK as sitk
 
-from preprocess_lisa import compute_offset, resample_labels_with_offset
+from data_klinikum_preprocess import compute_offset, resample_labels_with_offset
 
 
 def main() -> None:

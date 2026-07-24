@@ -11,6 +11,10 @@ def find_ct_images(input_dir: Path) -> List[Path]:
     return images
 
 
+def find_ct_images_klinikum(input_dir: Path) -> List[Path]:
+    pass
+
+
 def output_name(image: Path) -> str:
     parts = image.name.replace(".nii.gz", "").split("_")
     name = f"{parts[1]}_{parts[3]}.nii.gz"
@@ -34,13 +38,13 @@ def segment(image: Path, output: Path, fast: bool = True) -> None:
 
 
 def main() -> None:
-    input_dir = Path("/home/iml/fryderyk.koegl/data/AbdomenCTCT/images_all")
-    output_dir = Path("/home/iml/fryderyk.koegl/data/AbdomenCTCT/labels_all_totalseg")
+    input_dir = Path("/home/iml/fryderyk.koegl/data/PET_CT_bone/raw_data")
+    output_dir = Path("/home/iml/fryderyk.koegl/data/PET_CT_bone/raw_labels")
     skip_existing = True
     fast = False
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    images = find_ct_images(input_dir)
+    images = find_ct_images_klinikum(input_dir)
 
     pbar = tqdm(images, desc="TotalSegmentator", unit="case")
     for image in pbar:
