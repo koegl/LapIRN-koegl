@@ -72,7 +72,7 @@ class TrainingConfig:
     aug_seed: int = 42
     synthetic_repeat: int = 1
 
-    range_flow: float = 0.8
+    range_flow: float = 0.4
 
     in_channel: int = field(init=False)
     n_classes: int = 3
