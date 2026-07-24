@@ -846,7 +846,7 @@ def main() -> None:
 
     # --- what to evaluate ---
     eval_official: bool = True
-    eval_my_val: bool = True
+    eval_my_val: bool = False
 
     model_ori_name = "popular-sloth-38758804"
 
@@ -875,7 +875,7 @@ def main() -> None:
     ct_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_ct")
     pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
-    use_io: bool = False
+    use_io: bool = True
     use_class_weights = False
     use_polyaffine: bool = False
     io_lr: float = 2e-1
