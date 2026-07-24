@@ -146,7 +146,7 @@ class TrainingConfig:
     lvl2_ncc_win: int = 7
     lvl3_ncc_win: int = 7
 
-    mlflow_tracking_uri: str = "sqlite:////home/iml/fryderyk.koegl/code/mlruns.db"
+    mlflow_tracking_uri: str = "file:///home/iml/fryderyk.koegl/mlflow_hpc/mlruns"
     mlflow_experiment: str = "PSMAReg_LapIRN"
     logger_backend: str = "both"  # one of: "mlflow", "wandb", "both", "none"
     wandb_project: str = "PSMAReg_LapIRN"
