@@ -806,7 +806,7 @@ def process_subject(
         # --- DEBUG: save X, Y, warped X, ct label, warped ct label ---
         model_name_clean = model_name.replace(".", "_").replace(" ", "")
 
-        debug_dir = out_dir / "overlap_debug" / "model_name_clean"
+        debug_dir = out_dir / "overlap_debug" / model_name_clean
         debug_dir.mkdir(parents=True, exist_ok=True)
 
         def save_ct(vol: torch.Tensor, name: str) -> None:
