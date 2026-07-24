@@ -105,9 +105,9 @@ class TrainingConfig:
     w_dice_ct_lvl2: float = 4.0
     w_dice_ct_lvl3: float = 5.0
     w_dice_pet: float = 0.0
-    w_tlg: float = 2.0
-    w_jacobian_tumor: float = 2.0
-    w_bone_rigidity: float = 2.0
+    w_tlg: float = 20.0
+    w_jacobian_tumor: float = 20.0
+    w_bone_rigidity: float = 20.0
     w_dvf: float = 100.0
 
     # meta-learned / unrolled instance optimization (IO)
