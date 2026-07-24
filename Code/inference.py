@@ -148,7 +148,7 @@ val_subjects = [
     "0047",
     "0048",
 ]
-split_path = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/split.json")
+split_path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/split.json")
 my_val_image_dir = Path(
     "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTr"
 )
@@ -804,7 +804,9 @@ def process_subject(
 
     if True:
         # --- DEBUG: save X, Y, warped X, ct label, warped ct label ---
-        debug_dir = out_dir / "overlap_debug"
+        model_name_clean = model_name.replace(".", "_").replace(" ", "")
+
+        debug_dir = out_dir / "overlap_debug" / "model_name_clean"
         debug_dir.mkdir(parents=True, exist_ok=True)
 
         def save_ct(vol: torch.Tensor, name: str) -> None:
@@ -821,14 +823,14 @@ def process_subject(
             pet_template=pet_label_template,
         )
 
-        save_ct(X, f"{case_id}_X_{model_name.replace('.', '_')}")
-        save_ct(Y, f"{case_id}_Y_{model_name.replace('.', '_')}")
-        save_ct(warped, f"{case_id}_warped_X_{model_name.replace('.', '_')}")
-        save_ct(x_lbl_ct, f"{case_id}_ct_label_moving_{model_name.replace('.', '_')}")
-        save_ct(y_lbl_ct, f"{case_id}_ct_label_fixed_{model_name.replace('.', '_')}")
+        save_ct(X, f"{case_id}_X_{model_name_clean}")
+        save_ct(Y, f"{case_id}_Y_{model_name_clean}")
+        save_ct(warped, f"{case_id}_warped_X_{model_name_clean}")
+        save_ct(x_lbl_ct, f"{case_id}_ct_label_moving_{model_name_clean}")
+        save_ct(y_lbl_ct, f"{case_id}_ct_label_fixed_{model_name_clean}")
         save_ct(
             seg_their.round(),
-            f"{case_id}_ct_label_moving_warped_{model_name.replace('.', '_')}",
+            f"{case_id}_ct_label_moving_warped_{model_name_clean}",
         )
 
     save_disp(disp_half, out_dir / "submission", case_id)
@@ -844,9 +846,9 @@ def main() -> None:
 
     # --- what to evaluate ---
     eval_official: bool = True
-    eval_my_val: bool = False
+    eval_my_val: bool = True
 
-    model_ori_name = "exultant-hawk-38756587"
+    model_ori_name = "popular-sloth-38758804"
 
     model_path = Path(
         f"/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_{model_ori_name}_stagelvl3_best.pth"
@@ -873,7 +875,7 @@ def main() -> None:
     ct_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_ct")
     pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
-    use_io: bool = True
+    use_io: bool = False
     use_class_weights = False
     use_polyaffine: bool = False
     io_lr: float = 2e-1
@@ -972,8 +974,8 @@ def main() -> None:
                     per_label_csv=per_label_csv,
                 )
 
-    run_baseline("affine", baseline_polyaffine=False)
-    run_baseline("polyaffine", baseline_polyaffine=True)
+    # run_baseline("affine", baseline_polyaffine=False)
+    # run_baseline("polyaffine", baseline_polyaffine=True)
 
     if eval_official:
         # print("warning: reducing number of my val subjects")
