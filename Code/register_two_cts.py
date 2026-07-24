@@ -13,6 +13,7 @@ from typing import Dict, Tuple
 
 import affine_reg
 import Functions
+import instance_opt
 import miccai2020_model_stage
 import my_data
 import nibabel as nib
@@ -207,6 +208,10 @@ def register(
     model_path: Path,
     cfg: TrainingConfig,
     device: torch.device,
+    use_io: bool = False,
+    use_class_weights: bool = False,
+    io_lr: float = 2e-1,
+    io_it: int = 60,
 ) -> None:
     model = create_model(device, cfg, model_path)
 
@@ -217,6 +222,7 @@ def register(
         .float()
     )
     transform = miccai2020_model_stage.SpatialTransform_unit().to(device)
+    transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
 
     X, moving_ct_raw = build_input(moving_ct_path, device)
     Y, _ = build_input(fixed_ct_path, device)
@@ -251,6 +257,30 @@ def register(
     # --- model inference ---
     with torch.no_grad():
         F_X_Y, _, _, _, _, _, _ = model(X_affine, Y)
+
+    # --- instance optimisation ---
+    if use_io:
+        # the moving labels must sit in the affinely prealigned space, like X
+        x_lbl_ct = transform_nearest(moving_labels, flow_affine, grid_full)
+        # dummy PET labels: all zeros, so the TLG/masked-jacobian terms vanish
+        x_lbl_pet = torch.zeros_like(x_lbl_ct)
+
+        F_X_Y = instance_opt.run_io(
+            Y,
+            F_X_Y,
+            X_affine,
+            x_lbl_ct,
+            x_lbl_pet,
+            fixed_labels,
+            transform,
+            transform_nearest,
+            grid_full,
+            cfg,
+            device,
+            use_class_weights=use_class_weights,
+            lr=io_lr,
+            n_steps=io_it,
+        )
 
     # --- compose affine + deformable into one full-resolution field ---
     deform_grid = grid_full + F_X_Y.permute(0, 2, 3, 4, 1)
@@ -287,21 +317,23 @@ def register(
     )
     print(f"dice before={dice_before:.4f};\tafter={dice_after:.4f}")
 
+    suffix = f"_IO_lr{io_lr:.1e}_it{io_it}" if use_io else ""
+
     scores = dice_per_label(
         warped_labels[0, 0].round().long(), fixed_labels[0, 0].round().long()
     )
-    save_dice_csv(scores, out_dir / "dice_per_label.csv")
+    save_dice_csv(scores, out_dir / f"dice_per_label{suffix}.csv")
 
     save_like(
         warped_ct[0, 0].detach().cpu().numpy(),
         reference_path=fixed_ct_path,
-        out_path=out_dir / "warped_moving_ct.nii.gz",
+        out_path=out_dir / f"warped_moving_ct{suffix}.nii.gz",
         dtype=np.float32,
     )
     save_like(
         warped_labels[0, 0].round().detach().cpu().numpy(),
         reference_path=fixed_label_path,
-        out_path=out_dir / "warped_moving_labels.nii.gz",
+        out_path=out_dir / f"warped_moving_labels{suffix}.nii.gz",
         dtype=np.int16,
     )
 
@@ -327,6 +359,11 @@ def main() -> None:
     )
     out_dir = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/lisa/registered")
 
+    use_io: bool = True
+    use_class_weights: bool = False
+    io_lr: float = 2e-1
+    io_it: int = 60
+
     cfg = TrainingConfig()
     cfg.in_channel = 4
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -340,6 +377,10 @@ def main() -> None:
         model_path=model_path,
         cfg=cfg,
         device=device,
+        use_io=use_io,
+        use_class_weights=use_class_weights,
+        io_lr=io_lr,
+        io_it=io_it,
     )
 
 
