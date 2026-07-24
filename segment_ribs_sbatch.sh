@@ -31,6 +31,8 @@ nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader
 
 python -u /home/iml/fryderyk.koegl/code/LapIRN-koegl/segment_ribs_sbatch.py \
     --shard "$SLURM_ARRAY_TASK_ID" \
-    --num-shards "$NUM_SHARDS"
+    --num-shards "$NUM_SHARDS" \
+    --images-dir /lustre/groups/iml/data/PET_CT_bone/raw_data \
+    --output-dir /lustre/groups/iml/data/PET_CT_bone/segmentations_ribs
 
 echo "Job finished at $(date)"

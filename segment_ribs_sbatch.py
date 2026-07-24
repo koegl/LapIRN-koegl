@@ -1,20 +1,4 @@
-"""Batch rib segmentation over the PSMAReg CT volumes, sharded for a Slurm job array.
-
-Builds the work list deterministically from split.json (train + val, IDs starting
-with "0", CT channel _0000 only, all sessions), then processes the slice
-``files[shard::num_shards]`` so that the array tasks together cover every file
-exactly once.
-
-The nnU-Net predictor is built once per job and reused for every volume.
-Volumes whose output already exists are skipped, so a timed-out shard can simply
-be resubmitted.
-
-Usage:
-    python segment_ribs_sbatch.py --shard $SLURM_ARRAY_TASK_ID --num-shards 5
-"""
-
 import argparse
-import json
 import shutil
 import tempfile
 import time
@@ -31,28 +15,29 @@ from segment_ribs import (
     load_inference_config,
 )
 
-SPLIT_JSON = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/split.json")
-IMAGES_DIR = Path("/lustre/groups/iml/data/PSMAReg/PSMAReg_dataset/imagesTr")
-LABELS_DIR = Path("/lustre/groups/iml/data/PSMAReg/PSMAReg_dataset/labelsTr_ribs")
-CT_CHANNEL = "0000"
+IMAGES_DIR = Path("/lustre/groups/iml/data/PET_CT_bone/raw_data")
+LABELS_DIR = Path("/lustre/groups/iml/data/PET_CT_bone/segmentations_ribs")
 
 
-def collect_files(split_json, images_dir):
-    """All CT volumes of the train+val IDs that start with '0', sorted."""
-    with open(split_json) as f:
-        split = json.load(f)
+def collect_files(images_dir, select="all"):
+    """The volumes to segment, in a stable order for sharding.
 
-    case_ids = sorted(i for i in split["train"] + split["val"] if i.startswith("0"))
+    "all" takes everything below images_dir (what the lustre copy holds).
+    "pairs" runs the same whole-body series selection preprocessing uses, for
+    workstation trees that still contain the topograms and MPRs as well.
+    """
+    if select == "all":
+        return sorted(images_dir.rglob("*.nii.gz"))
 
-    files = []
-    for case_id in case_ids:
-        matches = sorted(
-            images_dir.glob(f"PSMARegPSMA_{case_id}_{CT_CHANNEL}_*.nii.gz")
-        )
-        if not matches:
-            print(f"WARNING: no CT volumes found for case {case_id}", flush=True)
-        files.extend(matches)
-    return files
+    from data_klinikum_preprocess import automatically_find_pairs
+
+    pairs = automatically_find_pairs(images_dir)
+    return sorted({p for pair in pairs for p in pair.values()})
+
+
+def output_path_for(image_path, images_dir, output_dir):
+    """Mirror the sub-*/ses-*/ct/ layout of images_dir under output_dir."""
+    return output_dir / image_path.relative_to(images_dir)
 
 
 def segment_one(predictor, image_path, output_path, target_orientation):
@@ -108,10 +93,16 @@ def parse_args():
     parser.add_argument(
         "--num-shards", type=int, default=5, help="total number of array tasks"
     )
-    parser.add_argument("--split-json", type=Path, default=SPLIT_JSON)
     parser.add_argument("--images-dir", type=Path, default=IMAGES_DIR)
     parser.add_argument("--output-dir", type=Path, default=LABELS_DIR)
     parser.add_argument("--model-dir", type=Path, default=MODEL_DIR)
+    parser.add_argument(
+        "--select",
+        choices=["all", "pairs"],
+        default="all",
+        help="'all' segments every .nii.gz below --images-dir; 'pairs' picks the "
+        "two whole-body CTs per patient via automatically_find_pairs()",
+    )
     parser.add_argument("--folds", type=int, nargs="+", default=[0, 1, 2])
     parser.add_argument(
         "--dry-run",
@@ -126,15 +117,17 @@ def main():
     if not 0 <= args.shard < args.num_shards:
         raise ValueError(f"shard {args.shard} outside of [0, {args.num_shards})")
 
-    all_files = collect_files(args.split_json, args.images_dir)
+    all_files = collect_files(args.images_dir, args.select)
     shard_files = all_files[args.shard :: args.num_shards]
     print(
         f"shard {args.shard}/{args.num_shards}: {len(shard_files)} of {len(all_files)} volumes",
         flush=True,
     )
 
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    todo = [f for f in shard_files if not (args.output_dir / f.name).is_file()]
+    outputs = {
+        f: output_path_for(f, args.images_dir, args.output_dir) for f in shard_files
+    }
+    todo = [f for f in shard_files if not outputs[f].is_file()]
     print(
         f"{len(shard_files) - len(todo)} already segmented, {len(todo)} to do",
         flush=True,
@@ -142,13 +135,15 @@ def main():
 
     if args.dry_run:
         for f in shard_files:
-            state = "done" if (args.output_dir / f.name).is_file() else "todo"
-            print(f"  [{state}] {f.name}")
+            state = "done" if outputs[f].is_file() else "todo"
+            print(f"  [{state}] {f.relative_to(args.images_dir)} -> {outputs[f]}")
         return
 
     if not todo:
         print("nothing to do", flush=True)
         return
+
+    args.output_dir.mkdir(parents=True, exist_ok=True)
 
     cfg = load_inference_config(args.model_dir)
     target_orientation = "".join(cfg["model_expected_orientation"])
@@ -166,16 +161,19 @@ def main():
 
     failures = []
     for i, image_path in enumerate(todo, start=1):
-        output_path = args.output_dir / image_path.name
+        output_path = outputs[image_path]
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         start = time.time()
-        print(f"[{i}/{len(todo)}] {image_path.name}", flush=True)
+        print(
+            f"[{i}/{len(todo)}] {image_path.relative_to(args.images_dir)}", flush=True
+        )
         try:
             segment_one(predictor, image_path, output_path, target_orientation)
             print(
                 f"    saved in {time.time() - start:.1f}s -> {output_path}", flush=True
             )
         except Exception:
-            failures.append(image_path.name)
+            failures.append(str(image_path.relative_to(args.images_dir)))
             print(f"    FAILED after {time.time() - start:.1f}s", flush=True)
             traceback.print_exc()
 
