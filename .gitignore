@@ -19,3 +19,5 @@ totalsegmentator_weights/*
 stump-rib/ribseg_model_weights/*
 ._segment_ribs_sbatch.sh
 wandb/*
+*.model
+*.pkl
