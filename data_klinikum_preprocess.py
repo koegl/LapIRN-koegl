@@ -17,18 +17,6 @@ Step 2
         - remove ribs from total segmentator labels and replace with rib segmentations
 """
 
-SELECTED_FILES = {
-    "sub-0L4e4-f1XHo": {
-        "ses-20180604": "sub-0L4e4-f1XHo_ses-20180604_sequ-6_acq-cor_ce-ContrastAgent_part-axial_ct.nii.gz",
-        "ses-20180919": "sub-0L4e4-f1XHo_ses-20180919_sequ-6_acq-cor_ce-ContrastAgent_part-axial_ct.nii.gz",
-    },
-    "sub-1ama2imoYR4": {
-        "ses-20171011": "sub-1ama2imoYR4_ses-20171011_sequ-7_acq-cor_part-axial_ct.nii.gz",
-        "ses-20180208": "",
-    },
-}
-
-
 # Whole-body axial reconstructions, best first. Everything else in a session is
 # a topogram, a thorax-only breath-hold, or a derived cor/sag MPR.
 WHOLE_BODY_SERIES_BY_PRIORITY = (
