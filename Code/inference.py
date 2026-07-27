@@ -848,7 +848,7 @@ def main() -> None:
     eval_official: bool = True
     eval_my_val: bool = False
 
-    model_ori_name = "popular-sloth-38758804"
+    model_ori_name = "nosy-doe-38788231"
 
     model_path = Path(
         f"/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_{model_ori_name}_stagelvl3_best.pth"
@@ -899,6 +899,9 @@ def main() -> None:
             per_label_csv = results_csv_official_val_dice_per_label.with_stem(
                 results_csv_official_val_dice_per_label.stem + baseline_name
             )
+            per_label_csv = Path(
+                per_label_csv.as_posix().replace("csvs/", "csvs/per_label/")
+            )
             if per_label_csv.exists():
                 print(f"skipping baseline '{baseline_name}' (official val): exists")
             else:
@@ -936,6 +939,9 @@ def main() -> None:
         if eval_my_val:
             per_label_csv = results_csv_my_val_dice_per_label.with_stem(
                 results_csv_my_val_dice_per_label.stem + baseline_name
+            )
+            per_label_csv = Path(
+                per_label_csv.as_posix().replace("csvs/", "csvs/per_label/")
             )
             if per_label_csv.exists():
                 print(f"skipping baseline '{baseline_name}' (my val): exists")
@@ -983,6 +989,9 @@ def main() -> None:
         per_label_dice_csv = results_csv_official_val_dice_per_label.with_stem(
             results_csv_official_val_dice_per_label.stem + model_name
         )
+        per_label_dice_csv = Path(
+            per_label_dice_csv.as_posix().replace("csvs/", "csvs/per_label/")
+        )
         evaluate_split(
             subjects=val_subjects,
             image_dir=val_image_dir,
@@ -1018,6 +1027,9 @@ def main() -> None:
     if eval_my_val:
         per_label_dice_csv = results_csv_my_val_dice_per_label.with_stem(
             results_csv_my_val_dice_per_label.stem + model_name
+        )
+        per_label_dice_csv = Path(
+            per_label_dice_csv.as_posix().replace("csvs/", "csvs/per_label/")
         )
         _, my_val_subjects = load_split(split_path)
         # my_val_subjects = my_val_subjects[0:1]
