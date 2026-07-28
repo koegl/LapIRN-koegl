@@ -729,14 +729,17 @@ def train_lvl3(
         # than a good final answer on its own. X_lbl_ct is already in the affine
         # (moving) frame here for both branches; X_prereg / Y are full-res.
         if config.use_unrolled_io and epoch >= config.unroll_start_epoch:
-            x_ct_io = X_prereg[:, 0:1]
             y_ct_io = Y[:, 0:1]
 
-            def io_loss_fn(disp_unit: torch.Tensor) -> torch.Tensor:
+            # Inner loop: descend the same objective run_io deploys (full moving
+            # image so the PET channel is available), so the net is seeded for the
+            # exact trajectory we run at test time. bone_labels_tensor is reused
+            # from the feed-forward rigidity term above.
+            def io_inner_loss_fn(disp_unit: torch.Tensor) -> torch.Tensor:
                 return instance_opt.unrolled_io_loss(
                     disp_unit,
                     y_ct_io,
-                    x_ct_io,
+                    X_prereg,
                     X_lbl_ct,
                     Y_lbl_ct,
                     transform,
@@ -744,11 +747,15 @@ def train_lvl3(
                     config,
                     loss_ncc_io,
                     ncc_weight=config.w_ct,
+                    x_lbl_pet=X_lbl_pet,
+                    bone_values=bone_labels_tensor,
+                    include_pet=config.unroll_include_pet,
+                    include_rigidity=config.unroll_include_rigidity,
                 )
 
             refined_disp = instance_opt.unrolled_refine(
                 F_X_Y,
-                io_loss_fn,
+                io_inner_loss_fn,
                 config,
                 device,
                 n_steps=config.unroll_K,
@@ -756,7 +763,11 @@ def train_lvl3(
                 n_integration=config.unroll_n_integration,
                 mode=config.unroll_mode,
             )
-            loss_unrolled = io_loss_fn(refined_disp)
+
+            # Outer meta-loss: grade the net on the same full objective the inner
+            # loop descended, which is also what the challenge scores (dice,
+            # folding, TLG, MTV). No reason to grade on a subset.
+            loss_unrolled = io_inner_loss_fn(refined_disp)
             loss = loss + config.w_unrolled * loss_unrolled
         else:
             loss_unrolled = torch.zeros((), device=device)

@@ -135,6 +135,14 @@ class TrainingConfig:
     # weight of the unrolled (post-IO) loss term, added on top of the normal
     # feed-forward lvl3 loss
     w_unrolled: float = 1.0
+    # Which terms the unrolled *inner* loop descends. Default: match the deployed
+    # run_io objective term-for-term (PET/TLG + tumor-jac and bone rigidity on),
+    # so the net is seeded for the exact trajectory we run at test time. Turn a
+    # group off to fall back to the CT-only subset (dice + NCC + Jacobian).
+    # NB: with unroll_mode="full" these extra terms are differentiated twice; they
+    # are only guaranteed first-order smooth, so keep parity paired with "fomaml".
+    unroll_include_pet: bool = True
+    unroll_include_rigidity: bool = True
 
     dice_pet_iou_threshold: float = 0.1
 

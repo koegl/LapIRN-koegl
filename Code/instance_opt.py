@@ -79,6 +79,122 @@ def multilabel_dice(
     return mean
 
 
+def io_objective(
+    disp_unit: torch.Tensor,
+    x_moving: torch.Tensor,
+    y_ct: torch.Tensor,
+    x_lbl_ct: torch.Tensor,
+    y_lbl_ct: torch.Tensor,
+    transform: torch.nn.Module,
+    grid: torch.Tensor,
+    cfg: config.TrainingConfig,
+    loss_ncc: NCC,
+    ncc_weight: float,
+    *,
+    class_weights: torch.Tensor | None = None,
+    x_lbl_pet: torch.Tensor | None = None,
+    bone_values: torch.Tensor | None = None,
+    transform_nearest: torch.nn.Module | None = None,
+    include_pet: bool = True,
+    include_rigidity: bool = True,
+    compute_hard_dice: bool = False,
+    n_hard_dice_labels: int = 118,
+) -> Tuple[torch.Tensor, Dict[str, float]]:
+    """The single IO objective shared by deploy-time IO (compute_io_loss /
+    run_io) and training-time unrolling (unrolled_io_loss).
+
+    Keeping both callers routed through one function is what guarantees that the
+    inner loop the net is *seeded* for stays in lockstep with the objective we
+    actually descend at test time - the two used to drift silently. Toggle the
+    include_* groups to deliberately diverge (e.g. a CT-only unroll).
+
+    x_moving: moving image, channel 0 = CT, channel 1 = PET (the PET channel is
+        only read when include_pet). y_ct: fixed CT (1 channel).
+
+    Differentiability note: with unroll_mode="full" the PET and rigidity terms
+    are differentiated twice (double-backward); they are only guaranteed
+    first-order smooth, so parity there is best paired with mode="fomaml"."""
+    device = disp_unit.device
+    disp_flow = disp_unit.permute(0, 2, 3, 4, 1)
+    disp_voxel = Functions.transform_unit_flow_to_flow_cuda(disp_flow.clone())
+    loss_jac = jacobian.non_diff_volume_loss(disp_voxel)
+    loss_smooth = smoothloss(disp_unit)
+
+    # warp the moving image once, reuse the CT and PET channels
+    x_y = transform(x_moving, disp_flow, grid)
+    x_y_ct = x_y[:, 0:1]
+    loss_ncc_ct = loss_ncc(x_y_ct, y_ct)
+
+    loss_dice_ct = dice_loss_with_grad(
+        x_lbl_ct, y_lbl_ct, disp_unit, grid, transform, class_weights=class_weights
+    )
+
+    loss = ncc_weight * loss_ncc_ct + cfg.w_jacobian * loss_jac
+    # + cfg.w_smooth * loss_smooth
+    if loss_dice_ct is not None:
+        loss = loss + cfg.w_dice_ct_lvl3 * loss_dice_ct
+
+    # jac_det / jac are only needed by the PET-tumor and rigidity terms
+    jac_det = jac = None
+    if include_pet or include_rigidity:
+        jac_det, jac = jacobian.jacobian_matrix(disp_voxel)
+
+    zero = torch.zeros((), device=device)
+    loss_mtv = loss_tlg = loss_masked_jac = zero
+    if include_pet:
+        assert x_lbl_pet is not None, "include_pet requires x_lbl_pet"
+        moving_pet_mask = (x_lbl_pet == 1).float()
+        warped_pet_mask = utils.warp_binary_mask(
+            moving_pet_mask, disp_unit, grid, transform
+        )
+        warped_pet_image = x_y[:, 1:2]
+        moving_pet_image = x_moving[:, 1:2]
+        loss_mtv = utils.mtv_bias_loss(warped_pet_mask, moving_pet_mask)
+        loss_tlg = utils.tlg_bias_loss(
+            warped_pet_image, warped_pet_mask, moving_pet_image, moving_pet_mask
+        )
+        loss_masked_jac = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
+        loss = loss + cfg.w_tlg * loss_tlg + cfg.w_jacobian_tumor * loss_masked_jac
+
+    loss_rigidity = zero
+    if include_rigidity:
+        assert bone_values is not None, "include_rigidity requires bone_values"
+        moving_bone_mask = torch.isin(x_lbl_ct, bone_values).float()
+        loss_rigidity, _ = utils.enforce_rigidity_loss(
+            jac_det, jac, disp_voxel, moving_bone_mask
+        )
+        loss = loss + cfg.w_bone_rigidity * loss_rigidity
+
+    hard_dice = float("nan")
+    if compute_hard_dice:
+        assert transform_nearest is not None, "compute_hard_dice needs transform_nearest"
+        with torch.no_grad():
+            warped_lbl_ct = warp_label(x_lbl_ct, disp_unit, grid, transform_nearest)
+            pred = warped_lbl_ct[0, 0].round().long()
+            target = y_lbl_ct[0, 0].round().long()
+            hard_dices = []
+            for lbl in range(1, n_hard_dice_labels):
+                p = pred == lbl
+                t = target == lbl
+                volume_sum = p.sum() + t.sum()
+                dice = 0.0 if volume_sum == 0 else (2.0 * (p & t).sum() / volume_sum).item()
+                hard_dices.append(dice)
+            hard_dice = float(np.mean(hard_dices))
+
+    logs = {
+        "ncc_ct": loss_ncc_ct.item(),
+        "dice_ct": loss_dice_ct.item() if loss_dice_ct is not None else float("nan"),
+        "hard_dice_ct": hard_dice,
+        "smooth": loss_smooth.item(),
+        "jac": loss_jac.item(),
+        "masked_jac": loss_masked_jac.item(),
+        "bone_rigidity": loss_rigidity.item(),
+        "mtv": loss_mtv.item(),
+        "tlg": loss_tlg.item(),
+    }
+    return loss, logs
+
+
 def compute_io_loss(
     disp_unit: torch.Tensor,
     y: torch.Tensor,
@@ -95,79 +211,27 @@ def compute_io_loss(
     ncc_weight: float,
     class_weights: torch.Tensor | None,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
-    disp_flow = disp_unit.permute(0, 2, 3, 4, 1)
-
-    disp_voxel = Functions.transform_unit_flow_to_flow_cuda(disp_flow.clone())
-    jac_det, jac = jacobian.jacobian_matrix(disp_voxel)
-    loss_jac = jacobian.non_diff_volume_loss(disp_voxel)
-    loss_smooth = smoothloss(disp_unit)
-
-    # warp the moving image once, reuse the CT and PET channels
-    x_y = transform(X_affine, disp_flow, grid)
-    x_y_ct = x_y[:, 0:1]
-    x_y_pet = x_y[:, 1:2]
-    y_ct = y[:, 0:1]
-
-    loss_ncc_ct = loss_ncc(x_y_ct, y_ct)
-
-    loss_dice_ct = dice_loss_with_grad(
-        x_lbl_ct, y_lbl_ct, disp_unit, grid, transform, class_weights=class_weights
+    """Deploy-time IO objective (used by run_io). Thin wrapper over io_objective
+    with every term on and hard-dice logging enabled."""
+    return io_objective(
+        disp_unit,
+        x_moving=X_affine,
+        y_ct=y[:, 0:1],
+        x_lbl_ct=x_lbl_ct,
+        y_lbl_ct=y_lbl_ct,
+        transform=transform,
+        grid=grid,
+        cfg=cfg,
+        loss_ncc=loss_ncc,
+        ncc_weight=ncc_weight,
+        class_weights=class_weights,
+        x_lbl_pet=x_lbl_pet,
+        bone_values=bone_values,
+        transform_nearest=transform_nearest,
+        include_pet=True,
+        include_rigidity=True,
+        compute_hard_dice=True,
     )
-
-    moving_pet_mask = (x_lbl_pet == 1).float()
-    warped_pet_mask = utils.warp_binary_mask(
-        moving_pet_mask, disp_unit, grid, transform
-    )
-    warped_pet_image = x_y_pet
-    moving_pet_image = X_affine[:, 1:2]
-
-    loss_mtv = utils.mtv_bias_loss(warped_pet_mask, moving_pet_mask)
-    loss_tlg = utils.tlg_bias_loss(
-        warped_pet_image, warped_pet_mask, moving_pet_image, moving_pet_mask
-    )
-    loss_masked_jac = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
-
-    moving_bone_mask = torch.isin(x_lbl_ct, bone_values).float()
-    loss_rigidity, _ = utils.enforce_rigidity_loss(
-        jac_det, jac, disp_voxel, moving_bone_mask
-    )
-
-    with torch.no_grad():
-        warped_lbl_ct = warp_label(x_lbl_ct, disp_unit, grid, transform_nearest)
-        pred = warped_lbl_ct[0, 0].round().long()
-        target = y_lbl_ct[0, 0].round().long()
-        hard_dices = []
-        for lbl in range(1, 118):
-            p = pred == lbl
-            t = target == lbl
-            volume_sum = p.sum() + t.sum()
-            dice = 0.0 if volume_sum == 0 else (2.0 * (p & t).sum() / volume_sum).item()
-            hard_dices.append(dice)
-        hard_dice = float(np.mean(hard_dices))
-
-    loss = (
-        ncc_weight * loss_ncc_ct
-        + cfg.w_jacobian * loss_jac
-        # + cfg.w_smooth * loss_smooth
-        + cfg.w_tlg * loss_tlg
-        + cfg.w_jacobian_tumor * loss_masked_jac
-        + cfg.w_bone_rigidity * loss_rigidity
-    )
-    if loss_dice_ct is not None:
-        loss = loss + cfg.w_dice_ct_lvl3 * loss_dice_ct
-
-    logs = {
-        "ncc_ct": loss_ncc_ct.item(),
-        "dice_ct": loss_dice_ct.item() if loss_dice_ct is not None else float("nan"),
-        "hard_dice_ct": hard_dice,
-        "smooth": loss_smooth.item(),
-        "jac": loss_jac.item(),
-        "masked_jac": loss_masked_jac.item(),
-        "bone_rigidity": loss_rigidity.item(),
-        "mtv": loss_mtv.item(),
-        "tlg": loss_tlg.item(),
-    }
-    return loss, logs
 
 
 def build_class_weights(
@@ -227,7 +291,7 @@ def svf_to_disp(
 def unrolled_io_loss(
     disp_unit: torch.Tensor,
     y_ct: torch.Tensor,
-    x_ct: torch.Tensor,
+    x_moving: torch.Tensor,
     x_lbl_ct: torch.Tensor,
     y_lbl_ct: torch.Tensor,
     transform: torch.nn.Module,
@@ -235,28 +299,39 @@ def unrolled_io_loss(
     cfg: config.TrainingConfig,
     loss_ncc: NCC,
     ncc_weight: float,
+    *,
     class_weights: torch.Tensor | None = None,
+    x_lbl_pet: torch.Tensor | None = None,
+    bone_values: torch.Tensor | None = None,
+    include_pet: bool = True,
+    include_rigidity: bool = True,
 ) -> torch.Tensor:
-    """CT-only IO objective used for training-time unrolling.
+    """IO objective used for training-time unrolling. Thin wrapper over
+    io_objective so the inner loop the net is seeded for matches the deployed
+    run_io objective (compute_io_loss) term-for-term by default.
 
-    A differentiable subset of compute_io_loss (label dice + CT NCC + Jacobian
-    volume penalty). PET/MTV/TLG/rigidity terms are dropped because they are
-    gated off during lvl3 training anyway, and the measured amortization gap is
-    a label-dice gap, so this is the objective the net should be seeded for."""
-    disp_flow = disp_unit.permute(0, 2, 3, 4, 1)
-    disp_voxel = Functions.transform_unit_flow_to_flow_cuda(disp_flow.clone())
-    loss_jac = jacobian.non_diff_volume_loss(disp_voxel)
-
-    x_y_ct = transform(x_ct, disp_flow, grid)
-    loss_ncc_ct = loss_ncc(x_y_ct, y_ct)
-
-    loss_dice_ct = dice_loss_with_grad(
-        x_lbl_ct, y_lbl_ct, disp_unit, grid, transform, class_weights=None
+    Set include_pet / include_rigidity False to fall back to the CT-only subset
+    (label dice + CT NCC + Jacobian volume penalty). x_moving must carry the PET
+    channel (index 1) when include_pet. hard-dice logging is skipped: the
+    nearest-warp label loop is pure overhead inside the unroll."""
+    loss, _ = io_objective(
+        disp_unit,
+        x_moving=x_moving,
+        y_ct=y_ct,
+        x_lbl_ct=x_lbl_ct,
+        y_lbl_ct=y_lbl_ct,
+        transform=transform,
+        grid=grid,
+        cfg=cfg,
+        loss_ncc=loss_ncc,
+        ncc_weight=ncc_weight,
+        class_weights=class_weights,
+        x_lbl_pet=x_lbl_pet,
+        bone_values=bone_values,
+        include_pet=include_pet,
+        include_rigidity=include_rigidity,
+        compute_hard_dice=False,
     )
-
-    loss = ncc_weight * loss_ncc_ct + cfg.w_jacobian * loss_jac
-    if loss_dice_ct is not None:
-        loss = loss + cfg.w_dice_ct_lvl3 * loss_dice_ct
     return loss
 
 
