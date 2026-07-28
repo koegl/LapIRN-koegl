@@ -838,6 +838,53 @@ def process_subject(
     return dice_their, dice_before, mtv, tlg, ndv, hd95, per_label
 
 
+CONFIGS_REPLACEMENTS: Dict[str, Dict[str, float | bool]] = {
+    "secretive-dolphin-38622192": {
+        "start_channel": 7,
+        "w_ct": 5.0,
+        "w_dice_ct_lvl3": 5.0,
+        "w_pet": 0.0,
+        "w_dice_pet": 0.0,
+        "w_bone_rigidity": 2.0,
+        "w_jacobian_tumor": 2.0,
+        "w_tlg": 2.0,
+        "w_jacobian": 2000.0,
+        "w_smooth": 2.0,
+        "range_flow": 0.4,
+        "use_poly_affine": False,
+    },
+    "sincere-finch-38813192": {
+        "start_channel": 7,
+        "w_ct": 5.0,
+        "w_dice_ct_lvl3": 5.0,
+        "w_pet": 0.0,
+        "w_dice_pet": 0.0,
+        "w_bone_rigidity": 20.0,
+        "w_jacobian_tumor": 20.0,
+        "w_tlg": 20.0,
+        "w_jacobian": 2000.0,
+        "w_smooth": 2.0,
+        "range_flow": 0.4,
+        "use_poly_affine": False,
+    },
+}
+
+
+def update_config_from_dict(cfg: TrainingConfig, model_name: str) -> None:
+
+    if model_name not in CONFIGS_REPLACEMENTS:
+        print(
+            f"Warning: model_name '{model_name}' not found in CONFIGS_REPLACEMENTS. Using default config."
+        )
+        return
+
+    for key, value in CONFIGS_REPLACEMENTS[model_name].items():
+        if hasattr(cfg, key):
+            setattr(cfg, key, value)
+        else:
+            raise ValueError(f"Invalid config key: {key}")
+
+
 def main() -> None:
     cfg = TrainingConfig()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -848,7 +895,9 @@ def main() -> None:
     eval_official: bool = True
     eval_my_val: bool = False
 
-    model_ori_name = "nosy-doe-38788231"
+    model_ori_name = "sincere-finch-38813192"
+
+    update_config_from_dict(cfg, model_ori_name)
 
     model_path = Path(
         f"/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_{model_ori_name}_stagelvl3_best.pth"
@@ -875,7 +924,7 @@ def main() -> None:
     ct_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_ct")
     pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
-    use_io: bool = True
+    use_io: bool = False
     use_class_weights = False
     use_polyaffine: bool = False
     io_lr: float = 2e-1
