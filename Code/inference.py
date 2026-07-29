@@ -711,29 +711,10 @@ def process_subject(
     seg_moving = load_seg("01")
     seg_fixed = load_seg("00")
     seg_fixed_i = seg_fixed[0, 0].round().long()
-    disp_half = torch.nn.functional.interpolate(
-        total_voxel, scale_factor=0.5, mode="trilinear", align_corners=False
-    )
 
-    # --- dice BEFORE half-res round-trip (full-res total_voxel) ---
-    disp_full_their = total_voxel.flip(1)
-    seg_full = their_st(seg_moving, disp_full_their)
-    dice_full = multilabel_dice(seg_full[0, 0].round().long(), seg_fixed_i)
-    tqdm.tqdm.write(f"{case_id}: dice full-res (pre round-trip)={dice_full:.4f}")
-
-    disp_up = torch.nn.functional.interpolate(
-        disp_half, scale_factor=2, mode="trilinear", align_corners=False
-    )
-
-    dice_their = np.nan
-
-    _, _, hh, ww, dd = disp_up.shape
-    disp_up_unit = disp_up.clone()
-    disp_up_unit[:, 0] = disp_up_unit[:, 0] / ((dd - 1) / 2.0)
-    disp_up_unit[:, 1] = disp_up_unit[:, 1] / ((ww - 1) / 2.0)
-    disp_up_unit[:, 2] = disp_up_unit[:, 2] / ((hh - 1) / 2.0)
-
-    disp_their = disp_up.flip(1)
+    # --- evaluation displacement: full-res, no half-res round-trip ---
+    disp_eval = total_voxel
+    disp_their = disp_eval.flip(1)
     seg_their = their_st(seg_moving, disp_their)
     dice_their = multilabel_dice(seg_their[0, 0].round().long(), seg_fixed_i)
 
@@ -741,12 +722,40 @@ def process_subject(
         seg_their[0, 0].round().long(), seg_fixed_i, empty_value=float("nan")
     )
 
-    disp_voxel = disp_up[0].detach().cpu().numpy().astype(np.float32)
+    disp_voxel = disp_eval[0].detach().cpu().numpy().astype(np.float32)
     ndv_mask = Y[0, 0].detach().cpu().numpy() > 0
     ndv = compute_ndv_official(disp_voxel, ndv_mask)
 
     dice_before = multilabel_dice(seg_moving[0, 0].round().long(), seg_fixed_i)
-    tqdm.tqdm.write(f"{case_id}: before={dice_before:.4f};\tafter={dice_their:.4f}")
+
+    # --- same after-registration dice, but on the fast segmentations used by IO ---
+    dice_after_fast = float("nan")
+    if ct_label_dir is not None:
+        stem_m = ct_label_template.format(case_id=case_id, tp="01")
+        stem_f = ct_label_template.format(case_id=case_id, tp="00")
+
+        def resolve_fast(stem: str) -> Path:
+            p = ct_label_dir / f"{stem}.nii.gz"
+            return p if p.exists() else ct_label_dir / f"{stem}.nii"
+
+        fast_m = (
+            my_data.nib.load(str(resolve_fast(stem_m))).get_fdata().astype(np.int16)
+        )
+        fast_f = (
+            my_data.nib.load(str(resolve_fast(stem_f))).get_fdata().astype(np.int16)
+        )
+        seg_moving_fast = torch.from_numpy(fast_m)[None, None].to(device).float()
+        seg_fixed_fast_i = torch.from_numpy(fast_f)[0, 0].round().long().to(device)
+        seg_their_fast = their_st(seg_moving_fast, disp_their)
+        dice_after_fast = multilabel_dice(
+            seg_their_fast[0, 0].round().long(), seg_fixed_fast_i
+        )
+
+    tqdm.tqdm.write(
+        f"{case_id}: before={dice_before:.4f}\t"
+        f"after_fast={dice_after_fast:.4f}\t"
+        f"after={dice_their:.4f}"
+    )
 
     fixed_seg_stem = seg_template.format(case_id=case_id, tp="00")
     fixed_seg_path = seg_dir / f"{fixed_seg_stem}.nii"
@@ -785,7 +794,7 @@ def process_subject(
         # --- DEBUG: verify submitted field via evaluator pipeline ---
         debug_dir = out_dir / "debug_compose"
         X_moving = X[:, 0:1]
-        X_submitted = transform(X, disp_up_unit.permute(0, 2, 3, 4, 1), grid_full)[
+        X_submitted = transform(X, total_unit_flow.permute(0, 2, 3, 4, 1), grid_full)[
             :, 0:1
         ]
         Y_fixed = Y[:, 0:1]
@@ -822,6 +831,10 @@ def process_subject(
             f"{case_id}_ct_label_moving_warped_{model_name_clean}",
         )
 
+    # submission format: half-resolution displacement field
+    disp_half = torch.nn.functional.interpolate(
+        total_voxel, scale_factor=0.5, mode="trilinear", align_corners=False
+    )
     save_disp(disp_half, out_dir / "submission", case_id)
 
     return dice_their, dice_before, mtv, tlg, ndv, hd95, per_label
