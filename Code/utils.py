@@ -1,6 +1,8 @@
 import contextlib
+import json
 import os
-from typing import Callable, Tuple
+from contextlib import ExitStack
+from typing import Any, Callable, Dict, Iterator, Tuple
 
 import mlflow
 import my_data
@@ -12,6 +14,116 @@ from miccai2020_model_stage import (
     SpatialTransform_unit,
 )
 from torch.utils import data as torch_data
+
+import wandb
+
+_ACTIVE_RUN_NAME: str | None = None
+_WANDB_RUN = None
+
+
+def _enabled_logger_backends(config: TrainingConfig) -> set[str]:
+    backend = config.logger_backend.lower()
+    if backend == "none":
+        return set()
+    if backend == "both":
+        return {"mlflow", "wandb"}
+    if backend not in {"mlflow", "wandb"}:
+        raise ValueError(
+            f"Unknown logger_backend={config.logger_backend!r}; "
+            'expected "mlflow", "wandb", "both", or "none".'
+        )
+    return {backend}
+
+
+def get_slurm_job_id() -> str:
+    return os.environ.get("SLURM_JOB_ID", "local")
+
+
+def get_run_name_with_job_id(base_name: str) -> str:
+    job_id = get_slurm_job_id()
+    if base_name.endswith(f"-{job_id}"):
+        return base_name
+    base_name_no_id = base_name.rsplit("-", 1)[0]
+    return f"{base_name_no_id}-{job_id}"
+
+
+@contextlib.contextmanager
+def start_logging_run(config: TrainingConfig) -> Iterator[None]:
+    """Start the configured experiment logger(s)."""
+    global _ACTIVE_RUN_NAME, _WANDB_RUN
+
+    backends = _enabled_logger_backends(config)
+    previous_run_name = _ACTIVE_RUN_NAME
+    previous_wandb_run = _WANDB_RUN
+    _ACTIVE_RUN_NAME = None
+    _WANDB_RUN = None
+
+    with ExitStack() as stack:
+        if not backends:
+            _ACTIVE_RUN_NAME = f"{config.mlflow_experiment}-{get_slurm_job_id()}"
+
+        if "mlflow" in backends:
+            mlflow.set_tracking_uri(config.mlflow_tracking_uri)
+            mlflow.set_experiment(config.mlflow_experiment)
+            stack.enter_context(mlflow.start_run())
+            add_jobid_to_mlflow_run()
+            _ACTIVE_RUN_NAME = get_mlflow_run_name()
+
+        if "wandb" in backends:
+            if config.wandb_mode is not None:
+                os.environ["WANDB_MODE"] = config.wandb_mode
+
+            run_name = (
+                _ACTIVE_RUN_NAME or f"{config.wandb_project}-{get_slurm_job_id()}"
+            )
+            _WANDB_RUN = wandb.init(
+                project=config.wandb_project,
+                entity=config.wandb_entity,
+                name=run_name,
+                group=get_slurm_job_id(),
+            )
+            _WANDB_RUN.define_metric("global_step")
+            _WANDB_RUN.define_metric("*", step_metric="global_step")
+            _ACTIVE_RUN_NAME = _WANDB_RUN.name
+
+        try:
+            yield
+        finally:
+            if _WANDB_RUN is not None:
+                _WANDB_RUN.finish()
+            _ACTIVE_RUN_NAME = previous_run_name
+            _WANDB_RUN = previous_wandb_run
+
+
+def log_params(params: Dict[str, Any]) -> None:
+    if mlflow.active_run() is not None:
+        mlflow.log_params(params)
+    if _WANDB_RUN is not None:
+        _WANDB_RUN.config.update(params, allow_val_change=True)
+
+
+def log_text(text: str, artifact_file: str) -> None:
+    if mlflow.active_run() is not None:
+        mlflow.log_text(text, artifact_file=artifact_file)
+    if _WANDB_RUN is not None:
+        import wandb
+
+        _WANDB_RUN.log({artifact_file: wandb.Html(f"<pre>{text}</pre>")})
+
+
+def log_config(params: Dict[str, Any]) -> None:
+    log_params(params)
+    log_text(json.dumps(params, indent=2), artifact_file="config.json")
+
+
+def log_metrics(metrics: Dict[str, float], step: int | None = None) -> None:
+    if mlflow.active_run() is not None:
+        mlflow.log_metrics(metrics, step=step)
+    if _WANDB_RUN is not None:
+        wandb_metrics = dict(metrics)
+        if step is not None:
+            wandb_metrics["global_step"] = step
+        _WANDB_RUN.log(wandb_metrics)
 
 
 def create_datasets(
@@ -224,16 +336,13 @@ def add_jobid_to_mlflow_run() -> None:
     job_id = os.environ.get("SLURM_JOB_ID", "local")
 
     auto_name = str(mlflow.active_run().info.run_name)
-    auto_name_no_id = auto_name.rsplit("-", 1)[0]
-
-    new_name = f"{auto_name_no_id}-{job_id}"
+    new_name = get_run_name_with_job_id(auto_name)
 
     mlflow.set_tag("mlflow.runName", new_name)
     mlflow.set_tag("slurm_job_id", job_id)
 
 
-def get_run_name() -> str:
-
+def get_mlflow_run_name() -> str:
     run_id = mlflow.active_run().info.run_id
     run_name = mlflow.get_run(run_id).info.run_name
 
@@ -241,6 +350,14 @@ def get_run_name() -> str:
         raise ValueError("MLflow run name is None. Please ensure an active run exists.")
 
     return run_name
+
+
+def get_run_name() -> str:
+    if _ACTIVE_RUN_NAME is not None:
+        return _ACTIVE_RUN_NAME
+    if mlflow.active_run() is not None:
+        return get_mlflow_run_name()
+    raise ValueError("No active logger run. Please ensure a logging run exists.")
 
 
 def optimizer_step_with_guard(
@@ -265,9 +382,7 @@ def optimizer_step_with_guard(
             total_norm = torch.nn.utils.clip_grad_norm_(
                 model.parameters(), max_norm=5.0
             )
-            mlflow.log_metrics(
-                {f"lvl{level}/grad_norm": total_norm.item()}, step=global_step
-            )
+            log_metrics({f"lvl{level}/grad_norm": total_norm.item()}, step=global_step)
             if not torch.isfinite(total_norm):
                 tqdm.tqdm.write(
                     f"[lvl{level}] step {global_step}: non-finite grad_norm "
@@ -410,23 +525,38 @@ def dice_loss_with_grad(
     transform: SpatialTransform_unit,
     eps: float = 1e-5,
     return_each: bool = False,
+    class_weights: torch.Tensor | None = None,
+    chunk_size: int = 16,
 ) -> torch.Tensor | None:
     """Per-class soft dice loss with gradients flowing through disp.
 
-    Builds one-hot only for classes present in fixed_label, warps each
-    moving one-hot channel with bilinear interpolation, then computes
-    dice per class and averages. Robust to variable class sets across subjects.
+    Builds one-hot only for classes present in *both* labels, warps the moving
+    one-hot channels with bilinear interpolation, then computes dice per class
+    and averages. Robust to variable class sets across subjects.
+
+    Memory note: the sampling grid `grid + flow` is identical for every class,
+    so it is built once and shared. Warping one class at a time via
+    SpatialTransform_unit would instead rebuild it per class and keep every
+    full-resolution copy alive for backward (~122 MiB each at 192x192x288,
+    i.e. many GB for a ~117-label volume). Classes are processed in chunks of
+    `chunk_size` channels so the one-hot tensors stay bounded too.
 
     Args:
         moving_label: (B, 1, D, H, W) integer tensor, moving labels.
         fixed_label: (B, 1, D, H, W) integer tensor, fixed labels.
         disp: (B, 3, D, H, W) displacement field (gradients flow through this).
         grid: level grid for SpatialTransform_unit.
-        transform: SpatialTransform_unit instance.
+        transform: kept for API compatibility; the bilinear warp is inlined
+            here so the sampling grid can be hoisted out of the class loop.
         eps: Smoothing term.
+        return_each: return the per-class losses instead of their mean.
+        class_weights: optional per-label weights, indexed by integer label
+            value. Renormalized over the classes actually used so the loss
+            scale stays comparable across subjects.
+        chunk_size: number of label channels warped per grid_sample call.
 
     Returns:
-        Scalar 1 - mean_foreground_dice.
+        Scalar 1 - mean_foreground_dice, or None if no class is usable.
     """
 
     classes = fixed_label.unique()
@@ -435,34 +565,48 @@ def dice_loss_with_grad(
     if classes.numel() == 0:
         return None
 
-    flow = disp.permute(0, 2, 3, 4, 1)  # (B, D, H, W, 3)
-
-    dice_scores = []
-    for c in classes:
-        moving_c = (moving_label == c).float()
-        fixed_c = (fixed_label == c).float()
-
-        # skip if either label is empty: a class present in only one image
-        # (e.g. cropped out of the moving by augmentation) yields dice~0 with
-        # no usable registration gradient and only biases the mean.
-        if fixed_c.sum() == 0 or moving_c.sum() == 0:
-            continue
-
-        warped_c = transform(moving_c, flow, grid)
-
-        intersection = (warped_c * fixed_c).sum()
-        cardinality = warped_c.sum() + fixed_c.sum()
-
-        dice_scores.append((2.0 * intersection + eps) / (cardinality + eps))
-
-    # every class was skipped (no overlapping labels present)
-    if len(dice_scores) == 0:
+    # Drop classes absent from the moving image: a class present in only one
+    # image (e.g. cropped out of the moving by augmentation) yields dice~0 with
+    # no usable registration gradient and only biases the mean. Testing this
+    # with unique() is far cheaper than materializing a one-hot per class.
+    classes = classes[torch.isin(classes, moving_label.unique())]
+    if classes.numel() == 0:
         return None
 
+    flow = disp.permute(0, 2, 3, 4, 1)  # (B, D, H, W, 3)
+    sample_grid = grid + flow  # built once, reused by every chunk
+
+    dims = (0, 2, 3, 4)  # sum over batch and space, keep the class channel
+    dice_scores = []
+    for start in range(0, classes.numel(), chunk_size):
+        chunk = classes[start : start + chunk_size].view(1, -1, 1, 1, 1)
+
+        moving_c = (moving_label == chunk).float()  # (B, C, D, H, W)
+        fixed_c = (fixed_label == chunk).float()
+
+        warped_c = torch.nn.functional.grid_sample(
+            moving_c,
+            sample_grid,
+            mode="bilinear",
+            padding_mode="border",
+            align_corners=False,
+        )
+
+        intersection = (warped_c * fixed_c).sum(dim=dims)
+        cardinality = warped_c.sum(dim=dims) + fixed_c.sum(dim=dims)
+        dice_scores.append((2.0 * intersection + eps) / (cardinality + eps))
+
+    dice_stack = torch.cat(dice_scores)
+
+    if class_weights is not None:
+        w = class_weights[classes.round().long()]
+        w = w / (w.mean() + eps)
+        return 1.0 - (w * dice_stack).sum() / w.sum()
+
     if return_each:
-        return 1.0 - torch.stack(dice_scores)
+        return 1.0 - dice_stack
     else:
-        return 1.0 - torch.stack(dice_scores).mean()
+        return 1.0 - dice_stack.mean()
 
 
 def mtv_bias_loss(

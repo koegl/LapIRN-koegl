@@ -8,12 +8,14 @@ dependencies = [
     "matplotlib>=3.11.0",
     "mlflow>=3.13.0",
     "nibabel>=5.4.2",
+    "nnunet==1.7.1",
     "pandas>=2.3.3",
     "psutil>=7.2.2",
     "seaborn>=0.13.2",
     "torch>=2.6.0",
     "torchvision>=0.21.0",
     "tqdm>=4.66.5",
+    "wandb>=0.21.0",
 ]
 
 [tool.uv.sources]

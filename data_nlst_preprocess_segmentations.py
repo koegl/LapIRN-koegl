@@ -14,7 +14,7 @@ from typing import Dict
 import SimpleITK as sitk
 from tqdm import tqdm
 
-from preprocess_nlst import compute_offset, flip_ap, resample_with_offset
+from data_nlst_preprocess import compute_offset, flip_ap, resample_with_offset
 
 mapping_path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/mapping_nlst.json")
 orig_dir = Path("/home/iml/fryderyk.koegl/data/NLST_l2r_2023/imagesTr")

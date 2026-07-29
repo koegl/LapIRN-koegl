@@ -148,7 +148,7 @@ val_subjects = [
     "0047",
     "0048",
 ]
-split_path = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/split.json")
+split_path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/split.json")
 my_val_image_dir = Path(
     "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTr"
 )
@@ -804,7 +804,9 @@ def process_subject(
 
     if True:
         # --- DEBUG: save X, Y, warped X, ct label, warped ct label ---
-        debug_dir = out_dir / "overlap_debug"
+        model_name_clean = model_name.replace(".", "_").replace(" ", "")
+
+        debug_dir = out_dir / "overlap_debug" / model_name_clean
         debug_dir.mkdir(parents=True, exist_ok=True)
 
         def save_ct(vol: torch.Tensor, name: str) -> None:
@@ -821,19 +823,94 @@ def process_subject(
             pet_template=pet_label_template,
         )
 
-        save_ct(X, f"{case_id}_X_{model_name.replace('.', '_')}")
-        save_ct(Y, f"{case_id}_Y_{model_name.replace('.', '_')}")
-        save_ct(warped, f"{case_id}_warped_X_{model_name.replace('.', '_')}")
-        save_ct(x_lbl_ct, f"{case_id}_ct_label_moving_{model_name.replace('.', '_')}")
-        save_ct(y_lbl_ct, f"{case_id}_ct_label_fixed_{model_name.replace('.', '_')}")
+        save_ct(X, f"{case_id}_X_{model_name_clean}")
+        save_ct(Y, f"{case_id}_Y_{model_name_clean}")
+        save_ct(warped, f"{case_id}_warped_X_{model_name_clean}")
+        save_ct(x_lbl_ct, f"{case_id}_ct_label_moving_{model_name_clean}")
+        save_ct(y_lbl_ct, f"{case_id}_ct_label_fixed_{model_name_clean}")
         save_ct(
             seg_their.round(),
-            f"{case_id}_ct_label_moving_warped_{model_name.replace('.', '_')}",
+            f"{case_id}_ct_label_moving_warped_{model_name_clean}",
         )
 
     save_disp(disp_half, out_dir / "submission", case_id)
 
     return dice_their, dice_before, mtv, tlg, ndv, hd95, per_label
+
+
+CONFIGS_REPLACEMENTS: Dict[str, Dict[str, float | bool]] = {
+    "secretive-dolphin-38622192": {
+        "start_channel": 7,
+        "w_ct": 5.0,
+        "w_dice_ct_lvl3": 5.0,
+        "w_pet": 0.0,
+        "w_dice_pet": 0.0,
+        "w_bone_rigidity": 2.0,
+        "w_jacobian_tumor": 2.0,
+        "w_tlg": 2.0,
+        "w_jacobian": 2000.0,
+        "w_smooth": 2.0,
+        "range_flow": 0.4,
+        "use_poly_affine": False,
+    },
+    "sincere-finch-38813192": {
+        "start_channel": 7,
+        "w_ct": 5.0,
+        "w_dice_ct_lvl3": 5.0,
+        "w_pet": 0.0,
+        "w_dice_pet": 0.0,
+        "w_bone_rigidity": 20.0,
+        "w_jacobian_tumor": 20.0,
+        "w_tlg": 20.0,
+        "w_jacobian": 2000.0,
+        "w_smooth": 2.0,
+        "range_flow": 0.4,
+        "use_poly_affine": False,
+    },
+    "worried-elk-38863657": {
+        "start_channel": 7,
+        "w_ct": 5.0,
+        "w_dice_ct_lvl3": 5.0,
+        "w_pet": 0.0,
+        "w_dice_pet": 0.0,
+        "w_bone_rigidity": 10.0,
+        "w_jacobian_tumor": 10.0,
+        "w_tlg": 10.0,
+        "w_jacobian": 2000.0,
+        "w_smooth": 2.0,
+        "range_flow": 0.4,
+        "use_poly_affine": False,
+    },
+    "charming-trout-38863973": {
+        "start_channel": 7,
+        "w_ct": 5.0,
+        "w_dice_ct_lvl3": 5.0,
+        "w_pet": 0.0,
+        "w_dice_pet": 0.0,
+        "w_bone_rigidity": 5.0,
+        "w_jacobian_tumor": 5.0,
+        "w_tlg": 5.0,
+        "w_jacobian": 2000.0,
+        "w_smooth": 2.0,
+        "range_flow": 0.4,
+        "use_poly_affine": False,
+    },
+}
+
+
+def update_config_from_dict(cfg: TrainingConfig, model_name: str) -> None:
+
+    if model_name not in CONFIGS_REPLACEMENTS:
+        print(
+            f"Warning: model_name '{model_name}' not found in CONFIGS_REPLACEMENTS. Using default config."
+        )
+        return
+
+    for key, value in CONFIGS_REPLACEMENTS[model_name].items():
+        if hasattr(cfg, key):
+            setattr(cfg, key, value)
+        else:
+            raise ValueError(f"Invalid config key: {key}")
 
 
 def main() -> None:
@@ -846,7 +923,9 @@ def main() -> None:
     eval_official: bool = True
     eval_my_val: bool = False
 
-    model_ori_name = "resilient-shrike-38730428"
+    model_ori_name = "worried-elk-38863657"
+
+    update_config_from_dict(cfg, model_ori_name)
 
     model_path = Path(
         f"/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_{model_ori_name}_stagelvl3_best.pth"
@@ -874,7 +953,7 @@ def main() -> None:
     pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
     use_io: bool = True
-    use_class_weights = True
+    use_class_weights = False
     use_polyaffine: bool = False
     io_lr: float = 2e-1
     io_it: float = 60
@@ -896,6 +975,9 @@ def main() -> None:
         if eval_official:
             per_label_csv = results_csv_official_val_dice_per_label.with_stem(
                 results_csv_official_val_dice_per_label.stem + baseline_name
+            )
+            per_label_csv = Path(
+                per_label_csv.as_posix().replace("csvs/", "csvs/per_label/")
             )
             if per_label_csv.exists():
                 print(f"skipping baseline '{baseline_name}' (official val): exists")
@@ -935,6 +1017,9 @@ def main() -> None:
             per_label_csv = results_csv_my_val_dice_per_label.with_stem(
                 results_csv_my_val_dice_per_label.stem + baseline_name
             )
+            per_label_csv = Path(
+                per_label_csv.as_posix().replace("csvs/", "csvs/per_label/")
+            )
             if per_label_csv.exists():
                 print(f"skipping baseline '{baseline_name}' (my val): exists")
             else:
@@ -972,14 +1057,17 @@ def main() -> None:
                     per_label_csv=per_label_csv,
                 )
 
-    run_baseline("affine", baseline_polyaffine=False)
-    run_baseline("polyaffine", baseline_polyaffine=True)
+    # run_baseline("affine", baseline_polyaffine=False)
+    # run_baseline("polyaffine", baseline_polyaffine=True)
 
     if eval_official:
         # print("warning: reducing number of my val subjects")
 
         per_label_dice_csv = results_csv_official_val_dice_per_label.with_stem(
             results_csv_official_val_dice_per_label.stem + model_name
+        )
+        per_label_dice_csv = Path(
+            per_label_dice_csv.as_posix().replace("csvs/", "csvs/per_label/")
         )
         evaluate_split(
             subjects=val_subjects,
@@ -1016,6 +1104,9 @@ def main() -> None:
     if eval_my_val:
         per_label_dice_csv = results_csv_my_val_dice_per_label.with_stem(
             results_csv_my_val_dice_per_label.stem + model_name
+        )
+        per_label_dice_csv = Path(
+            per_label_dice_csv.as_posix().replace("csvs/", "csvs/per_label/")
         )
         _, my_val_subjects = load_split(split_path)
         # my_val_subjects = my_val_subjects[0:1]

@@ -16,15 +16,14 @@ Loss:
     weighted and summed. Smoothness and Jacobian losses on DVF unchanged.
 """
 
-import json
 from pathlib import Path
 from typing import Tuple
 
-import mlflow
 import nibabel as nib
 import numpy as np
 import torch
 import torch.utils.data as Data
+import utils
 from config import TrainingConfig
 from Functions import generate_grid, transform_unit_flow_to_flow_cuda
 from miccai2020_model_stage import (
@@ -226,7 +225,7 @@ def train_lvl1(
             loss.backward()
             optimizer.step()
 
-            mlflow.log_metrics(
+            utils.log_metrics(
                 {
                     "lvl1/loss": loss.item(),
                     "lvl1/ncc_ct": ncc_ct.item(),
@@ -366,7 +365,7 @@ def train_lvl2(
             loss.backward()
             optimizer.step()
 
-            mlflow.log_metrics(
+            utils.log_metrics(
                 {
                     "lvl2/loss": loss.item(),
                     "lvl2/ncc_ct": ncc_ct.item(),
@@ -514,7 +513,7 @@ def train_lvl3(
             loss.backward()
             optimizer.step()
 
-            mlflow.log_metrics(
+            utils.log_metrics(
                 {
                     "lvl3/loss": loss.item(),
                     "lvl3/ncc_ct": ncc_ct.item(),
@@ -576,16 +575,9 @@ def main() -> None:
         num_workers=config.num_workers,
     )
 
-    # --- MLflow --------------------------------------------------------------
-    mlflow.set_tracking_uri(config.mlflow_tracking_uri)
-    mlflow.set_experiment(config.mlflow_experiment)
-
-    with mlflow.start_run():
-        mlflow.log_params(config.to_mlflow_params())
-        mlflow.log_text(
-            json.dumps(config.to_mlflow_params(), indent=2),
-            artifact_file="config.json",
-        )
+    # --- experiment logging -------------------------------------------------
+    with utils.start_logging_run(config):
+        utils.log_config(config.to_mlflow_params())
 
         if config.train_lvl1:
             train_lvl1(
