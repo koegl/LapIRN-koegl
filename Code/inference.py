@@ -707,8 +707,6 @@ def process_subject(
         arr = my_data.nib.load(str(path)).get_fdata().astype(np.int16)
         seg = torch.from_numpy(arr)[None, None].to(device).float()
         return seg
-        arr = my_data.nib.load(str(path)).get_fdata().astype(np.int16)
-        return torch.from_numpy(arr)[None, None].to(device).float()
 
     seg_moving = load_seg("01")
     seg_fixed = load_seg("00")
@@ -814,20 +812,11 @@ def process_subject(
             path = debug_dir / f"{case_id}_{name}.nii.gz"
             my_data.nib.save(my_data.nib.Nifti1Image(arr, np.eye(4)), str(path))
 
-        x_lbl_ct, _, y_lbl_ct, _ = load_io_labels(
-            seg_dir,
-            pet_label_dir,
-            case_id,
-            device,
-            ct_template=seg_template,
-            pet_template=pet_label_template,
-        )
-
         save_ct(X, f"{case_id}_X_{model_name_clean}")
         save_ct(Y, f"{case_id}_Y_{model_name_clean}")
         save_ct(warped, f"{case_id}_warped_X_{model_name_clean}")
-        save_ct(x_lbl_ct, f"{case_id}_ct_label_moving_{model_name_clean}")
-        save_ct(y_lbl_ct, f"{case_id}_ct_label_fixed_{model_name_clean}")
+        save_ct(seg_moving, f"{case_id}_ct_label_moving_{model_name_clean}")
+        save_ct(seg_fixed, f"{case_id}_ct_label_fixed_{model_name_clean}")
         save_ct(
             seg_their.round(),
             f"{case_id}_ct_label_moving_warped_{model_name_clean}",
@@ -954,7 +943,7 @@ def main() -> None:
     transform = miccai2020_model_stage.SpatialTransform_unit().to(device)
     transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
 
-    ct_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_ct")
+    # PET labels (IO and evaluation) come from io_labels_pet: pet_{case_id}_{tp}
     pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
     use_io: bool = True
@@ -1006,8 +995,9 @@ def main() -> None:
                     use_class_weights=False,
                     use_polyaffine=baseline_polyaffine,
                     skip_model=True,
-                    ct_label_dir=ct_label_dir,
+                    ct_label_dir=official_seg_dir_fast,
                     pet_label_dir=pet_label_dir,
+                    ct_label_template="{case_id}_{tp}",
                     io_lr=io_lr,
                     io_it=io_it,
                     desc=f"official val [{baseline_name}]",
