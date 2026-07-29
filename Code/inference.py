@@ -867,6 +867,34 @@ CONFIGS_REPLACEMENTS: Dict[str, Dict[str, float | bool]] = {
         "range_flow": 0.4,
         "use_poly_affine": False,
     },
+    "worried-elk-38863657": {
+        "start_channel": 7,
+        "w_ct": 5.0,
+        "w_dice_ct_lvl3": 5.0,
+        "w_pet": 0.0,
+        "w_dice_pet": 0.0,
+        "w_bone_rigidity": 10.0,
+        "w_jacobian_tumor": 10.0,
+        "w_tlg": 10.0,
+        "w_jacobian": 2000.0,
+        "w_smooth": 2.0,
+        "range_flow": 0.4,
+        "use_poly_affine": False,
+    },
+    "charming-trout-38863973": {
+        "start_channel": 7,
+        "w_ct": 5.0,
+        "w_dice_ct_lvl3": 5.0,
+        "w_pet": 0.0,
+        "w_dice_pet": 0.0,
+        "w_bone_rigidity": 5.0,
+        "w_jacobian_tumor": 5.0,
+        "w_tlg": 5.0,
+        "w_jacobian": 2000.0,
+        "w_smooth": 2.0,
+        "range_flow": 0.4,
+        "use_poly_affine": False,
+    },
 }
 
 
@@ -895,7 +923,7 @@ def main() -> None:
     eval_official: bool = True
     eval_my_val: bool = False
 
-    model_ori_name = "sincere-finch-38813192"
+    model_ori_name = "worried-elk-38863657"
 
     update_config_from_dict(cfg, model_ori_name)
 
@@ -924,7 +952,7 @@ def main() -> None:
     ct_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_ct")
     pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
-    use_io: bool = False
+    use_io: bool = True
     use_class_weights = False
     use_polyaffine: bool = False
     io_lr: float = 2e-1
