@@ -815,11 +815,11 @@ def process_subject(
             my_data.nib.save(my_data.nib.Nifti1Image(arr, np.eye(4)), str(path))
 
         x_lbl_ct, _, y_lbl_ct, _ = load_io_labels(
-            ct_label_dir,
+            seg_dir,
             pet_label_dir,
             case_id,
             device,
-            ct_template=ct_label_template,
+            ct_template=seg_template,
             pet_template=pet_label_template,
         )
 
@@ -933,7 +933,12 @@ def main() -> None:
     model_name = model_path.stem
 
     out_dir = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results")
+    # evaluation metrics use the high-quality segmentations
     official_seg_dir = Path(
+        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/segmentations"
+    )
+    # IO optimization only has access to the fast segmentations
+    official_seg_dir_fast = Path(
         "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/segmentations_fast"
     )
 
@@ -1086,8 +1091,9 @@ def main() -> None:
             use_io=use_io,
             use_class_weights=use_class_weights,
             use_polyaffine=use_polyaffine,
-            ct_label_dir=ct_label_dir,
+            ct_label_dir=official_seg_dir_fast,
             pet_label_dir=pet_label_dir,
+            ct_label_template="{case_id}_{tp}",
             io_lr=io_lr,
             io_it=io_it,
             desc="official val",
