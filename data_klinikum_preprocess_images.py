@@ -73,23 +73,38 @@ def automatically_find_pairs(data_dir: Path) -> List[Dict[str, Path]]:
         if not patient.is_dir():
             continue
 
-        pair = {"fixed": Path(), "moving": Path()}
-
         sessions = [s for s in patient.iterdir() if s.is_dir()]
+
+        if len(sessions) != 2:
+            continue
+
         sessions.sort(key=lambda s: s.name)
 
         session_fixed = sessions[0]
         session_moving = sessions[1]
 
-        path_fixed = select_ct(session_fixed / "ct")
-        path_moving = select_ct(session_moving / "ct")
+        path_fixed = list((session_fixed / "ct").iterdir())[0]
+        path_moving = list((session_moving / "ct").iterdir())[0]
 
-        pair["fixed"] = path_fixed
-        pair["moving"] = path_moving
-
+        pair = {"fixed": path_fixed, "moving": path_moving}
         files.append(pair)
 
     return files
+
+
+def find_corresponding_pet(ct_path: Path) -> Path:
+
+    session_dir = ct_path.parent.parent
+    pet_dir = session_dir / "pet"
+
+    pet_files = list(pet_dir.glob("*.nii.gz"))
+
+    if len(pet_files) != 1:
+        raise FileNotFoundError(
+            f"Expected exactly one PET file in {pet_dir}, found {len(pet_files)}"
+        )
+
+    return pet_files[0]
 
 
 def find_files_from_manual_selection(data_dir: Path) -> list[Path]:
@@ -266,8 +281,8 @@ def main() -> None:
     mapping_path = Path(
         "/home/iml/fryderyk.koegl/code/LapIRN-koegl/mapping_klinikum.json"
     )
-    # if mapping_path.exists():
-    #     mapping_path.unlink()
+    if mapping_path.exists():
+        mapping_path.unlink()
 
     path_pairs = automatically_find_pairs(in_dir)
 
