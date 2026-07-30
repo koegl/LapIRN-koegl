@@ -25,6 +25,39 @@ WHOLE_BODY_SERIES_BY_PRIORITY = (
     "CT ax 3mm SAF",
 )
 
+# need to exclude patients with PETs that we couldnt convert to SUV
+EXLUCDE_PET = [
+    "8M-rhLIeYlw",
+    "T-2E5gxfsmI",
+    "GDYu5GavJ8c",
+    "2VYgP7OOA-w",
+    "uWVuIYc-6gw",
+    "TNhz3uRIjqo",
+    "kA2OcxmxWDc",
+    "BilJ1J-PJCw",
+    "BilJ1J-PJCw",
+    "5kcfs3M-ZEc",
+    "5kcfs3M-ZEc",
+    "jbHwWjKIrss",
+    "DuEANzDZh6I",
+    "D5nsU3QtnJM",
+    "eaYmLmKQdZk",
+    "2DX3v-69KUM",
+    "rJZ-Ou2gwrs",
+    "wzY5r43UD-I",
+    "wzY5r43UD-I",
+    "Q37sPdVoiWQ",
+    "XHHoQGaCKCA",
+    "XJgaQCRJmDE",
+    "y06xSlyG2us",
+    "y06xSlyG2us",
+    "Da0fgYJxw8A",
+    "F-eW7FMy79M",
+    "vJYsjU0-u-w",
+    "Ja9vNzAx-U ",
+    "YxCW0a1l4Mk",
+]
+
 
 def select_ct(ct_dir: Path) -> Path:
     """Return the whole-body axial CT of a session's ``ct`` folder."""
@@ -326,33 +359,44 @@ def main() -> None:
     pbar = tqdm(path_pairs, ncols=170, desc="Preprocessing CT/SUV pairs")
     for idx, pair in enumerate(pbar):
         path_fixed = pair["fixed"]
-        path_fixed_suv = find_corresponding_suv(path_fixed)
-        path_moving = pair["moving"]
-        path_moving_suv = find_corresponding_suv(path_moving)
 
-        pbar.set_postfix_str(
-            f"{path_fixed.name.replace('.nii.gz', '')} / {path_moving.name.replace('.nii.gz', '')}"
-        )
+        patient_id = path_fixed.parent.parent.parent.name
 
-        new_name_fix = f"PSMARegPSMA_4{idx:03d}_0000_00.nii.gz"
-        new_name_fix_suv = f"PSMARegPSMA_4{idx:03d}_0001_00.nii.gz"
-        new_name_mov = f"PSMARegPSMA_4{idx:03d}_0000_01.nii.gz"
-        new_name_mov_suv = f"PSMARegPSMA_4{idx:03d}_0001_01.nii.gz"
+        if patient_id in EXLUCDE_PET:
+            tqdm.write(f"Skipping patient {patient_id} due to missing SUV")
+            continue
 
-        offset_fixed = preprocess_ct(path_fixed, out_dir / new_name_fix)
-        offset_moving = preprocess_ct(path_moving, out_dir / new_name_mov)
+        try:
+            path_fixed_suv = find_corresponding_suv(path_fixed)
+            path_moving = pair["moving"]
+            path_moving_suv = find_corresponding_suv(path_moving)
 
-        preprocess_suv(path_fixed_suv, out_dir / new_name_fix_suv, offset_fixed)
-        preprocess_suv(path_moving_suv, out_dir / new_name_mov_suv, offset_moving)
+            pbar.set_postfix_str(
+                f"{path_fixed.name.replace('.nii.gz', '')} / {path_moving.name.replace('.nii.gz', '')}"
+            )
 
-        mapping[path_fixed.name] = new_name_fix
-        mapping[new_name_fix] = path_fixed.name
-        mapping[path_fixed_suv.name] = new_name_fix_suv
-        mapping[new_name_fix_suv] = path_fixed_suv.name
-        mapping[path_moving.name] = new_name_mov
-        mapping[new_name_mov] = path_moving.name
-        mapping[path_moving_suv.name] = new_name_mov_suv
-        mapping[new_name_mov_suv] = path_moving_suv.name
+            new_name_fix = f"PSMARegPSMA_4{idx:03d}_0000_00.nii.gz"
+            new_name_fix_suv = f"PSMARegPSMA_4{idx:03d}_0001_00.nii.gz"
+            new_name_mov = f"PSMARegPSMA_4{idx:03d}_0000_01.nii.gz"
+            new_name_mov_suv = f"PSMARegPSMA_4{idx:03d}_0001_01.nii.gz"
+
+            offset_fixed = preprocess_ct(path_fixed, out_dir / new_name_fix)
+            offset_moving = preprocess_ct(path_moving, out_dir / new_name_mov)
+
+            preprocess_suv(path_fixed_suv, out_dir / new_name_fix_suv, offset_fixed)
+            preprocess_suv(path_moving_suv, out_dir / new_name_mov_suv, offset_moving)
+
+            mapping[path_fixed.name] = new_name_fix
+            mapping[new_name_fix] = path_fixed.name
+            mapping[path_fixed_suv.name] = new_name_fix_suv
+            mapping[new_name_fix_suv] = path_fixed_suv.name
+            mapping[path_moving.name] = new_name_mov
+            mapping[new_name_mov] = path_moving.name
+            mapping[path_moving_suv.name] = new_name_mov_suv
+            mapping[new_name_mov_suv] = path_moving_suv.name
+        except Exception as e:
+            tqdm.write(f"Error processing pair {path_fixed} and {path_moving}: {e}")
+            continue
         x = 0
     with open(mapping_path, "w") as f:
         json.dump(mapping, f, indent=4)

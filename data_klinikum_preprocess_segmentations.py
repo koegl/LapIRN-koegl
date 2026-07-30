@@ -46,11 +46,15 @@ def get_orig_path(
         )
 
     path_rib = (
-        found[0] if "ribs" in found[0].name else found[1] if len(found) > 1 else None
+        found[0]
+        if "ribs" in found[0].as_posix()
+        else found[1]
+        if len(found) > 1
+        else None
     )
     path_seg = (
         found[0]
-        if "ribs" not in found[0].name
+        if "ribs" not in found[0].as_posix()
         else found[1]
         if len(found) > 1
         else None
@@ -121,10 +125,10 @@ def main() -> None:
         Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/data_klinikum_mapping.json")
     )
     dir_orig_seg_total = Path(
-        "/home/iml/fryderyk.koegl/data/PET_CT_bone/segmentations_total_segmentator"
+        "/home/iml/fryderyk.koegl/data/PET_CT_bone_old/segmentations_total_segmentator"
     )
     dir_orig_seg_rib = Path(
-        "/home/iml/fryderyk.koegl/data/PET_CT_bone/segmentations_ribs"
+        "/home/iml/fryderyk.koegl/data/PET_CT_bone_old/segmentations_ribs"
     )
     out_dir = Path(
         "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTr_klinikum"
@@ -140,9 +144,9 @@ def main() -> None:
     case_items = sorted(cases.items(), key=lambda x: x[1])  # sort by new name
 
     print("warning, reducing to one case for debug only")
-    case_items = [case_items[0]]
+    case_items = case_items[0:2]
 
-    pbar = tqdm(case_items, desc="NLST segmentations", unit="case")
+    pbar = tqdm(case_items, desc="Klinikum segmentations", unit="case")
 
     for orig_name, new_name in pbar:
         pbar.set_postfix_str(new_name)
