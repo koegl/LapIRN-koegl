@@ -69,7 +69,7 @@ def automatically_find_pairs(data_dir: Path) -> List[Dict[str, Path]]:
 
     files = []
 
-    for patient in data_dir.iterdir():
+    for patient in sorted(data_dir.iterdir()):
         if not patient.is_dir():
             continue
 
@@ -92,19 +92,22 @@ def automatically_find_pairs(data_dir: Path) -> List[Dict[str, Path]]:
     return files
 
 
-def find_corresponding_pet(ct_path: Path) -> Path:
+def find_corresponding_suv(ct_path: Path) -> Path:
 
-    session_dir = ct_path.parent.parent
-    pet_dir = session_dir / "pet"
+    session = ct_path.parent.parent.name
+    patient = ct_path.parent.parent.parent.name
+    main_dir = ct_path.parent.parent.parent.parent
 
-    pet_files = list(pet_dir.glob("*.nii.gz"))
+    suv_dir = main_dir.parent / "suv" / patient / session / "pet"
 
-    if len(pet_files) != 1:
+    suv_files = list(suv_dir.glob("*.nii.gz"))
+
+    if len(suv_files) != 1:
         raise FileNotFoundError(
-            f"Expected exactly one PET file in {pet_dir}, found {len(pet_files)}"
+            f"Expected exactly one SUV file in {suv_dir}, found {len(suv_files)}"
         )
 
-    return pet_files[0]
+    return suv_files[0]
 
 
 def find_files_from_manual_selection(data_dir: Path) -> list[Path]:
@@ -244,23 +247,53 @@ def resample_labels_with_offset(
     return out
 
 
-def preprocess_file(
+def preprocess_ct(
     in_path: Path,
     out_path: Path,
     output_size: Tuple[int, int, int] = OUTPUT_SIZE,
     output_spacing: Tuple[float, float, float] = OUTPUT_SPACING,
     threshold: float = THRESHOLD,
     top_margin_vox: int = TOP_MARGIN_VOX,
-) -> None:
+) -> np.ndarray:
     image = sitk.ReadImage(in_path)
     offset = compute_offset(
         image, output_size, output_spacing, threshold, top_margin_vox
     )
+
+    if out_path.exists():
+        return offset
+
     resampled = resample_with_offset(
         image,
         offset,
         interpolator=sitk.sitkLinear,
         default_value=-1024.0,
+        output_size=output_size,
+        output_spacing=output_spacing,
+    )
+    sitk.WriteImage(resampled, out_path.as_posix())
+
+    return offset
+
+
+def preprocess_suv(
+    in_path: Path,
+    out_path: Path,
+    offset: np.ndarray,
+    output_size: Tuple[int, int, int] = OUTPUT_SIZE,
+    output_spacing: Tuple[float, float, float] = OUTPUT_SPACING,
+) -> None:
+
+    if out_path.exists():
+        return
+
+    image = sitk.ReadImage(in_path)
+
+    resampled = resample_with_offset(
+        image,
+        offset,
+        interpolator=sitk.sitkLinear,
+        default_value=0.0,
         output_size=output_size,
         output_spacing=output_spacing,
     )
@@ -279,30 +312,52 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     mapping_path = Path(
-        "/home/iml/fryderyk.koegl/code/LapIRN-koegl/mapping_klinikum.json"
+        "/home/iml/fryderyk.koegl/code/LapIRN-koegl/data_klinikum_mapping.json"
     )
     if mapping_path.exists():
-        mapping_path.unlink()
+        try:
+            with open(mapping_path, "r") as f:
+                mapping = json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError):
+            mapping = {}
 
     path_pairs = automatically_find_pairs(in_dir)
 
-    for idx, pair in enumerate(tqdm(path_pairs)):
+    pbar = tqdm(path_pairs, ncols=170, desc="Preprocessing CT/SUV pairs")
+    for idx, pair in enumerate(pbar):
         path_fixed = pair["fixed"]
+        path_fixed_suv = find_corresponding_suv(path_fixed)
         path_moving = pair["moving"]
+        path_moving_suv = find_corresponding_suv(path_moving)
+
+        pbar.set_postfix_str(
+            f"{path_fixed.name.replace('.nii.gz', '')} / {path_moving.name.replace('.nii.gz', '')}"
+        )
 
         new_name_fix = f"PSMARegPSMA_4{idx:03d}_0000_00.nii.gz"
+        new_name_fix_suv = f"PSMARegPSMA_4{idx:03d}_0001_00.nii.gz"
         new_name_mov = f"PSMARegPSMA_4{idx:03d}_0000_01.nii.gz"
+        new_name_mov_suv = f"PSMARegPSMA_4{idx:03d}_0001_01.nii.gz"
 
-        preprocess_file(path_fixed, out_dir / new_name_fix)
-        preprocess_file(path_moving, out_dir / new_name_mov)
+        offset_fixed = preprocess_ct(path_fixed, out_dir / new_name_fix)
+        offset_moving = preprocess_ct(path_moving, out_dir / new_name_mov)
+
+        preprocess_suv(path_fixed_suv, out_dir / new_name_fix_suv, offset_fixed)
+        preprocess_suv(path_moving_suv, out_dir / new_name_mov_suv, offset_moving)
 
         mapping[path_fixed.name] = new_name_fix
         mapping[new_name_fix] = path_fixed.name
+        mapping[path_fixed_suv.name] = new_name_fix_suv
+        mapping[new_name_fix_suv] = path_fixed_suv.name
         mapping[path_moving.name] = new_name_mov
         mapping[new_name_mov] = path_moving.name
-
+        mapping[path_moving_suv.name] = new_name_mov_suv
+        mapping[new_name_mov_suv] = path_moving_suv.name
+        x = 0
     with open(mapping_path, "w") as f:
         json.dump(mapping, f, indent=4)
+
+    x = 0
 
 
 if __name__ == "__main__":
