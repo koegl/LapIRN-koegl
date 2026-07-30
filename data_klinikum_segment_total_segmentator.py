@@ -1,10 +1,38 @@
+import argparse
 import subprocess
 from pathlib import Path
-from typing import List
+from typing import Any, List
 
 from tqdm import tqdm
 
 from data_klinikum_preprocess import automatically_find_pairs
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="TotalSegmentator batch runner")
+    parser.add_argument(
+        "--order",
+        choices=["forward", "reverse", "middle_out"],
+        default="forward",
+    )
+    parser.add_argument("--start-index", type=int, default=None)
+    args = parser.parse_args()
+    return args
+
+
+def reorder_middle_out(items: List[Any], start: int) -> List[Any]:
+    idx_order = [start]
+    offset = 1
+    while len(idx_order) < len(items):
+        left = start - offset
+        right = start + offset
+        if left >= 0:
+            idx_order.append(left)
+        if right < len(items):
+            idx_order.append(right)
+        offset += 1
+    reordered = [items[i] for i in idx_order]
+    return reordered
 
 
 def find_ct_images(input_dir: Path) -> List[Path]:
@@ -40,13 +68,24 @@ def segment(image: Path, output: Path, fast: bool = True) -> None:
 
 
 def main() -> None:
+    args = parse_args()
+
     input_dir = Path("/home/iml/fryderyk.koegl/data/PET_CT_bone/raw_data")
     skip_existing = True
     fast = False
 
     image_pairs = automatically_find_pairs(input_dir)
 
-    pbar = tqdm(image_pairs, desc="TotalSegmentator", unit="case")
+    if args.order == "reverse":
+        image_pairs.reverse()
+    elif args.order == "middle_out":
+        if args.start_index is not None:
+            start_index = args.start_index
+        else:
+            start_index = len(image_pairs) // 2
+        image_pairs = reorder_middle_out(image_pairs, start_index)
+
+    pbar = tqdm(image_pairs, desc="TotalSegmentator", unit="case", ncols=150)
     for pair in pbar:
         for image in [pair["fixed"], pair["moving"]]:
             output_path = Path(
