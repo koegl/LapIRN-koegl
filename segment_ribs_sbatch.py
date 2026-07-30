@@ -27,7 +27,7 @@ def collect_files(images_dir, select="all"):
     workstation trees that still contain the topograms and MPRs as well.
     """
     if select == "all":
-        return sorted(images_dir.rglob("*.nii.gz"))
+        return sorted(images_dir.rglob("*ct/*.nii.gz"))
 
     from data_klinikum_preprocess_images import automatically_find_pairs
 
@@ -123,6 +123,16 @@ def main():
         f"shard {args.shard}/{args.num_shards}: {len(shard_files)} of {len(all_files)} volumes",
         flush=True,
     )
+
+    # print all files (exclduing existing outputs) for this shard, so the sbatch log shows what was done
+    print("Files to process:")
+    for f in shard_files:
+        if not f.exists():
+            print(f"\t{f.name}")
+
+    print()
+    print()
+    print()
 
     outputs = {
         f: output_path_for(f, args.images_dir, args.output_dir) for f in shard_files
