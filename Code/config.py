@@ -86,11 +86,11 @@ class TrainingConfig:
     start_channel: int = 7
 
     # train val
-    total_steps_lvl1: int = 60000
-    total_steps_lvl2: int = 60000
-    total_steps_lvl3: int = 120000
+    total_steps_lvl1: int = 1
+    total_steps_lvl2: int = 1
+    total_steps_lvl3: int = 1
     unfreeze_epoch_in_lvl2: int = 10
-    unfreeze_epoch_in_lvl3: int = 10
+    unfreeze_epoch_in_lvl3: int = 0
     val_interval: int = 2
     checkpoint_interval: int = 50
 
