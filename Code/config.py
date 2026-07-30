@@ -27,9 +27,9 @@ class TrainingConfig:
     cache_dir_poly = DATA_PATH / "PSMAReg/poly_cache"
     split_path = repo_dir / "split.json"
     val_fraction: float = 0.15
-    use_cache_train_real: bool = True
-    use_cache_train_synthetic: bool = True
-    use_cache_valid: bool = True
+    use_cache_train_real: bool = False
+    use_cache_train_synthetic: bool = False
+    use_cache_valid: bool = False
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
     use_poly_affine: bool = False
@@ -86,9 +86,9 @@ class TrainingConfig:
     start_channel: int = 7
 
     # train val
-    total_steps_lvl1: int = 60000
-    total_steps_lvl2: int = 60000
-    total_steps_lvl3: int = 120000
+    total_steps_lvl1: int = 1
+    total_steps_lvl2: int = 1
+    total_steps_lvl3: int = 1
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
