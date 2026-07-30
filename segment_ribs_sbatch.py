@@ -29,7 +29,7 @@ def collect_files(images_dir, select="all"):
     if select == "all":
         return sorted(images_dir.rglob("*.nii.gz"))
 
-    from data_klinikum_preprocess import automatically_find_pairs
+    from data_klinikum_preprocess_images import automatically_find_pairs
 
     pairs = automatically_find_pairs(images_dir)
     return sorted({p for pair in pairs for p in pair.values()})

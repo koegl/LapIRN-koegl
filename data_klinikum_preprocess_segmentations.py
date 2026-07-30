@@ -14,7 +14,7 @@ from typing import Dict, Literal
 import SimpleITK as sitk
 from tqdm import tqdm
 
-from data_klinikum_preprocess import compute_offset, resample_labels_with_offset
+from data_klinikum_preprocess_images import compute_offset, resample_labels_with_offset
 
 # TotalSegmentator rib labels (rib_left_1..rib_right_12)
 RIB_LABELS = list(range(92, 116))

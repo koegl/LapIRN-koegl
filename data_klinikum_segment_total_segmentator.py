@@ -5,7 +5,7 @@ from typing import Any, List
 
 from tqdm import tqdm
 
-from data_klinikum_preprocess import automatically_find_pairs
+from data_klinikum_preprocess_images import automatically_find_pairs
 
 
 def parse_args() -> argparse.Namespace:
