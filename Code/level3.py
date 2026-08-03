@@ -445,6 +445,11 @@ def train_lvl3(
     if start_global_step >= unfreeze_step:
         model.unfreeze_modellvl2()
 
+    _flag = utils.stop_flag_path(config.save_dir, 3)
+    _flag.parent.mkdir(parents=True, exist_ok=True)
+    tqdm.tqdm.write(f"[lvl3] stop early with:  touch {_flag}")
+    utils.log_text(f"touch {_flag}", "stop_lvl3_cmd.txt")
+
     for global_step in range(start_global_step, total_steps):
         epoch = global_step // steps_per_epoch
         is_epoch_start = global_step % steps_per_epoch == 0
@@ -865,10 +870,8 @@ def train_lvl3(
                     f"jacob={epoch_metrics['train_lvl3/jacob']:.6f}\t"
                     f"unrolled={epoch_metrics['train_lvl3/unrolled_io']:.4f}\t"
                 )
-        if (
-            False
-            and config.overfit is False
-            and (global_step % val_step_interval == 0 or is_last_step)
+        if config.overfit is False and (
+            global_step % val_step_interval == 0 or is_last_step
         ):
             val_losses = evaluate_lvl3(
                 model=model,
@@ -999,6 +1002,11 @@ def train_lvl3(
 
         if config.overfit is False:
             pbar.update(1)
+
+        if is_epoch_end and utils.check_stop_flag(config.save_dir, 3):
+            tqdm.tqdm.write(f"[lvl3] stop flag at step {global_step} -> ending level")
+            utils.log_metrics({"train_lvl3/early_stopped": 1.0}, step=global_step)
+            break
 
     if config.overfit is False:
         pbar.close()

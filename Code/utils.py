@@ -2,6 +2,7 @@ import contextlib
 import json
 import os
 from contextlib import ExitStack
+from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, Tuple
 
 import mlflow
@@ -19,6 +20,24 @@ import wandb
 
 _ACTIVE_RUN_NAME: str | None = None
 _WANDB_RUN = None
+
+
+def stop_flag_path(save_dir: Path, level: int) -> Path:
+    return save_dir / "stop_flags" / f"stop_{7777}_lvl{level}.flag"
+
+    job_id = get_slurm_job_id()
+    array_id = os.environ.get("SLURM_ARRAY_TASK_ID")
+    if array_id is not None:
+        job_id = f"{job_id}_{array_id}"
+    return save_dir / "stop_flags" / f"stop_{job_id}_lvl{level}.flag"
+
+
+def check_stop_flag(save_dir: Path, level: int) -> bool:
+    p = stop_flag_path(save_dir, level)
+    if not p.exists():
+        return False
+    p.unlink(missing_ok=True)
+    return True
 
 
 def _enabled_logger_backends(config: TrainingConfig) -> set[str]:
