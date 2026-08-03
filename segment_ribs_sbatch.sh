@@ -4,15 +4,15 @@
 #SBATCH --error=/home/iml/fryderyk.koegl/logs/%x_%A_%a.err
 #SBATCH -t 3-00:00:00
 #SBATCH -p gpu_p
-#SBATCH --mem=64G
+#SBATCH --mem=128G
 #SBATCH --cpus-per-task=8
 #SBATCH --qos=gpu_reservation
 #SBATCH --nice=10000
 #SBATCH --gres=gpu:1
 #SBATCH --reservation=iml_user
-#SBATCH --array=0
+#SBATCH --array=0-4
 
-NUM_SHARDS=1
+NUM_SHARDS=5
 
 # prevent memory fragmentation
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
