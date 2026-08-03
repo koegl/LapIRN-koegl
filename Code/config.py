@@ -86,11 +86,11 @@ class TrainingConfig:
     start_channel: int = 7
 
     # train val
-    total_steps_lvl1: int = 1
-    total_steps_lvl2: int = 1
-    total_steps_lvl3: int = 2
+    total_steps_lvl1: int = 80000
+    total_steps_lvl2: int = 80000
+    total_steps_lvl3: int = 120000
     unfreeze_epoch_in_lvl2: int = 10
-    unfreeze_epoch_in_lvl3: int = 0
+    unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
     checkpoint_interval: int = 50
 
@@ -105,9 +105,9 @@ class TrainingConfig:
     w_dice_ct_lvl2: float = 4.0
     w_dice_ct_lvl3: float = 5.0
     w_dice_pet: float = 0.0
-    w_tlg: float = 5.0
-    w_jacobian_tumor: float = 5.0
-    w_bone_rigidity: float = 5.0
+    w_tlg: float = 2.0
+    w_jacobian_tumor: float = 2.0
+    w_bone_rigidity: float = 2.0
     w_dvf: float = 100.0
 
     # meta-learned / unrolled instance optimization (IO)
