@@ -88,7 +88,7 @@ class TrainingConfig:
     # train val
     total_steps_lvl1: int = 1
     total_steps_lvl2: int = 1
-    total_steps_lvl3: int = 1
+    total_steps_lvl3: int = 2
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 0
     val_interval: int = 2
