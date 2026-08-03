@@ -280,6 +280,36 @@ def resample_labels_with_offset(
     return out
 
 
+def resample_pet_label_with_offset(
+    seg: sitk.Image,
+    offset: np.ndarray,
+    output_size: Tuple[int, int, int] = OUTPUT_SIZE,
+    output_spacing: Tuple[float, float, float] = OUTPUT_SPACING,
+    sigma_scale: float = 0.5,
+    foreground_threshold: float = 0.45,
+) -> sitk.Image:
+    """Anti-aliased single-label resampling for PET tumour masks."""
+    in_spacing = np.asarray(seg.GetSpacing(), dtype=float)
+    out_spacing = np.asarray(output_spacing, dtype=float)
+    sigma = np.maximum(sigma_scale * (out_spacing - in_spacing), 1e-3)
+
+    transform = sitk.TranslationTransform(3)
+    transform.SetOffset(np.asarray(offset, dtype=float).tolist())
+    ref = make_reference(sitk.sitkFloat32, output_size, output_spacing)
+
+    mask = sitk.Cast(sitk.NotEqual(seg, 0), sitk.sitkFloat32)
+    mask = sitk.SmoothingRecursiveGaussian(mask, sigma.tolist(), False)
+    resampled = sitk.Resample(
+        mask, ref, transform, sitk.sitkLinear, 0.0, sitk.sitkFloat32
+    )
+    score = sitk.GetArrayFromImage(resampled)
+    out_arr = (score >= foreground_threshold).astype(np.int16)
+
+    out = sitk.GetImageFromArray(out_arr)
+    out.CopyInformation(make_reference(sitk.sitkInt16, output_size, output_spacing))
+    return out
+
+
 def preprocess_ct(
     in_path: Path,
     out_path: Path,

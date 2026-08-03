@@ -11,10 +11,15 @@ import json
 from pathlib import Path
 from typing import Dict, Literal
 
+import numpy as np
 import SimpleITK as sitk
 from tqdm import tqdm
 
-from data_klinikum_preprocess_images import compute_offset, resample_labels_with_offset
+from data_klinikum_preprocess_images import (
+    compute_offset,
+    resample_labels_with_offset,
+    resample_pet_label_with_offset,
+)
 
 # TotalSegmentator rib labels (rib_left_1..rib_right_12)
 RIB_LABELS = list(range(92, 116))
@@ -27,7 +32,9 @@ def load_mapping(mapping_path) -> Dict[str, str]:
 
 
 def get_orig_path(
-    seg_dir_orig: Path, name: str, output_type: Literal["CT", "SEG_TOTAL", "SEG_RIB"]
+    seg_dir_orig: Path,
+    name: str,
+    output_type: Literal["CT", "SEG_TOTAL", "SEG_RIB", "SEG_PET"],
 ) -> Path:
 
     name_clean = name.replace(".nii.gz", "")
@@ -59,8 +66,15 @@ def get_orig_path(
         if len(found) > 1
         else None
     )
+    path_pet = (
+        found[0]
+        if "pet_labels" in found[0].as_posix()
+        else found[1]
+        if len(found) > 1
+        else None
+    )
 
-    if path_rib is None and path_seg is None:
+    if path_rib is None and path_seg is None and path_pet is None:
         raise FileNotFoundError(
             f"Could not find both rib and total segmentations for {name_clean} in {seg_dir_orig}: {found}"
         )
@@ -73,6 +87,8 @@ def get_orig_path(
         output_path = path_seg
     elif output_type == "SEG_RIB":
         output_path = path_rib
+    elif output_type == "SEG_PET":
+        output_path = path_pet
     else:
         raise ValueError(
             f"output_type must be 'CT', 'SEG_TOTAL', or 'SEG_RIB', got {output_type}"
@@ -124,12 +140,15 @@ def main() -> None:
     mapping = load_mapping(
         Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/data_klinikum_mapping.json")
     )
+    with open(Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/split.json"), "r") as f:
+        split = json.load(f)
     dir_orig_seg_total = Path(
-        "/home/iml/fryderyk.koegl/data/PET_CT_bone_old/segmentations_total_segmentator"
+        "/home/iml/fryderyk.koegl/data/PET_CT_bone/segmentations_total_segmentator"
     )
     dir_orig_seg_rib = Path(
-        "/home/iml/fryderyk.koegl/data/PET_CT_bone_old/segmentations_ribs"
+        "/home/iml/fryderyk.koegl/data/PET_CT_bone/segmentations_ribs"
     )
+    dir_orig_seg_pet = Path("/home/iml/fryderyk.koegl/data/PET_CT_bone/pet_labels")
     out_dir = Path(
         "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTr_klinikum"
     )
@@ -143,34 +162,80 @@ def main() -> None:
 
     case_items = sorted(cases.items(), key=lambda x: x[1])  # sort by new name
 
-    print("warning, reducing to one case for debug only")
-    case_items = case_items[0:2]
+    # print("warning, reducing to one case for debug only")
+    # case_items = case_items[0:2]
 
-    pbar = tqdm(case_items, desc="Klinikum segmentations", unit="case")
+    pbar = tqdm(case_items, desc="Klinikum segmentations", unit="case", ncols=150)
+
+    # offsets stored by patient~session
+    offsets: Dict[str, np.ndarray] = {}
+
+    failed_cases = []
 
     for orig_name, new_name in pbar:
-        pbar.set_postfix_str(new_name)
+        try:
+            orig_name = "~".join(orig_name.split("~")[0:2])
 
-        out_path = out_dir / new_name
-        if out_path.exists():
-            tqdm.write(f"skip {new_name}")
-            continue
+            out_path = out_dir / new_name
+            if out_path.exists():
+                tqdm.write(f"skip {new_name}")
+                continue
 
-        path_orig_seg_total = get_orig_path(dir_orig_seg_total, orig_name, "SEG_TOTAL")
-        path_orig_seg_rib = get_orig_path(dir_orig_seg_rib, orig_name, "SEG_RIB")
-        path_orig_im = get_orig_path(dir_orig_seg_total, orig_name, "CT")
+            patient_id = orig_name.split("~")[0]
+            session_id = orig_name.split("~")[1]
 
-        seg_orig_total = sitk.ReadImage(path_orig_seg_total.as_posix())
-        seg_orig_rib = sitk.ReadImage(path_orig_seg_rib.as_posix())
-        im_orig = sitk.ReadImage(path_orig_im.as_posix())
+            new_patient_id = new_name.split("_")[1]
+            if new_patient_id in split["test"]:
+                continue
 
-        seg_replaced = join_ribs(seg_orig_total, seg_orig_rib)
+            pbar.set_postfix_str(new_name)
 
-        offset = compute_offset(im_orig)
+            if "_0000_" in new_name:
+                path_orig_seg_total = get_orig_path(
+                    dir_orig_seg_total, orig_name, "SEG_TOTAL"
+                )
+                path_orig_seg_rib = get_orig_path(
+                    dir_orig_seg_rib, orig_name, "SEG_RIB"
+                )
+                seg_orig_total = sitk.ReadImage(path_orig_seg_total.as_posix())
+                seg_orig_rib = sitk.ReadImage(path_orig_seg_rib.as_posix())
+                seg = join_ribs(seg_orig_total, seg_orig_rib)
+            elif "_0001_" in new_name:
+                path_orig_seg_pet = get_orig_path(
+                    dir_orig_seg_pet, orig_name, "SEG_PET"
+                )
+                seg = sitk.ReadImage(path_orig_seg_pet.as_posix())
+            else:
+                raise ValueError(f"Unexpected new_name format: {new_name}")
 
-        resampled = resample_labels_with_offset(seg_replaced, offset)
+            path_orig_im = get_orig_path(dir_orig_seg_total, orig_name, "CT")
+            # im_orig = sitk.ReadImage(path_orig_im.as_posix())
 
-        sitk.WriteImage(resampled, out_path.as_posix())
+            if f"{patient_id}~{session_id}" in offsets:
+                offset = offsets[f"{patient_id}~{session_id}"]
+            else:
+                offset = compute_offset(sitk.ReadImage(path_orig_im.as_posix()))
+                offsets[f"{patient_id}~{session_id}"] = offset
+
+            if "_0000_" in new_name:
+                resampled_seg = resample_labels_with_offset(seg, offset)
+            elif "_0001_" in new_name:
+                resampled_seg = resample_pet_label_with_offset(seg, offset)
+
+            sitk.WriteImage(resampled_seg, out_path.as_posix())
+
+        except Exception as e:
+            tqdm.write(f"Failed to process {new_name}: {e}")
+            failed_cases.append(new_name)
+
+    with open(
+        Path(
+            "/home/iml/fryderyk.koegl/code/LapIRN-koegl/data_klinikum_preprocess_segmentations_failed.txt"
+        ),
+        "w",
+    ) as f:
+        for case in failed_cases:
+            f.write(f"{case}\n")
 
 
 if __name__ == "__main__":
