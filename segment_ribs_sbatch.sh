@@ -10,7 +10,7 @@
 #SBATCH --nice=10000
 #SBATCH --gres=gpu:1
 #SBATCH --reservation=iml_user
-#SBATCH --array=0-4
+#SBATCH --array=0
 
 NUM_SHARDS=1
 
