@@ -40,12 +40,11 @@ def load_split(split_path: Path) -> Tuple[List[str], List[str]]:
 
 
 def load_io_labels(
-    ct_label_dir: Path,
-    pet_label_dir: Path,
+    label_dir: Path,
     case_id: str,
     device: torch.device,
-    ct_template: str = "ct_{case_id}_{tp}",
-    pet_template: str = "pet_{case_id}_{tp}",
+    ct_template: str = "{case_id}_0000_{tp}",
+    pet_template: str = "{case_id}_0001_{tp}",
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     def load(path: Path) -> torch.Tensor:
         arr = my_data.nib.load(str(path)).get_fdata().astype(np.int16)
@@ -59,10 +58,10 @@ def load_io_labels(
             path = label_dir / f"{stem}.nii"
         return path
 
-    x_lbl_ct = load(p(ct_label_dir, ct_template, "01"))
-    y_lbl_ct = load(p(ct_label_dir, ct_template, "00"))
-    x_lbl_pet = load(p(pet_label_dir, pet_template, "01"))
-    y_lbl_pet = load(p(pet_label_dir, pet_template, "00"))
+    x_lbl_ct = load(p(label_dir, ct_template, "01"))
+    y_lbl_ct = load(p(label_dir, ct_template, "00"))
+    x_lbl_pet = load(p(label_dir, pet_template, "01"))
+    y_lbl_pet = load(p(label_dir, pet_template, "00"))
 
     labels = (x_lbl_ct, x_lbl_pet, y_lbl_ct, y_lbl_pet)
     return labels
@@ -124,7 +123,7 @@ def compute_hd95_official(
 
 
 # --- variables (define here, no argparse) ---
-val_image_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesVal")
+val_image_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTs")
 val_cache_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/affine_cache_val")
 val_subjects = [
     "0001",
@@ -147,6 +146,26 @@ val_subjects = [
     "0042",
     "0047",
     "0048",
+    "4000",
+    "4003",
+    "4011",
+    "4013",
+    "4022",
+    "4032",
+    "4034",
+    "4036",
+    "4040",
+    "4041",
+    "4047",
+    "4048",
+    "4053",
+    "4054",
+    "4055",
+    "4063",
+    "4064",
+    "4065",
+    "4067",
+    "4068",
 ]
 split_path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/split.json")
 my_val_image_dir = Path(
@@ -457,7 +476,7 @@ def evaluate_split(
     subjects: List[str],
     image_dir: Path,
     seg_dir: Path,
-    seg_template: str,
+    seg_dir_fast: Path,
     results_csv: Path,
     model_name: str,
     out_dir: Path,
@@ -470,8 +489,6 @@ def evaluate_split(
     use_io: bool,
     use_class_weights: bool,
     use_polyaffine: bool,
-    ct_label_dir: Path,
-    pet_label_dir: Path,
     io_lr: float,
     io_it: int,
     desc: str,
@@ -480,8 +497,8 @@ def evaluate_split(
     ndv_csv: Path,
     hd95_csv: Path,
     per_label_csv: Path,
-    ct_label_template: str = "ct_{case_id}_{tp}",
-    pet_label_template: str = "pet_{case_id}_{tp}",
+    ct_label_template: str = "PSMARegPSMA_{case_id}_0000_{tp}",
+    pet_label_template: str = "PSMARegPSMA_{case_id}_0001_{tp}",
     skip_model: bool = False,
 ) -> None:
     dices: Dict[str, float] = {}
@@ -504,13 +521,11 @@ def evaluate_split(
             transform_nearest,
             seg_dir,
             model_name=model_name,
-            seg_template=seg_template,
             use_io=use_io,
             use_class_weights=use_class_weights,
             use_polyaffine=use_polyaffine,
             skip_model=skip_model,
-            ct_label_dir=ct_label_dir,
-            pet_label_dir=pet_label_dir,
+            seg_dir_fast=seg_dir_fast,
             ct_label_template=ct_label_template,
             pet_label_template=pet_label_template,
             io_lr=io_lr,
@@ -537,6 +552,9 @@ def evaluate_split(
     append_metric_to_csv(hd95_csv, model_name, hd95s, "hd95")
 
 
+image_pair_memory_cache = {}
+
+
 def process_subject(
     case_id: str,
     val_image_dir: Path,
@@ -549,19 +567,21 @@ def process_subject(
     transform_nearest: torch.nn.Module,
     seg_dir: Path,
     model_name: str,
-    seg_template: str = "{case_id}_{tp}",
     use_io: bool = False,
     use_class_weights: bool = False,
     use_polyaffine: bool = False,
     skip_model: bool = False,
-    ct_label_dir: Optional[Path] = None,
-    pet_label_dir: Optional[Path] = None,
-    ct_label_template: str = "ct_{case_id}_{tp}",
-    pet_label_template: str = "pet_{case_id}_{tp}",
+    seg_dir_fast: Optional[Path] = None,
+    ct_label_template: str = "PSMARegPSMA_{case_id}_0000_{tp}",
+    pet_label_template: str = "PSMARegPSMA_{case_id}_0001_{tp}",
     io_lr: float = 1e-1,
     io_it: int = 100,
 ) -> Tuple[float, float, float, float, float, float, Dict[int, float]]:
-    pair = load_val_pair(val_image_dir, case_id)
+
+    if case_id in image_pair_memory_cache:
+        pair = image_pair_memory_cache[case_id]
+    else:
+        pair = load_val_pair(val_image_dir, case_id)
     X = pair["x"].unsqueeze(0).to(device).float()
     Y = pair["y"].unsqueeze(0).to(device).float()
 
@@ -595,14 +615,15 @@ def process_subject(
     if use_polyaffine:
 
         def resolve_seg_path(tp: str) -> Path:
-            stem = seg_template.format(case_id=case_id, tp=tp)
+            stem = ct_label_template.format(case_id=case_id, tp=tp)
             path = seg_dir / f"{stem}.nii"
             if not path.exists():
                 path = seg_dir / f"{stem}.nii.gz"
             return path
 
         poly_dvf = poly_affine_reg.get_polyaffine_dvf(
-            case_id=case_id,
+            case_id_x=case_id,
+            case_id_y=case_id,
             tp_x="01",
             tp_y="00",
             fixed_seg_path=resolve_seg_path("00"),
@@ -633,8 +654,7 @@ def process_subject(
 
     if use_io and not skip_model:
         x_lbl_ct, x_lbl_pet, y_lbl_ct, y_lbl_pet = load_io_labels(
-            ct_label_dir,
-            pet_label_dir,
+            seg_dir_fast,
             case_id,
             device,
             ct_template=ct_label_template,
@@ -663,7 +683,7 @@ def process_subject(
     if False:
         # --- DIAGNOSTIC: replicate IO hard_dice path (transform_nearest, unit flow) ---
         x_lbl_ct_diag, _, y_lbl_ct_diag, _ = load_io_labels(
-            ct_label_dir,
+            seg_dir_fast,
             pet_label_dir,
             case_id,
             device,
@@ -700,7 +720,7 @@ def process_subject(
     their_st = SpatialTransformer(size=cfg.img_shape, mode="nearest").to(device)
 
     def load_seg(tp: str) -> torch.Tensor:
-        stem = seg_template.format(case_id=case_id, tp=tp)
+        stem = ct_label_template.format(case_id=case_id, tp=tp)
         path = seg_dir / f"{stem}.nii"
         if not path.exists():
             path = seg_dir / f"{stem}.nii.gz"
@@ -730,13 +750,13 @@ def process_subject(
 
     # --- same after-registration dice, but on the fast segmentations used by IO ---
     dice_after_fast = float("nan")
-    if ct_label_dir is not None:
+    if seg_dir_fast is not None:
         stem_m = ct_label_template.format(case_id=case_id, tp="01")
         stem_f = ct_label_template.format(case_id=case_id, tp="00")
 
         def resolve_fast(stem: str) -> Path:
-            p = ct_label_dir / f"{stem}.nii.gz"
-            return p if p.exists() else ct_label_dir / f"{stem}.nii"
+            p = seg_dir_fast / f"{stem}.nii.gz"
+            return p if p.exists() else seg_dir_fast / f"{stem}.nii"
 
         fast_m = (
             my_data.nib.load(str(resolve_fast(stem_m))).get_fdata().astype(np.int16)
@@ -745,10 +765,10 @@ def process_subject(
             my_data.nib.load(str(resolve_fast(stem_f))).get_fdata().astype(np.int16)
         )
         seg_moving_fast = torch.from_numpy(fast_m)[None, None].to(device).float()
-        seg_fixed_fast_i = torch.from_numpy(fast_f)[0, 0].round().long().to(device)
+        seg_fixed_fast = torch.from_numpy(fast_f)[None, None].round().long().to(device)
         seg_their_fast = their_st(seg_moving_fast, disp_their)
         dice_after_fast = multilabel_dice(
-            seg_their_fast[0, 0].round().long(), seg_fixed_fast_i
+            seg_their_fast[0, 0].round().long(), seg_fixed_fast
         )
 
     tqdm.tqdm.write(
@@ -757,7 +777,7 @@ def process_subject(
         f"after={dice_their:.4f}"
     )
 
-    fixed_seg_stem = seg_template.format(case_id=case_id, tp="00")
+    fixed_seg_stem = ct_label_template.format(case_id=case_id, tp="00")
     fixed_seg_path = seg_dir / f"{fixed_seg_stem}.nii"
     if not fixed_seg_path.exists():
         fixed_seg_path = seg_dir / f"{fixed_seg_stem}.nii.gz"
@@ -773,9 +793,9 @@ def process_subject(
 
     def load_pet_mask(tp: str) -> torch.Tensor:
         stem = pet_label_template.format(case_id=case_id, tp=tp)
-        path = pet_label_dir / f"{stem}.nii.gz"
+        path = seg_dir_fast / f"{stem}.nii.gz"
         if not path.exists():
-            path = pet_label_dir / f"{stem}.nii"
+            path = seg_dir_fast / f"{stem}.nii"
         arr = my_data.nib.load(str(path)).get_fdata()
         mask = (torch.from_numpy(arr)[None, None].to(device).float() > 0).float()
         return mask
@@ -809,7 +829,7 @@ def process_subject(
         )
         # --- END DEBUG ---
 
-    if True:
+    if False:
         # --- DEBUG: save X, Y, warped X, ct label, warped ct label ---
         model_name_clean = model_name.replace(".", "_").replace(" ", "")
 
@@ -915,6 +935,21 @@ def update_config_from_dict(cfg: TrainingConfig, model_name: str) -> None:
             raise ValueError(f"Invalid config key: {key}")
 
 
+models_to_evaluate = [
+    "polite-snake-38577202",
+    "exultant-hawk-38756587",
+    "rumbling-yak-38789486",
+    "secretive-dolphin-38622192",
+    "victorious-flea-38622412",
+    "intelligent-fish-38730451",
+    "popular-sloth-38758804",
+    "nosy-doe-38788231",
+    "sincere-finch-38813192",
+    "worried-elk-38863657",
+    "charming-trout-38863973",
+]
+
+
 def main() -> None:
     cfg = TrainingConfig()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -924,232 +959,233 @@ def main() -> None:
     # --- what to evaluate ---
     eval_official: bool = True
     eval_my_val: bool = False
+    baselines_done: bool = False
 
     model_ori_name = "worried-elk-38863657"
 
-    update_config_from_dict(cfg, model_ori_name)
+    for model_ori_name in models_to_evaluate:
+        # update_config_from_dict(cfg, model_ori_name)
 
-    model_path = Path(
-        f"/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_{model_ori_name}_stagelvl3_best.pth"
-    )
-    model_name = model_path.stem
+        model_path = Path(
+            f"/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_{model_ori_name}_stagelvl3_best.pth"
+        )
+        model_name = model_path.stem
 
-    out_dir = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results")
-    # evaluation metrics use the high-quality segmentations
-    official_seg_dir = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/segmentations"
-    )
-    # IO optimization only has access to the fast segmentations
-    official_seg_dir_fast = Path(
-        "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/segmentations_fast"
-    )
+        out_dir = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results")
+        # evaluation metrics use the high-quality segmentations
+        official_seg_dir = Path(
+            "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTs"
+        )
+        # IO optimization only has access to the fast segmentations
+        official_seg_dir_fast = Path(
+            "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTs_fast"
+        )
 
-    model = create_model(device, cfg, model_path)
+        model = create_model(device, cfg, model_path)
 
-    grid_full = Functions.generate_grid_unit(cfg.img_shape)
-    grid_full = (
-        torch.from_numpy(np.reshape(grid_full, (1,) + grid_full.shape))
-        .to(device)
-        .float()
-    )
+        grid_full = Functions.generate_grid_unit(cfg.img_shape)
+        grid_full = (
+            torch.from_numpy(np.reshape(grid_full, (1,) + grid_full.shape))
+            .to(device)
+            .float()
+        )
 
-    transform = miccai2020_model_stage.SpatialTransform_unit().to(device)
-    transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
+        transform = miccai2020_model_stage.SpatialTransform_unit().to(device)
+        transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(
+            device
+        )
 
-    # PET labels (IO and evaluation) come from io_labels_pet: pet_{case_id}_{tp}
-    pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
+        # PET labels (IO and evaluation) come from io_labels_pet: pet_{case_id}_{tp}
+        # pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
-    use_io: bool = True
-    use_class_weights = False
-    use_polyaffine: bool = False
-    io_lr: float = 2e-1
-    io_it: float = 60
-    if use_io:
-        model_name += "_IO_"
-        model_name += f"lr{io_lr:.1e}_it{io_it}_wncc{cfg.w_ct:.2f}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct_lvl3:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_jacobian_tumor:.2f}_wBoneRigid{cfg.w_bone_rigidity:.2f} "
-        print("warning using IO")
-        if use_class_weights:
-            model_name += "_classweights"
-            print("warning using class weights")
+        use_io: bool = False
+        use_class_weights = False
+        use_polyaffine: bool = False
+        io_lr: float = 2e-1
+        io_it: float = 60
+        if use_io:
+            model_name += "_IO_"
+            model_name += f"lr{io_lr:.1e}_it{io_it}_wncc{cfg.w_ct:.2f}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct_lvl3:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_jacobian_tumor:.2f}_wBoneRigid{cfg.w_bone_rigidity:.2f} "
+            print("warning using IO")
+            if use_class_weights:
+                model_name += "_classweights"
+                print("warning using class weights")
 
-    if use_polyaffine:
-        model_name += "_polyaffine"
-        print("warning using polyaffine prereg")
+        if use_polyaffine:
+            model_name += "_polyaffine"
+            print("warning using polyaffine prereg")
 
-    # --- baselines: affine-only and affine+polyaffine, no model inference.
-    # each runs once, only if its per-label csv is missing.
-    def run_baseline(baseline_name: str, baseline_polyaffine: bool) -> None:
-        if eval_official:
-            per_label_csv = results_csv_official_val_dice_per_label.with_stem(
-                results_csv_official_val_dice_per_label.stem + baseline_name
-            )
-            per_label_csv = Path(
-                per_label_csv.as_posix().replace("csvs/", "csvs/per_label/")
-            )
-            if per_label_csv.exists():
-                print(f"skipping baseline '{baseline_name}' (official val): exists")
-            else:
-                print(f"running baseline '{baseline_name}' on official val")
-                evaluate_split(
-                    subjects=val_subjects,
-                    image_dir=val_image_dir,
-                    seg_dir=official_seg_dir,
-                    seg_template="{case_id}_{tp}",
-                    results_csv=results_csv_official_val_dice,
-                    model_name=baseline_name,
-                    out_dir=out_dir / f"baseline_{baseline_name}",
-                    model=model,
-                    transform=transform,
-                    transform_nearest=transform_nearest,
-                    grid_full=grid_full,
-                    cfg=cfg,
-                    device=device,
-                    use_io=False,
-                    use_class_weights=False,
-                    use_polyaffine=baseline_polyaffine,
-                    skip_model=True,
-                    ct_label_dir=official_seg_dir_fast,
-                    pet_label_dir=pet_label_dir,
-                    ct_label_template="{case_id}_{tp}",
-                    io_lr=io_lr,
-                    io_it=io_it,
-                    desc=f"official val [{baseline_name}]",
-                    mtv_csv=results_csv_official_mtv,
-                    tlg_csv=results_csv_official_tlg,
-                    ndv_csv=results_csv_official_ndv,
-                    hd95_csv=results_csv_official_hd95,
-                    per_label_csv=per_label_csv,
+        # --- baselines: affine-only and affine+polyaffine, no model inference.
+        # each runs once, only if its per-label csv is missing.
+        def run_baseline(baseline_name: str, baseline_polyaffine: bool) -> None:
+            if eval_official:
+                per_label_csv = results_csv_official_val_dice_per_label.with_stem(
+                    results_csv_official_val_dice_per_label.stem + baseline_name
                 )
+                per_label_csv = Path(
+                    per_label_csv.as_posix().replace("csvs/", "csvs/per_label/")
+                )
+                if per_label_csv.exists():
+                    print(f"skipping baseline '{baseline_name}' (official val): exists")
+                else:
+                    print(f"running baseline '{baseline_name}' on official val")
+                    evaluate_split(
+                        subjects=val_subjects,
+                        image_dir=val_image_dir,
+                        seg_dir=official_seg_dir,
+                        seg_dir_fast=official_seg_dir_fast,
+                        results_csv=results_csv_official_val_dice,
+                        model_name=baseline_name,
+                        out_dir=out_dir / f"baseline_{baseline_name}",
+                        model=model,
+                        transform=transform,
+                        transform_nearest=transform_nearest,
+                        grid_full=grid_full,
+                        cfg=cfg,
+                        device=device,
+                        use_io=False,
+                        use_class_weights=False,
+                        use_polyaffine=baseline_polyaffine,
+                        skip_model=True,
+                        ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
+                        pet_label_template="PSMARegPSMA_{case_id}_0001_{tp}",
+                        io_lr=io_lr,
+                        io_it=io_it,
+                        desc=f"official val [{baseline_name}]",
+                        mtv_csv=results_csv_official_mtv,
+                        tlg_csv=results_csv_official_tlg,
+                        ndv_csv=results_csv_official_ndv,
+                        hd95_csv=results_csv_official_hd95,
+                        per_label_csv=per_label_csv,
+                    )
+
+            if eval_my_val:
+                per_label_csv = results_csv_my_val_dice_per_label.with_stem(
+                    results_csv_my_val_dice_per_label.stem + baseline_name
+                )
+                per_label_csv = Path(
+                    per_label_csv.as_posix().replace("csvs/", "csvs/per_label/")
+                )
+                if per_label_csv.exists():
+                    print(f"skipping baseline '{baseline_name}' (my val): exists")
+                else:
+                    print(f"running baseline '{baseline_name}' on my val")
+                    _, my_val_subjects = load_split(split_path)
+                    evaluate_split(
+                        subjects=my_val_subjects,
+                        image_dir=my_val_image_dir,
+                        seg_dir_fast=my_val_seg_dir,
+                        seg_dir=my_val_seg_dir,
+                        results_csv=results_csv_my_val_dice,
+                        model_name=baseline_name,
+                        out_dir=out_dir / "my_val" / f"baseline_{baseline_name}",
+                        model=model,
+                        transform=transform,
+                        transform_nearest=transform_nearest,
+                        grid_full=grid_full,
+                        cfg=cfg,
+                        device=device,
+                        use_io=False,
+                        use_class_weights=False,
+                        use_polyaffine=baseline_polyaffine,
+                        skip_model=True,
+                        ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
+                        pet_label_template="PSMARegPSMA_{case_id}_0001_{tp}",
+                        io_lr=io_lr,
+                        io_it=io_it,
+                        desc=f"my val [{baseline_name}]",
+                        mtv_csv=results_csv_my_val_mtv,
+                        tlg_csv=results_csv_my_val_tlg,
+                        ndv_csv=results_csv_my_val_ndv,
+                        hd95_csv=results_csv_my_val_hd95,
+                        per_label_csv=per_label_csv,
+                    )
+
+        if baselines_done is False:
+            run_baseline("affine", baseline_polyaffine=False)
+            run_baseline("polyaffine", baseline_polyaffine=True)
+            baselines_done = True
+
+        if eval_official:
+            # print("warning: reducing number of my val subjects")
+
+            per_label_dice_csv = results_csv_official_val_dice_per_label.with_stem(
+                results_csv_official_val_dice_per_label.stem + model_name
+            )
+            per_label_dice_csv = Path(
+                per_label_dice_csv.as_posix().replace("csvs/", "csvs/per_label/")
+            )
+            evaluate_split(
+                subjects=val_subjects,
+                image_dir=val_image_dir,
+                seg_dir=official_seg_dir,
+                seg_dir_fast=official_seg_dir_fast,
+                results_csv=results_csv_official_val_dice,
+                model_name=model_name,
+                out_dir=out_dir,
+                model=model,
+                transform=transform,
+                transform_nearest=transform_nearest,
+                grid_full=grid_full,
+                cfg=cfg,
+                device=device,
+                use_io=use_io,
+                use_class_weights=use_class_weights,
+                use_polyaffine=use_polyaffine,
+                ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
+                pet_label_template="PSMARegPSMA_{case_id}_0001_{tp}",
+                io_lr=io_lr,
+                io_it=io_it,
+                desc="official val",
+                mtv_csv=results_csv_official_mtv,
+                tlg_csv=results_csv_official_tlg,
+                ndv_csv=results_csv_official_ndv,
+                hd95_csv=results_csv_official_hd95,
+                per_label_csv=per_label_dice_csv,
+            )
+            compress_to_zip(
+                out_dir / "submission", out_dir / f"submission_{model_name}.zip"
+            )
 
         if eval_my_val:
-            per_label_csv = results_csv_my_val_dice_per_label.with_stem(
-                results_csv_my_val_dice_per_label.stem + baseline_name
+            per_label_dice_csv = results_csv_my_val_dice_per_label.with_stem(
+                results_csv_my_val_dice_per_label.stem + model_name
             )
-            per_label_csv = Path(
-                per_label_csv.as_posix().replace("csvs/", "csvs/per_label/")
+            per_label_dice_csv = Path(
+                per_label_dice_csv.as_posix().replace("csvs/", "csvs/per_label/")
             )
-            if per_label_csv.exists():
-                print(f"skipping baseline '{baseline_name}' (my val): exists")
-            else:
-                print(f"running baseline '{baseline_name}' on my val")
-                _, my_val_subjects = load_split(split_path)
-                evaluate_split(
-                    subjects=my_val_subjects,
-                    image_dir=my_val_image_dir,
-                    seg_dir=my_val_seg_dir,
-                    seg_template="PSMARegPSMA_{case_id}_0000_{tp}",
-                    results_csv=results_csv_my_val_dice,
-                    model_name=baseline_name,
-                    out_dir=out_dir / "my_val" / f"baseline_{baseline_name}",
-                    model=model,
-                    transform=transform,
-                    transform_nearest=transform_nearest,
-                    grid_full=grid_full,
-                    cfg=cfg,
-                    device=device,
-                    use_io=False,
-                    use_class_weights=False,
-                    use_polyaffine=baseline_polyaffine,
-                    skip_model=True,
-                    ct_label_dir=my_val_seg_dir,
-                    pet_label_dir=my_val_seg_dir,
-                    ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
-                    pet_label_template="PSMARegPSMA_{case_id}_0001_{tp}",
-                    io_lr=io_lr,
-                    io_it=io_it,
-                    desc=f"my val [{baseline_name}]",
-                    mtv_csv=results_csv_my_val_mtv,
-                    tlg_csv=results_csv_my_val_tlg,
-                    ndv_csv=results_csv_my_val_ndv,
-                    hd95_csv=results_csv_my_val_hd95,
-                    per_label_csv=per_label_csv,
-                )
-
-    # run_baseline("affine", baseline_polyaffine=False)
-    # run_baseline("polyaffine", baseline_polyaffine=True)
-
-    if eval_official:
-        # print("warning: reducing number of my val subjects")
-
-        per_label_dice_csv = results_csv_official_val_dice_per_label.with_stem(
-            results_csv_official_val_dice_per_label.stem + model_name
-        )
-        per_label_dice_csv = Path(
-            per_label_dice_csv.as_posix().replace("csvs/", "csvs/per_label/")
-        )
-        evaluate_split(
-            subjects=val_subjects,
-            image_dir=val_image_dir,
-            seg_dir=official_seg_dir,
-            seg_template="{case_id}_{tp}",
-            results_csv=results_csv_official_val_dice,
-            model_name=model_name,
-            out_dir=out_dir,
-            model=model,
-            transform=transform,
-            transform_nearest=transform_nearest,
-            grid_full=grid_full,
-            cfg=cfg,
-            device=device,
-            use_io=use_io,
-            use_class_weights=use_class_weights,
-            use_polyaffine=use_polyaffine,
-            ct_label_dir=official_seg_dir_fast,
-            pet_label_dir=pet_label_dir,
-            ct_label_template="{case_id}_{tp}",
-            io_lr=io_lr,
-            io_it=io_it,
-            desc="official val",
-            mtv_csv=results_csv_official_mtv,
-            tlg_csv=results_csv_official_tlg,
-            ndv_csv=results_csv_official_ndv,
-            hd95_csv=results_csv_official_hd95,
-            per_label_csv=per_label_dice_csv,
-        )
-        compress_to_zip(
-            out_dir / "submission", out_dir / f"submission_{model_name}.zip"
-        )
-
-    if eval_my_val:
-        per_label_dice_csv = results_csv_my_val_dice_per_label.with_stem(
-            results_csv_my_val_dice_per_label.stem + model_name
-        )
-        per_label_dice_csv = Path(
-            per_label_dice_csv.as_posix().replace("csvs/", "csvs/per_label/")
-        )
-        _, my_val_subjects = load_split(split_path)
-        # my_val_subjects = my_val_subjects[0:1]
-        # print("warning: reducing number of my val subjects")
-        evaluate_split(
-            subjects=my_val_subjects,
-            image_dir=my_val_image_dir,
-            seg_dir=my_val_seg_dir,
-            seg_template="PSMARegPSMA_{case_id}_0000_{tp}",
-            results_csv=results_csv_my_val_dice,
-            model_name=model_name,
-            out_dir=out_dir / "my_val",
-            model=model,
-            transform=transform,
-            transform_nearest=transform_nearest,
-            grid_full=grid_full,
-            cfg=cfg,
-            device=device,
-            use_io=use_io,
-            use_class_weights=use_class_weights,
-            use_polyaffine=use_polyaffine,
-            io_it=io_it,
-            ct_label_dir=my_val_seg_dir,
-            pet_label_dir=my_val_seg_dir,
-            ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
-            pet_label_template="PSMARegPSMA_{case_id}_0001_{tp}",
-            io_lr=io_lr,
-            desc="my val",
-            mtv_csv=results_csv_my_val_mtv,
-            tlg_csv=results_csv_my_val_tlg,
-            ndv_csv=results_csv_my_val_ndv,
-            hd95_csv=results_csv_my_val_hd95,
-            per_label_csv=per_label_dice_csv,
-        )
+            _, my_val_subjects = load_split(split_path)
+            # my_val_subjects = my_val_subjects[0:1]
+            # print("warning: reducing number of my val subjects")
+            evaluate_split(
+                subjects=my_val_subjects,
+                image_dir=my_val_image_dir,
+                seg_dir=my_val_seg_dir,
+                results_csv=results_csv_my_val_dice,
+                model_name=model_name,
+                out_dir=out_dir / "my_val",
+                model=model,
+                transform=transform,
+                transform_nearest=transform_nearest,
+                grid_full=grid_full,
+                cfg=cfg,
+                device=device,
+                use_io=use_io,
+                use_class_weights=use_class_weights,
+                use_polyaffine=use_polyaffine,
+                io_it=io_it,
+                seg_dir_fast=my_val_seg_dir,
+                pet_label_dir=my_val_seg_dir,
+                ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
+                pet_label_template="PSMARegPSMA_{case_id}_0001_{tp}",
+                io_lr=io_lr,
+                desc="my val",
+                mtv_csv=results_csv_my_val_mtv,
+                tlg_csv=results_csv_my_val_tlg,
+                ndv_csv=results_csv_my_val_ndv,
+                hd95_csv=results_csv_my_val_hd95,
+                per_label_csv=per_label_dice_csv,
+            )
 
 
 if __name__ == "__main__":
