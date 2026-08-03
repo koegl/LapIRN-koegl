@@ -172,6 +172,14 @@ def main():
     failures = []
     for i, image_path in enumerate(todo, start=1):
         output_path = outputs[image_path]
+
+        if output_path.exists():
+            print(
+                f"skipping {image_path.relative_to(args.images_dir)} -> {output_path} (already exists)",
+                flush=True,
+            )
+            continue
+
         output_path.parent.mkdir(parents=True, exist_ok=True)
         start = time.time()
         print(

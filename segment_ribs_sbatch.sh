@@ -12,7 +12,7 @@
 #SBATCH --reservation=iml_user
 #SBATCH --array=0-4
 
-NUM_SHARDS=5
+NUM_SHARDS=1
 
 # prevent memory fragmentation
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
