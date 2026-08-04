@@ -210,6 +210,12 @@ results_csv_my_val_hd95 = Path(
     "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/results_my_val_hd95.csv"
 )
 
+# the before-registration row is only written when a csv is created from
+# scratch. the hd95 csvs already exist, so set this to print the
+# before-registration hd95 values as comma-separated values in the terminal
+# instead (paste them into the existing csv by hand).
+print_hd95_before_to_terminal: bool = False
+
 
 def predict_ct_labels(
     ct_path: Path,
@@ -450,17 +456,49 @@ def append_results_to_csv(
     tqdm.tqdm.write(f"results saved → {csv_path}")
 
 
+def print_metric_row_as_csv(
+    model_name: str,
+    values: Dict[str, float],
+    metric_name: str,
+) -> None:
+    """Print one metric row as comma-separated values (header + values), so it
+    can be pasted into an already-existing csv by hand."""
+    avg = float(np.nanmean(list(values.values())))
+    header = ["model", f"avg_{metric_name}"] + [
+        f"{metric_name}_{k}" for k in values.keys()
+    ]
+    row = [model_name, f"{avg}"] + [f"{v}" for v in values.values()]
+    tqdm.tqdm.write(f"--- {metric_name} row for '{model_name}' ---")
+    tqdm.tqdm.write(",".join(header))
+    tqdm.tqdm.write(",".join(row))
+
+
 def append_metric_to_csv(
     csv_path: Path,
     model_name: str,
     values: Dict[str, float],
     metric_name: str,
+    values_before: Dict[str, float] | None = None,
 ) -> None:
-    """Append one experiment row for a per-case metric (no before row)."""
+    """Append one experiment row for a per-case metric, writing a
+    'before_registration' row first if the CSV does not yet exist."""
+    rows = []
+
+    if values_before is not None and not csv_path.exists():
+        avg_before = float(np.nanmean(list(values_before.values())))
+        before_row: Dict[str, object] = {
+            "model": "before_registration",
+            f"avg_{metric_name}": avg_before,
+        }
+        before_row.update({f"{metric_name}_{k}": v for k, v in values_before.items()})
+        rows.append(before_row)
+
     avg = float(np.nanmean(list(values.values())))
     row: Dict[str, object] = {"model": model_name, f"avg_{metric_name}": avg}
     row.update({f"{metric_name}_{k}": v for k, v in values.items()})
-    new_df = pd.DataFrame([row])
+    rows.append(row)
+
+    new_df = pd.DataFrame(rows)
 
     if csv_path.exists():
         existing_df = pd.read_csv(csv_path)
@@ -507,9 +545,19 @@ def evaluate_split(
     tlgs: Dict[str, float] = {}
     ndvs: Dict[str, float] = {}
     hd95s: Dict[str, float] = {}
+    hd95s_before: Dict[str, float] = {}
     per_case: Dict[str, Dict[int, float]] = {}
     for case_id in tqdm.tqdm(subjects, desc=desc):
-        dice_after, dice_before, mtv, tlg, ndv, hd95, per_label = process_subject(
+        (
+            dice_after,
+            dice_before,
+            mtv,
+            tlg,
+            ndv,
+            hd95,
+            hd95_before,
+            per_label,
+        ) = process_subject(
             case_id,
             image_dir,
             out_dir,
@@ -537,6 +585,7 @@ def evaluate_split(
         tlgs[case_id] = tlg
         ndvs[case_id] = ndv
         hd95s[case_id] = hd95
+        hd95s_before[case_id] = hd95_before
         per_case[case_id] = per_label
 
     df = build_per_label_df(per_case)
@@ -549,7 +598,11 @@ def evaluate_split(
     append_metric_to_csv(mtv_csv, model_name, mtvs, "mtv")
     append_metric_to_csv(tlg_csv, model_name, tlgs, "tlg")
     append_metric_to_csv(ndv_csv, model_name, ndvs, "ndv")
-    append_metric_to_csv(hd95_csv, model_name, hd95s, "hd95")
+    append_metric_to_csv(
+        hd95_csv, model_name, hd95s, "hd95", values_before=hd95s_before
+    )
+    if print_hd95_before_to_terminal:
+        print_metric_row_as_csv("before_registration", hd95s_before, "hd95")
 
 
 image_pair_memory_cache = {}
@@ -576,7 +629,7 @@ def process_subject(
     pet_label_template: str = "PSMARegPSMA_{case_id}_0001_{tp}",
     io_lr: float = 1e-1,
     io_it: int = 100,
-) -> Tuple[float, float, float, float, float, float, Dict[int, float]]:
+) -> Tuple[float, float, float, float, float, float, float, Dict[int, float]]:
 
     if case_id in image_pair_memory_cache:
         pair = image_pair_memory_cache[case_id]
@@ -788,6 +841,10 @@ def process_subject(
     warped_np = seg_their[0, 0].round().long().cpu().numpy().astype(np.int16)
     moving_np = seg_moving[0, 0].round().long().cpu().numpy().astype(np.int16)
     hd95 = compute_hd95_official(fixed_np, moving_np, warped_np, spacing_mm)
+    # before registration: the "warped" labels are just the moving ones
+    hd95_before = compute_hd95_official(fixed_np, moving_np, moving_np, spacing_mm)
+
+    # tqdm.tqdm.write(f"{case_id}: hd95 before={hd95_before:.4f}\thd95 after={hd95:.4f}")
 
     their_st_lin = SpatialTransformer(size=cfg.img_shape, mode="bilinear").to(device)
 
@@ -857,7 +914,7 @@ def process_subject(
     )
     save_disp(disp_half, out_dir / "submission", case_id)
 
-    return dice_their, dice_before, mtv, tlg, ndv, hd95, per_label
+    return dice_their, dice_before, mtv, tlg, ndv, hd95, hd95_before, per_label
 
 
 CONFIGS_REPLACEMENTS: Dict[str, Dict[str, float | bool]] = {
@@ -1102,8 +1159,8 @@ def main() -> None:
                     )
 
         if baselines_done is False:
-            run_baseline("affine", baseline_polyaffine=False)
-            run_baseline("polyaffine", baseline_polyaffine=True)
+            # run_baseline("affine", baseline_polyaffine=False)
+            # run_baseline("polyaffine", baseline_polyaffine=True)
             baselines_done = True
 
         if eval_official:
