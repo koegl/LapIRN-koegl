@@ -114,11 +114,9 @@ def save_initial(
     )
 
 
-def norm_ct(
-    vol: np.ndarray, hu_min: float = -1000.0, hu_max: float = 1500.0
-) -> np.ndarray:
-    """Clip to a fixed HU window and scale to [0, 1]."""
-    return np.clip((vol - hu_min) / (hu_max - hu_min), 0.0, 1.0)
+def norm_ct(vol: np.ndarray) -> np.ndarray:
+    """Min-max normalize a CT volume to [0, 1]."""
+    return (vol - vol.min()) / (vol.max() - vol.min() + 1e-8)
 
 
 def norm_pet(vol: np.ndarray, suv_max: float = 20.0) -> np.ndarray:
