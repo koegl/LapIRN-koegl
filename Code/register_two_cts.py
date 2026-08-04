@@ -108,9 +108,7 @@ def build_input(
     ct_raw = nib.load(str(ct_path)).get_fdata().astype(np.float32)
 
     mask = my_data.get_body_mask(ct_raw)
-    ct_raw = my_data.apply_body_mask(
-        ct_raw, mask, fill_value=float(np.percentile(ct_raw, 0.5))
-    )
+    ct_raw = my_data.apply_body_mask(ct_raw, mask, fill_value=my_data.CT_AIR_HU)
 
     # dummy PET: all zeros, same grid as the CT
     pet_raw = np.zeros_like(ct_raw)

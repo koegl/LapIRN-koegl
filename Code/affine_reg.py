@@ -142,12 +142,8 @@ def compute_affine_dvf(
     # Apply bed removal before passing to ANTs
     fixed_mask = my_data.get_body_mask(fixed_np)
     moving_mask = my_data.get_body_mask(moving_np)
-    fixed_np = my_data.apply_body_mask(
-        fixed_np, fixed_mask, float(np.percentile(fixed_np, 0.5))
-    )
-    moving_np = my_data.apply_body_mask(
-        moving_np, moving_mask, float(np.percentile(moving_np, 0.5))
-    )
+    fixed_np = my_data.apply_body_mask(fixed_np, fixed_mask, my_data.CT_AIR_HU)
+    moving_np = my_data.apply_body_mask(moving_np, moving_mask, my_data.CT_AIR_HU)
 
     fixed_ants = make_lowres_ants_image_fn(
         preprocess_ct_fn(fixed_np),

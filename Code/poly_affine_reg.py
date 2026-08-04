@@ -189,12 +189,8 @@ def load_val_pair(
     x_mask = my_data.get_body_mask(x_ct_raw)
     y_mask = my_data.get_body_mask(y_ct_raw)
 
-    x_ct_raw = my_data.apply_body_mask(
-        x_ct_raw, x_mask, fill_value=float(np.percentile(x_ct_raw, 0.5))
-    )
-    y_ct_raw = my_data.apply_body_mask(
-        y_ct_raw, y_mask, fill_value=float(np.percentile(y_ct_raw, 0.5))
-    )
+    x_ct_raw = my_data.apply_body_mask(x_ct_raw, x_mask, fill_value=my_data.CT_AIR_HU)
+    y_ct_raw = my_data.apply_body_mask(y_ct_raw, y_mask, fill_value=my_data.CT_AIR_HU)
 
     x_pet_raw = my_data.apply_body_mask(
         load_pet(tp_x, case_id_x), x_mask, fill_value=0.0

@@ -114,9 +114,17 @@ def save_initial(
     )
 
 
-def norm_ct(vol: np.ndarray) -> np.ndarray:
-    """Min-max normalize a CT volume to [0, 1]."""
-    return (vol - vol.min()) / (vol.max() - vol.min() + 1e-8)
+# Air in Hounsfield units. Doubles as the lower bound of the CT window and as
+# the body-mask fill, so masked-out voxels always land on exactly 0 after
+# normalization and the two cannot drift apart.
+CT_AIR_HU = -1000.0
+
+
+def norm_ct(
+    vol: np.ndarray, hu_min: float = CT_AIR_HU, hu_max: float = 1500.0
+) -> np.ndarray:
+    """Clip to a fixed HU window and scale to [0, 1]."""
+    return np.clip((vol - hu_min) / (hu_max - hu_min), 0.0, 1.0)
 
 
 def norm_pet(vol: np.ndarray, suv_max: float = 20.0) -> np.ndarray:
@@ -327,7 +335,7 @@ def load_single_session(data_dir: Path, case_id: str, tp: str) -> dict:
 
     ct_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id}_0000_{tp}.nii.gz")
     mask = get_body_mask(ct_raw)
-    ct_raw = apply_body_mask(ct_raw, mask, fill_value=float(np.percentile(ct_raw, 0.5)))
+    ct_raw = apply_body_mask(ct_raw, mask, fill_value=CT_AIR_HU)
 
     pet_raw = load_vol(image_dir / f"PSMARegPSMA_{case_id}_0001_{tp}.nii.gz")
     pet_raw = apply_body_mask(pet_raw, mask, fill_value=0.0)
@@ -575,14 +583,11 @@ def load_pair_to_dict(
     y_mask = get_body_mask(y_ct_raw)
 
     # Apply mask before normalization:
-    #   CT: fill outside with 0.5th percentile of raw HU (original remove_bed behaviour)
+    #   CT: fill outside with air (CT_AIR_HU), the same value the CT window
+#       clips at, so the masked-out region normalizes to exactly 0
     #   PET: fill outside with 0.0 (SUV=0 is correct background)
-    x_ct_raw = apply_body_mask(
-        x_ct_raw, x_mask, fill_value=float(np.percentile(x_ct_raw, 0.5))
-    )
-    y_ct_raw = apply_body_mask(
-        y_ct_raw, y_mask, fill_value=float(np.percentile(y_ct_raw, 0.5))
-    )
+    x_ct_raw = apply_body_mask(x_ct_raw, x_mask, fill_value=CT_AIR_HU)
+    y_ct_raw = apply_body_mask(y_ct_raw, y_mask, fill_value=CT_AIR_HU)
 
     if ignore_pet:
         return {
@@ -651,14 +656,11 @@ def load_abdomen_pair_to_dict(
     y_mask = get_body_mask(y_ct_raw)
 
     # Apply mask before normalization:
-    #   CT: fill outside with 0.5th percentile of raw HU (original remove_bed behaviour)
+    #   CT: fill outside with air (CT_AIR_HU), the same value the CT window
+#       clips at, so the masked-out region normalizes to exactly 0
     #   PET: fill outside with 0.0 (SUV=0 is correct background)
-    x_ct_raw = apply_body_mask(
-        x_ct_raw, x_mask, fill_value=float(np.percentile(x_ct_raw, 0.5))
-    )
-    y_ct_raw = apply_body_mask(
-        y_ct_raw, y_mask, fill_value=float(np.percentile(y_ct_raw, 0.5))
-    )
+    x_ct_raw = apply_body_mask(x_ct_raw, x_mask, fill_value=CT_AIR_HU)
+    y_ct_raw = apply_body_mask(y_ct_raw, y_mask, fill_value=CT_AIR_HU)
 
     return {
         "x_ct": t(norm_ct(x_ct_raw)).float(),
