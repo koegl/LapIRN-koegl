@@ -280,8 +280,14 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
 
         bias_opt = False
 
+        # without lvl1 this is the coarsest level, so there is no incoming
+        # velocity field to concatenate (3 fewer input channels)
+        encoder_in_channel = self.in_channel
+        if self.model_lvl1 is not None:
+            encoder_in_channel += 3
+
         self.input_encoder_lvl1 = self.input_feature_extract(
-            self.in_channel + 3, self.start_channel * 4, bias=bias_opt
+            encoder_in_channel, self.start_channel * 4, bias=bias_opt
         )
 
         self.down_conv = nn.Conv3d(
@@ -324,6 +330,8 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
         self.config = config.TrainingConfig()
 
     def unfreeze_modellvl1(self):
+        if self.model_lvl1 is None:
+            return
         # unFreeze model_lvl1 weight
         print("\nunfreeze model_lvl1 parameter")
         for param in self.model_lvl1.parameters():
@@ -460,18 +468,25 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
         return layer
 
     def forward(self, x, y):
-        lvl1_disp, _, _, lvl1_v, lvl1_embedding = self.model_lvl1(x, y)
-        lvl1_disp_up = self.up_tri(lvl1_disp)
-        lvl1_v_up = self.up_tri(lvl1_v)
+        standalone = self.model_lvl1 is None
 
         down_y = self.down_avg(y)
         down_x = self.down_avg(x)
 
-        warpped_x = self.transform(
-            down_x, lvl1_disp_up.permute(0, 2, 3, 4, 1), self.grid_1
-        )
+        if standalone:
+            # coarsest level: nothing to warp with and no velocity to carry over
+            lvl1_v = None
+            cat_input_lvl2 = torch.cat((down_x, down_y), 1)
+        else:
+            lvl1_disp, _, _, lvl1_v, lvl1_embedding = self.model_lvl1(x, y)
+            lvl1_disp_up = self.up_tri(lvl1_disp)
+            lvl1_v_up = self.up_tri(lvl1_v)
 
-        cat_input_lvl2 = torch.cat((warpped_x, down_y, lvl1_v_up), 1)
+            warpped_x = self.transform(
+                down_x, lvl1_disp_up.permute(0, 2, 3, 4, 1), self.grid_1
+            )
+
+            cat_input_lvl2 = torch.cat((warpped_x, down_y, lvl1_v_up), 1)
 
         # bf16 autocast around the conv trunk only; flows upcast to fp32
         # before composition / scaling-and-squaring / grid_sample
@@ -479,7 +494,8 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
             fea_e0 = self.input_encoder_lvl1(cat_input_lvl2)
             e0 = self.down_conv(fea_e0)
 
-            e0 = e0 + lvl1_embedding
+            if not standalone:
+                e0 = e0 + lvl1_embedding
 
             e0 = self.resblock_group_lvl1(e0)
             e0 = self.up(e0)
@@ -488,7 +504,10 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
             )
         output_disp_e0_v = output_disp_e0_v.float()
         e0 = e0.float()
-        compose_field_e0_lvl1v = output_disp_e0_v + lvl1_v_up.float()
+        if standalone:
+            compose_field_e0_lvl1v = output_disp_e0_v
+        else:
+            compose_field_e0_lvl1v = output_disp_e0_v + lvl1_v_up.float()
         output_disp_e0 = self.diff_transform(compose_field_e0_lvl1v, self.grid_1)
         warpped_inputx_lvl1_out = self.transform(
             x, output_disp_e0.permute(0, 2, 3, 4, 1), self.grid_1

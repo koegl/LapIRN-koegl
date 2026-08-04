@@ -344,14 +344,18 @@ def train_lvl3(
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model_lvl1 = Miccai2020_LDR_laplacian_unit_add_lvl1(
-        in_channel=config.in_channel,
-        n_classes=config.n_classes,
-        start_channel=config.start_channel,
-        is_train=True,
-        imgshape=config.img_shape_4,
-        range_flow=config.range_flow,
-    ).to(device)
+    if config.use_lvl1:
+        model_lvl1 = Miccai2020_LDR_laplacian_unit_add_lvl1(
+            in_channel=config.in_channel,
+            n_classes=config.n_classes,
+            start_channel=config.start_channel,
+            is_train=True,
+            imgshape=config.img_shape_4,
+            range_flow=config.range_flow,
+        ).to(device)
+    else:
+        model_lvl1 = None
+
     model_lvl2 = Miccai2020_LDR_laplacian_unit_add_lvl2(
         in_channel=config.in_channel,
         n_classes=config.n_classes,
@@ -879,8 +883,10 @@ def train_lvl3(
                     f"jacob={epoch_metrics['train_lvl3/jacob']:.6f}\t"
                     f"unrolled={epoch_metrics['train_lvl3/unrolled_io']:.4f}\t"
                 )
-        if config.overfit is False and (
-            global_step % val_step_interval == 0 or is_last_step
+        if (
+            False
+            and config.overfit is False
+            and (global_step % val_step_interval == 0 or is_last_step)
         ):
             val_losses = evaluate_lvl3(
                 model=model,

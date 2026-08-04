@@ -25,14 +25,18 @@ def main() -> None:
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model_lvl1 = Miccai2020_LDR_laplacian_unit_add_lvl1(
-        in_channel=cfg.in_channel,
-        n_classes=cfg.n_classes,
-        start_channel=cfg.start_channel,
-        is_train=True,
-        imgshape=cfg.img_shape_4,
-        range_flow=cfg.range_flow,
-    ).to(device)
+    if cfg.use_lvl1:
+        model_lvl1 = Miccai2020_LDR_laplacian_unit_add_lvl1(
+            in_channel=cfg.in_channel,
+            n_classes=cfg.n_classes,
+            start_channel=cfg.start_channel,
+            is_train=True,
+            imgshape=cfg.img_shape_4,
+            range_flow=cfg.range_flow,
+        ).to(device)
+    else:
+        model_lvl1 = None
+
     model_lvl2 = Miccai2020_LDR_laplacian_unit_add_lvl2(
         in_channel=cfg.in_channel,
         n_classes=cfg.n_classes,

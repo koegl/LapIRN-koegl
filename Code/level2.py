@@ -280,7 +280,7 @@ def evaluate_lvl2(
 
 def train_lvl2(
     config: TrainingConfig,
-    path_model_level1: Path,
+    path_model_level1: Optional[Path],
     train_generator: torch_data.DataLoader,
     valid_generator: torch_data.DataLoader,
     valid_tubingen_generator: Optional[torch_data.DataLoader] = None,
@@ -320,20 +320,27 @@ def train_lvl2(
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model_lvl1 = Miccai2020_LDR_laplacian_unit_add_lvl1(
-        in_channel=config.in_channel,
-        n_classes=config.n_classes,
-        start_channel=config.start_channel,
-        is_train=True,
-        imgshape=config.img_shape_4,
-        range_flow=config.range_flow,
-    ).to(device)
+    if config.use_lvl1:
+        if path_model_level1 is None:
+            raise ValueError("path_model_level1 is required when config.use_lvl1")
 
-    print("Loading weight for model_lvl1...", path_model_level1)
-    model_lvl1.load_state_dict(torch.load(path_model_level1))
+        model_lvl1 = Miccai2020_LDR_laplacian_unit_add_lvl1(
+            in_channel=config.in_channel,
+            n_classes=config.n_classes,
+            start_channel=config.start_channel,
+            is_train=True,
+            imgshape=config.img_shape_4,
+            range_flow=config.range_flow,
+        ).to(device)
 
-    for param in model_lvl1.parameters():
-        param.requires_grad = False
+        print("Loading weight for model_lvl1...", path_model_level1)
+        model_lvl1.load_state_dict(torch.load(path_model_level1))
+
+        for param in model_lvl1.parameters():
+            param.requires_grad = False
+    else:
+        print("use_lvl1 is False -> training lvl2 as the coarsest level")
+        model_lvl1 = None
 
     model = Miccai2020_LDR_laplacian_unit_add_lvl2(
         in_channel=config.in_channel,
@@ -389,7 +396,7 @@ def train_lvl2(
     train_iter = utils.cycle(train_generator)
 
     warmup_steps = int(round(config.warmup_epochs * steps_per_epoch))
-    if config.warmup_epochs >= config.unfreeze_epoch_in_lvl2:
+    if config.use_lvl1 and config.warmup_epochs >= config.unfreeze_epoch_in_lvl2:
         print(
             f"[WARN] lvl2 warmup ({config.warmup_epochs} ep) does not finish "
             f"before unfreeze ({config.unfreeze_epoch_in_lvl2} ep); the fresh "
@@ -781,8 +788,10 @@ def train_lvl2(
                     f"jacob={epoch_metrics['train_lvl2/jacob']:.6f}; jacob_weighted={epoch_metrics['train_lvl2/jacob'] * config.w_jacobian:.6f} "
                 )
 
-        if config.overfit is False and (
-            global_step % val_step_interval == 0 or is_last_step
+        if (
+            False
+            and config.overfit is False
+            and (global_step % val_step_interval == 0 or is_last_step)
         ):
             val_losses = evaluate_lvl2(
                 model=model,

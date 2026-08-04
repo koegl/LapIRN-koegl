@@ -316,14 +316,18 @@ def load_val_pair(val_image_dir: Path, case_id: str) -> Dict[str, torch.Tensor]:
 def create_model(
     device: torch.device, cfg: TrainingConfig, model_path: Path
 ) -> torch.nn.Module:
-    model_lvl1 = miccai2020_model_stage.Miccai2020_LDR_laplacian_unit_add_lvl1(
-        in_channel=cfg.in_channel,
-        n_classes=cfg.n_classes,
-        start_channel=cfg.start_channel,
-        is_train=True,
-        imgshape=cfg.img_shape_4,
-        range_flow=cfg.range_flow,
-    ).to(device)
+    if cfg.use_lvl1:
+        model_lvl1 = miccai2020_model_stage.Miccai2020_LDR_laplacian_unit_add_lvl1(
+            in_channel=cfg.in_channel,
+            n_classes=cfg.n_classes,
+            start_channel=cfg.start_channel,
+            is_train=True,
+            imgshape=cfg.img_shape_4,
+            range_flow=cfg.range_flow,
+        ).to(device)
+    else:
+        model_lvl1 = None
+
     model_lvl2 = miccai2020_model_stage.Miccai2020_LDR_laplacian_unit_add_lvl2(
         in_channel=cfg.in_channel,
         n_classes=cfg.n_classes,

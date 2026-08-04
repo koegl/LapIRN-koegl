@@ -27,13 +27,19 @@ class TrainingConfig:
     cache_dir_poly = DATA_PATH / "PSMAReg/poly_cache"
     split_path = repo_dir / "split.json"
     val_fraction: float = 0.15
-    use_cache_train_real: bool = False
-    use_cache_train_synthetic: bool = False
-    use_cache_valid: bool = False
+    use_cache_train_real: bool = True
+    use_cache_train_synthetic: bool = True
+    use_cache_valid: bool = True
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
     use_poly_affine: bool = False
     use_labels_directly: bool = False
+
+    # False -> skip the quarter-res level entirely: lvl2 (half res) becomes the
+    # coarsest level and runs standalone, lvl3 (full res) sits on top of it.
+    # NB: lvl2 weights are not interchangeable between the two modes (its input
+    # encoder loses the 3 velocity channels coming from lvl1).
+    use_lvl1: bool = False
 
     use_synthetic: bool = False
     use_tubingen: bool = False
@@ -87,7 +93,7 @@ class TrainingConfig:
 
     # train val
     total_steps_lvl1: int = 80000
-    total_steps_lvl2: int = 80000
+    total_steps_lvl2: int = 100000
     total_steps_lvl3: int = 120000
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
