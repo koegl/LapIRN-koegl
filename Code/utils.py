@@ -1,5 +1,6 @@
 import contextlib
 import json
+import math
 import os
 from contextlib import ExitStack
 from pathlib import Path
@@ -14,6 +15,7 @@ from config import TrainingConfig
 from miccai2020_model_stage import (
     SpatialTransform_unit,
 )
+from torch.utils import checkpoint as torch_checkpoint
 from torch.utils import data as torch_data
 
 import wandb
@@ -619,6 +621,240 @@ def dice_loss_with_grad(
 
     if class_weights is not None:
         w = class_weights[classes.round().long()]
+        w = w / (w.mean() + eps)
+        return 1.0 - (w * dice_stack).sum() / w.sum()
+
+    if return_each:
+        return 1.0 - dice_stack
+    else:
+        return 1.0 - dice_stack.mean()
+
+
+def _mask_bbox(mask: torch.Tensor) -> Tuple[int, int, int, int, int, int] | None:
+    """Tight half-open bbox (d0, d1, h0, h1, w0, w1) of a (B, 1, D, H, W) bool
+    mask, or None if the mask is empty. Uses per-axis `any` reductions rather
+    than nonzero() so nothing proportional to the number of set voxels is
+    materialized."""
+    m = mask.reshape(-1, *mask.shape[-3:]).any(0)  # (D, H, W)
+
+    dh = m.any(2)  # (D, H)
+    occ_d = dh.any(1)  # (D,)
+    occ_h = dh.any(0)  # (H,)
+    occ_w = m.any(1).any(0)  # (W,)
+
+    nz_d = occ_d.nonzero().flatten()
+    if nz_d.numel() == 0:
+        return None
+    nz_h = occ_h.nonzero().flatten()
+    nz_w = occ_w.nonzero().flatten()
+
+    # one device->host sync for all six bounds instead of six
+    bounds = torch.stack(
+        [nz_d[0], nz_d[-1] + 1, nz_h[0], nz_h[-1] + 1, nz_w[0], nz_w[-1] + 1]
+    )
+    d0, d1, h0, h1, w0, w1 = bounds.tolist()
+    return d0, d1, h0, h1, w0, w1
+
+
+def _class_dice_cropped(
+    sample_grid: torch.Tensor,
+    moving_label: torch.Tensor,
+    fixed_label: torch.Tensor,
+    class_value: float,
+    box: Tuple[int, int, int, int, int, int],
+    eps: float,
+) -> torch.Tensor:
+    """Soft dice for one class inside `box`, as a 0-dim tensor.
+
+    Split out so it can be wrapped in `torch.utils.checkpoint`: every tensor it
+    allocates is then dropped at the end of the forward pass and recomputed
+    during backward, leaving only `sample_grid` (which the caller shares across
+    classes anyway) alive in between.
+    """
+    d0, d1, h0, h1, w0, w1 = box
+    shape_d, shape_h, shape_w = moving_label.shape[-3:]
+    n_d, n_h, n_w = d1 - d0, h1 - h0, w1 - w0
+
+    moving_c = (moving_label[:, :, d0:d1, h0:h1, w0:w1] == class_value).float()
+    fixed_c = (fixed_label[:, :, d0:d1, h0:h1, w0:w1] == class_value).float()
+
+    # remap the full-volume normalized coordinates into the crop's own
+    # normalized frame: u' = u * (N / n) + ((N - 2 * o) / n - 1). Components are
+    # ordered (x, y, z) = (W, H, D).
+    scale = torch.tensor(
+        [shape_w / n_w, shape_h / n_h, shape_d / n_d],
+        device=sample_grid.device,
+        dtype=sample_grid.dtype,
+    )
+    offset = torch.tensor(
+        [
+            (shape_w - 2 * w0) / n_w - 1.0,
+            (shape_h - 2 * h0) / n_h - 1.0,
+            (shape_d - 2 * d0) / n_d - 1.0,
+        ],
+        device=sample_grid.device,
+        dtype=sample_grid.dtype,
+    )
+    grid_c = sample_grid[:, d0:d1, h0:h1, w0:w1, :] * scale + offset
+
+    warped_c = torch.nn.functional.grid_sample(
+        moving_c,
+        grid_c,
+        mode="bilinear",
+        padding_mode="border",
+        align_corners=False,
+    )
+
+    intersection = (warped_c * fixed_c).sum()
+    cardinality = warped_c.sum() + fixed_c.sum()
+    return (2.0 * intersection + eps) / (cardinality + eps)
+
+
+def dice_loss_with_grad_bbox(
+    moving_label: torch.Tensor,
+    fixed_label: torch.Tensor,
+    disp: torch.Tensor,
+    grid: torch.Tensor,
+    transform: SpatialTransform_unit,
+    eps: float = 1e-5,
+    return_each: bool = False,
+    class_weights: torch.Tensor | None = None,
+    extra_margin: int = 2,
+    max_disp_vox: Tuple[float, float, float] | None = None,
+    use_checkpoint: bool = False,
+) -> torch.Tensor | None:
+    """Memory-lean drop-in for `dice_loss_with_grad`, cropped per class.
+
+    Same loss, computed one class at a time inside the union bounding box of
+    (moving == c) and (fixed == c), dilated by the largest displacement in the
+    field plus `extra_margin`. Most labels occupy well under 5% of the volume,
+    so the tensors kept alive for backward shrink by roughly the same factor.
+
+    Why the crop is exact, not an approximation. Let B be the dilated box and
+    `maxd` the per-axis bound on |displacement| in voxels, so B contains
+    bbox(moving == c) dilated by maxd:
+
+    * warped(p) for p outside B is 0. It could only be non-zero if p + d(p)
+      landed in bbox(moving == c), which would put p within maxd of that box,
+      i.e. inside B. So nothing is missed from `warped.sum()`.
+    * for p inside B whose source p + d(p) falls outside B, that source is more
+      than maxd away from bbox(moving == c), so the true value is 0; the
+      `padding_mode="border"` clamp returns the value on B's boundary shell,
+      which is background for this class because the box was dilated by at
+      least one voxel. So the clamp returns 0 too.
+    * bbox(fixed == c) is contained in B by construction.
+
+    All three sums therefore match the uncropped computation exactly, up to
+    floating-point summation order. The bbox itself is derived from the integer
+    labels under no_grad, so it is a constant and gradients flow only through
+    the (cropped, coordinate-remapped) sampling grid.
+
+    Args:
+        moving_label: (B, 1, D, H, W) integer tensor, moving labels.
+        fixed_label: (B, 1, D, H, W) integer tensor, fixed labels.
+        disp: (B, 3, D, H, W) displacement field (gradients flow through this).
+        grid: level grid for SpatialTransform_unit.
+        transform: kept for API compatibility; the bilinear warp is inlined.
+        eps: Smoothing term.
+        return_each: return the per-class losses instead of their mean.
+        class_weights: optional per-label weights, indexed by integer label
+            value. Renormalized over the classes actually used.
+        extra_margin: voxels of slack added on top of the displacement bound.
+            Must be >= 1 for the border-clamp argument above to hold.
+        max_disp_vox: per-axis (D, H, W) bound on |displacement| in voxels. If
+            None it is derived from `disp`, which costs one reduction over the
+            field. Pass it if you already know a bound and want to skip that.
+        use_checkpoint: recompute each class's crop during backward instead of
+            keeping it alive, at the cost of one extra (cropped) forward pass.
+
+    Measured on a real 114-label pair at 192x192x288 (Code/check_dice_bbox.py),
+    memory retained from the end of the forward until backward:
+
+        dice_loss_with_grad   9357 MiB    1.0x
+        this, crop only        540 MiB   17.3x
+        this, + checkpoint     122 MiB   76.7x
+
+    and the crop is also ~4x faster in the forward, because it does ~4x less
+    work: the per-class boxes sum to ~2.5 volumes rather than 114. What autograd
+    retains per grid_sample call is (2C + 3)|box| - the one-hots for C classes
+    plus the sampling grid - which is why the crop cannot reach the checkpointed
+    figure on its own: cropping turns the single shared grid into a per-class
+    one and pays 3|box| for it.
+
+    Returns:
+        Scalar 1 - mean_foreground_dice, or None if no class is usable.
+    """
+
+    classes = fixed_label.unique()
+    classes = classes[classes != 0]  # exclude background
+
+    if classes.numel() == 0:
+        return None
+
+    classes = classes[torch.isin(classes, moving_label.unique())]
+    if classes.numel() == 0:
+        return None
+
+    shape_d, shape_h, shape_w = moving_label.shape[-3:]
+    flow = disp.permute(0, 2, 3, 4, 1)  # (B, D, H, W, 3)
+    sample_grid = grid + flow  # built once, sliced per class
+
+    # grid_sample's last-dim components are ordered (x, y, z) = (W, H, D), so
+    # component k indexes spatial axis 2 - k. Displacement is in normalized
+    # units where a span of 2 covers N voxels, hence the N / 2 factor.
+    if max_disp_vox is None:
+        with torch.no_grad():
+            amax = disp.detach().abs().amax(dim=(0, 2, 3, 4))  # (3,) -> (W, H, D)
+            max_w, max_h, max_d = (amax * 0.5).tolist()
+            max_d *= shape_d
+            max_h *= shape_h
+            max_w *= shape_w
+    else:
+        max_d, max_h, max_w = max_disp_vox
+
+    margin = max(extra_margin, 1)
+    pad_d = int(math.ceil(max_d)) + margin
+    pad_h = int(math.ceil(max_h)) + margin
+    pad_w = int(math.ceil(max_w)) + margin
+
+    dice_scores = []
+    used_classes = []
+    for c in classes.tolist():
+        with torch.no_grad():
+            occupied = (moving_label == c) | (fixed_label == c)
+            box = _mask_bbox(occupied)
+        if box is None:
+            continue
+
+        d0, d1, h0, h1, w0, w1 = box
+        box = (
+            max(0, d0 - pad_d),
+            min(shape_d, d1 + pad_d),
+            max(0, h0 - pad_h),
+            min(shape_h, h1 + pad_h),
+            max(0, w0 - pad_w),
+            min(shape_w, w1 + pad_w),
+        )
+
+        args = (sample_grid, moving_label, fixed_label, c, box, eps)
+        if use_checkpoint:
+            score = torch_checkpoint.checkpoint(
+                _class_dice_cropped, *args, use_reentrant=False
+            )
+        else:
+            score = _class_dice_cropped(*args)
+
+        dice_scores.append(score)
+        used_classes.append(c)
+
+    if not dice_scores:
+        return None
+
+    dice_stack = torch.stack(dice_scores)
+
+    if class_weights is not None:
+        idx = torch.tensor(used_classes, device=dice_stack.device).round().long()
+        w = class_weights[idx]
         w = w / (w.mean() + eps)
         return 1.0 - (w * dice_stack).sum() / w.sum()
 

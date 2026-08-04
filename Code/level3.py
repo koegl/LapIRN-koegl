@@ -221,11 +221,21 @@ def evaluate_lvl3(
             X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_prereg, grid_full)
             X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_prereg, grid_full)
 
-            loss_dice_ct = utils.dice_loss_with_grad(
-                X_lbl_ct, Y_lbl_ct, F_X_Y, model.grid_1, transform
+            loss_dice_ct = utils.dice_loss_with_grad_bbox(
+                X_lbl_ct,
+                Y_lbl_ct,
+                F_X_Y,
+                model.grid_1,
+                transform,
+                use_checkpoint=True,
             )
-            loss_dice_pet = utils.dice_loss_with_grad(
-                X_lbl_pet, Y_lbl_pet, F_X_Y, model.grid_1, transform
+            loss_dice_pet = utils.dice_loss_with_grad_bbox(
+                X_lbl_pet,
+                Y_lbl_pet,
+                F_X_Y,
+                model.grid_1,
+                transform,
+                use_checkpoint=True,
             )
 
             moving_pet_mask = (X_lbl_pet == 1).float()
@@ -681,12 +691,24 @@ def train_lvl3(
         else:
             loss_multiNCC = config.w_ct * loss_ncc_ct
 
-        loss_dice_ct = utils.dice_loss_with_grad(
-            X_lbl_ct, Y_lbl_ct, F_X_Y, model.grid_1, transform
+        x = 0
+
+        loss_dice_ct = utils.dice_loss_with_grad_bbox(
+            X_lbl_ct,
+            Y_lbl_ct,
+            F_X_Y,
+            model.grid_1,
+            transform,
+            use_checkpoint=True,
         )
         with torch.no_grad():
-            loss_dice_pet = utils.dice_loss_with_grad(
-                X_lbl_pet, Y_lbl_pet, F_X_Y, model.grid_1, transform
+            loss_dice_pet = utils.dice_loss_with_grad_bbox(
+                X_lbl_pet,
+                Y_lbl_pet,
+                F_X_Y,
+                model.grid_1,
+                transform,
+                use_checkpoint=True,
             )
 
         moving_pet_mask = (X_lbl_pet == 1).float()

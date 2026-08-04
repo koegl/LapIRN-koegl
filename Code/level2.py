@@ -230,11 +230,21 @@ def evaluate_lvl2(
                 Y_lbl_pet.to(device), scale_factor=0.5
             )
 
-            loss_dice_ct = utils.dice_loss_with_grad(
-                X_lbl_ct_down, Y_lbl_ct_down, F_X_Y, model.grid_1, transform
+            loss_dice_ct = utils.dice_loss_with_grad_bbox(
+                X_lbl_ct_down,
+                Y_lbl_ct_down,
+                F_X_Y,
+                model.grid_1,
+                transform,
+                use_checkpoint=True,
             )
-            loss_dice_pet = utils.dice_loss_with_grad(
-                X_lbl_pet_down, Y_lbl_pet_down, F_X_Y, model.grid_1, transform
+            loss_dice_pet = utils.dice_loss_with_grad_bbox(
+                X_lbl_pet_down,
+                Y_lbl_pet_down,
+                F_X_Y,
+                model.grid_1,
+                transform,
+                use_checkpoint=True,
             )
 
             loss = (
@@ -676,12 +686,22 @@ def train_lvl2(
                 name="y_lvl2",
             )
 
-        loss_dice_ct = utils.dice_loss_with_grad(
-            X_lbl_ct_down, Y_lbl_ct_down, F_X_Y, model.grid_1, transform
+        loss_dice_ct = utils.dice_loss_with_grad_bbox(
+            X_lbl_ct_down,
+            Y_lbl_ct_down,
+            F_X_Y,
+            model.grid_1,
+            transform,
+            use_checkpoint=True,
         )
         with torch.no_grad():
-            loss_dice_pet = utils.dice_loss_with_grad(
-                X_lbl_pet_down, Y_lbl_pet_down, F_X_Y, model.grid_1, transform
+            loss_dice_pet = utils.dice_loss_with_grad_bbox(
+                X_lbl_pet_down,
+                Y_lbl_pet_down,
+                F_X_Y,
+                model.grid_1,
+                transform,
+                use_checkpoint=True,
             )
 
         # update total loss
