@@ -66,8 +66,8 @@ class TrainingConfig:
     aug_use_z_crop_asym: bool = True
     aug_flip_prob: float = 0.5
     aug_ct_shift_range: Tuple[float, float] = (
-        -0.010,
-        0.010,
+        -0.020,
+        0.020,
     )  # in normalized [0,1] CT space (~±50 HU)
     aug_ct_scale_range: Tuple[float, float] = (0.9, 1.1)
     aug_pet_scale_range: Tuple[float, float] = (0.85, 1.15)
