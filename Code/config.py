@@ -98,7 +98,7 @@ class TrainingConfig:
     #             the features are concatenated instead of correlated
     # The volume lives at img_shape // 8, so with radius 2 / dilation 1 the
     # search window covers +-2 voxels there == +-16 full-resolution voxels.
-    cost_volume_mode: str = "feat"
+    cost_volume_mode: str = "corr"
     cost_volume_radius: int = 2
     cost_volume_dilation: int = 1
     cost_volume_feat_channels: int = 16
