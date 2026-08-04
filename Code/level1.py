@@ -329,6 +329,11 @@ def train_lvl1(
         is_train=True,
         imgshape=config.img_shape_4,
         range_flow=config.range_flow,
+        cost_volume_mode=config.cost_volume_mode,
+        cost_volume_radius=config.cost_volume_radius,
+        cost_volume_dilation=config.cost_volume_dilation,
+        cost_volume_feat_channels=config.cost_volume_feat_channels,
+        cost_volume_out_channels=config.cost_volume_out_channels,
     ).to(device)
 
     loss_similarity_ct = NCC_fast(win=config.lvl1_ncc_win)
@@ -772,10 +777,8 @@ def train_lvl1(
                     f"jacob={epoch_metrics['train_lvl1/jacob']:.6f}; jacob_weighted={epoch_metrics['train_lvl1/jacob'] * config.w_jacobian:.6f} "
                 )
 
-        if (
-            False
-            and config.overfit is False
-            and (global_step % val_step_interval == 0 or is_last_step)
+        if config.overfit is False and (
+            global_step % val_step_interval == 0 or is_last_step
         ):
             val_losses = evaluate_lvl1(
                 model=model,

@@ -320,6 +320,11 @@ def create_model(
             is_train=True,
             imgshape=cfg.img_shape_4,
             range_flow=cfg.range_flow,
+            cost_volume_mode=cfg.cost_volume_mode,
+            cost_volume_radius=cfg.cost_volume_radius,
+            cost_volume_dilation=cfg.cost_volume_dilation,
+            cost_volume_feat_channels=cfg.cost_volume_feat_channels,
+            cost_volume_out_channels=cfg.cost_volume_out_channels,
         ).to(device)
     else:
         model_lvl1 = None

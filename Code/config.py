@@ -39,7 +39,7 @@ class TrainingConfig:
     # coarsest level and runs standalone, lvl3 (full res) sits on top of it.
     # NB: lvl2 weights are not interchangeable between the two modes (its input
     # encoder loses the 3 velocity channels coming from lvl1).
-    use_lvl1: bool = False
+    use_lvl1: bool = True
 
     use_synthetic: bool = False
     use_tubingen: bool = False
@@ -66,8 +66,8 @@ class TrainingConfig:
     aug_use_z_crop_asym: bool = True
     aug_flip_prob: float = 0.5
     aug_ct_shift_range: Tuple[float, float] = (
-        -0.010,
-        0.010,
+        -0.020,
+        0.020,
     )  # in normalized [0,1] CT space (~±50 HU)
     aug_ct_scale_range: Tuple[float, float] = (0.9, 1.1)
     aug_pet_scale_range: Tuple[float, float] = (0.85, 1.15)
@@ -90,6 +90,19 @@ class TrainingConfig:
     # level head is fully warmed before the previous level is unfrozen.
     warmup_epochs: float = 5
     start_channel: int = 7
+
+    # PWC-Net style local cost volume in lvl1, fused into the res-block trunk.
+    #   "off"  -> baseline
+    #   "corr" -> explicit local 3D correlation between encoded x/y features
+    #   "feat" -> ablation control: same encoder and same extra channels, but
+    #             the features are concatenated instead of correlated
+    # The volume lives at img_shape // 8, so with radius 2 / dilation 1 the
+    # search window covers +-2 voxels there == +-16 full-resolution voxels.
+    cost_volume_mode: str = "corr"
+    cost_volume_radius: int = 2
+    cost_volume_dilation: int = 1
+    cost_volume_feat_channels: int = 16
+    cost_volume_out_channels: int = 16
 
     # train val
     total_steps_lvl1: int = 80000

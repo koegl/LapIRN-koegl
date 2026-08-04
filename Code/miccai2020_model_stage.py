@@ -8,6 +8,41 @@ import torch.nn.functional as F
 from Functions import generate_grid, generate_grid_unit
 
 
+def build_correlation_offsets(radius, dilation):
+    """Offsets of a local 3D search window, as (dz, dy, dx) in feature voxels.
+
+    A dilation > 1 widens the captured displacement range without adding
+    channels, which is the usual trade in PWC-Net style cost volumes.
+    """
+    steps = [i * dilation for i in range(-radius, radius + 1)]
+    return [(dz, dy, dx) for dz in steps for dy in steps for dx in steps]
+
+
+def local_correlation_3d(f_moving, f_fixed, offsets, pad):
+    """Local 3D cost volume between two feature maps.
+
+    corr[:, k] = <f_moving(p + offsets[k]), f_fixed(p)>, so the arg-max offset
+    is the displacement at which the moving image should be sampled -- the same
+    convention as the flow that is later handed to grid_sample.
+    """
+    d, h, w = f_fixed.shape[-3:]
+    f_moving = F.pad(f_moving, (pad,) * 6)
+    corr = [
+        (
+            f_moving[
+                :,
+                :,
+                pad + dz : pad + dz + d,
+                pad + dy : pad + dy + h,
+                pad + dx : pad + dx + w,
+            ]
+            * f_fixed
+        ).sum(dim=1)
+        for dz, dy, dx in offsets
+    ]
+    return torch.stack(corr, dim=1)
+
+
 class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
     def __init__(
         self,
@@ -17,6 +52,11 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
         is_train=True,
         imgshape=(160, 192, 144),
         range_flow=0.4,
+        cost_volume_mode="off",
+        cost_volume_radius=2,
+        cost_volume_dilation=1,
+        cost_volume_feat_channels=16,
+        cost_volume_out_channels=16,
     ):
         super(Miccai2020_LDR_laplacian_unit_add_lvl1, self).__init__()
         self.in_channel = in_channel
@@ -80,7 +120,82 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
             bias=False,
         )
 
+        # Local cost volume between x and y, computed at the res-block
+        # resolution (imgshape // 2) and fused into e0 before the res-blocks.
+        # "corr" is the real thing; "feat" is the ablation control that gets the
+        # same shared encoder and the same extra channel budget but no explicit
+        # matching, so a gain from "corr" cannot be explained by capacity alone.
+        self.cost_volume_mode = cost_volume_mode
+        if self.cost_volume_mode != "off":
+            if self.cost_volume_mode not in ("corr", "feat"):
+                raise ValueError(
+                    f"unknown cost_volume_mode {self.cost_volume_mode!r}, "
+                    "expected one of 'off', 'corr', 'feat'"
+                )
+
+            self.corr_offsets = build_correlation_offsets(
+                cost_volume_radius, cost_volume_dilation
+            )
+            self.corr_pad = cost_volume_radius * cost_volume_dilation
+
+            # shared (siamese) encoder, stride 2 so it lands on the same grid
+            # as down_conv; in_channel stacks x and y, so one image has half.
+            self.corr_encoder = nn.Sequential(
+                nn.Conv3d(
+                    self.in_channel // 2,
+                    cost_volume_feat_channels,
+                    3,
+                    stride=2,
+                    padding=1,
+                    bias=bias_opt,
+                ),
+                nn.LeakyReLU(0.2),
+                nn.Conv3d(
+                    cost_volume_feat_channels,
+                    cost_volume_feat_channels,
+                    3,
+                    stride=1,
+                    padding=1,
+                    bias=bias_opt,
+                ),
+            )
+
+            n_corr_channels = (
+                len(self.corr_offsets)
+                if self.cost_volume_mode == "corr"
+                else 2 * cost_volume_feat_channels
+            )
+            # 1x1x1 first: feeding a few hundred channels straight into a 3x3x3
+            # conv would add ~250k params and swamp the rest of the network.
+            self.corr_compress = nn.Sequential(
+                nn.Conv3d(n_corr_channels, cost_volume_out_channels, 1, bias=bias_opt),
+                nn.LeakyReLU(0.2),
+            )
+            self.corr_fuse = nn.Conv3d(
+                self.start_channel * 4 + cost_volume_out_channels,
+                self.start_channel * 4,
+                1,
+                bias=bias_opt,
+            )
+
         self.config = config.TrainingConfig()
+
+    def cost_volume_features(self, down_x, down_y):
+        """Correlation branch, kept in fp32 -- the tensors here are tiny."""
+        f_x = self.corr_encoder(down_x.float())
+        f_y = self.corr_encoder(down_y.float())
+
+        if self.cost_volume_mode == "corr":
+            # unit-norm features so the scores are cosine similarities; a raw
+            # dot product would be dominated by whichever input channel
+            # (CT vs PET vs label) happens to have the largest magnitude.
+            f_x = F.normalize(f_x, dim=1)
+            f_y = F.normalize(f_y, dim=1)
+            corr = local_correlation_3d(f_x, f_y, self.corr_offsets, self.corr_pad)
+        else:
+            corr = torch.cat((f_x, f_y), 1)
+
+        return self.corr_compress(corr)
 
     def resblock_seq(self, in_channels, bias_opt=False):
         layer = nn.Sequential(
@@ -222,11 +337,19 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
         down_y = cat_input_lvl1[:, c : 2 * c, :, :, :]  # y block: channels 5..9
         down_x = cat_input_lvl1[:, 0:c, :, :, :]  # x block: channels 0..4
 
+        corr_feat = (
+            self.cost_volume_features(down_x, down_y)
+            if self.cost_volume_mode != "off"
+            else None
+        )
+
         # bf16 autocast around the conv trunk only (~40% off activations);
         # flows are upcast to fp32 before any composition / grid_sample / loss
         with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
             fea_e0 = self.input_encoder_lvl1(cat_input_lvl1)
             e0 = self.down_conv(fea_e0)
+            if corr_feat is not None:
+                e0 = self.corr_fuse(torch.cat((e0, corr_feat.to(e0.dtype)), dim=1))
             e0 = self.resblock_group_lvl1(e0)
             e0 = self.up(e0)
             output_disp_e0_v = (
