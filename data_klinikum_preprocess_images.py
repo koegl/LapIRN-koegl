@@ -25,6 +25,39 @@ WHOLE_BODY_SERIES_BY_PRIORITY = (
     "CT ax 3mm SAF",
 )
 
+# need to exclude patients with PETs that we couldnt convert to SUV
+EXLUCDE_PET = [
+    "8M-rhLIeYlw",
+    "T-2E5gxfsmI",
+    "GDYu5GavJ8c",
+    "2VYgP7OOA-w",
+    "uWVuIYc-6gw",
+    "TNhz3uRIjqo",
+    "kA2OcxmxWDc",
+    "BilJ1J-PJCw",
+    "BilJ1J-PJCw",
+    "5kcfs3M-ZEc",
+    "5kcfs3M-ZEc",
+    "jbHwWjKIrss",
+    "DuEANzDZh6I",
+    "D5nsU3QtnJM",
+    "eaYmLmKQdZk",
+    "2DX3v-69KUM",
+    "rJZ-Ou2gwrs",
+    "wzY5r43UD-I",
+    "wzY5r43UD-I",
+    "Q37sPdVoiWQ",
+    "XHHoQGaCKCA",
+    "XJgaQCRJmDE",
+    "y06xSlyG2us",
+    "y06xSlyG2us",
+    "Da0fgYJxw8A",
+    "F-eW7FMy79M",
+    "vJYsjU0-u-w",
+    "Ja9vNzAx-U ",
+    "YxCW0a1l4Mk",
+]
+
 
 def select_ct(ct_dir: Path) -> Path:
     """Return the whole-body axial CT of a session's ``ct`` folder."""
@@ -69,27 +102,45 @@ def automatically_find_pairs(data_dir: Path) -> List[Dict[str, Path]]:
 
     files = []
 
-    for patient in data_dir.iterdir():
+    for patient in sorted(data_dir.iterdir()):
         if not patient.is_dir():
             continue
 
-        pair = {"fixed": Path(), "moving": Path()}
-
         sessions = [s for s in patient.iterdir() if s.is_dir()]
+
+        if len(sessions) != 2:
+            continue
+
         sessions.sort(key=lambda s: s.name)
 
         session_fixed = sessions[0]
         session_moving = sessions[1]
 
-        path_fixed = select_ct(session_fixed / "ct")
-        path_moving = select_ct(session_moving / "ct")
+        path_fixed = list((session_fixed / "ct").iterdir())[0]
+        path_moving = list((session_moving / "ct").iterdir())[0]
 
-        pair["fixed"] = path_fixed
-        pair["moving"] = path_moving
-
+        pair = {"fixed": path_fixed, "moving": path_moving}
         files.append(pair)
 
     return files
+
+
+def find_corresponding_suv(ct_path: Path) -> Path:
+
+    session = ct_path.parent.parent.name
+    patient = ct_path.parent.parent.parent.name
+    main_dir = ct_path.parent.parent.parent.parent
+
+    suv_dir = main_dir.parent / "suv" / patient / session / "pet"
+
+    suv_files = list(suv_dir.glob("*.nii.gz"))
+
+    if len(suv_files) != 1:
+        raise FileNotFoundError(
+            f"Expected exactly one SUV file in {suv_dir}, found {len(suv_files)}"
+        )
+
+    return suv_files[0]
 
 
 def find_files_from_manual_selection(data_dir: Path) -> list[Path]:
@@ -229,23 +280,83 @@ def resample_labels_with_offset(
     return out
 
 
-def preprocess_file(
+def resample_pet_label_with_offset(
+    seg: sitk.Image,
+    offset: np.ndarray,
+    output_size: Tuple[int, int, int] = OUTPUT_SIZE,
+    output_spacing: Tuple[float, float, float] = OUTPUT_SPACING,
+    sigma_scale: float = 0.5,
+    foreground_threshold: float = 0.45,
+) -> sitk.Image:
+    """Anti-aliased single-label resampling for PET tumour masks."""
+    in_spacing = np.asarray(seg.GetSpacing(), dtype=float)
+    out_spacing = np.asarray(output_spacing, dtype=float)
+    sigma = np.maximum(sigma_scale * (out_spacing - in_spacing), 1e-3)
+
+    transform = sitk.TranslationTransform(3)
+    transform.SetOffset(np.asarray(offset, dtype=float).tolist())
+    ref = make_reference(sitk.sitkFloat32, output_size, output_spacing)
+
+    mask = sitk.Cast(sitk.NotEqual(seg, 0), sitk.sitkFloat32)
+    mask = sitk.SmoothingRecursiveGaussian(mask, sigma.tolist(), False)
+    resampled = sitk.Resample(
+        mask, ref, transform, sitk.sitkLinear, 0.0, sitk.sitkFloat32
+    )
+    score = sitk.GetArrayFromImage(resampled)
+    out_arr = (score >= foreground_threshold).astype(np.int16)
+
+    out = sitk.GetImageFromArray(out_arr)
+    out.CopyInformation(make_reference(sitk.sitkInt16, output_size, output_spacing))
+    return out
+
+
+def preprocess_ct(
     in_path: Path,
     out_path: Path,
     output_size: Tuple[int, int, int] = OUTPUT_SIZE,
     output_spacing: Tuple[float, float, float] = OUTPUT_SPACING,
     threshold: float = THRESHOLD,
     top_margin_vox: int = TOP_MARGIN_VOX,
-) -> None:
+) -> np.ndarray:
     image = sitk.ReadImage(in_path)
     offset = compute_offset(
         image, output_size, output_spacing, threshold, top_margin_vox
     )
+
+    if out_path.exists():
+        return offset
+
     resampled = resample_with_offset(
         image,
         offset,
         interpolator=sitk.sitkLinear,
         default_value=-1024.0,
+        output_size=output_size,
+        output_spacing=output_spacing,
+    )
+    sitk.WriteImage(resampled, out_path.as_posix())
+
+    return offset
+
+
+def preprocess_suv(
+    in_path: Path,
+    out_path: Path,
+    offset: np.ndarray,
+    output_size: Tuple[int, int, int] = OUTPUT_SIZE,
+    output_spacing: Tuple[float, float, float] = OUTPUT_SPACING,
+) -> None:
+
+    if out_path.exists():
+        return
+
+    image = sitk.ReadImage(in_path)
+
+    resampled = resample_with_offset(
+        image,
+        offset,
+        interpolator=sitk.sitkLinear,
+        default_value=0.0,
         output_size=output_size,
         output_spacing=output_spacing,
     )
@@ -264,30 +375,63 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     mapping_path = Path(
-        "/home/iml/fryderyk.koegl/code/LapIRN-koegl/mapping_klinikum.json"
+        "/home/iml/fryderyk.koegl/code/LapIRN-koegl/data_klinikum_mapping.json"
     )
-    # if mapping_path.exists():
-    #     mapping_path.unlink()
+    if mapping_path.exists():
+        try:
+            with open(mapping_path, "r") as f:
+                mapping = json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError):
+            mapping = {}
 
     path_pairs = automatically_find_pairs(in_dir)
 
-    for idx, pair in enumerate(tqdm(path_pairs)):
+    pbar = tqdm(path_pairs, ncols=170, desc="Preprocessing CT/SUV pairs")
+    for idx, pair in enumerate(pbar):
         path_fixed = pair["fixed"]
-        path_moving = pair["moving"]
 
-        new_name_fix = f"PSMARegPSMA_4{idx:03d}_0000_00.nii.gz"
-        new_name_mov = f"PSMARegPSMA_4{idx:03d}_0000_01.nii.gz"
+        patient_id = path_fixed.parent.parent.parent.name
 
-        preprocess_file(path_fixed, out_dir / new_name_fix)
-        preprocess_file(path_moving, out_dir / new_name_mov)
+        if patient_id in EXLUCDE_PET:
+            tqdm.write(f"Skipping patient {patient_id} due to missing SUV")
+            continue
 
-        mapping[path_fixed.name] = new_name_fix
-        mapping[new_name_fix] = path_fixed.name
-        mapping[path_moving.name] = new_name_mov
-        mapping[new_name_mov] = path_moving.name
+        try:
+            path_fixed_suv = find_corresponding_suv(path_fixed)
+            path_moving = pair["moving"]
+            path_moving_suv = find_corresponding_suv(path_moving)
 
+            pbar.set_postfix_str(
+                f"{path_fixed.name.replace('.nii.gz', '')} / {path_moving.name.replace('.nii.gz', '')}"
+            )
+
+            new_name_fix = f"PSMARegPSMA_4{idx:03d}_0000_00.nii.gz"
+            new_name_fix_suv = f"PSMARegPSMA_4{idx:03d}_0001_00.nii.gz"
+            new_name_mov = f"PSMARegPSMA_4{idx:03d}_0000_01.nii.gz"
+            new_name_mov_suv = f"PSMARegPSMA_4{idx:03d}_0001_01.nii.gz"
+
+            offset_fixed = preprocess_ct(path_fixed, out_dir / new_name_fix)
+            offset_moving = preprocess_ct(path_moving, out_dir / new_name_mov)
+
+            preprocess_suv(path_fixed_suv, out_dir / new_name_fix_suv, offset_fixed)
+            preprocess_suv(path_moving_suv, out_dir / new_name_mov_suv, offset_moving)
+
+            mapping[path_fixed.name] = new_name_fix
+            mapping[new_name_fix] = path_fixed.name
+            mapping[path_fixed_suv.name] = new_name_fix_suv
+            mapping[new_name_fix_suv] = path_fixed_suv.name
+            mapping[path_moving.name] = new_name_mov
+            mapping[new_name_mov] = path_moving.name
+            mapping[path_moving_suv.name] = new_name_mov_suv
+            mapping[new_name_mov_suv] = path_moving_suv.name
+        except Exception as e:
+            tqdm.write(f"Error processing pair {path_fixed} and {path_moving}: {e}")
+            continue
+        x = 0
     with open(mapping_path, "w") as f:
         json.dump(mapping, f, indent=4)
+
+    x = 0
 
 
 if __name__ == "__main__":

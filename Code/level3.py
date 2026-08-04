@@ -445,6 +445,11 @@ def train_lvl3(
     if start_global_step >= unfreeze_step:
         model.unfreeze_modellvl2()
 
+    _flag = utils.stop_flag_path(config.save_dir, 3)
+    _flag.parent.mkdir(parents=True, exist_ok=True)
+    tqdm.tqdm.write(f"[lvl3] stop early with:  touch {_flag}")
+    utils.log_text(f"touch {_flag}", "stop_lvl3_cmd.txt")
+
     for global_step in range(start_global_step, total_steps):
         epoch = global_step // steps_per_epoch
         is_epoch_start = global_step % steps_per_epoch == 0
@@ -659,6 +664,11 @@ def train_lvl3(
         if not use_dice_pet:
             n_gated += 1
 
+        # losses run in fp32: the bf16 autocast region is confined to the conv
+        # trunk inside the model forwards, and F_X_Y / F_xy / X_Y are upcast to
+        # fp32 before they reach here. This guard makes that invariant explicit
+        # (a no-op today, protective if a future edit wraps the loop body).
+        assert not torch.is_autocast_enabled(), "losses must run outside autocast"
         loss_ncc_ct = loss_similarity_ct(X_Y_ct, Y_4x_ct)
         with torch.no_grad():
             loss_ncc_pet = loss_similarity_pet(X_Y_pet, Y_4x_pet)
@@ -734,35 +744,39 @@ def train_lvl3(
             # Inner loop: descend the same objective run_io deploys (full moving
             # image so the PET channel is available), so the net is seeded for the
             # exact trajectory we run at test time. bone_labels_tensor is reused
-            # from the feed-forward rigidity term above.
-            def io_inner_loss_fn(disp_unit: torch.Tensor) -> torch.Tensor:
-                return instance_opt.unrolled_io_loss(
-                    disp_unit,
-                    y_ct_io,
-                    X_prereg,
-                    X_lbl_ct,
-                    Y_lbl_ct,
-                    transform,
-                    grid_full,
-                    config,
-                    loss_ncc_io,
-                    ncc_weight=config.w_ct,
-                    x_lbl_pet=X_lbl_pet,
-                    bone_values=bone_labels_tensor,
-                    include_pet=config.unroll_include_pet,
-                    include_rigidity=config.unroll_include_rigidity,
-                )
+            # from the feed-forward rigidity term above. autocast(enabled=False):
+            # the refined field + IO losses stay in fp32 (the inner velocity leaf
+            # would otherwise inherit an autocast dtype).
+            with torch.autocast(device_type="cuda", enabled=False):
 
-            refined_disp = instance_opt.unrolled_refine(
-                F_X_Y,
-                io_inner_loss_fn,
-                config,
-                device,
-                n_steps=config.unroll_K,
-                inner_lr=config.unroll_inner_lr,
-                n_integration=config.unroll_n_integration,
-                mode=config.unroll_mode,
-            )
+                def io_inner_loss_fn(disp_unit: torch.Tensor) -> torch.Tensor:
+                    return instance_opt.unrolled_io_loss(
+                        disp_unit,
+                        y_ct_io,
+                        X_prereg,
+                        X_lbl_ct,
+                        Y_lbl_ct,
+                        transform,
+                        grid_full,
+                        config,
+                        loss_ncc_io,
+                        ncc_weight=config.w_ct,
+                        x_lbl_pet=X_lbl_pet,
+                        bone_values=bone_labels_tensor,
+                        include_pet=config.unroll_include_pet,
+                        include_rigidity=config.unroll_include_rigidity,
+                    )
+
+                refined_disp = instance_opt.unrolled_refine(
+                    F_X_Y,
+                    io_inner_loss_fn,
+                    config,
+                    device,
+                    n_steps=config.unroll_K,
+                    inner_lr=config.unroll_inner_lr,
+                    n_integration=config.unroll_n_integration,
+                    mode=config.unroll_mode,
+                )
 
             # Outer meta-loss: grade the net on the same full objective the inner
             # loop descended, which is also what the challenge scores (dice,
@@ -997,6 +1011,11 @@ def train_lvl3(
 
         if config.overfit is False:
             pbar.update(1)
+
+        if is_epoch_end and utils.check_stop_flag(config.save_dir, 3):
+            tqdm.tqdm.write(f"[lvl3] stop flag at step {global_step} -> ending level")
+            utils.log_metrics({"train_lvl3/early_stopped": 1.0}, step=global_step)
+            break
 
     if config.overfit is False:
         pbar.close()

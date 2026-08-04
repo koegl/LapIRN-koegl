@@ -167,7 +167,9 @@ def io_objective(
 
     hard_dice = float("nan")
     if compute_hard_dice:
-        assert transform_nearest is not None, "compute_hard_dice needs transform_nearest"
+        assert transform_nearest is not None, (
+            "compute_hard_dice needs transform_nearest"
+        )
         with torch.no_grad():
             warped_lbl_ct = warp_label(x_lbl_ct, disp_unit, grid, transform_nearest)
             pred = warped_lbl_ct[0, 0].round().long()
@@ -177,7 +179,11 @@ def io_objective(
                 p = pred == lbl
                 t = target == lbl
                 volume_sum = p.sum() + t.sum()
-                dice = 0.0 if volume_sum == 0 else (2.0 * (p & t).sum() / volume_sum).item()
+                dice = (
+                    0.0
+                    if volume_sum == 0
+                    else (2.0 * (p & t).sum() / volume_sum).item()
+                )
                 hard_dices.append(dice)
             hard_dice = float(np.mean(hard_dices))
 
@@ -260,28 +266,25 @@ def build_class_weights(
 # Shared IO refinement operator
 #
 # Both test-time IO (run_io) and training-time unrolled IO parametrize the
-# refinement as a half-resolution stationary velocity field, integrate it with
-# scaling-and-squaring, upsample to full resolution and add it to the network's
-# output `base`. Keeping the parametrization in one place guarantees that what
-# we train against is exactly what we deploy.
+# refinement as a full-resolution stationary velocity field, integrate it with
+# scaling-and-squaring and add it to the network's output `base`. Keeping the
+# parametrization in one place guarantees that what we train against is exactly
+# what we deploy.
 # ---------------------------------------------------------------------------
 
 
 def svf_to_disp(
     base: torch.Tensor,
     velocity: torch.Tensor,
-    identity_vox_half: torch.Tensor,
+    identity_vox: torch.Tensor,
     cfg: config.TrainingConfig,
     n_integration: int,
 ) -> torch.Tensor:
-    """base (unit flow) + refinement decoded from a half-res velocity field.
+    """base (unit flow) + refinement decoded from a full-res velocity field.
 
     Returns a full-resolution unit-flow displacement. Fully differentiable in
     both `velocity` (inner loop) and `base` (network output)."""
-    disp_res_half = synthetic.integrate_svf(velocity, identity_vox_half, n_integration)
-    disp_res_full = torch.nn.functional.interpolate(
-        disp_res_half, scale_factor=2, mode="trilinear", align_corners=False
-    )
+    disp_res_full = synthetic.integrate_svf(velocity, identity_vox, n_integration)
     disp_res_unit = synthetic.unit_flow_from_voxel_disp(
         disp_res_full, cfg.img_shape
     ).flip(1)
@@ -363,9 +366,9 @@ def unrolled_refine(
     if mode not in ("full", "fomaml"):
         raise ValueError(f"unknown unroll mode: {mode!r}")
 
-    half_shape = tuple(s // 2 for s in cfg.img_shape)
-    identity_vox_half = synthetic.build_identity_grid(half_shape, device)
-    velocity = torch.zeros((1, 3) + half_shape, device=device, requires_grad=True)
+    full_shape = tuple(cfg.img_shape)
+    identity_vox_full = synthetic.build_identity_grid(full_shape, device)
+    velocity = torch.zeros((1, 3) + full_shape, device=device, requires_grad=True)
 
     create_graph = mode == "full"
     # In fomaml the inner loop must not see gradients flowing back into `base`,
@@ -374,7 +377,7 @@ def unrolled_refine(
 
     for _ in range(n_steps):
         disp_unit = svf_to_disp(
-            inner_base, velocity, identity_vox_half, cfg, n_integration
+            inner_base, velocity, identity_vox_full, cfg, n_integration
         )
         loss = loss_fn(disp_unit)
         (grad,) = torch.autograd.grad(loss, velocity, create_graph=create_graph)
@@ -387,7 +390,7 @@ def unrolled_refine(
     # Final field. In "full" this closes the K-step graph; in "fomaml" the
     # velocity is frozen and gradient reaches the net only via `base`.
     final_velocity = velocity if create_graph else velocity.detach()
-    return svf_to_disp(base, final_velocity, identity_vox_half, cfg, n_integration)
+    return svf_to_disp(base, final_velocity, identity_vox_full, cfg, n_integration)
 
 
 def run_io(
@@ -414,9 +417,9 @@ def run_io(
     if ncc_weight is None:
         ncc_weight = cfg.w_ct
 
-    half_shape = tuple(s // 2 for s in cfg.img_shape)
-    identity_vox_half = synthetic.build_identity_grid(half_shape, device)
-    velocity = torch.zeros((1, 3) + half_shape, device=device)
+    full_shape = tuple(cfg.img_shape)
+    identity_vox_full = synthetic.build_identity_grid(full_shape, device)
+    velocity = torch.zeros((1, 3) + full_shape, device=device)
     velocity.requires_grad_(True)
     optimizer = torch.optim.Adam([velocity], lr=lr)
 
@@ -444,7 +447,7 @@ def run_io(
     for i in pbar:
         start_time = time.time()
         optimizer.zero_grad()
-        disp_unit = svf_to_disp(base, velocity, identity_vox_half, cfg, n_integration)
+        disp_unit = svf_to_disp(base, velocity, identity_vox_full, cfg, n_integration)
         loss, logs = compute_io_loss(
             disp_unit,
             y,

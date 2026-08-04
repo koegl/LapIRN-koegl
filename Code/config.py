@@ -27,9 +27,9 @@ class TrainingConfig:
     cache_dir_poly = DATA_PATH / "PSMAReg/poly_cache"
     split_path = repo_dir / "split.json"
     val_fraction: float = 0.15
-    use_cache_train_real: bool = True
-    use_cache_train_synthetic: bool = True
-    use_cache_valid: bool = True
+    use_cache_train_real: bool = False
+    use_cache_train_synthetic: bool = False
+    use_cache_valid: bool = False
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
     use_poly_affine: bool = False
@@ -86,8 +86,8 @@ class TrainingConfig:
     start_channel: int = 7
 
     # train val
-    total_steps_lvl1: int = 60000
-    total_steps_lvl2: int = 60000
+    total_steps_lvl1: int = 80000
+    total_steps_lvl2: int = 80000
     total_steps_lvl3: int = 120000
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
@@ -105,9 +105,9 @@ class TrainingConfig:
     w_dice_ct_lvl2: float = 4.0
     w_dice_ct_lvl3: float = 5.0
     w_dice_pet: float = 0.0
-    w_tlg: float = 5.0
-    w_jacobian_tumor: float = 5.0
-    w_bone_rigidity: float = 5.0
+    w_tlg: float = 2.0
+    w_jacobian_tumor: float = 2.0
+    w_bone_rigidity: float = 2.0
     w_dvf: float = 100.0
 
     # meta-learned / unrolled instance optimization (IO)

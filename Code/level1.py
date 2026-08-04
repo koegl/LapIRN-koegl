@@ -376,6 +376,11 @@ def train_lvl1(
     epoch_metrics: Dict[str, float] = {}
     n_gated = 0
 
+    _flag = utils.stop_flag_path(config.save_dir, 1)
+    _flag.parent.mkdir(parents=True, exist_ok=True)
+    tqdm.tqdm.write(f"[lvl1] stop early with:  touch {_flag}")
+    utils.log_text(f"touch {_flag}", "stop_lvl1_cmd.txt")
+
     for global_step in range(start_global_step, total_steps):
         epoch = global_step // steps_per_epoch
         is_epoch_start = global_step % steps_per_epoch == 0
@@ -877,6 +882,11 @@ def train_lvl1(
 
         if config.overfit is False:
             pbar.update(1)
+
+        if is_epoch_end and utils.check_stop_flag(config.save_dir, 1):
+            tqdm.tqdm.write(f"[lvl1] stop flag at step {global_step} -> ending level")
+            utils.log_metrics({"train_lvl1/early_stopped": 1.0}, step=global_step)
+            break
 
     if config.overfit is False:
         pbar.close()

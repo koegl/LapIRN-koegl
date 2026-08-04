@@ -107,6 +107,90 @@ def load_bone_labels(seg_path: str):
     return seg_node
 
 
+def load_rib_labels(seg_path: str):
+    """Load a segmentation, merge all bone labels into one red outline segment.
+
+    Args:
+        seg_path: Path to the segmentation NIfTI (labelmap).
+
+    Returns:
+        The created segmentation node.
+    """
+    from pathlib import Path
+
+    import numpy as np
+    import vtk
+
+    rib_label_values: Sequence[int] = (
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+    )
+
+    node_name = Path(seg_path).name.replace(".nii.gz", "").replace(".nii", "")
+
+    labelmap_node = slicer.util.loadLabelVolume(seg_path)
+
+    arr = slicer.util.arrayFromVolume(labelmap_node)
+    keep = np.isin(arr, rib_label_values)
+    arr[~keep] = 0
+    slicer.util.updateVolumeFromArray(labelmap_node, arr)
+
+    seg_node = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode", node_name)
+    seg_node.CreateDefaultDisplayNodes()
+    slicer.modules.segmentations.logic().ImportLabelmapToSegmentationNode(
+        labelmap_node, seg_node
+    )
+    slicer.mrmlScene.RemoveNode(labelmap_node)
+
+    segmentation = seg_node.GetSegmentation()
+    segment_id = segmentation.GetNthSegmentID(0)
+    segmentation.GetSegment(segment_id).SetColor(1.0, 0.0, 0.0)
+
+    display_node = seg_node.GetDisplayNode()
+    display_node.SetOpacity2DFill(0.0)
+    display_node.SetOpacity2DOutline(1.0)
+
+    sh_node = slicer.mrmlScene.GetSubjectHierarchyNode()
+    export_folder_id = sh_node.CreateFolderItem(
+        sh_node.GetSceneItemID(), node_name + "_models"
+    )
+    slicer.modules.segmentations.logic().ExportVisibleSegmentsToModels(
+        seg_node, export_folder_id
+    )
+
+    model_ids = vtk.vtkIdList()
+    sh_node.GetItemChildren(export_folder_id, model_ids)
+    for i in range(model_ids.GetNumberOfIds()):
+        model_node = sh_node.GetItemDataNode(model_ids.GetId(i))
+        if model_node is not None:
+            slicer.mrmlScene.RemoveNode(model_node)
+    sh_node.RemoveItem(export_folder_id)
+
+    return seg_node
+
+
 def load_abdomen_labels(seg_path: str):
     """Load a segmentation, merge all bone labels into one red outline segment.
 
