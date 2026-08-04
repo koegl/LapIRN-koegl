@@ -4,7 +4,7 @@
 #SBATCH --error=/home/iml/fryderyk.koegl/logs/%x_%A_%a.err
 #SBATCH -t 3-00:00:00
 #SBATCH -p gpu_p
-#SBATCH --mem=64G
+#SBATCH --mem=128G
 #SBATCH --cpus-per-task=8
 #SBATCH --qos=gpu_reservation
 #SBATCH --nice=10000

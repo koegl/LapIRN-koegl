@@ -222,13 +222,18 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
         down_y = cat_input_lvl1[:, c : 2 * c, :, :, :]  # y block: channels 5..9
         down_x = cat_input_lvl1[:, 0:c, :, :, :]  # x block: channels 0..4
 
-        fea_e0 = self.input_encoder_lvl1(cat_input_lvl1)
-        e0 = self.down_conv(fea_e0)
-        e0 = self.resblock_group_lvl1(e0)
-        e0 = self.up(e0)
-        output_disp_e0_v = (
-            self.output_lvl1(torch.cat([e0, fea_e0], dim=1)) * self.range_flow
-        )
+        # bf16 autocast around the conv trunk only (~40% off activations);
+        # flows are upcast to fp32 before any composition / grid_sample / loss
+        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+            fea_e0 = self.input_encoder_lvl1(cat_input_lvl1)
+            e0 = self.down_conv(fea_e0)
+            e0 = self.resblock_group_lvl1(e0)
+            e0 = self.up(e0)
+            output_disp_e0_v = (
+                self.output_lvl1(torch.cat([e0, fea_e0], dim=1)) * self.range_flow
+            )
+        output_disp_e0_v = output_disp_e0_v.float()
+        e0 = e0.float()
         output_disp_e0 = self.diff_transform(output_disp_e0_v, self.grid_1)
         warpped_inputx_lvl1_out = self.transform(
             x, output_disp_e0.permute(0, 2, 3, 4, 1), self.grid_1
@@ -468,17 +473,22 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
 
         cat_input_lvl2 = torch.cat((warpped_x, down_y, lvl1_v_up), 1)
 
-        fea_e0 = self.input_encoder_lvl1(cat_input_lvl2)
-        e0 = self.down_conv(fea_e0)
+        # bf16 autocast around the conv trunk only; flows upcast to fp32
+        # before composition / scaling-and-squaring / grid_sample
+        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+            fea_e0 = self.input_encoder_lvl1(cat_input_lvl2)
+            e0 = self.down_conv(fea_e0)
 
-        e0 = e0 + lvl1_embedding
+            e0 = e0 + lvl1_embedding
 
-        e0 = self.resblock_group_lvl1(e0)
-        e0 = self.up(e0)
-        output_disp_e0_v = (
-            self.output_lvl1(torch.cat([e0, fea_e0], dim=1)) * self.range_flow
-        )
-        compose_field_e0_lvl1v = output_disp_e0_v + lvl1_v_up
+            e0 = self.resblock_group_lvl1(e0)
+            e0 = self.up(e0)
+            output_disp_e0_v = (
+                self.output_lvl1(torch.cat([e0, fea_e0], dim=1)) * self.range_flow
+            )
+        output_disp_e0_v = output_disp_e0_v.float()
+        e0 = e0.float()
+        compose_field_e0_lvl1v = output_disp_e0_v + lvl1_v_up.float()
         output_disp_e0 = self.diff_transform(compose_field_e0_lvl1v, self.grid_1)
         warpped_inputx_lvl1_out = self.transform(
             x, output_disp_e0.permute(0, 2, 3, 4, 1), self.grid_1
@@ -714,16 +724,21 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
 
         cat_input = torch.cat((warpped_x, y, compose_lvl2_v_up), 1)
 
-        fea_e0 = self.input_encoder_lvl1(cat_input)
-        e0 = self.down_conv(fea_e0)
+        # bf16 autocast around the conv trunk only; flows upcast to fp32
+        # before composition / scaling-and-squaring / grid_sample
+        with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+            fea_e0 = self.input_encoder_lvl1(cat_input)
+            e0 = self.down_conv(fea_e0)
 
-        e0 = e0 + lvl2_embedding
-        e0 = self.resblock_group_lvl1(e0)
-        e0 = self.up(e0)
-        output_disp_e0_v = (
-            self.output_lvl1(torch.cat([e0, fea_e0], dim=1)) * self.range_flow
-        )
-        compose_field_e0_lvl2_compose = output_disp_e0_v + compose_lvl2_v_up
+            e0 = e0 + lvl2_embedding
+            e0 = self.resblock_group_lvl1(e0)
+            e0 = self.up(e0)
+            output_disp_e0_v = (
+                self.output_lvl1(torch.cat([e0, fea_e0], dim=1)) * self.range_flow
+            )
+        output_disp_e0_v = output_disp_e0_v.float()
+        e0 = e0.float()
+        compose_field_e0_lvl2_compose = output_disp_e0_v + compose_lvl2_v_up.float()
         output_disp_e0 = self.diff_transform(compose_field_e0_lvl2_compose, self.grid_1)
 
         warpped_inputx_lvl1_out = self.transform(
@@ -2245,6 +2260,10 @@ class SpatialTransform_unit(nn.Module):
         super(SpatialTransform_unit, self).__init__()
 
     def forward(self, x, flow, sample_grid):
+        # fp32 zone: upcast so a bf16 flow from an autocast conv trunk cannot
+        # silently degrade (or crash) the grid_sample
+        x = x.float()
+        flow = flow.float()
         sample_grid = sample_grid + flow
         flow = torch.nn.functional.grid_sample(
             x, sample_grid, mode="bilinear", padding_mode="border", align_corners=False
@@ -2257,6 +2276,8 @@ class SpatialTransformNearest_unit(nn.Module):
         super(SpatialTransformNearest_unit, self).__init__()
 
     def forward(self, x, flow, sample_grid):
+        x = x.float()
+        flow = flow.float()
         sample_grid = sample_grid + flow
         flow = torch.nn.functional.grid_sample(
             x, sample_grid, mode="nearest", padding_mode="border", align_corners=False
@@ -2270,6 +2291,10 @@ class DiffeomorphicTransform_unit(nn.Module):
         self.time_step = time_step
 
     def forward(self, velocity, sample_grid):
+        # scaling-and-squaring composes the flow with itself repeatedly; keep
+        # it in fp32 (bf16 rounding would compound over the iterations)
+        velocity = velocity.float()
+        sample_grid = sample_grid.float()
         flow = velocity / (2.0**self.time_step)
         for _ in range(self.time_step):
             grid = sample_grid + flow.permute(0, 2, 3, 4, 1)
