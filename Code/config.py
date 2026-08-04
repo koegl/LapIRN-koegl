@@ -39,7 +39,7 @@ class TrainingConfig:
     # coarsest level and runs standalone, lvl3 (full res) sits on top of it.
     # NB: lvl2 weights are not interchangeable between the two modes (its input
     # encoder loses the 3 velocity channels coming from lvl1).
-    use_lvl1: bool = True
+    use_lvl1: bool = False
 
     use_synthetic: bool = False
     use_tubingen: bool = False
@@ -107,7 +107,7 @@ class TrainingConfig:
     # train val
     total_steps_lvl1: int = 80000
     total_steps_lvl2: int = 100000
-    total_steps_lvl3: int = 120000
+    total_steps_lvl3: int = 140000
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
