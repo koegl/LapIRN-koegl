@@ -27,9 +27,9 @@ class TrainingConfig:
     cache_dir_poly = DATA_PATH / "PSMAReg/poly_cache"
     split_path = repo_dir / "split.json"
     val_fraction: float = 0.15
-    use_cache_train_real: bool = True
-    use_cache_train_synthetic: bool = True
-    use_cache_valid: bool = True
+    use_cache_train_real: bool = False
+    use_cache_train_synthetic: bool = False
+    use_cache_valid: bool = False
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
     use_poly_affine: bool = False
@@ -89,7 +89,7 @@ class TrainingConfig:
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
     warmup_epochs: float = 5
-    start_channel: int = 7
+    start_channel: int = 30
 
     # PWC-Net style local cost volume in lvl1, fused into the res-block trunk.
     #   "off"  -> baseline
@@ -98,16 +98,16 @@ class TrainingConfig:
     #             the features are concatenated instead of correlated
     # The volume lives at img_shape // 8, so with radius 2 / dilation 1 the
     # search window covers +-2 voxels there == +-16 full-resolution voxels.
-    cost_volume_mode: str = "feat"
+    cost_volume_mode: str = "off"
     cost_volume_radius: int = 2
     cost_volume_dilation: int = 1
     cost_volume_feat_channels: int = 16
     cost_volume_out_channels: int = 16
 
     # train val
-    total_steps_lvl1: int = 80000
-    total_steps_lvl2: int = 100000
-    total_steps_lvl3: int = 140000
+    total_steps_lvl1: int = 2  # 80000
+    total_steps_lvl2: int = 1  # 100000
+    total_steps_lvl3: int = 2
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2

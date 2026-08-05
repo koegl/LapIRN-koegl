@@ -136,7 +136,6 @@ def main() -> None:
                     # )
                 else:
                     path_model_level_1 = None
-                return
                 paths_model_level2 = level2.train_lvl2(
                     config,
                     path_model_level_1,
