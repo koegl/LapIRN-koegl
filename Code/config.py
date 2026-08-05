@@ -89,7 +89,7 @@ class TrainingConfig:
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
     warmup_epochs: float = 5
-    start_channel: int = 22
+    start_channel: int = 28
 
     # PWC-Net style local cost volume in lvl1, fused into the res-block trunk.
     #   "off"  -> baseline
@@ -107,7 +107,7 @@ class TrainingConfig:
     # train val
     total_steps_lvl1: int = 1  # 80000
     total_steps_lvl2: int = 1  # 100000
-    total_steps_lvl3: int = 20
+    total_steps_lvl3: int = 5
     unfreeze_epoch_in_lvl2: int = 0
     unfreeze_epoch_in_lvl3: int = 0
     val_interval: int = 2
