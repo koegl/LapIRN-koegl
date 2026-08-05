@@ -77,6 +77,9 @@ def main() -> None:
             )
         )
 
+        if config.val_interval > 2:
+            print(f"warning: val_interval is set to {config.val_interval}")
+
         with utils.track_peak_memory("training"):
             Path()
             level1.train_lvl1
