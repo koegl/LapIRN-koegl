@@ -39,7 +39,7 @@ class TrainingConfig:
     # coarsest level and runs standalone, lvl3 (full res) sits on top of it.
     # NB: lvl2 weights are not interchangeable between the two modes (its input
     # encoder loses the 3 velocity channels coming from lvl1).
-    use_lvl1: bool = False
+    use_lvl1: bool = True
 
     use_synthetic: bool = False
     use_tubingen: bool = False
@@ -98,7 +98,7 @@ class TrainingConfig:
     #             the features are concatenated instead of correlated
     # The volume lives at img_shape // 8, so with radius 2 / dilation 1 the
     # search window covers +-2 voxels there == +-16 full-resolution voxels.
-    cost_volume_mode: str = "corr"
+    cost_volume_mode: str = "off"
     cost_volume_radius: int = 2
     cost_volume_dilation: int = 1
     cost_volume_feat_channels: int = 16
