@@ -777,8 +777,10 @@ def train_lvl1(
                     f"jacob={epoch_metrics['train_lvl1/jacob']:.6f}; jacob_weighted={epoch_metrics['train_lvl1/jacob'] * config.w_jacobian:.6f} "
                 )
 
-        if config.overfit is False and (
-            global_step % val_step_interval == 0 or is_last_step
+        if (
+            False
+            and config.overfit is False
+            and (global_step % val_step_interval == 0 or is_last_step)
         ):
             val_losses = evaluate_lvl1(
                 model=model,

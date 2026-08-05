@@ -110,7 +110,7 @@ class TrainingConfig:
     total_steps_lvl3: int = 20
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
-    val_interval: int = 200000000
+    val_interval: int = 2
     checkpoint_interval: int = 50
 
     accumulation_steps: int = field(init=False)
