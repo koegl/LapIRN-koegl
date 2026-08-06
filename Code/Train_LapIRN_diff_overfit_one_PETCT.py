@@ -123,20 +123,20 @@ def main() -> None:
                 )
             else:
                 if config.use_lvl1:
-                    # paths_model_level1 = level1.train_lvl1(
-                    #     config,
-                    #     train_generator,
-                    #     valid_generator,
-                    #     valid_tubingen_generator,
-                    #     valid_nlst_generator,
-                    #     valid_abdomen_generator,
-                    # )
-                    # path_model_level_1 = paths_model_level1["best"]
-                    # path_model_level_1 = paths_model_level1["final"]
-                    print("skipping level 1, already trained")
-                    path_model_level_1 = Path(
-                        "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_useful-pig-39155220_stagelvl1_best.pth"
+                    paths_model_level1 = level1.train_lvl1(
+                        config,
+                        train_generator,
+                        valid_generator,
+                        valid_tubingen_generator,
+                        valid_nlst_generator,
+                        valid_abdomen_generator,
                     )
+                    path_model_level_1 = paths_model_level1["best"]
+                    # path_model_level_1 = paths_model_level1["final"]
+                    # print("skipping level 1, already trained")
+                    # path_model_level_1 = Path(
+                    #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_useful-pig-39155220_stagelvl1_best.pth"
+                    # )
                 else:
                     path_model_level_1 = None
                 paths_model_level2 = level2.train_lvl2(

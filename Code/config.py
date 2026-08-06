@@ -89,7 +89,8 @@ class TrainingConfig:
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
     warmup_epochs: float = 5
-    start_channel: int = 24
+    start_channel: int = 7
+
 
     # PWC-Net style local cost volume in lvl1, fused into the res-block trunk.
     #   "off"  -> baseline
@@ -198,7 +199,7 @@ class TrainingConfig:
     # (MIND-SSC descriptor MSE, uses mind_radius / mind_dilation below).
     # NB: MIND is a plain MSE in [0, 1] while NCC is in [-1, 0], so w_ct / w_pet
     # have to be re-tuned when switching.
-    similarity_metric: Literal["ncc", "mind"] = "ncc"
+    similarity_metric: Literal["ncc", "mind"] = "mind"
     mind_radius: int = 2
     mind_dilation: int = 2
 
@@ -239,7 +240,7 @@ class TrainingConfig:
         self.in_channel = 4 + 2 * self.n_label_groups
 
         if self.similarity_metric == "mind":
-            self.w_ct *= 3.0
+            self.w_ct *= 3.4
 
         if self.overfit:
             self.augment = False
