@@ -27,9 +27,9 @@ class TrainingConfig:
     cache_dir_poly = DATA_PATH / "PSMAReg/poly_cache"
     split_path = repo_dir / "split.json"
     val_fraction: float = 0.15
-    use_cache_train_real: bool = False
-    use_cache_train_synthetic: bool = False
-    use_cache_valid: bool = False
+    use_cache_train_real: bool = True
+    use_cache_train_synthetic: bool = True
+    use_cache_valid: bool = True
     img_shape: Tuple[int, int, int] = (192, 192, 288)
 
     use_poly_affine: bool = False
