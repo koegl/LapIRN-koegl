@@ -4,7 +4,7 @@ import shutil
 import sys
 import zipfile
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import affine_reg
 import Functions
@@ -527,7 +527,7 @@ def evaluate_split(
     results_csv: Path,
     model_name: str,
     out_dir: Path,
-    model: torch.nn.Module,
+    model: Union[torch.nn.Module, List[torch.nn.Module]],
     transform: torch.nn.Module,
     transform_nearest: torch.nn.Module,
     grid_full: torch.Tensor,
@@ -556,7 +556,7 @@ def evaluate_split(
     hd95s: Dict[str, float] = {}
     hd95s_before: Dict[str, float] = {}
     per_case: Dict[str, Dict[int, float]] = {}
-    for case_id in tqdm.tqdm(subjects, desc=desc):
+    for case_id in tqdm.tqdm(subjects, desc=desc, ncols=150):
         (
             dice_after,
             dice_before,
@@ -621,7 +621,7 @@ def process_subject(
     case_id: str,
     val_image_dir: Path,
     out_dir: Path,
-    model: torch.nn.Module,
+    model: Union[torch.nn.Module, List[torch.nn.Module]],
     transform: torch.nn.Module,
     grid_full: torch.Tensor,
     cfg: TrainingConfig,
@@ -711,8 +711,21 @@ def process_subject(
         F_X_Y = torch.zeros_like(flow_affine.permute(0, 4, 1, 2, 3))
         warped = X_affine
     else:
+        models = model if isinstance(model, (list, tuple)) else [model]
         with torch.no_grad():
-            F_X_Y, warped, _, _, _, _, _ = model(X_affine, Y)
+            if len(models) == 1:
+                F_X_Y, warped, _, _, _, _, _ = models[0](X_affine, Y)
+            else:
+                # log-euclidean mean of the ensemble: average the stationary
+                # velocity fields, then integrate the mean once. averaging the
+                # already-integrated displacements can fold, the velocities cannot.
+                velocity = None
+                for m in models:
+                    _, _, _, v, _, _, _ = m(X_affine, Y)
+                    velocity = v if velocity is None else velocity + v
+                velocity = velocity / len(models)
+                F_X_Y = models[0].diff_transform(velocity, grid_full)
+                warped = transform(X_affine, F_X_Y.permute(0, 2, 3, 4, 1), grid_full)
 
     if use_io and not skip_model:
         x_lbl_ct, x_lbl_pet, y_lbl_ct, y_lbl_pet = load_io_labels(
@@ -1002,18 +1015,29 @@ def update_config_from_dict(cfg: TrainingConfig, model_name: str) -> None:
 
 
 models_to_evaluate = [
-    "polite-snake-38577202",
-    "exultant-hawk-38756587",
-    "rumbling-yak-38789486",
-    "secretive-dolphin-38622192",
-    "victorious-flea-38622412",
-    "intelligent-fish-38730451",
-    "popular-sloth-38758804",
-    "nosy-doe-38788231",
-    "sincere-finch-38813192",
-    "worried-elk-38863657",
-    "charming-trout-38863973",
+    # "polite-snake-38577202",
+    # "exultant-hawk-38756587",
+    # "rumbling-yak-38789486",
+    # "secretive-dolphin-38622192",
+    # "victorious-flea-38622412",
+    # "intelligent-fish-38730451",
+    # "popular-sloth-38758804",
+    # "nosy-doe-38788231",
+    # "sincere-finch-38813192",
+    # "worried-elk-38863657",
+    # "charming-trout-38863973",
+    # "rebellious-stork-38993360",
 ]
+
+# each inner list is one ensemble: the velocity fields of its models are
+# averaged with equal weights (1/n) and integrated once into a displacement.
+models_to_combine = [["nosy-doe-38788231", "intelligent-fish-38730451"]]
+
+
+def model_path_for(model_ori_name: str) -> Path:
+    return Path(
+        f"/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_{model_ori_name}_stagelvl3_best.pth"
+    )
 
 
 def main() -> None:
@@ -1028,15 +1052,16 @@ def main() -> None:
     eval_my_val: bool = False
     baselines_done: bool = False
 
-    model_ori_name = "worried-elk-38863657"
+    # single models first, then the ensembles
+    eval_jobs: List[List[str]] = [[name] for name in models_to_evaluate]
+    eval_jobs += [list(names) for names in models_to_combine]
 
-    for model_ori_name in models_to_evaluate:
-        # update_config_from_dict(cfg, model_ori_name)
-
-        model_path = Path(
-            f"/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_{model_ori_name}_stagelvl3_best.pth"
-        )
-        model_name = model_path.stem
+    for model_ori_names in eval_jobs:
+        if len(model_ori_names) == 1:
+            # update_config_from_dict(cfg, model_ori_names[0])
+            model_name = model_path_for(model_ori_names[0]).stem
+        else:
+            model_name = "combined_" + "_".join(model_ori_names)
 
         out_dir = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results")
         # evaluation metrics use the high-quality segmentations
@@ -1048,7 +1073,14 @@ def main() -> None:
             "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTs_fast"
         )
 
-        model = create_model(device, cfg, model_path)
+        # note: create_model reads mutable cfg fields (start_channel, cost_volume_*),
+        # so a per-model update_config_from_dict has to happen before each build
+        models = [
+            create_model(device, cfg, model_path_for(name)) for name in model_ori_names
+        ]
+        model: Union[torch.nn.Module, List[torch.nn.Module]] = (
+            models[0] if len(models) == 1 else models
+        )
 
         grid_full = Functions.generate_grid_unit(cfg.img_shape)
         grid_full = (
@@ -1104,7 +1136,7 @@ def main() -> None:
                         results_csv=results_csv_official_val_dice,
                         model_name=baseline_name,
                         out_dir=out_dir / f"baseline_{baseline_name}",
-                        model=model,
+                        model=models[0],
                         transform=transform,
                         transform_nearest=transform_nearest,
                         grid_full=grid_full,
@@ -1146,7 +1178,7 @@ def main() -> None:
                         results_csv=results_csv_my_val_dice,
                         model_name=baseline_name,
                         out_dir=out_dir / "my_val" / f"baseline_{baseline_name}",
-                        model=model,
+                        model=models[0],
                         transform=transform,
                         transform_nearest=transform_nearest,
                         grid_full=grid_full,
