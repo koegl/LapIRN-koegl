@@ -125,11 +125,11 @@ class TrainingConfig:
     cost_volume_out_channels: int = 16
 
     # train val
-    total_steps_lvl1: int = 2
-    total_steps_lvl2: int = 2
-    total_steps_lvl3: int = 2
-    unfreeze_epoch_in_lvl2: int = 0
-    unfreeze_epoch_in_lvl3: int = 0
+    total_steps_lvl1: int = 100000
+    total_steps_lvl2: int = 100000
+    total_steps_lvl3: int = 140000
+    unfreeze_epoch_in_lvl2: int = 10
+    unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
     checkpoint_interval: int = 50
 
