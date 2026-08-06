@@ -19,7 +19,7 @@ class TrainingConfig:
     model_save_dir: Path = DATA_PATH / "PSMAReg/models"
 
     # overfit
-    overfit: bool = True
+    overfit: bool = False
 
     # Dataset
     data_dir = DATA_PATH / "PSMAReg/PSMAReg_dataset"
@@ -231,7 +231,7 @@ class TrainingConfig:
     # (MIND-SSC descriptor MSE, uses mind_radius / mind_dilation below).
     # NB: MIND is a plain MSE in [0, 1] while NCC is in [-1, 0], so w_ct / w_pet
     # have to be re-tuned when switching.
-    similarity_metric: Literal["ncc", "mind"] = "mind"
+    similarity_metric: Literal["ncc", "mind"] = "ncc"
     mind_radius: int = 2
     mind_dilation: int = 2
 

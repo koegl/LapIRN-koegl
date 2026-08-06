@@ -877,19 +877,25 @@ def train_lvl3(
                     loss_group_accuracy + config.w_dice_pet * loss_dice_pet
                 )
 
-            loss_group_tumour = (
-                config.w_tlg * loss_tlg
-                + config.w_jacobian_tumor * loss_jacobian_tumor
-                + config.w_bone_rigidity * loss_rigidity
-            )
+            # kept as separate terms so the report can say *which* tumour term
+            # does the fighting; their gradients sum to the group-B gradient, so
+            # the aggregate cos still comes out of the same backward passes
+            losses_tumour = {
+                "tlg": config.w_tlg * loss_tlg,
+                "jactum": config.w_jacobian_tumor * loss_jacobian_tumor,
+                "rigidity": config.w_bone_rigidity * loss_rigidity,
+            }
 
-            raw = utils.gradient_conflict_metrics(
-                loss_group_accuracy, loss_group_tumour, model
+            raw = utils.gradient_conflict_report(
+                loss_group_accuracy, losses_tumour, model
             )
             if raw:
-                raw.update(grad_conflict_tracker.update(raw["cos"], raw["norm_ratio"]))
+                windowed = grad_conflict_tracker.update(raw)
                 utils.log_metrics(
-                    {f"grad_conflict_lvl3/{key}": value for key, value in raw.items()},
+                    {
+                        f"grad_conflict_lvl3/{key}": value
+                        for key, value in {**raw, **windowed}.items()
+                    },
                     step=global_step,
                 )
 

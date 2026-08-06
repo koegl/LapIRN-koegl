@@ -123,40 +123,40 @@ def main() -> None:
                 )
             else:
                 if config.use_lvl1:
-                    paths_model_level1 = level1.train_lvl1(
-                        config,
-                        train_generator,
-                        valid_generator,
-                        valid_tubingen_generator,
-                        valid_nlst_generator,
-                        valid_abdomen_generator,
-                    )
-                    path_model_level_1 = paths_model_level1["best"]
+                    # paths_model_level1 = level1.train_lvl1(
+                    #     config,
+                    #     train_generator,
+                    #     valid_generator,
+                    #     valid_tubingen_generator,
+                    #     valid_nlst_generator,
+                    #     valid_abdomen_generator,
+                    # )
+                    # path_model_level_1 = paths_model_level1["best"]
                     # path_model_level_1 = paths_model_level1["final"]
-                    # print("skipping level 1, already trained")
+                    print("skipping level 1, already trained")
                     # path_model_level_1 = Path(
                     #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_useful-pig-39155220_stagelvl1_best.pth"
                     # )
                 else:
                     path_model_level_1 = None
-                paths_model_level2 = level2.train_lvl2(
-                    config,
-                    path_model_level_1,
-                    train_generator,
-                    valid_generator,
-                    valid_tubingen_generator,
-                    valid_nlst_generator,
-                    valid_abdomen_generator,
-                )
-                path_model_level_2 = paths_model_level2["best"]
+                # paths_model_level2 = level2.train_lvl2(
+                #     config,
+                #     path_model_level_1,
+                #     train_generator,
+                #     valid_generator,
+                #     valid_tubingen_generator,
+                #     valid_nlst_generator,
+                #     valid_abdomen_generator,
+                # )
+                # path_model_level_2 = paths_model_level2["best"]
                 # path_model_level_2 = paths_model_level2["final"]
-                # print("skipping level 2, already trained")
+                print("skipping level 2, already trained")
                 # path_model_level_2 = Path(
                 # "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_nosy-shrike-707_stagelvl2_best.pth"
                 # )
-                # path_model_level_2 = Path(
-                #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_rebellious-stork-38993360_stagelvl2_best.pth"
-                # )
+                path_model_level_2 = Path(
+                    "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_rebellious-stork-38993360_stagelvl2_best.pth"
+                )
                 path_model_level3 = level3.train_lvl3(
                     config,
                     path_model_level_2,

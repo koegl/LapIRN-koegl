@@ -154,25 +154,31 @@ class GradConflictTracker:
 
     def __init__(self, window: int = 20) -> None:
         self.window = window
-        self._cos: list[float] = []
-        self._ratio: list[float] = []
+        self._hist: Dict[str, list[float]] = {}
 
-    def update(self, cos: float, ratio: float) -> Dict[str, float]:
-        self._cos.append(cos)
-        self._ratio.append(ratio)
-        if len(self._cos) > self.window:
-            self._cos.pop(0)
-            self._ratio.pop(0)
-        cos_arr = np.asarray(self._cos)
-        return {
-            "cos_mean": float(cos_arr.mean()),
-            "cos_std": float(cos_arr.std()),
-            "cos_frac_negative": float((cos_arr < 0).mean()),
-            "cos_min": float(cos_arr.min()),
-            "cos_max": float(cos_arr.max()),
-            "norm_ratio_mean": float(np.asarray(self._ratio).mean()),
-            "n_samples": float(len(self._cos)),
-        }
+    def update(self, values: Dict[str, float]) -> Dict[str, float]:
+        """Push one measurement, get the windowed stats back.
+
+        Every key gets a `_mean`. Keys naming a cosine additionally get the
+        spread stats, because for a cosine the spread is the whole question:
+        a mean of 0 with a large std is violent conflict cancelling itself out,
+        not the absence of conflict.
+        """
+        out: Dict[str, float] = {}
+        for key, value in values.items():
+            hist = self._hist.setdefault(key, [])
+            hist.append(value)
+            if len(hist) > self.window:
+                hist.pop(0)
+            arr = np.asarray(hist)
+            out[f"{key}_mean"] = float(arr.mean())
+            if key == "cos" or key.startswith("cos_"):
+                out[f"{key}_std"] = float(arr.std())
+                out[f"{key}_frac_negative"] = float((arr < 0).mean())
+                out[f"{key}_min"] = float(arr.min())
+                out[f"{key}_max"] = float(arr.max())
+        out["n_samples"] = float(max((len(h) for h in self._hist.values()), default=0))
+        return out
 
 
 def _flat_grad(
@@ -194,18 +200,30 @@ def _flat_grad(
     return torch.cat(flat)
 
 
-def gradient_conflict_metrics(
+def _cos(u: torch.Tensor, v: torch.Tensor, eps: float = 1e-12) -> float | None:
+    nu, nv = u.norm(), v.norm()
+    if nu < eps or nv < eps:
+        return None
+    return float((torch.dot(u, v) / (nu * nv)).item())
+
+
+def gradient_conflict_report(
     loss_a: torch.Tensor,
-    loss_b: torch.Tensor,
+    named_losses_b: Dict[str, torch.Tensor],
     model: torch.nn.Module,
     eps: float = 1e-12,
 ) -> Dict[str, float]:
-    """Measure whether two loss groups pull the shared parameters apart.
+    """Measure whether the accuracy group and the tumour terms pull apart.
 
-    `loss_a` / `loss_b` must be the *weighted* group sums, i.e. exactly what each
-    group contributes to the total objective. The cosine is scale invariant so
-    the weights do not affect it, but they do affect `norm_ratio`, which is the
-    number that tells you whether one group is simply drowning the other out.
+    `loss_a` is the *weighted* accuracy+regularisation sum; `named_losses_b` maps
+    each tumour term's name to its *weighted* value. Weights matter for the norms
+    (which say whether a term is loud enough to matter at all) but not for the
+    cosines, which are scale invariant -- which is exactly why a conflict shown
+    here cannot be tuned away by reweighting.
+
+    Because gradients are linear, the aggregate tumour gradient is just the sum
+    of the per-term gradients, so `cos` (group A vs group B as a whole) comes out
+    of the same backward passes as the per-term breakdown: 1 + len(b) passes.
 
     Reading it:
       cos > 0  -> the groups agree; no conflict to architect around, any problem
@@ -214,35 +232,64 @@ def gradient_conflict_metrics(
       cos < 0  -> genuine conflict; every update trades one group against the
                   other. This is the case that justifies a chained / multi-stage
                   model or gradient surgery.
-      norm_ratio = |g_a| / |g_b|; far from 1 means one group dominates the update
-                  regardless of the cosine.
+      norm_ratio     = |g_a| / |g_b|; far from 1 means one group dominates the
+                       update regardless of the cosine.
+      cos_a_vs_<t>   = which individual tumour term does the fighting.
+      share_<t>      = |g_t| / sum of the tumour term norms; a term with a tiny
+                       share cannot matter no matter how hostile its cosine.
+      cos_<t1>_vs_<t2> = whether the tumour terms also fight each other, which
+                       would mean group B is not one coherent objective.
 
-    Costs two extra backward passes, so call it sparingly. Uses autograd.grad, so
-    it never touches `.grad` and does not disturb gradient accumulation.
+    Uses autograd.grad, so it never touches `.grad` and does not disturb
+    gradient accumulation. Call it sparingly.
     """
     params = [p for p in model.parameters() if p.requires_grad]
     if not params:
         return {}
 
     g_a = _flat_grad(loss_a, params)
-    g_b = _flat_grad(loss_b, params)
-    if g_a is None or g_b is None:
+    if g_a is None or g_a.norm() < eps:
         return {}
 
-    n_a = g_a.norm()
-    n_b = g_b.norm()
-    if n_a < eps or n_b < eps:
-        # e.g. an abdomen batch (rigidity forced to 0) or a synthetic batch
-        # (tlg/mtv forced to 0) can leave group B with no gradient at all.
+    # per-term gradients; a term that is a constant this step (e.g. rigidity on
+    # an abdomen batch, tlg on a synthetic one) simply drops out
+    g_terms: Dict[str, torch.Tensor] = {}
+    for name, term in named_losses_b.items():
+        g_t = _flat_grad(term, params)
+        if g_t is not None and g_t.norm() >= eps:
+            g_terms[name] = g_t
+    if not g_terms:
         return {}
 
-    cos = torch.dot(g_a, g_b) / (n_a * n_b)
-    return {
-        "cos": float(cos.item()),
+    g_b = torch.stack(list(g_terms.values())).sum(dim=0)
+    n_a, n_b = g_a.norm(), g_b.norm()
+    if n_b < eps:
+        return {}
+
+    out: Dict[str, float] = {
+        "cos": float((torch.dot(g_a, g_b) / (n_a * n_b)).item()),
         "norm_a": float(n_a.item()),
         "norm_b": float(n_b.item()),
         "norm_ratio": float((n_a / n_b).item()),
     }
+
+    norm_sum = sum(float(g.norm().item()) for g in g_terms.values())
+    for name, g_t in g_terms.items():
+        c = _cos(g_a, g_t, eps)
+        if c is not None:
+            out[f"cos_a_vs_{name}"] = c
+        out[f"norm_{name}"] = float(g_t.norm().item())
+        if norm_sum > eps:
+            out[f"share_{name}"] = float(g_t.norm().item()) / norm_sum
+
+    names = list(g_terms)
+    for i, n1 in enumerate(names):
+        for n2 in names[i + 1 :]:
+            c = _cos(g_terms[n1], g_terms[n2], eps)
+            if c is not None:
+                out[f"cos_{n1}_vs_{n2}"] = c
+
+    return out
 
 
 def create_datasets(
