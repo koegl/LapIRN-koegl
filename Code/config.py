@@ -98,6 +98,13 @@ class TrainingConfig:
     #             the features are concatenated instead of correlated
     # The volume lives at img_shape // 8, so with radius 2 / dilation 1 the
     # search window covers +-2 voxels there == +-16 full-resolution voxels.
+    # Diagnostic. When true, lvl1 runs a single validation pass, writes the
+    # per case/label centroid distance left over after pre-registration to
+    # save_dir/prereg_residual.csv, prints the percentiles, and exits without
+    # training. Measured from the label maps, so it does not depend on what
+    # the network manages to correct.
+    measure_prereg_residual: bool = False
+
     cost_volume_mode: str = "off"
     cost_volume_radius: int = 2
     cost_volume_dilation: int = 1
