@@ -25,8 +25,6 @@ _WANDB_RUN = None
 
 
 def stop_flag_path(save_dir: Path, level: int) -> Path:
-    return save_dir / "stop_flags" / f"stop_{7777}_lvl{level}.flag"
-
     job_id = get_slurm_job_id()
     array_id = os.environ.get("SLURM_ARRAY_TASK_ID")
     if array_id is not None:
