@@ -198,7 +198,7 @@ class TrainingConfig:
     # (MIND-SSC descriptor MSE, uses mind_radius / mind_dilation below).
     # NB: MIND is a plain MSE in [0, 1] while NCC is in [-1, 0], so w_ct / w_pet
     # have to be re-tuned when switching.
-    similarity_metric: str = "mind"
+    similarity_metric: str = "ssd"
     mind_radius: int = 2
     mind_dilation: int = 2
 
