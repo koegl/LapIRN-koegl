@@ -72,6 +72,8 @@ def evaluate_lvl1(
     n_dice_ct = 0
     n_dice_pet = 0
 
+    prereg_rows: list = []
+
     with torch.no_grad():
         saved = False
         for batch in val_generator:
@@ -107,6 +109,7 @@ def evaluate_lvl1(
 
             if config.use_poly_affine is False or batch["is_abdomen"] is True:
                 X_prereg = transform(X, flow_prereg, grid_full)
+
             else:
                 poly_dvf = poly_affine_reg.get_polyaffine_dvf(
                     case_id_x=case_id_x,
@@ -154,6 +157,18 @@ def evaluate_lvl1(
                 )
 
                 X_prereg = transform(X, flow_prereg, grid_full)
+
+            if config.measure_prereg_residual:
+                prereg_rows.extend(
+                    utils.prereg_residual_rows(
+                        x_label=X_lbl_ct,
+                        y_label=Y_lbl_ct,
+                        flow_prereg=flow_prereg,
+                        transform_nearest=transform_nearest,
+                        grid_full=grid_full,
+                        case_id=batch["case_id"][0],
+                    )
+                )
 
             F_X_Y, X_Y, Y_4x, F_xy, _ = model(X_prereg, Y)
 
@@ -267,6 +282,11 @@ def evaluate_lvl1(
                 n_dice_pet += 1
             n_batches += 1
 
+    if config.measure_prereg_residual:
+        utils.write_prereg_residual_csv(
+            prereg_rows, config.save_dir / "prereg_residual.csv"
+        )
+
     model.train()
     averaged = {
         key: value / n_batches
@@ -329,6 +349,11 @@ def train_lvl1(
         is_train=True,
         imgshape=config.img_shape_4,
         range_flow=config.range_flow,
+        cost_volume_mode=config.cost_volume_mode,
+        cost_volume_radius=config.cost_volume_radius,
+        cost_volume_dilation=config.cost_volume_dilation,
+        cost_volume_feat_channels=config.cost_volume_feat_channels,
+        cost_volume_out_channels=config.cost_volume_out_channels,
     ).to(device)
 
     loss_similarity_ct = NCC_fast(win=config.lvl1_ncc_win)
@@ -360,6 +385,28 @@ def train_lvl1(
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr_lvl1)
 
     config.save_dir.mkdir(parents=True, exist_ok=True)
+
+    if config.measure_prereg_residual:
+        # Diagnostic only: one validation pass to measure what the
+        # pre-registration leaves behind, then stop. The model is untrained
+        # here, which is fine -- the measurement never looks at its output.
+        evaluate_lvl1(
+            model=model,
+            val_generator=valid_generator,
+            config=config,
+            device=device,
+            loss_similarity_ct=loss_similarity_ct,
+            loss_similarity_pet=loss_similarity_pet,
+            loss_smooth=loss_smooth,
+            loss_Jdet=loss_Jdet,
+            transform=transform,
+            grid_4=grid_4,
+            epoch=1,  # avoids the debug-volume save branch
+            val_interval=config.val_interval,
+            saved_initial=True,
+            is_last=False,
+        )
+        raise SystemExit(0)
 
     lossall = np.zeros((4, total_steps))
 
@@ -772,10 +819,8 @@ def train_lvl1(
                     f"jacob={epoch_metrics['train_lvl1/jacob']:.6f}; jacob_weighted={epoch_metrics['train_lvl1/jacob'] * config.w_jacobian:.6f} "
                 )
 
-        if (
-            False
-            and config.overfit is False
-            and (global_step % val_step_interval == 0 or is_last_step)
+        if config.overfit is False and (
+            global_step % val_step_interval == 0 or is_last_step
         ):
             val_losses = evaluate_lvl1(
                 model=model,

@@ -362,6 +362,11 @@ def train_lvl3(
             is_train=True,
             imgshape=config.img_shape_4,
             range_flow=config.range_flow,
+            cost_volume_mode=config.cost_volume_mode,
+            cost_volume_radius=config.cost_volume_radius,
+            cost_volume_dilation=config.cost_volume_dilation,
+            cost_volume_feat_channels=config.cost_volume_feat_channels,
+            cost_volume_out_channels=config.cost_volume_out_channels,
         ).to(device)
     else:
         model_lvl1 = None
@@ -905,10 +910,8 @@ def train_lvl3(
                     f"jacob={epoch_metrics['train_lvl3/jacob']:.6f}\t"
                     f"unrolled={epoch_metrics['train_lvl3/unrolled_io']:.4f}\t"
                 )
-        if (
-            False
-            and config.overfit is False
-            and (global_step % val_step_interval == 0 or is_last_step)
+        if config.overfit is False and (
+            global_step % val_step_interval == 0 or is_last_step
         ):
             val_losses = evaluate_lvl3(
                 model=model,

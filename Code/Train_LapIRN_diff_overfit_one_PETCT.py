@@ -77,6 +77,9 @@ def main() -> None:
             )
         )
 
+        if config.val_interval > 2:
+            print(f"warning: val_interval is set to {config.val_interval}")
+
         with utils.track_peak_memory("training"):
             Path()
             level1.train_lvl1
@@ -129,9 +132,10 @@ def main() -> None:
                         valid_abdomen_generator,
                     )
                     path_model_level_1 = paths_model_level1["best"]
+                    # path_model_level_1 = paths_model_level1["final"]
                     # print("skipping level 1, already trained")
                     # path_model_level_1 = Path(
-                    #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_stylish-kite-38590187_stagelvl1_best.pth"
+                    #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_persistent-fly-39113072_stagelvl1_best.pth"
                     # )
                 else:
                     path_model_level_1 = None
@@ -145,12 +149,13 @@ def main() -> None:
                     valid_abdomen_generator,
                 )
                 path_model_level_2 = paths_model_level2["best"]
+                # path_model_level_2 = paths_model_level2["final"]
                 # print("skipping level 2, already trained")
                 # path_model_level_2 = Path(
                 # "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_nosy-shrike-707_stagelvl2_best.pth"
                 # )
                 # path_model_level_2 = Path(
-                #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_sincere-finch-38813192_stagelvl2_best.pth"
+                #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_persistent-fly-39113072_stagelvl2_best.pth"
                 # )
                 path_model_level3 = level3.train_lvl3(
                     config,

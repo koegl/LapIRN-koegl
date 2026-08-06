@@ -341,6 +341,11 @@ def train_lvl2(
             is_train=True,
             imgshape=config.img_shape_4,
             range_flow=config.range_flow,
+            cost_volume_mode=config.cost_volume_mode,
+            cost_volume_radius=config.cost_volume_radius,
+            cost_volume_dilation=config.cost_volume_dilation,
+            cost_volume_feat_channels=config.cost_volume_feat_channels,
+            cost_volume_out_channels=config.cost_volume_out_channels,
         ).to(device)
 
         print("Loading weight for model_lvl1...", path_model_level1)
@@ -808,10 +813,8 @@ def train_lvl2(
                     f"jacob={epoch_metrics['train_lvl2/jacob']:.6f}; jacob_weighted={epoch_metrics['train_lvl2/jacob'] * config.w_jacobian:.6f} "
                 )
 
-        if (
-            False
-            and config.overfit is False
-            and (global_step % val_step_interval == 0 or is_last_step)
+        if config.overfit is False and (
+            global_step % val_step_interval == 0 or is_last_step
         ):
             val_losses = evaluate_lvl2(
                 model=model,

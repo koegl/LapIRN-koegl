@@ -1086,3 +1086,70 @@ def affine_pet_iou(
     union = (x_bin | y_bin).sum().float()
     iou = (intersection / (union + 1e-8)).item()
     return iou
+
+
+def prereg_residual_rows(
+    x_label: torch.Tensor,
+    y_label: torch.Tensor,
+    flow_prereg: torch.Tensor,
+    transform_nearest: torch.nn.Module,
+    grid_full: torch.Tensor,
+    case_id: str,
+    min_voxels: int = 10,
+) -> list:
+    """Per-label centroid distance between the pre-registered moving labels and
+    the fixed labels, in full-resolution voxels.
+
+    This measures the misalignment the pre-registration leaves behind using the
+    label maps only, so unlike the magnitude of the network's own flow it does
+    not shrink when the network fails to correct a case.
+    """
+    x_label_prereg = transform_nearest(x_label.float(), flow_prereg, grid_full)
+    moving = x_label_prereg[0, 0]
+    fixed = y_label[0, 0].float()
+
+    rows = []
+    for label in fixed.unique().tolist():
+        if label == 0:
+            continue
+        mask_moving = moving == label
+        mask_fixed = fixed == label
+        if mask_moving.sum() < min_voxels or mask_fixed.sum() < min_voxels:
+            continue
+        centroid_moving = mask_moving.nonzero().float().mean(0)
+        centroid_fixed = mask_fixed.nonzero().float().mean(0)
+        distance = (centroid_moving - centroid_fixed).norm().item()
+        rows.append((case_id, int(label), distance))
+    return rows
+
+
+def write_prereg_residual_csv(rows: list, out_path: Path) -> None:
+    """Write the centroid distances and print the percentiles that matter."""
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w") as handle:
+        handle.write("case_id,label,centroid_distance_voxels\n")
+        for case_id, label, distance in rows:
+            handle.write(f"{case_id},{label},{distance:.4f}\n")
+
+    if not rows:
+        print(f"[prereg-residual] no rows written to {out_path}")
+        return
+
+    distances = np.array([row[2] for row in rows])
+    print(f"\n[prereg-residual] {len(rows)} case/label pairs -> {out_path}")
+    print(
+        "[prereg-residual] centroid distance (full-res voxels): "
+        f"median {np.median(distances):.1f}  "
+        f"p95 {np.percentile(distances, 95):.1f}  "
+        f"p99 {np.percentile(distances, 99):.1f}  "
+        f"max {distances.max():.1f}"
+    )
+
+    worst = {}
+    for case_id, label, distance in rows:
+        worst[label] = max(worst.get(label, 0.0), distance)
+    ranked = sorted(worst.items(), key=lambda item: item[1], reverse=True)[:10]
+    print(
+        "[prereg-residual] worst labels (label: max voxels): "
+        + ", ".join(f"{label}: {distance:.0f}" for label, distance in ranked)
+    )
