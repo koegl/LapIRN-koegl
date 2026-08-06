@@ -238,8 +238,8 @@ class TrainingConfig:
         self.n_label_groups = len(self.label_groups) if self.use_labels_directly else 0
         self.in_channel = 4 + 2 * self.n_label_groups
 
-        if self.similarity_metric == "ncc":
-            self.w_ct *= 3.4
+        if self.similarity_metric == "mind":
+            self.w_ct *= 3.0
 
         if self.overfit:
             self.augment = False
