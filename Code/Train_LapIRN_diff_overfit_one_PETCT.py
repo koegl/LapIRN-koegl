@@ -131,8 +131,8 @@ def main() -> None:
                         valid_nlst_generator,
                         valid_abdomen_generator,
                     )
-                    # path_model_level_1 = paths_model_level1["best"]
-                    path_model_level_1 = paths_model_level1["final"]
+                    path_model_level_1 = paths_model_level1["best"]
+                    # path_model_level_1 = paths_model_level1["final"]
                     # print("skipping level 1, already trained")
                     # path_model_level_1 = Path(
                     #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_persistent-fly-39113072_stagelvl1_best.pth"
@@ -148,8 +148,8 @@ def main() -> None:
                     valid_nlst_generator,
                     valid_abdomen_generator,
                 )
-                # path_model_level_2 = paths_model_level2["best"]
-                path_model_level_2 = paths_model_level2["final"]
+                path_model_level_2 = paths_model_level2["best"]
+                # path_model_level_2 = paths_model_level2["final"]
                 # print("skipping level 2, already trained")
                 # path_model_level_2 = Path(
                 # "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_nosy-shrike-707_stagelvl2_best.pth"
