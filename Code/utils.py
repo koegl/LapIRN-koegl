@@ -147,6 +147,106 @@ def log_metrics(metrics: Dict[str, float], step: int | None = None) -> None:
         _WANDB_RUN.log(wandb_metrics)
 
 
+class GradConflictTracker:
+    """Running window over the gradient-conflict measurements.
+
+    Single-step cosines are noisy, so we keep the last `window` values and log
+    their mean / std / fraction-negative alongside the instantaneous value.
+    """
+
+    def __init__(self, window: int = 20) -> None:
+        self.window = window
+        self._cos: list[float] = []
+        self._ratio: list[float] = []
+
+    def update(self, cos: float, ratio: float) -> Dict[str, float]:
+        self._cos.append(cos)
+        self._ratio.append(ratio)
+        if len(self._cos) > self.window:
+            self._cos.pop(0)
+            self._ratio.pop(0)
+        cos_arr = np.asarray(self._cos)
+        return {
+            "cos_mean": float(cos_arr.mean()),
+            "cos_std": float(cos_arr.std()),
+            "cos_frac_negative": float((cos_arr < 0).mean()),
+            "cos_min": float(cos_arr.min()),
+            "cos_max": float(cos_arr.max()),
+            "norm_ratio_mean": float(np.asarray(self._ratio).mean()),
+            "n_samples": float(len(self._cos)),
+        }
+
+
+def _flat_grad(
+    loss: torch.Tensor, params: list[torch.nn.Parameter]
+) -> torch.Tensor | None:
+    """Flattened dL/dparams, or None if `loss` is not attached to the graph."""
+    if not loss.requires_grad:
+        return None
+    grads = torch.autograd.grad(
+        loss,
+        params,
+        retain_graph=True,
+        allow_unused=True,
+    )
+    flat = [
+        (g if g is not None else torch.zeros_like(p)).reshape(-1).float()
+        for g, p in zip(grads, params)
+    ]
+    return torch.cat(flat)
+
+
+def gradient_conflict_metrics(
+    loss_a: torch.Tensor,
+    loss_b: torch.Tensor,
+    model: torch.nn.Module,
+    eps: float = 1e-12,
+) -> Dict[str, float]:
+    """Measure whether two loss groups pull the shared parameters apart.
+
+    `loss_a` / `loss_b` must be the *weighted* group sums, i.e. exactly what each
+    group contributes to the total objective. The cosine is scale invariant so
+    the weights do not affect it, but they do affect `norm_ratio`, which is the
+    number that tells you whether one group is simply drowning the other out.
+
+    Reading it:
+      cos > 0  -> the groups agree; no conflict to architect around, any problem
+                  is one of weighting or capacity.
+      cos ~ 0  -> orthogonal; the parameters have room to serve both.
+      cos < 0  -> genuine conflict; every update trades one group against the
+                  other. This is the case that justifies a chained / multi-stage
+                  model or gradient surgery.
+      norm_ratio = |g_a| / |g_b|; far from 1 means one group dominates the update
+                  regardless of the cosine.
+
+    Costs two extra backward passes, so call it sparingly. Uses autograd.grad, so
+    it never touches `.grad` and does not disturb gradient accumulation.
+    """
+    params = [p for p in model.parameters() if p.requires_grad]
+    if not params:
+        return {}
+
+    g_a = _flat_grad(loss_a, params)
+    g_b = _flat_grad(loss_b, params)
+    if g_a is None or g_b is None:
+        return {}
+
+    n_a = g_a.norm()
+    n_b = g_b.norm()
+    if n_a < eps or n_b < eps:
+        # e.g. an abdomen batch (rigidity forced to 0) or a synthetic batch
+        # (tlg/mtv forced to 0) can leave group B with no gradient at all.
+        return {}
+
+    cos = torch.dot(g_a, g_b) / (n_a * n_b)
+    return {
+        "cos": float(cos.item()),
+        "norm_a": float(n_a.item()),
+        "norm_b": float(n_b.item()),
+        "norm_ratio": float((n_a / n_b).item()),
+    }
+
+
 def create_datasets(
     config: TrainingConfig,
 ) -> Tuple[

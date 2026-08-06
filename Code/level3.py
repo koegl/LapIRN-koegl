@@ -460,6 +460,10 @@ def train_lvl3(
     epoch_metrics: Dict[str, float] = {}
     n_gated = 0
 
+    grad_conflict_tracker = utils.GradConflictTracker(
+        window=config.grad_conflict_window
+    )
+
     # re-apply unfreeze if resuming past the threshold
     if start_global_step >= unfreeze_step:
         model.unfreeze_modellvl2()
@@ -816,6 +820,50 @@ def train_lvl3(
             loss = loss + config.w_unrolled * loss_unrolled
         else:
             loss_unrolled = torch.zeros((), device=device)
+
+        # Gradient-conflict diagnostic. Must run before the backward in
+        # optimizer_step_with_guard (it needs the graph alive) but it uses
+        # autograd.grad, so it neither writes .grad nor disturbs accumulation.
+        # The unrolled-IO meta-loss is deliberately excluded: it mixes both
+        # groups and would blur the split.
+        if config.log_grad_conflict and (
+            global_step % (val_step_interval * config.grad_conflict_every_n_val) == 0
+        ):
+            loss_group_accuracy = (
+                loss_multiNCC
+                + config.w_jacobian * loss_jacobian
+                + config.w_smooth * loss_regulation
+                + config.w_dvf * loss_dvf
+            )
+            if loss_dice_ct is not None:
+                loss_group_accuracy = (
+                    loss_group_accuracy + config.w_dice_ct_lvl3 * loss_dice_ct
+                )
+            if loss_dice_pet is not None and use_dice_pet:
+                loss_group_accuracy = (
+                    loss_group_accuracy + config.w_dice_pet * loss_dice_pet
+                )
+
+            loss_group_tumour = (
+                config.w_tlg * loss_tlg
+                + config.w_jacobian_tumor * loss_jacobian_tumor
+                + config.w_bone_rigidity * loss_rigidity
+            )
+
+            raw = utils.gradient_conflict_metrics(
+                loss_group_accuracy, loss_group_tumour, model
+            )
+            if raw:
+                raw.update(
+                    grad_conflict_tracker.update(raw["cos"], raw["norm_ratio"])
+                )
+                utils.log_metrics(
+                    {
+                        f"grad_conflict_lvl3/{key}": value
+                        for key, value in raw.items()
+                    },
+                    step=global_step,
+                )
 
         loss_scaled = loss / config.accumulation_steps
         is_step = (global_step + 1) % config.accumulation_steps == 0 or is_last_step

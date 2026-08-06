@@ -89,7 +89,7 @@ class TrainingConfig:
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
     warmup_epochs: float = 5
-    start_channel: int = 24
+    start_channel: int = 7
 
     # PWC-Net style local cost volume in lvl1, fused into the res-block trunk.
     #   "off"  -> baseline
@@ -135,6 +135,19 @@ class TrainingConfig:
     w_jacobian_tumor: float = 2.0
     w_bone_rigidity: float = 2.0
     w_dvf: float = 100.0
+
+    # gradient-conflict diagnostic: splits the lvl3 objective into
+    #   A = accuracy + regularisation (ncc, dice, jacobian, smooth, dvf)
+    #   B = tumour                    (tlg, jacobian_tumor, rigidity)
+    # and logs cos(grad_A, grad_B) w.r.t. the shared parameters. Persistently
+    # negative => the groups genuinely fight and a multi-stage model / gradient
+    # surgery is justified; positive or near-zero => it is only a weighting
+    # problem. Costs two extra backward passes per measurement.
+    log_grad_conflict: bool = True
+    # measured every N validation intervals (1 = at every validation)
+    grad_conflict_every_n_val: int = 1
+    # window length for the running cos mean / std / fraction-negative
+    grad_conflict_window: int = 20
 
     # meta-learned / unrolled instance optimization (IO)
     # During lvl3 training, after the net emits F_X_Y we run a few differentiable
