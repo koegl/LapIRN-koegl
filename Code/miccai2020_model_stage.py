@@ -8,6 +8,26 @@ import torch.nn.functional as F
 from Functions import generate_grid, generate_grid_unit
 
 
+def resblock_seq(in_channels, bias_opt=False, n_blocks=5, expansion=1):
+    """The res-block trunk shared by every level.
+
+    Emitting the blocks in a loop keeps the nn.Sequential child names
+    ("0", "1", ...) identical to the older hand-unrolled version, so
+    n_blocks=5, expansion=1 still loads pre-existing checkpoints unchanged.
+
+    n_blocks deepens the trunk (and widens its receptive field by roughly
+    +4 voxels per block at the trunk's resolution); expansion turns each block
+    into an inverted bottleneck. Both leave in/out width at in_channels.
+    """
+    layers = []
+    for _ in range(n_blocks):
+        layers.append(
+            PreActBlock(in_channels, in_channels, bias=bias_opt, expansion=expansion)
+        )
+        layers.append(nn.LeakyReLU(0.2))
+    return nn.Sequential(*layers)
+
+
 def build_correlation_offsets(radius, dilation):
     """Offsets of a local 3D search window, as (dz, dy, dx) in feature voxels.
 
@@ -57,11 +77,19 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
         cost_volume_dilation=1,
         cost_volume_feat_channels=16,
         cost_volume_out_channels=16,
+        n_resblocks=5,
+        resblock_expansion=1,
     ):
         super(Miccai2020_LDR_laplacian_unit_add_lvl1, self).__init__()
         self.in_channel = in_channel
         self.n_classes = n_classes
         self.start_channel = start_channel
+
+        # trunk capacity knobs: n_resblocks deepens the res-block group (also
+        # widening its receptive field), resblock_expansion widens each block
+        # internally. Both leave every inter-level tensor shape untouched.
+        self.n_resblocks = n_resblocks
+        self.resblock_expansion = resblock_expansion
 
         self.range_flow = range_flow
         self.is_train = is_train
@@ -93,8 +121,11 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
             bias=bias_opt,
         )
 
-        self.resblock_group_lvl1 = self.resblock_seq(
-            self.start_channel * 4, bias_opt=bias_opt
+        self.resblock_group_lvl1 = resblock_seq(
+            self.start_channel * 4,
+            bias_opt=bias_opt,
+            n_blocks=self.n_resblocks,
+            expansion=self.resblock_expansion,
         )
 
         self.up = nn.ConvTranspose3d(
@@ -196,21 +227,6 @@ class Miccai2020_LDR_laplacian_unit_add_lvl1(nn.Module):
             corr = torch.cat((f_x, f_y), 1)
 
         return self.corr_compress(corr)
-
-    def resblock_seq(self, in_channels, bias_opt=False):
-        layer = nn.Sequential(
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-        )
-        return layer
 
     def input_feature_extract(
         self,
@@ -378,11 +394,19 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
         imgshape=(160, 192, 144),
         range_flow=0.4,
         model_lvl1=None,
+        n_resblocks=5,
+        resblock_expansion=1,
     ):
         super(Miccai2020_LDR_laplacian_unit_add_lvl2, self).__init__()
         self.in_channel = in_channel
         self.n_classes = n_classes
         self.start_channel = start_channel
+
+        # trunk capacity knobs: n_resblocks deepens the res-block group (also
+        # widening its receptive field), resblock_expansion widens each block
+        # internally. Both leave every inter-level tensor shape untouched.
+        self.n_resblocks = n_resblocks
+        self.resblock_expansion = resblock_expansion
 
         self.range_flow = range_flow
         self.is_train = is_train
@@ -422,8 +446,11 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
             bias=bias_opt,
         )
 
-        self.resblock_group_lvl1 = self.resblock_seq(
-            self.start_channel * 4, bias_opt=bias_opt
+        self.resblock_group_lvl1 = resblock_seq(
+            self.start_channel * 4,
+            bias_opt=bias_opt,
+            n_blocks=self.n_resblocks,
+            expansion=self.resblock_expansion,
         )
 
         self.up_tri = torch.nn.Upsample(scale_factor=2, mode="trilinear")
@@ -459,21 +486,6 @@ class Miccai2020_LDR_laplacian_unit_add_lvl2(nn.Module):
         print("\nunfreeze model_lvl1 parameter")
         for param in self.model_lvl1.parameters():
             param.requires_grad = True
-
-    def resblock_seq(self, in_channels, bias_opt=False):
-        layer = nn.Sequential(
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-        )
-        return layer
 
     def input_feature_extract(
         self,
@@ -659,11 +671,19 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
         imgshape=(160, 192, 144),
         range_flow=0.4,
         model_lvl2=None,
+        n_resblocks=5,
+        resblock_expansion=1,
     ):
         super(Miccai2020_LDR_laplacian_unit_add_lvl3, self).__init__()
         self.in_channel = in_channel
         self.n_classes = n_classes
         self.start_channel = start_channel
+
+        # trunk capacity knobs: n_resblocks deepens the res-block group (also
+        # widening its receptive field), resblock_expansion widens each block
+        # internally. Both leave every inter-level tensor shape untouched.
+        self.n_resblocks = n_resblocks
+        self.resblock_expansion = resblock_expansion
 
         self.range_flow = range_flow
         self.is_train = is_train
@@ -697,8 +717,11 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
             bias=bias_opt,
         )
 
-        self.resblock_group_lvl1 = self.resblock_seq(
-            self.start_channel * 4, bias_opt=bias_opt
+        self.resblock_group_lvl1 = resblock_seq(
+            self.start_channel * 4,
+            bias_opt=bias_opt,
+            n_blocks=self.n_resblocks,
+            expansion=self.resblock_expansion,
         )
 
         self.up_tri = torch.nn.Upsample(scale_factor=2, mode="trilinear")
@@ -726,21 +749,6 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
         print("\nunfreeze model_lvl2 parameter")
         for param in self.model_lvl2.parameters():
             param.requires_grad = True
-
-    def resblock_seq(self, in_channels, bias_opt=False):
-        layer = nn.Sequential(
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-        )
-        return layer
 
     def input_feature_extract(
         self,
@@ -945,7 +953,7 @@ class Miccai2020_LDR_laplacian_unit_disp_add_lvl1(nn.Module):
             bias=bias_opt,
         )
 
-        self.resblock_group_lvl1 = self.resblock_seq(
+        self.resblock_group_lvl1 = resblock_seq(
             self.start_channel * 4, bias_opt=bias_opt
         )
 
@@ -971,21 +979,6 @@ class Miccai2020_LDR_laplacian_unit_disp_add_lvl1(nn.Module):
             padding=1,
             bias=False,
         )
-
-    def resblock_seq(self, in_channels, bias_opt=False):
-        layer = nn.Sequential(
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-        )
-        return layer
 
     def input_feature_extract(
         self,
@@ -1180,7 +1173,7 @@ class Miccai2020_LDR_laplacian_unit_disp_add_lvl2(nn.Module):
             bias=bias_opt,
         )
 
-        self.resblock_group_lvl1 = self.resblock_seq(
+        self.resblock_group_lvl1 = resblock_seq(
             self.start_channel * 4, bias_opt=bias_opt
         )
 
@@ -1213,21 +1206,6 @@ class Miccai2020_LDR_laplacian_unit_disp_add_lvl2(nn.Module):
         print("\nunfreeze model_lvl1 parameter")
         for param in self.model_lvl1.parameters():
             param.requires_grad = True
-
-    def resblock_seq(self, in_channels, bias_opt=False):
-        layer = nn.Sequential(
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-        )
-        return layer
 
     def input_feature_extract(
         self,
@@ -1433,7 +1411,7 @@ class Miccai2020_LDR_laplacian_unit_disp_add_lvl3(nn.Module):
             bias=bias_opt,
         )
 
-        self.resblock_group_lvl1 = self.resblock_seq(
+        self.resblock_group_lvl1 = resblock_seq(
             self.start_channel * 4, bias_opt=bias_opt
         )
 
@@ -1462,21 +1440,6 @@ class Miccai2020_LDR_laplacian_unit_disp_add_lvl3(nn.Module):
         print("\nunfreeze model_lvl2 parameter")
         for param in self.model_lvl2.parameters():
             param.requires_grad = True
-
-    def resblock_seq(self, in_channels, bias_opt=False):
-        layer = nn.Sequential(
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-        )
-        return layer
 
     def input_feature_extract(
         self,
@@ -1674,7 +1637,7 @@ class Miccai2020_LDR_laplacian_unit_disp_add_unorm_lvl1(nn.Module):
             bias=bias_opt,
         )
 
-        self.resblock_group_lvl1 = self.resblock_seq(
+        self.resblock_group_lvl1 = resblock_seq(
             self.start_channel * 4, bias_opt=bias_opt
         )
 
@@ -1700,21 +1663,6 @@ class Miccai2020_LDR_laplacian_unit_disp_add_unorm_lvl1(nn.Module):
             padding=1,
             bias=False,
         )
-
-    def resblock_seq(self, in_channels, bias_opt=False):
-        layer = nn.Sequential(
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-        )
-        return layer
 
     def input_feature_extract(
         self,
@@ -1910,7 +1858,7 @@ class Miccai2020_LDR_laplacian_unit_disp_add_unorm_lvl2(nn.Module):
             bias=bias_opt,
         )
 
-        self.resblock_group_lvl1 = self.resblock_seq(
+        self.resblock_group_lvl1 = resblock_seq(
             self.start_channel * 4, bias_opt=bias_opt
         )
 
@@ -1943,21 +1891,6 @@ class Miccai2020_LDR_laplacian_unit_disp_add_unorm_lvl2(nn.Module):
         print("\nunfreeze model_lvl1 parameter")
         for param in self.model_lvl1.parameters():
             param.requires_grad = True
-
-    def resblock_seq(self, in_channels, bias_opt=False):
-        layer = nn.Sequential(
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-        )
-        return layer
 
     def input_feature_extract(
         self,
@@ -2163,7 +2096,7 @@ class Miccai2020_LDR_laplacian_unit_disp_add_unorm_lvl3(nn.Module):
             bias=bias_opt,
         )
 
-        self.resblock_group_lvl1 = self.resblock_seq(
+        self.resblock_group_lvl1 = resblock_seq(
             self.start_channel * 4, bias_opt=bias_opt
         )
 
@@ -2192,21 +2125,6 @@ class Miccai2020_LDR_laplacian_unit_disp_add_unorm_lvl3(nn.Module):
         print("\nunfreeze model_lvl2 parameter")
         for param in self.model_lvl2.parameters():
             param.requires_grad = True
-
-    def resblock_seq(self, in_channels, bias_opt=False):
-        layer = nn.Sequential(
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-            PreActBlock(in_channels, in_channels, bias=bias_opt),
-            nn.LeakyReLU(0.2),
-        )
-        return layer
 
     def input_feature_extract(
         self,
@@ -2361,24 +2279,33 @@ class Miccai2020_LDR_laplacian_unit_disp_add_unorm_lvl3(nn.Module):
 
 
 class PreActBlock(nn.Module):
-    """Pre-activation version of the BasicBlock."""
+    """Pre-activation version of the BasicBlock.
 
-    expansion = 1
+    ``expansion`` turns the block into an inverted bottleneck: conv1 lifts to
+    ``planes * expansion`` channels and conv2 projects back down to ``planes``,
+    so the block's input/output width is unchanged and only its interior gets
+    wider. This adds capacity without touching start_channel or any of the
+    inter-level tensor shapes. expansion=1 reproduces the original block
+    exactly, parameter shapes and state_dict keys included.
+    """
 
-    def __init__(self, in_planes, planes, num_group=4, stride=1, bias=False):
+    def __init__(
+        self, in_planes, planes, num_group=4, stride=1, bias=False, expansion=1
+    ):
         super(PreActBlock, self).__init__()
+        hidden_planes = planes * expansion
         self.conv1 = nn.Conv3d(
-            in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=bias
+            in_planes, hidden_planes, kernel_size=3, stride=stride, padding=1, bias=bias
         )
         self.conv2 = nn.Conv3d(
-            planes, planes, kernel_size=3, stride=1, padding=1, bias=bias
+            hidden_planes, planes, kernel_size=3, stride=1, padding=1, bias=bias
         )
 
-        if stride != 1 or in_planes != self.expansion * planes:
+        if stride != 1 or in_planes != planes:
             self.shortcut = nn.Sequential(
                 nn.Conv3d(
                     in_planes,
-                    self.expansion * planes,
+                    planes,
                     kernel_size=1,
                     stride=stride,
                     bias=bias,

@@ -68,6 +68,8 @@ def create_model(
             is_train=True,
             imgshape=cfg.img_shape_4,
             range_flow=cfg.range_flow,
+            n_resblocks=cfg.n_resblocks,
+            resblock_expansion=cfg.resblock_expansion,
         ).to(device)
     else:
         model_lvl1 = None
@@ -80,6 +82,8 @@ def create_model(
         imgshape=cfg.img_shape_2,
         range_flow=cfg.range_flow,
         model_lvl1=model_lvl1,
+        n_resblocks=cfg.n_resblocks,
+        resblock_expansion=cfg.resblock_expansion,
     ).to(device)
     model = miccai2020_model_stage.Miccai2020_LDR_laplacian_unit_add_lvl3(
         in_channel=cfg.in_channel,
@@ -89,6 +93,8 @@ def create_model(
         imgshape=cfg.img_shape,
         range_flow=cfg.range_flow,
         model_lvl2=model_lvl2,
+        n_resblocks=cfg.n_resblocks,
+        resblock_expansion=cfg.resblock_expansion,
     ).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()

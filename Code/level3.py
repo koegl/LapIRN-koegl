@@ -367,6 +367,8 @@ def train_lvl3(
             cost_volume_dilation=config.cost_volume_dilation,
             cost_volume_feat_channels=config.cost_volume_feat_channels,
             cost_volume_out_channels=config.cost_volume_out_channels,
+            n_resblocks=config.n_resblocks,
+            resblock_expansion=config.resblock_expansion,
         ).to(device)
     else:
         model_lvl1 = None
@@ -379,6 +381,8 @@ def train_lvl3(
         imgshape=config.img_shape_2,
         range_flow=config.range_flow,
         model_lvl1=model_lvl1,
+        n_resblocks=config.n_resblocks,
+        resblock_expansion=config.resblock_expansion,
     ).to(device)
 
     print("Loading weight for model_lvl2...", path_model_level2)
@@ -395,6 +399,8 @@ def train_lvl3(
         imgshape=config.img_shape,
         range_flow=config.range_flow,
         model_lvl2=model_lvl2,
+        n_resblocks=config.n_resblocks,
+        resblock_expansion=config.resblock_expansion,
     ).to(device)
 
     loss_similarity_ct = build_similarity_loss(config, level=3)
@@ -854,14 +860,9 @@ def train_lvl3(
                 loss_group_accuracy, loss_group_tumour, model
             )
             if raw:
-                raw.update(
-                    grad_conflict_tracker.update(raw["cos"], raw["norm_ratio"])
-                )
+                raw.update(grad_conflict_tracker.update(raw["cos"], raw["norm_ratio"]))
                 utils.log_metrics(
-                    {
-                        f"grad_conflict_lvl3/{key}": value
-                        for key, value in raw.items()
-                    },
+                    {f"grad_conflict_lvl3/{key}": value for key, value in raw.items()},
                     step=global_step,
                 )
 
@@ -955,8 +956,8 @@ def train_lvl3(
                     f"ep: {epoch}\t"
                     f"ncc={epoch_metrics['train_lvl3/ncc_ct']:.4f}\t"
                     f"dice={epoch_metrics['train_lvl3/dice_ct']:.4f}\t"
-                    f"jacob={epoch_metrics['train_lvl3/jacob']:.6f}\t"
-                    f"unrolled={epoch_metrics['train_lvl3/unrolled_io']:.4f}\t"
+                    f"jacob={epoch_metrics['train_lvl3/jacobian']:.6f}\t"
+                    # f"unrolled={epoch_metrics['train_lvl3/unrolled_io']:.4f}\t"
                 )
         if config.overfit is False and (
             global_step % val_step_interval == 0 or is_last_step

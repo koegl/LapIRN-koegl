@@ -19,7 +19,7 @@ class TrainingConfig:
     model_save_dir: Path = DATA_PATH / "PSMAReg/models"
 
     # overfit
-    overfit: bool = False
+    overfit: bool = True
 
     # Dataset
     data_dir = DATA_PATH / "PSMAReg/PSMAReg_dataset"
@@ -91,6 +91,18 @@ class TrainingConfig:
     warmup_epochs: float = 5
     start_channel: int = 7
 
+    # Per-level res-block trunk capacity, independent of start_channel (so no
+    # inter-level tensor shape changes).
+    #   *_n_resblocks       -> depth of the res-block group. Also grows the
+    #                          receptive field (~+4 voxels per block at the
+    #                          trunk's own resolution), which caps how much
+    #                          misalignment the level can perceive; widening
+    #                          does not.
+    #   *_resblock_expansion -> inverted bottleneck inside each block: conv1
+    #                          lifts to 4x*expansion channels, conv2 projects
+    #                          back. Roughly multiplies per-block params.
+    n_resblocks: int = 5  # 5
+    resblock_expansion: int = 1  # 1
 
     # PWC-Net style local cost volume in lvl1, fused into the res-block trunk.
     #   "off"  -> baseline
@@ -113,11 +125,11 @@ class TrainingConfig:
     cost_volume_out_channels: int = 16
 
     # train val
-    total_steps_lvl1: int = 100000
-    total_steps_lvl2: int = 100000
-    total_steps_lvl3: int = 140000
-    unfreeze_epoch_in_lvl2: int = 10
-    unfreeze_epoch_in_lvl3: int = 10
+    total_steps_lvl1: int = 2
+    total_steps_lvl2: int = 2
+    total_steps_lvl3: int = 2
+    unfreeze_epoch_in_lvl2: int = 0
+    unfreeze_epoch_in_lvl3: int = 0
     val_interval: int = 2
     checkpoint_interval: int = 50
 

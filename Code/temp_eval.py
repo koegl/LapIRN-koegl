@@ -33,6 +33,8 @@ def main() -> None:
             is_train=True,
             imgshape=cfg.img_shape_4,
             range_flow=cfg.range_flow,
+            n_resblocks=cfg.n_resblocks,
+            resblock_expansion=cfg.resblock_expansion,
         ).to(device)
     else:
         model_lvl1 = None
@@ -45,6 +47,8 @@ def main() -> None:
         imgshape=cfg.img_shape_2,
         range_flow=cfg.range_flow,
         model_lvl1=model_lvl1,
+        n_resblocks=cfg.n_resblocks,
+        resblock_expansion=cfg.resblock_expansion,
     ).to(device)
 
     model_lvl2.load_state_dict(torch.load(ckpt_lvl2))
@@ -60,6 +64,8 @@ def main() -> None:
         imgshape=cfg.img_shape,
         range_flow=cfg.range_flow,
         model_lvl2=model_lvl2,
+        n_resblocks=cfg.n_resblocks,
+        resblock_expansion=cfg.resblock_expansion,
     ).to(device)
 
     state = torch.load(ckpt_lvl3, map_location=device)

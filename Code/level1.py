@@ -354,6 +354,8 @@ def train_lvl1(
         cost_volume_dilation=config.cost_volume_dilation,
         cost_volume_feat_channels=config.cost_volume_feat_channels,
         cost_volume_out_channels=config.cost_volume_out_channels,
+        n_resblocks=config.n_resblocks,
+        resblock_expansion=config.resblock_expansion,
     ).to(device)
 
     loss_similarity_ct = build_similarity_loss(config, level=1)

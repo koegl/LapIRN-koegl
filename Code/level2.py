@@ -346,6 +346,8 @@ def train_lvl2(
             cost_volume_dilation=config.cost_volume_dilation,
             cost_volume_feat_channels=config.cost_volume_feat_channels,
             cost_volume_out_channels=config.cost_volume_out_channels,
+            n_resblocks=config.n_resblocks,
+            resblock_expansion=config.resblock_expansion,
         ).to(device)
 
         print("Loading weight for model_lvl1...", path_model_level1)
@@ -365,6 +367,8 @@ def train_lvl2(
         imgshape=config.img_shape_2,
         range_flow=config.range_flow,
         model_lvl1=model_lvl1,
+        n_resblocks=config.n_resblocks,
+        resblock_expansion=config.resblock_expansion,
     ).to(device)
 
     loss_similarity_ct = build_similarity_loss(config, level=2)
