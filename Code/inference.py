@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import sys
 import zipfile
 from pathlib import Path
@@ -237,12 +238,15 @@ def predict_ct_labels(
 def compress_to_zip(source_dir: Path, output_zip: Path) -> None:
     files = list(source_dir.rglob("*"))
     files = [f for f in files if f.is_file()]
+    files = [f for f in files if f.name.startswith("disp_00")]
 
     with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zf:
         for file in files:
             arcname = file.relative_to(source_dir)
             zf.write(file, arcname)
             print(f"Added: {arcname}")
+
+    shutil.rmtree(source_dir)
 
     print(f"\nDone! Zip saved to: {output_zip}")
 
@@ -917,7 +921,7 @@ def process_subject(
     disp_half = torch.nn.functional.interpolate(
         total_voxel, scale_factor=0.5, mode="trilinear", align_corners=False
     )
-    save_disp(disp_half, out_dir / "submission", case_id)
+    save_disp(disp_half, out_dir / f"submission_{model_name}", case_id)
 
     return dice_their, dice_before, mtv, tlg, ndv, hd95, hd95_before, per_label
 
@@ -1017,6 +1021,7 @@ def main() -> None:
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     cfg.cache_dir = val_cache_dir
     cfg.in_channel = 4
+    cfg.start_channel = 7
 
     # --- what to evaluate ---
     eval_official: bool = True
@@ -1206,7 +1211,8 @@ def main() -> None:
                 per_label_csv=per_label_dice_csv,
             )
             compress_to_zip(
-                out_dir / "submission", out_dir / f"submission_{model_name}.zip"
+                out_dir / f"submission_{model_name}",
+                out_dir / f"submission_{model_name}.zip",
             )
 
         if eval_my_val:
