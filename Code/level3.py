@@ -333,10 +333,23 @@ def train_lvl3(
     run_name = utils.get_run_name()
 
     best_dice_ct = float("inf")
+    best_tumour = float("inf")
+    best_combined = float("inf")
     config.model_save_dir.mkdir(parents=True, exist_ok=True)
     best_model_path = (
         config.model_save_dir
         / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best.pth"
+    )
+    # tumour val metrics turn upward long before dice_ct plateaus, so selecting
+    # on dice alone ships a checkpoint deep into the tumour-overfitting region.
+    # Keep a checkpoint per objective and let the test set decide.
+    best_tumour_model_path = (
+        config.model_save_dir
+        / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best_tumour.pth"
+    )
+    best_combined_model_path = (
+        config.model_save_dir
+        / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best_combined.pth"
     )
     final_model_path = (
         config.model_save_dir
@@ -350,6 +363,16 @@ def train_lvl3(
     best_optimizer_path = (
         config.model_save_dir
         / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best_optimizer.pth"
+    )
+    # one optimizer checkpoint per selection criterion, written at the same
+    # moment as its model, so any of the three can be resumed from
+    best_tumour_optimizer_path = (
+        config.model_save_dir
+        / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best_tumour_optimizer.pth"
+    )
+    best_combined_optimizer_path = (
+        config.model_save_dir
+        / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best_combined_optimizer.pth"
     )
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -445,6 +468,10 @@ def train_lvl3(
         optimizer.load_state_dict(opt_ckpt["optimizer"])
         start_global_step = opt_ckpt["global_step"]
         best_dice_ct = opt_ckpt["best_dice_ct"]
+        # .get: optimizer checkpoints written before the extra selection
+        # criteria existed only carry best_dice_ct
+        best_tumour = opt_ckpt.get("best_tumour", float("inf"))
+        best_combined = opt_ckpt.get("best_combined", float("inf"))
 
     train_iter = utils.cycle(train_generator)
 
@@ -1076,17 +1103,60 @@ def train_lvl3(
                 f"- tlg {val_losses['tlg_bias']:.4f}"
             )
 
+            # all three are "lower is better"; scales make the terms comparable
+            tumour_score = (
+                config.sel_w_mtv * val_losses["mtv_bias"] / config.sel_scale_mtv
+                + config.sel_w_tlg * val_losses["tlg_bias"] / config.sel_scale_tlg
+            )
+            combined_score = (
+                config.sel_w_dice * val_losses["dice_ct"] / config.sel_scale_dice_ct
+                + tumour_score
+            )
+            utils.log_metrics(
+                {
+                    "valid_lvl3/sel_tumour_score": tumour_score,
+                    "valid_lvl3/sel_combined_score": combined_score,
+                },
+                step=global_step,
+            )
+
+            def save_selected(model_path: Path, optimizer_path: Path) -> None:
+                # every optimizer checkpoint carries all three bests, so a resume
+                # from any of them will not re-save worse checkpoints over better
+                torch.save(model.state_dict(), model_path)
+                torch.save(
+                    {
+                        "optimizer": optimizer.state_dict(),
+                        "global_step": global_step,
+                        "best_dice_ct": best_dice_ct,
+                        "best_tumour": best_tumour,
+                        "best_combined": best_combined,
+                    },
+                    optimizer_path,
+                )
+
             if val_losses["dice_ct"] < best_dice_ct:
                 best_dice_ct = val_losses["dice_ct"]
-                torch.save(model.state_dict(), best_model_path)
-                opt_ckpt = {
-                    "optimizer": optimizer.state_dict(),
-                    "global_step": global_step,
-                    "best_dice_ct": best_dice_ct,
-                }
-                torch.save(opt_ckpt, best_optimizer_path)
+                save_selected(best_model_path, best_optimizer_path)
                 tqdm.tqdm.write(
                     f"step {global_step}: new best dice_ct {best_dice_ct:.4f} -> saved best"
+                )
+
+            if tumour_score < best_tumour:
+                best_tumour = tumour_score
+                save_selected(best_tumour_model_path, best_tumour_optimizer_path)
+                tqdm.tqdm.write(
+                    f"step {global_step}: new best tumour {best_tumour:.4f} "
+                    f"(mtv {val_losses['mtv_bias']:.4f} tlg {val_losses['tlg_bias']:.4f})"
+                    " -> saved best_tumour"
+                )
+
+            if combined_score < best_combined:
+                best_combined = combined_score
+                save_selected(best_combined_model_path, best_combined_optimizer_path)
+                tqdm.tqdm.write(
+                    f"step {global_step}: new best combined {best_combined:.4f}"
+                    " -> saved best_combined"
                 )
 
         if config.overfit is False:
@@ -1110,6 +1180,10 @@ def train_lvl3(
     result = {
         "final": final_model_path,
         "best": best_model_path,
+        "best_tumour": best_tumour_model_path,
+        "best_combined": best_combined_model_path,
         "best_optimizer": best_optimizer_path,
+        "best_tumour_optimizer": best_tumour_optimizer_path,
+        "best_combined_optimizer": best_combined_optimizer_path,
     }
     return result
