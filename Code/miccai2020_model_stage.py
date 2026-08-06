@@ -2829,3 +2829,174 @@ class multi_resolution_NCC(torch.nn.Module):
             )
 
         return sum(total_NCC)
+
+
+# ---------------------------------------------------------------------------
+# MIND-SSC (modality independent neighbourhood descriptor, self-similarity
+# context) -- http://mpheinrich.de/pub/miccai2013_943_mheinrich.pdf
+# ---------------------------------------------------------------------------
+
+
+def _pdist_squared(x):
+    """Pairwise squared distances of the points in x, shaped (B, D, N)."""
+    xx = (x**2).sum(dim=1).unsqueeze(2)
+    yy = xx.permute(0, 2, 1)
+    dist = xx + yy - 2.0 * torch.bmm(x.permute(0, 2, 1), x)
+    dist[dist != dist] = 0
+    dist = torch.clamp(dist, 0.0, np.inf)
+    return dist
+
+
+class MIND_SSC(torch.nn.Module):
+    """MIND-SSC descriptor distance (mean squared error over the 12 channels).
+
+    Unlike NCC this is *not* bounded in [-1, 0]: it is a plain MSE between two
+    descriptor fields, so it lives in roughly [0, 1] and is lower-is-better.
+    The similarity weights (`w_ct`, `w_pet`) therefore need re-tuning when
+    switching from NCC to MIND.
+    """
+
+    def __init__(self, radius=2, dilation=2):
+        super(MIND_SSC, self).__init__()
+        self.radius = radius
+        self.dilation = dilation
+        self.kernel_size = radius * 2 + 1
+        self.rpad1 = nn.ReplicationPad3d(dilation)
+        self.rpad2 = nn.ReplicationPad3d(radius)
+        # (device, dtype) -> (mshift1, mshift2); the shift kernels are constant
+        # so they are built once per device/dtype instead of every forward
+        self._kernel_cache = {}
+
+    def _shift_kernels(self, device, dtype):
+        key = (device, dtype)
+        if key in self._kernel_cache:
+            return self._kernel_cache[key]
+
+        # start/end locations of the self-similarity pattern (6-neighbourhood)
+        six_neighbourhood = torch.tensor(
+            [[0, 1, 1], [1, 1, 0], [1, 0, 1], [1, 1, 2], [2, 1, 1], [1, 2, 1]],
+            dtype=torch.float32,
+        ).long()
+
+        dist = _pdist_squared(six_neighbourhood.t().unsqueeze(0).float()).squeeze(0)
+
+        # keep the 12 unordered pairs of neighbours that are sqrt(2) apart
+        x, y = torch.meshgrid(torch.arange(6), torch.arange(6), indexing="ij")
+        mask = (x > y).view(-1) & (dist == 2).view(-1)
+
+        idx_shift1 = six_neighbourhood.unsqueeze(1).repeat(1, 6, 1).view(-1, 3)[mask, :]
+        idx_shift2 = six_neighbourhood.unsqueeze(0).repeat(6, 1, 1).view(-1, 3)[mask, :]
+
+        # built on CPU, then moved -- advanced indexing wants the index tensor
+        # on the same device as the target
+        mshift1 = torch.zeros(12, 1, 3, 3, 3)
+        mshift1.view(-1)[
+            torch.arange(12) * 27
+            + idx_shift1[:, 0] * 9
+            + idx_shift1[:, 1] * 3
+            + idx_shift1[:, 2]
+        ] = 1
+        mshift2 = torch.zeros(12, 1, 3, 3, 3)
+        mshift2.view(-1)[
+            torch.arange(12) * 27
+            + idx_shift2[:, 0] * 9
+            + idx_shift2[:, 1] * 3
+            + idx_shift2[:, 2]
+        ] = 1
+
+        mshift1 = mshift1.to(device=device, dtype=dtype)
+        mshift2 = mshift2.to(device=device, dtype=dtype)
+        # channel order matching the reference C++ implementation
+        order = torch.tensor(
+            [6, 8, 1, 11, 2, 10, 0, 7, 9, 4, 5, 3], device=device
+        ).long()
+        self._kernel_cache[key] = (mshift1, mshift2, order)
+        return mshift1, mshift2, order
+
+    def descriptor(self, img):
+        """MIND-SSC descriptor of a single-channel volume (B, 1, D, H, W).
+
+        Returns a (B, 12, D, H, W) tensor.
+        """
+        assert img.shape[1] == 1, f"expected 1 channel, got {img.shape[1]}"
+
+        mshift1, mshift2, order = self._shift_kernels(img.device, img.dtype)
+        padded = self.rpad1(img)
+
+        # patch-wise SSD between the 12 neighbour pairs
+        diff = F.conv3d(padded, mshift1, dilation=self.dilation) - F.conv3d(
+            padded, mshift2, dilation=self.dilation
+        )
+        ssd = F.avg_pool3d(self.rpad2(diff**2), self.kernel_size, stride=1)
+
+        # MIND equation
+        mind = ssd - torch.min(ssd, 1, keepdim=True)[0]
+        mind_var = torch.mean(mind, 1, keepdim=True)
+        mean_var = mind_var.mean()
+        # keep the variance in a sane range without a host sync (the reference
+        # implementation does the same clamp via .item())
+        mind_var = torch.maximum(
+            torch.minimum(mind_var, mean_var * 1000.0), mean_var * 0.001
+        )
+        mind = mind / mind_var
+        mind = torch.exp(-mind)
+
+        # permute to have the same channel ordering as the reference C++ code
+        return mind[:, order, :, :, :]
+
+    def forward(self, I, J):
+        return torch.mean((self.descriptor(I) - self.descriptor(J)) ** 2)
+
+
+class multi_resolution_MIND_SSC(torch.nn.Module):
+    """MIND-SSC evaluated on an average-pooled pyramid, mirroring
+    `multi_resolution_NCC_fast`: scale i contributes with weight 1 / 2**i."""
+
+    def __init__(self, radius=2, dilation=2, scale=3):
+        super(multi_resolution_MIND_SSC, self).__init__()
+        self.num_scale = scale
+        self.similarity_metric = [
+            MIND_SSC(radius=radius, dilation=dilation) for _ in range(scale)
+        ]
+
+    def forward(self, I, J):
+        total = []
+
+        for i in range(self.num_scale):
+            total.append(self.similarity_metric[i](I, J) / (2**i))
+
+            I = nn.functional.avg_pool3d(
+                I, kernel_size=3, stride=2, padding=1, count_include_pad=False
+            )
+            J = nn.functional.avg_pool3d(
+                J, kernel_size=3, stride=2, padding=1, count_include_pad=False
+            )
+
+        return sum(total)
+
+
+def build_similarity_loss(cfg, level):
+    """Similarity loss for a pyramid level, picked by `cfg.similarity_metric`.
+
+    level is 1, 2 or 3; level 1 is single-resolution, levels 2/3 use a 2- and
+    3-scale pyramid respectively (matching the original NCC setup).
+    """
+    scale = {1: 1, 2: 2, 3: 3}[level]
+    metric = cfg.similarity_metric.lower()
+
+    if metric == "ncc":
+        win = {1: cfg.lvl1_ncc_win, 2: cfg.lvl2_ncc_win, 3: cfg.lvl3_ncc_win}[level]
+        if scale == 1:
+            return NCC_fast(win=win)
+        return multi_resolution_NCC_fast(win=win, scale=scale)
+
+    if metric == "mind":
+        if scale == 1:
+            return MIND_SSC(radius=cfg.mind_radius, dilation=cfg.mind_dilation)
+        return multi_resolution_MIND_SSC(
+            radius=cfg.mind_radius, dilation=cfg.mind_dilation, scale=scale
+        )
+
+    raise ValueError(
+        f"unknown similarity_metric {cfg.similarity_metric!r}, expected 'ncc' or 'mind'"
+    )

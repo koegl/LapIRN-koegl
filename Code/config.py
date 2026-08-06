@@ -193,6 +193,15 @@ class TrainingConfig:
     lvl2_ncc_win: int = 7
     lvl3_ncc_win: int = 7
 
+    # image similarity term used at every pyramid level: "ncc" (local
+    # normalized cross correlation, uses the lvl*_ncc_win above) or "mind"
+    # (MIND-SSC descriptor MSE, uses mind_radius / mind_dilation below).
+    # NB: MIND is a plain MSE in [0, 1] while NCC is in [-1, 0], so w_ct / w_pet
+    # have to be re-tuned when switching.
+    similarity_metric: str = "mind"
+    mind_radius: int = 2
+    mind_dilation: int = 2
+
     mlflow_tracking_uri: str = "file:///home/iml/fryderyk.koegl/code/mlruns"
     mlflow_experiment: str = "PSMAReg_LapIRN"
     logger_backend: str = "both"  # one of: "mlflow", "wandb", "both", "none"
@@ -228,6 +237,9 @@ class TrainingConfig:
     def __post_init__(self) -> None:
         self.n_label_groups = len(self.label_groups) if self.use_labels_directly else 0
         self.in_channel = 4 + 2 * self.n_label_groups
+
+        if self.similarity_metric == "ncc":
+            self.w_ct *= 3.4
 
         if self.overfit:
             self.augment = False

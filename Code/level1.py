@@ -19,9 +19,9 @@ from Functions import (
 )
 from miccai2020_model_stage import (
     Miccai2020_LDR_laplacian_unit_add_lvl1,
-    NCC_fast,
     SpatialTransform_unit,
     SpatialTransformNearest_unit,
+    build_similarity_loss,
     smoothloss,
 )
 from torch.utils import data as torch_data
@@ -32,8 +32,8 @@ def evaluate_lvl1(
     val_generator: torch_data.DataLoader,
     config: TrainingConfig,
     device: torch.device,
-    loss_similarity_ct: NCC_fast,
-    loss_similarity_pet: NCC_fast,
+    loss_similarity_ct: torch.nn.Module,
+    loss_similarity_pet: torch.nn.Module,
     loss_smooth: Callable,
     loss_Jdet: Callable,
     transform: SpatialTransform_unit,
@@ -356,8 +356,8 @@ def train_lvl1(
         cost_volume_out_channels=config.cost_volume_out_channels,
     ).to(device)
 
-    loss_similarity_ct = NCC_fast(win=config.lvl1_ncc_win)
-    loss_similarity_pet = NCC_fast(win=config.lvl1_ncc_win)
+    loss_similarity_ct = build_similarity_loss(config, level=1)
+    loss_similarity_pet = build_similarity_loss(config, level=1)
     loss_smooth = smoothloss
     loss_Jdet = jacobian.non_diff_volume_loss
 
