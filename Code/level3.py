@@ -862,32 +862,56 @@ def train_lvl3(
         if config.log_grad_conflict and (
             global_step % (val_step_interval * config.grad_conflict_every_n_val) == 0
         ):
-            loss_group_accuracy = (
-                loss_multiNCC
-                + config.w_jacobian * loss_jacobian
-                + config.w_smooth * loss_regulation
-                + config.w_dvf * loss_dvf
-            )
+            # Both groups are passed term-by-term. Lumping the accuracy group
+            # together hides which half of it a tumour term actually fights:
+            # smooth/jacobian penalise violent deformation just like rigidity
+            # does, so their agreement cancels part of ncc's disagreement and
+            # makes the group cosine look milder than the real conflict.
+            # Gradients are linear, so the group aggregates still come free.
+            losses_accuracy = {
+                "ncc": loss_multiNCC,
+                "jacob": config.w_jacobian * loss_jacobian,
+                "smooth": config.w_smooth * loss_regulation,
+            }
             if loss_dice_ct is not None:
-                loss_group_accuracy = (
-                    loss_group_accuracy + config.w_dice_ct_lvl3 * loss_dice_ct
-                )
+                losses_accuracy["dice"] = config.w_dice_ct_lvl3 * loss_dice_ct
             if loss_dice_pet is not None and use_dice_pet:
-                loss_group_accuracy = (
-                    loss_group_accuracy + config.w_dice_pet * loss_dice_pet
-                )
+                losses_accuracy["dice_pet"] = config.w_dice_pet * loss_dice_pet
 
-            # kept as separate terms so the report can say *which* tumour term
-            # does the fighting; their gradients sum to the group-B gradient, so
-            # the aggregate cos still comes out of the same backward passes
             losses_tumour = {
                 "tlg": config.w_tlg * loss_tlg,
                 "jactum": config.w_jacobian_tumor * loss_jacobian_tumor,
                 "rigidity": config.w_bone_rigidity * loss_rigidity,
             }
 
+            # Diagnostic probes: Dice restricted to bone labels and to
+            # everything else. The rigidity loss is masked to bone, but its
+            # gradient still reaches every conv weight and the field it produces
+            # is smooth, so it can move soft tissue too -- which is why this is
+            # measured rather than assumed. Probes, not group-A members: the two
+            # class means do not sum back to the full dice term, so folding them
+            # into the group would corrupt cos / norm_ratio / the shares.
+            probes: Dict[str, torch.Tensor] = {}
+            if loss_dice_ct is not None:
+                is_bone_x = torch.isin(X_lbl_ct, bone_labels_tensor)
+                is_bone_y = torch.isin(Y_lbl_ct, bone_labels_tensor)
+                for probe_name, keep_x, keep_y in (
+                    ("dice_bone", is_bone_x, is_bone_y),
+                    ("dice_soft", ~is_bone_x, ~is_bone_y),
+                ):
+                    probe_dice = utils.dice_loss_with_grad_bbox(
+                        X_lbl_ct * keep_x,
+                        Y_lbl_ct * keep_y,
+                        F_X_Y,
+                        model.grid_1,
+                        transform,
+                        use_checkpoint=True,
+                    )
+                    if probe_dice is not None:
+                        probes[probe_name] = config.w_dice_ct_lvl3 * probe_dice
+
             raw = utils.gradient_conflict_report(
-                loss_group_accuracy, losses_tumour, model
+                losses_accuracy, losses_tumour, model, named_probes=probes
             )
             if raw:
                 windowed = grad_conflict_tracker.update(raw)

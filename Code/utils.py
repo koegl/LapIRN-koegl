@@ -4,7 +4,7 @@ import math
 import os
 from contextlib import ExitStack
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, Tuple
+from typing import Any, Callable, Dict, Iterator, Optional, Tuple
 
 import mlflow
 import my_data
@@ -208,64 +208,83 @@ def _cos(u: torch.Tensor, v: torch.Tensor, eps: float = 1e-12) -> float | None:
 
 
 def gradient_conflict_report(
-    loss_a: torch.Tensor,
+    named_losses_a: Dict[str, torch.Tensor],
     named_losses_b: Dict[str, torch.Tensor],
     model: torch.nn.Module,
+    named_probes: Optional[Dict[str, torch.Tensor]] = None,
     eps: float = 1e-12,
 ) -> Dict[str, float]:
-    """Measure whether the accuracy group and the tumour terms pull apart.
+    """Measure how every loss term pulls the shared parameters against every other.
 
-    `loss_a` is the *weighted* accuracy+regularisation sum; `named_losses_b` maps
-    each tumour term's name to its *weighted* value. Weights matter for the norms
-    (which say whether a term is loud enough to matter at all) but not for the
-    cosines, which are scale invariant -- which is exactly why a conflict shown
-    here cannot be tuned away by reweighting.
+    `named_losses_a` are the accuracy + regularisation terms, `named_losses_b` the
+    tumour terms, each mapping a name to its *weighted* value. Weights matter for
+    the norms (which say whether a term is loud enough to matter at all) but not
+    for the cosines, which are scale invariant -- which is why a conflict shown
+    here cannot be removed by scaling a whole group.
 
-    Because gradients are linear, the aggregate tumour gradient is just the sum
-    of the per-term gradients, so `cos` (group A vs group B as a whole) comes out
-    of the same backward passes as the per-term breakdown: 1 + len(b) passes.
+    Gradients are linear, so each group's aggregate gradient is the sum of its
+    term gradients: the group-level numbers cost no extra backward passes on top
+    of the per-term ones. Total cost is len(a) + len(b) backward passes.
 
-    Reading it:
-      cos > 0  -> the groups agree; no conflict to architect around, any problem
-                  is one of weighting or capacity.
-      cos ~ 0  -> orthogonal; the parameters have room to serve both.
-      cos < 0  -> genuine conflict; every update trades one group against the
-                  other. This is the case that justifies a chained / multi-stage
-                  model or gradient surgery.
-      norm_ratio     = |g_a| / |g_b|; far from 1 means one group dominates the
-                       update regardless of the cosine.
-      cos_a_vs_<t>   = which individual tumour term does the fighting.
-      share_<t>      = |g_t| / sum of the tumour term norms; a term with a tiny
-                       share cannot matter no matter how hostile its cosine.
-      cos_<t1>_vs_<t2> = whether the tumour terms also fight each other, which
-                       would mean group B is not one coherent objective.
+    Keys:
+      cos              group A vs group B as a whole. > 0 they agree (no conflict
+                       to architect around); ~ 0 orthogonal, the parameters have
+                       room for both; < 0 genuine conflict, every update trades
+                       one against the other.
+      norm_ratio       |g_a| / |g_b|; far from 1 means one group dominates the
+                       update regardless of the cosine, so the cosine is moot.
+      cos_a_vs_<b>     group A against one tumour term - which term fights.
+      cos_<a>_vs_b     one accuracy term against group B.
+      cos_<x>_vs_<y>   the full pairwise matrix, within and across groups. Within
+                       a group this says whether that group is one coherent
+                       objective or is already fighting itself.
+      share_<x>        |g_x| / sum of that group's term norms; a term with a tiny
+                       share cannot matter however hostile its cosine. Sums to 1
+                       within each group, per step and after windowing.
+      present_<x>      1 when the term had a gradient this step, 0 when it was a
+                       constant. Its windowed mean is the fraction of steps the
+                       term was live, i.e. the sample base behind its cosine.
 
-    Uses autograd.grad, so it never touches `.grad` and does not disturb
-    gradient accumulation. Call it sparingly.
+    `named_probes` are diagnostic-only losses: they get norms, presence and every
+    pairwise cosine, but are deliberately excluded from both group aggregates and
+    from the shares. Use them for quantities that are not additive parts of the
+    objective -- e.g. Dice restricted to bone vs to soft tissue, whose class means
+    do not sum back to the full Dice term. Including them in a group would corrupt
+    `cos`, `norm_ratio` and the shares.
+
+    Uses autograd.grad, so it never touches `.grad` and does not disturb gradient
+    accumulation. Call it sparingly.
     """
     params = [p for p in model.parameters() if p.requires_grad]
     if not params:
         return {}
 
-    g_a = _flat_grad(loss_a, params)
-    if g_a is None or g_a.norm() < eps:
+    # Per-term gradients. A term can be a constant this step and contribute no
+    # gradient at all (a case with no PET-positive lesion zeroes tlg/jactum; an
+    # abdomen batch zeroes rigidity). Such a term is recorded as *present=0 with
+    # norm 0* rather than omitted: dropping the key would shrink the share
+    # denominator for that step AND leave each term's running window covering a
+    # different subset of steps, so the windowed shares would not sum to 1.
+    probes = named_probes or {}
+    grads: Dict[str, Optional[torch.Tensor]] = {}
+    for group in (named_losses_a, named_losses_b, probes):
+        for name, term in group.items():
+            g = _flat_grad(term, params)
+            grads[name] = g if (g is not None and g.norm() >= eps) else None
+
+    def aggregate(group: Dict[str, torch.Tensor]) -> Optional[torch.Tensor]:
+        live = [grads[n] for n in group if grads[n] is not None]
+        if not live:
+            return None
+        g = torch.stack(live).sum(dim=0)
+        return g if g.norm() >= eps else None
+
+    g_a = aggregate(named_losses_a)
+    g_b = aggregate(named_losses_b)
+    if g_a is None or g_b is None:
         return {}
 
-    # per-term gradients; a term that is a constant this step (e.g. rigidity on
-    # an abdomen batch, tlg on a synthetic one) simply drops out
-    g_terms: Dict[str, torch.Tensor] = {}
-    for name, term in named_losses_b.items():
-        g_t = _flat_grad(term, params)
-        if g_t is not None and g_t.norm() >= eps:
-            g_terms[name] = g_t
-    if not g_terms:
-        return {}
-
-    g_b = torch.stack(list(g_terms.values())).sum(dim=0)
     n_a, n_b = g_a.norm(), g_b.norm()
-    if n_b < eps:
-        return {}
-
     out: Dict[str, float] = {
         "cos": float((torch.dot(g_a, g_b) / (n_a * n_b)).item()),
         "norm_a": float(n_a.item()),
@@ -273,19 +292,42 @@ def gradient_conflict_report(
         "norm_ratio": float((n_a / n_b).item()),
     }
 
-    norm_sum = sum(float(g.norm().item()) for g in g_terms.values())
-    for name, g_t in g_terms.items():
-        c = _cos(g_a, g_t, eps)
-        if c is not None:
-            out[f"cos_a_vs_{name}"] = c
-        out[f"norm_{name}"] = float(g_t.norm().item())
-        if norm_sum > eps:
-            out[f"share_{name}"] = float(g_t.norm().item()) / norm_sum
+    # shares are normalised within each group, so each group's shares sum to 1
+    for group, aggr, aggr_key in (
+        (named_losses_a, g_b, "vs_b"),
+        (named_losses_b, g_a, "a_vs"),
+    ):
+        norms = {
+            n: (float(grads[n].norm().item()) if grads[n] is not None else 0.0)
+            for n in group
+        }
+        norm_sum = sum(norms.values())
+        for name in group:
+            out[f"norm_{name}"] = norms[name]
+            out[f"share_{name}"] = norms[name] / norm_sum if norm_sum > eps else 0.0
+            out[f"present_{name}"] = 1.0 if grads[name] is not None else 0.0
+            if grads[name] is not None:
+                c = _cos(aggr, grads[name], eps)
+                if c is not None:
+                    key = f"cos_{name}_vs_b" if aggr_key == "vs_b" else f"cos_a_vs_{name}"
+                    out[key] = c
 
-    names = list(g_terms)
-    for i, n1 in enumerate(names):
-        for n2 in names[i + 1 :]:
-            c = _cos(g_terms[n1], g_terms[n2], eps)
+    # probes: norms and presence only, no share (they belong to no group)
+    for name in probes:
+        g = grads[name]
+        out[f"norm_{name}"] = float(g.norm().item()) if g is not None else 0.0
+        out[f"present_{name}"] = 1.0 if g is not None else 0.0
+        if g is not None:
+            for aggr, key in ((g_a, f"cos_a_vs_{name}"), (g_b, f"cos_{name}_vs_b")):
+                c = _cos(aggr, g, eps)
+                if c is not None:
+                    out[key] = c
+
+    # full pairwise matrix over every live term, within and across groups
+    live_names = [n for n in grads if grads[n] is not None]
+    for i, n1 in enumerate(live_names):
+        for n2 in live_names[i + 1 :]:
+            c = _cos(grads[n1], grads[n2], eps)
             if c is not None:
                 out[f"cos_{n1}_vs_{n2}"] = c
 
