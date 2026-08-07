@@ -166,7 +166,7 @@ class TrainingConfig:
     w_dice_pet: float = 0.0
     w_tlg: float = 2.0
     w_jacobian_tumor: float = 2.0
-    w_bone_rigidity: float = 2.0
+    w_bone_rigidity: float = 0.0
     w_dvf: float = 100.0
 
     # gradient-conflict diagnostic: splits the lvl3 objective into
