@@ -89,7 +89,7 @@ class TrainingConfig:
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
     warmup_epochs: float = 5
-    start_channel: int = 24
+    start_channel: int = 7
 
     # Per-level res-block trunk capacity, independent of start_channel (so no
     # inter-level tensor shape changes).
@@ -102,7 +102,7 @@ class TrainingConfig:
     #                          lifts to 4x*expansion channels, conv2 projects
     #                          back. Roughly multiplies per-block params.
     n_resblocks: int = 10  # 5
-    resblock_expansion: int = 1  # 1
+    resblock_expansion: int = 2  # 1
 
     # PWC-Net style local cost volume in lvl1, fused into the res-block trunk.
     #   "off"  -> baseline
