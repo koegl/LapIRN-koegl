@@ -101,8 +101,8 @@ class TrainingConfig:
     #   *_resblock_expansion -> inverted bottleneck inside each block: conv1
     #                          lifts to 4x*expansion channels, conv2 projects
     #                          back. Roughly multiplies per-block params.
-    n_resblocks: int = 5  # 5
-    resblock_expansion: int = 1  # 1
+    n_resblocks: int = 10  # 5
+    resblock_expansion: int = 4  # 1
 
     # PWC-Net style local cost volume in lvl1, fused into the res-block trunk.
     #   "off"  -> baseline
@@ -125,8 +125,8 @@ class TrainingConfig:
     cost_volume_out_channels: int = 16
 
     # train val
-    total_steps_lvl1: int = 100000
-    total_steps_lvl2: int = 100000
+    total_steps_lvl1: int = 70000
+    total_steps_lvl2: int = 80000
     total_steps_lvl3: int = 140000
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
@@ -176,7 +176,7 @@ class TrainingConfig:
     # negative => the groups genuinely fight and a multi-stage model / gradient
     # surgery is justified; positive or near-zero => it is only a weighting
     # problem. Costs two extra backward passes per measurement.
-    log_grad_conflict: bool = True
+    log_grad_conflict: bool = False
     # measured every N validation intervals (1 = at every validation)
     grad_conflict_every_n_val: int = 1
     # window length for the running cos mean / std / fraction-negative
