@@ -1021,7 +1021,7 @@ def update_config_from_dict(cfg: TrainingConfig, model_name: str) -> None:
 
 
 models_to_evaluate = [
-    # "polite-snake-38577202",
+    "polite-snake-38577202",
     # "exultant-hawk-38756587",
     # "rumbling-yak-38789486",
     # "secretive-dolphin-38622192",
@@ -1037,7 +1037,8 @@ models_to_evaluate = [
 
 # each inner list is one ensemble: the velocity fields of its models are
 # averaged with equal weights (1/n) and integrated once into a displacement.
-models_to_combine = [["nosy-doe-38788231", "intelligent-fish-38730451"]]
+models_to_combine = []
+# models_to_combine = [["nosy-doe-38788231", "intelligent-fish-38730451"]]
 
 
 def model_path_for(model_ori_name: str) -> Path:

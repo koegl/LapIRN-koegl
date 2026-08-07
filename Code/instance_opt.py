@@ -118,19 +118,21 @@ def io_objective(
     disp_flow = disp_unit.permute(0, 2, 3, 4, 1)
     disp_voxel = Functions.transform_unit_flow_to_flow_cuda(disp_flow.clone())
     loss_jac = jacobian.non_diff_volume_loss(disp_voxel)
-    loss_smooth = smoothloss(disp_unit)
+    # loss_smooth = smoothloss(disp_unit)
 
     # warp the moving image once, reuse the CT and PET channels
     x_y = transform(x_moving, disp_flow, grid)
     x_y_ct = x_y[:, 0:1]
     loss_ncc_ct = loss_ncc(x_y_ct, y_ct)
 
-    loss_dice_ct = dice_loss_with_grad(
-        x_lbl_ct, y_lbl_ct, disp_unit, grid, transform, class_weights=class_weights
-    )
+    # loss_dice_ct = dice_loss_with_grad(
+    #     x_lbl_ct, y_lbl_ct, disp_unit, grid, transform, class_weights=class_weights
+    # )
+    # loss_dice_ct = None
 
     loss = ncc_weight * loss_ncc_ct + cfg.w_jacobian * loss_jac
     # + cfg.w_smooth * loss_smooth
+    """
     if loss_dice_ct is not None:
         loss = loss + cfg.w_dice_ct_lvl3 * loss_dice_ct
 
@@ -186,17 +188,17 @@ def io_objective(
                 )
                 hard_dices.append(dice)
             hard_dice = float(np.mean(hard_dices))
-
+    """
     logs = {
         "ncc_ct": loss_ncc_ct.item(),
-        "dice_ct": loss_dice_ct.item() if loss_dice_ct is not None else float("nan"),
-        "hard_dice_ct": hard_dice,
-        "smooth": loss_smooth.item(),
+        # "dice_ct": loss_dice_ct.item() if loss_dice_ct is not None else float("nan"),
+        # "hard_dice_ct": hard_dice,
+        # "smooth": loss_smooth.item(),
         "jac": loss_jac.item(),
-        "masked_jac": loss_masked_jac.item(),
-        "bone_rigidity": loss_rigidity.item(),
-        "mtv": loss_mtv.item(),
-        "tlg": loss_tlg.item(),
+        # "masked_jac": loss_masked_jac.item(),
+        # "bone_rigidity": loss_rigidity.item(),
+        # "mtv": loss_mtv.item(),
+        # "tlg": loss_tlg.item(),
     }
     return loss, logs
 
