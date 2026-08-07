@@ -89,7 +89,7 @@ class TrainingConfig:
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
     warmup_epochs: float = 5
-    start_channel: int = 24
+    start_channel: int = 7
 
     # Per-level res-block trunk capacity, independent of start_channel (so no
     # inter-level tensor shape changes).
@@ -101,8 +101,8 @@ class TrainingConfig:
     #   *_resblock_expansion -> inverted bottleneck inside each block: conv1
     #                          lifts to 4x*expansion channels, conv2 projects
     #                          back. Roughly multiplies per-block params.
-    n_resblocks: int = 10  # 5
-    resblock_expansion: int = 4  # 1
+    n_resblocks: int = 5  # 5
+    resblock_expansion: int = 1  # 1
 
     # PWC-Net style local cost volume in lvl1, fused into the res-block trunk.
     #   "off"  -> baseline
@@ -157,16 +157,16 @@ class TrainingConfig:
 
     # loss weights
     w_jacobian: float = 2000.0
-    w_smooth: float = 3.0
+    w_smooth: float = 2.0
     w_ct: float = 5.0
     w_pet: float = 0.0
     w_dice_ct_lvl1: float = 3.0
     w_dice_ct_lvl2: float = 4.0
     w_dice_ct_lvl3: float = 5.0
     w_dice_pet: float = 0.0
-    w_tlg: float = 3.0
-    w_jacobian_tumor: float = 3.0
-    w_bone_rigidity: float = 3.0
+    w_tlg: float = 2.0
+    w_jacobian_tumor: float = 2.0
+    w_bone_rigidity: float = 2.0
     w_dvf: float = 100.0
 
     # gradient-conflict diagnostic: splits the lvl3 objective into
