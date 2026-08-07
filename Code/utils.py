@@ -212,6 +212,7 @@ def gradient_conflict_report(
     named_losses_b: Dict[str, torch.Tensor],
     model: torch.nn.Module,
     named_probes: Optional[Dict[str, torch.Tensor]] = None,
+    loss_a_single: Optional[torch.Tensor] = None,
     eps: float = 1e-12,
 ) -> Dict[str, float]:
     """Measure how every loss term pulls the shared parameters against every other.
@@ -291,6 +292,21 @@ def gradient_conflict_report(
         "norm_b": float(n_b.item()),
         "norm_ratio": float((n_a / n_b).item()),
     }
+
+    # Verification: g_a is assembled by summing per-term gradients, which is
+    # exact only in exact arithmetic. Under bf16 autocast and checkpointed
+    # recomputation it need not match one backward on the summed loss. Pass
+    # loss_a_single to measure the discrepancy directly instead of assuming it.
+    if loss_a_single is not None:
+        g_a_single = _flat_grad(loss_a_single, params)
+        if g_a_single is not None and g_a_single.norm() >= eps:
+            out["cos_singlepass"] = float(
+                (torch.dot(g_a_single, g_b) / (g_a_single.norm() * n_b)).item()
+            )
+            out["agg_rel_err"] = float(
+                ((g_a - g_a_single).norm() / g_a_single.norm()).item()
+            )
+            out["agg_cos_delta"] = out["cos"] - out["cos_singlepass"]
 
     # shares are normalised within each group, so each group's shares sum to 1
     for group, aggr, aggr_key in (

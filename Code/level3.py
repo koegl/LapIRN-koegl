@@ -910,8 +910,18 @@ def train_lvl3(
                     if probe_dice is not None:
                         probes[probe_name] = config.w_dice_ct_lvl3 * probe_dice
 
+            # exactly what runs 1 and 2 used as group A: one tensor, one
+            # backward. Logged alongside the summed-per-term version so any
+            # discrepancy between the two shows up as agg_rel_err rather than
+            # being mistaken for a change in the training trajectory.
+            loss_a_single = sum(losses_accuracy.values())
+
             raw = utils.gradient_conflict_report(
-                losses_accuracy, losses_tumour, model, named_probes=probes
+                losses_accuracy,
+                losses_tumour,
+                model,
+                named_probes=probes,
+                loss_a_single=loss_a_single,
             )
             if raw:
                 windowed = grad_conflict_tracker.update(raw)

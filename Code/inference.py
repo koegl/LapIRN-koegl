@@ -1053,6 +1053,8 @@ def main() -> None:
     cfg.cache_dir = val_cache_dir
     cfg.in_channel = 4
     cfg.start_channel = 7
+    cfg.resblock_expansion = 1
+    cfg.n_resblocks = 5
 
     # --- what to evaluate ---
     eval_official: bool = True
