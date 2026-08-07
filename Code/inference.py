@@ -505,11 +505,11 @@ def append_results_to_csv(
 
     if csv_path.exists():
         existing_df = pd.read_csv(csv_path)
-        combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+        averaged_df = pd.concat([existing_df, new_df], ignore_index=True)
     else:
-        combined_df = new_df
+        averaged_df = new_df
 
-    combined_df.to_csv(csv_path, index=False)
+    averaged_df.to_csv(csv_path, index=False)
     tqdm.tqdm.write(f"results saved → {csv_path}")
 
 
@@ -559,11 +559,11 @@ def append_metric_to_csv(
 
     if csv_path.exists():
         existing_df = pd.read_csv(csv_path)
-        combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+        averaged_df = pd.concat([existing_df, new_df], ignore_index=True)
     else:
-        combined_df = new_df
+        averaged_df = new_df
 
-    combined_df.to_csv(csv_path, index=False)
+    averaged_df.to_csv(csv_path, index=False)
     tqdm.tqdm.write(f"results saved → {csv_path}")
 
 
@@ -1096,8 +1096,8 @@ models_to_evaluate = [
 
 # each inner list is one ensemble: the velocity fields of its models are
 # averaged with equal weights (1/n) and integrated once into a displacement.
-models_to_combine = []
-# models_to_combine = [["nosy-doe-38788231", "intelligent-fish-38730451"]]
+models_to_average = []
+# models_to_average = [["nosy-doe-38788231", "intelligent-fish-38730451"]]
 
 
 def model_path_for(model_ori_name: str) -> Path:
@@ -1122,14 +1122,14 @@ def main() -> None:
 
     # single models first, then the ensembles
     eval_jobs: List[List[str]] = [[name] for name in models_to_evaluate]
-    eval_jobs += [list(names) for names in models_to_combine]
+    eval_jobs += [list(names) for names in models_to_average]
 
     for model_ori_names in eval_jobs:
         if len(model_ori_names) == 1:
             # update_config_from_dict(cfg, model_ori_names[0])
             model_name = model_path_for(model_ori_names[0]).stem
         else:
-            model_name = "combined_" + "_".join(model_ori_names)
+            model_name = "averaged_" + "_".join(model_ori_names)
 
         out_dir = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results")
         # evaluation metrics use the high-quality segmentations
