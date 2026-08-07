@@ -149,7 +149,7 @@ def main() -> None:
                 #     valid_abdomen_generator,
                 # )
                 # path_model_level_2 = paths_model_level2["best"]
-                path_model_level_2 = paths_model_level2["final"]
+                # path_model_level_2 = paths_model_level2["final"]
                 # print("skipping level 2, already trained")
                 # path_model_level_2 = Path(
                 # "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_nosy-shrike-707_stagelvl2_best.pth"
