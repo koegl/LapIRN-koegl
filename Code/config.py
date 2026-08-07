@@ -101,8 +101,8 @@ class TrainingConfig:
     #   *_resblock_expansion -> inverted bottleneck inside each block: conv1
     #                          lifts to 4x*expansion channels, conv2 projects
     #                          back. Roughly multiplies per-block params.
-    n_resblocks: int = 5  # 5
-    resblock_expansion: int = 1  # 1
+    n_resblocks: int = 10  # 5
+    resblock_expansion: int = 2  # 1
 
     # PWC-Net style local cost volume in lvl1, fused into the res-block trunk.
     #   "off"  -> baseline
@@ -125,8 +125,8 @@ class TrainingConfig:
     cost_volume_out_channels: int = 16
 
     # train val
-    total_steps_lvl1: int = 70000
-    total_steps_lvl2: int = 80000
+    total_steps_lvl1: int = 100000
+    total_steps_lvl2: int = 100000
     total_steps_lvl3: int = 140000
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
