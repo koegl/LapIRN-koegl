@@ -11,7 +11,6 @@ import utils
 from miccai2020_model_stage import (
     NCC,
     SpatialTransform_unit,
-    smoothloss,
 )
 
 
@@ -475,8 +474,8 @@ def run_io(
             best_disp_i = i
 
         pbar.set_postfix(
-            dice_weighted=f"{1 - logs['dice_ct']:.4f}",
-            dice_hard=f"{logs['hard_dice_ct']:.4f}",
+            # dice_weighted=f"{1 - logs['dice_ct']:.4f}",
+            # dice_hard=f"{logs['hard_dice_ct']:.4f}",
             loss=f"{loss.item():.4f}",
             best=f"{best_loss:.4f}",
             best_i=best_disp_i,
