@@ -26,6 +26,8 @@ os.environ["TOTALSEG_WEIGHTS_PATH"] = (
     "/home/iml/fryderyk.koegl/code/LapIRN-koegl/totalsegmentator_weights/nnunet/results"
 )
 sys.path.insert(0, "/home/iml/fryderyk.koegl/code/autopet-3-submission")
+import datetime
+
 import hd95_official
 import totalsegmentator.python_api as totalseg
 
@@ -279,6 +281,46 @@ class SpatialTransformer(torch.nn.Module):
             new_locs = new_locs.permute(0, 2, 3, 4, 1)
             new_locs = new_locs[..., [2, 1, 0]]
         return F.grid_sample(src, new_locs, align_corners=False, mode=self.mode)
+
+
+def load_val_pair_OLD(val_image_dir: Path, case_id: str) -> Dict[str, torch.Tensor]:
+    """Load fixed (00) + moving (01) val pair."""
+
+    def load_ct(tp: str) -> np.ndarray:
+        path = val_image_dir / f"PSMARegPSMA_{case_id}_0000_{tp}.nii.gz"
+        return my_data.nib.load(str(path)).get_fdata().astype(np.float32)
+
+    def load_pet(tp: str) -> np.ndarray:
+        path = val_image_dir / f"PSMARegPSMA_{case_id}_0001_{tp}.nii.gz"
+        return my_data.nib.load(str(path)).get_fdata().astype(np.float32)
+
+    x_ct_raw = load_ct("01")
+    y_ct_raw = load_ct("00")
+
+    x_mask = my_data.get_body_mask(x_ct_raw)
+    y_mask = my_data.get_body_mask(y_ct_raw)
+
+    x_ct_raw = my_data.apply_body_mask(
+        x_ct_raw, x_mask, fill_value=float(np.percentile(x_ct_raw, 0.5))
+    )
+    y_ct_raw = my_data.apply_body_mask(
+        y_ct_raw, y_mask, fill_value=float(np.percentile(y_ct_raw, 0.5))
+    )
+
+    x_pet_raw = my_data.apply_body_mask(load_pet("01"), x_mask, fill_value=0.0)
+    y_pet_raw = my_data.apply_body_mask(load_pet("00"), y_mask, fill_value=0.0)
+
+    def t(arr: np.ndarray) -> torch.Tensor:
+        return torch.from_numpy(arr).unsqueeze(0)
+
+    x = torch.cat(
+        [t(my_data.norm_ct_OLD(x_ct_raw)), t(my_data.norm_pet(x_pet_raw))], dim=0
+    )
+    y = torch.cat(
+        [t(my_data.norm_ct_OLD(y_ct_raw)), t(my_data.norm_pet(y_pet_raw))], dim=0
+    )
+    pair = {"x": x.float(), "y": y.float()}
+    return pair
 
 
 def load_val_pair(val_image_dir: Path, case_id: str) -> Dict[str, torch.Tensor]:
@@ -623,11 +665,23 @@ def evaluate_split(
 image_pair_memory_cache = {}
 
 
+def is_old_model(model_path: Path) -> bool:
+    ref = datetime.datetime(
+        2026, 8, 4, 14, 48, 42, tzinfo=datetime.timezone(datetime.timedelta(hours=2))
+    )
+    mtime = datetime.datetime.fromtimestamp(
+        model_path.stat().st_mtime, tz=datetime.timezone.utc
+    )
+
+    return mtime < ref
+
+
 def process_subject(
     case_id: str,
     val_image_dir: Path,
     out_dir: Path,
     model: Union[torch.nn.Module, List[torch.nn.Module]],
+    model_path: Path,
     transform: torch.nn.Module,
     grid_full: torch.Tensor,
     cfg: TrainingConfig,
@@ -649,7 +703,12 @@ def process_subject(
     if case_id in image_pair_memory_cache:
         pair = image_pair_memory_cache[case_id]
     else:
-        pair = load_val_pair(val_image_dir, case_id)
+        if is_old_model(model_path):
+            pair = load_val_pair_OLD(val_image_dir, case_id)
+        else:
+            pair = load_val_pair(val_image_dir, case_id)
+
+        image_pair_memory_cache[case_id] = pair
     X = pair["x"].unsqueeze(0).to(device).float()
     Y = pair["y"].unsqueeze(0).to(device).float()
 
@@ -1021,8 +1080,8 @@ def update_config_from_dict(cfg: TrainingConfig, model_name: str) -> None:
 
 
 models_to_evaluate = [
-    "polite-snake-38577202",
-    # "exultant-hawk-38756587",
+    # "polite-snake-38577202",
+    "exultant-hawk-38756587",
     # "rumbling-yak-38789486",
     # "secretive-dolphin-38622192",
     # "victorious-flea-38622412",

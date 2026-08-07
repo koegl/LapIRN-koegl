@@ -127,6 +127,11 @@ def norm_ct(
     return np.clip((vol - hu_min) / (hu_max - hu_min), 0.0, 1.0)
 
 
+def norm_ct_OLD(vol: np.ndarray) -> np.ndarray:
+    """Min-max normalize a CT volume to [0, 1]."""
+    return (vol - vol.min()) / (vol.max() - vol.min() + 1e-8)
+
+
 def norm_pet(vol: np.ndarray, suv_max: float = 20.0) -> np.ndarray:
     """Clip and scale a PET SUV volume to [0, 1]."""
     vol = np.clip(vol, 0.0, suv_max)
@@ -584,7 +589,7 @@ def load_pair_to_dict(
 
     # Apply mask before normalization:
     #   CT: fill outside with air (CT_AIR_HU), the same value the CT window
-#       clips at, so the masked-out region normalizes to exactly 0
+    #       clips at, so the masked-out region normalizes to exactly 0
     #   PET: fill outside with 0.0 (SUV=0 is correct background)
     x_ct_raw = apply_body_mask(x_ct_raw, x_mask, fill_value=CT_AIR_HU)
     y_ct_raw = apply_body_mask(y_ct_raw, y_mask, fill_value=CT_AIR_HU)
@@ -657,7 +662,7 @@ def load_abdomen_pair_to_dict(
 
     # Apply mask before normalization:
     #   CT: fill outside with air (CT_AIR_HU), the same value the CT window
-#       clips at, so the masked-out region normalizes to exactly 0
+    #       clips at, so the masked-out region normalizes to exactly 0
     #   PET: fill outside with 0.0 (SUV=0 is correct background)
     x_ct_raw = apply_body_mask(x_ct_raw, x_mask, fill_value=CT_AIR_HU)
     y_ct_raw = apply_body_mask(y_ct_raw, y_mask, fill_value=CT_AIR_HU)
