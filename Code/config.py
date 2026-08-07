@@ -101,8 +101,8 @@ class TrainingConfig:
     #   *_resblock_expansion -> inverted bottleneck inside each block: conv1
     #                          lifts to 4x*expansion channels, conv2 projects
     #                          back. Roughly multiplies per-block params.
-    n_resblocks: int = 10  # 5
-    resblock_expansion: int = 2  # 1
+    n_resblocks: int = 5  # 5
+    resblock_expansion: int = 1  # 1
 
     # PWC-Net style local cost volume in lvl1, fused into the res-block trunk.
     #   "off"  -> baseline
