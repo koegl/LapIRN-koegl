@@ -576,6 +576,7 @@ def evaluate_split(
     model_name: str,
     out_dir: Path,
     model: Union[torch.nn.Module, List[torch.nn.Module]],
+    model_path: Path,
     transform: torch.nn.Module,
     transform_nearest: torch.nn.Module,
     grid_full: torch.Tensor,
@@ -619,6 +620,7 @@ def evaluate_split(
             image_dir,
             out_dir,
             model,
+            model_path,
             transform,
             grid_full,
             cfg,
@@ -1080,18 +1082,19 @@ def update_config_from_dict(cfg: TrainingConfig, model_name: str) -> None:
 
 
 models_to_evaluate = [
-    # "polite-snake-38577202",
-    "exultant-hawk-38756587",
-    # "rumbling-yak-38789486",
-    # "secretive-dolphin-38622192",
-    # "victorious-flea-38622412",
-    # "intelligent-fish-38730451",
-    # "popular-sloth-38758804",
-    # "nosy-doe-38788231",
-    # "sincere-finch-38813192",
-    # "worried-elk-38863657",
-    # "charming-trout-38863973",
-    # "rebellious-stork-38993360",
+    # "PSMAReg_LapIRN_polite-snake-38577202_stagelvl3_best.pth",
+    # "PSMAReg_LapIRN_exultant-hawk-38756587_stagelvl3_best.pth",
+    # "PSMAReg_LapIRN_rumbling-yak-38789486_stagelvl3_best.pth",
+    # "PSMAReg_LapIRN_secretive-dolphin-38622192_stagelvl3_best.pth",
+    # "PSMAReg_LapIRN_victorious-flea-38622412_stagelvl3_best.pth",
+    # "PSMAReg_LapIRN_intelligent-fish-38730451_stagelvl3_best.pth",
+    # "PSMAReg_LapIRN_popular-sloth-38758804_stagelvl3_best.pth",
+    # "PSMAReg_LapIRN_nosy-doe-38788231_stagelvl3_best.pth",
+    # "PSMAReg_LapIRN_sincere-finch-38813192_stagelvl3_best.pth",
+    # "PSMAReg_LapIRN_worried-elk-38863657_stagelvl3_best.pth",
+    # "PSMAReg_LapIRN_charming-trout-38863973_stagelvl3_best.pth",
+    # "PSMAReg_LapIRN_rebellious-stork-38993360_stagelvl3_best.pth",
+    "PSMAReg_LapIRN_nervous-pig-39235734_stagelvl3_best_combined.pth",
 ]
 
 # each inner list is one ensemble: the velocity fields of its models are
@@ -1100,10 +1103,20 @@ models_to_average = []
 # models_to_average = [["nosy-doe-38788231", "intelligent-fish-38730451"]]
 
 
-def model_path_for(model_ori_name: str) -> Path:
-    return Path(
-        f"/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_{model_ori_name}_stagelvl3_best.pth"
-    )
+def short_model_name(model_full_name: str) -> str:
+
+    if "combined" in model_full_name:
+        short_name = model_full_name.split("_")[2] + "_combined"
+    elif "tumour" in model_full_name:
+        short_name = model_full_name.split("_")[2] + "_tumour"
+    else:
+        short_name = model_full_name.split("_")[2]
+
+    return short_name
+
+
+def model_path_for(model_full_name: str) -> Path:
+    return Path(f"/home/iml/fryderyk.koegl/data/PSMAReg/models/{model_full_name}")
 
 
 def main() -> None:
@@ -1127,9 +1140,10 @@ def main() -> None:
     for model_ori_names in eval_jobs:
         if len(model_ori_names) == 1:
             # update_config_from_dict(cfg, model_ori_names[0])
-            model_name = model_path_for(model_ori_names[0]).stem
+            model_name = short_model_name(model_ori_names[0])
         else:
-            model_name = "averaged_" + "_".join(model_ori_names)
+            short_model_ori_names = [short_model_name(n) for n in model_ori_names]
+            model_name = "averaged_" + "_".join(short_model_ori_names)
 
         out_dir = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results")
         # evaluation metrics use the high-quality segmentations
@@ -1289,6 +1303,7 @@ def main() -> None:
                 seg_dir_fast=official_seg_dir_fast,
                 results_csv=results_csv_official_val_dice,
                 model_name=model_name,
+                model_path=model_path_for(model_ori_names[0]),
                 out_dir=out_dir,
                 model=model,
                 transform=transform,
