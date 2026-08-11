@@ -1391,14 +1391,22 @@ def enforce_rigidity_loss(
     flow: torch.Tensor,
     mask: torch.Tensor,
     eps: float = 1e-5,
+    w_det: float = 1.0,
+    w_ortho: float = 1.0,
+    w_affine: float = 1.0,
 ):
     """Combined local-rigidity loss over a masked region (e.g. bones).
 
-    Enforces the three Staring/Modersitzki conditions (summed with equal weight;
-    scale the whole term with ``config.w_bone_rigidity`` at the call site):
+    Enforces the three Staring/Modersitzki conditions (scale the whole term with
+    ``config.w_bone_rigidity`` at the call site):
       * properness    -- det(J) = 1   (``masked_jac_det_loss``)
       * orthonormality -- J^T J = I    (``orthonormality_loss``)
       * affine-ness    -- d^2 u = 0    (``affine_loss``)
+
+    The three are returned unweighted so they can be logged on their own scale;
+    only ``total`` carries the sub-weights. They are not interchangeable: det
+    alone is blind to shear, and orthonormality pins only |det J| = 1, so det is
+    what excludes reflections.
 
     Args:
         jac_det: (B, 1, D, H, W) Jacobian determinant field.
@@ -1406,14 +1414,15 @@ def enforce_rigidity_loss(
         flow: (B, D, H, W, 3) displacement field in voxel units.
         mask: (B, 1, D, H, W) binary float mask.
         eps: Smoothing term.
+        w_det, w_ortho, w_affine: relative weights of the three conditions.
 
     Returns:
-        (total, (det, ortho, affine)) scalar tensors.
+        (total, (det, ortho, affine)) scalar tensors, the three unweighted.
     """
     det = masked_jac_det_loss(jac_det, mask, eps)
     ortho = orthonormality_loss(jac, mask, eps)
     affine = affine_loss(flow, mask, eps)
-    total = det + ortho + affine
+    total = w_det * det + w_ortho * ortho + w_affine * affine
     return total, (det, ortho, affine)
 
 

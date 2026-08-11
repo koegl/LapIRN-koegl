@@ -60,6 +60,9 @@ def evaluate_lvl3(
         "tlg_bias": 0.0,
         "jacobian_tumor": 0.0,
         "rigidity": 0.0,
+        "rig_det": 0.0,
+        "rig_ortho": 0.0,
+        "rig_affine": 0.0,
         "ndv": 0.0,
     }
     if config.use_seg_head:
@@ -268,10 +271,20 @@ def evaluate_lvl3(
 
             if batch["is_abdomen"]:
                 # empty loss
-                loss_rigidity = torch.tensor(0.0, device=device)
+                zero_rig = torch.tensor(0.0, device=device)
+                loss_rigidity = zero_rig
+                loss_rig_det = loss_rig_ortho = loss_rig_affine = zero_rig
             else:
-                loss_rigidity, _ = utils.enforce_rigidity_loss(
-                    jac_det, jac, F_X_Y_norm, bone_mask
+                loss_rigidity, (loss_rig_det, loss_rig_ortho, loss_rig_affine) = (
+                    utils.enforce_rigidity_loss(
+                        jac_det,
+                        jac,
+                        F_X_Y_norm,
+                        bone_mask,
+                        w_det=config.w_rig_det,
+                        w_ortho=config.w_rig_ortho,
+                        w_affine=config.w_rig_affine,
+                    )
                 )
 
             loss = (
@@ -788,10 +801,20 @@ def train_lvl3(
         bone_mask = torch.isin(X_lbl_ct, bone_labels_tensor).float()
 
         if batch["is_abdomen"]:
-            loss_rigidity = torch.tensor(0.0, device=device)
+            zero_rig = torch.tensor(0.0, device=device)
+            loss_rigidity = zero_rig
+            loss_rig_det = loss_rig_ortho = loss_rig_affine = zero_rig
         else:
             loss_rigidity, (loss_rig_det, loss_rig_ortho, loss_rig_affine) = (
-                utils.enforce_rigidity_loss(jac_det, jac, F_X_Y_norm, bone_mask)
+                utils.enforce_rigidity_loss(
+                    jac_det,
+                    jac,
+                    F_X_Y_norm,
+                    bone_mask,
+                    w_det=config.w_rig_det,
+                    w_ortho=config.w_rig_ortho,
+                    w_affine=config.w_rig_affine,
+                )
             )
 
         # Auxiliary PET-tumour segmentation. Both target channels live in the
@@ -1034,6 +1057,14 @@ def train_lvl3(
             "train_lvl3/jacobian_tumor": loss_jacobian_tumor.item(),
             "train_lvl3/jacobian": loss_jacobian.item(),
             "train_lvl3/rigidity": loss_rigidity.item(),
+            # the three rigidity conditions on their own (unweighted) scale, so
+            # their relative magnitudes are visible before w_rig_* is tuned
+            "train_lvl3/rig_det": loss_rig_det.item(),
+            "train_lvl3/rig_ortho": loss_rig_ortho.item(),
+            "train_lvl3/rig_affine": loss_rig_affine.item(),
+            "train_lvl3/w_rig_det": config.w_rig_det * loss_rig_det.item(),
+            "train_lvl3/w_rig_ortho": config.w_rig_ortho * loss_rig_ortho.item(),
+            "train_lvl3/w_rig_affine": config.w_rig_affine * loss_rig_affine.item(),
             "train_lvl3/ndv": ndv,
             "train_lvl3/dvf": loss_dvf.item(),
             "train_lvl3/lr": current_lr,
