@@ -176,6 +176,17 @@ class TrainingConfig:
     w_rig_det: float = 1.0
     w_rig_ortho: float = 1.0
     w_rig_affine: float = 1.0
+    # Swap the local finite-difference rigidity term for a per-label rigid fit
+    # (utils.per_label_rigid_loss). The old term's stencils read one voxel past
+    # the mask, so ~53% of the voxels entering it were soft tissue and ~45% of
+    # its gradient landed outside bone; it scored ~50 on fields where bones do
+    # not move at all. The per-label fit reads no neighbourhood, so it leaks
+    # nothing and lets bones move relative to each other.
+    # Units are voxel^2 rather than dimensionless strain, so w_bone_rigidity
+    # MUST be retuned when this is switched on. w_rig_* are ignored.
+    use_per_label_rigidity: bool = False
+    # labels smaller than this are skipped: the rigid fit is ill-posed
+    rigidity_min_voxels: int = 50
     w_dvf: float = 100.0
 
     # --- auxiliary PET-tumour segmentation head (lvl3 only) ---------------

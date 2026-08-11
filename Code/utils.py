@@ -6,6 +6,7 @@ from contextlib import ExitStack
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, Optional, Tuple
 
+import jacobian
 import mlflow
 import my_data
 import numpy as np
@@ -1424,6 +1425,157 @@ def enforce_rigidity_loss(
     affine = affine_loss(flow, mask, eps)
     total = w_det * det + w_ortho * ortho + w_affine * affine
     return total, (det, ortho, affine)
+
+
+def per_label_rigid_loss(
+    flow: torch.Tensor,
+    labels: torch.Tensor,
+    label_values: torch.Tensor,
+    min_voxels: int = 50,
+    eps: float = 1e-8,
+):
+    """Per-structure rigidity: distance from each label's own best rigid fit.
+
+    For every label separately, fit the single rigid transform (R, t) that best
+    explains that structure's displacement, then penalise the squared residual
+    of each of its voxels against that fit::
+
+        loss_l = mean_i || (p_i + u_i) - (R_l p_i + t_l) ||^2      (voxel^2)
+        loss   = mean over labels of loss_l
+
+    This replaces ``enforce_rigidity_loss`` and fixes both of its failure modes,
+    for the same reason: it reads no neighbourhood at all. There is no finite
+    difference, so no stencil can cross into soft tissue, and each label is
+    fitted independently, so two adjacent bones may move relative to each other
+    at zero cost. Measured on the old term (see test_bone_rigidity_loss.py), a
+    field with zero displacement inside every bone still scored ~50, of which
+    100% vanished after one erosion, and ~45% of its gradient landed on
+    non-bone voxels.
+
+    (R, t) are detached. That is exact rather than an approximation: they
+    minimise the residual, so the partial derivative of the loss with respect to
+    them is zero and by the envelope theorem the total derivative w.r.t. ``u``
+    equals the partial taken at fixed (R, t). Detaching only avoids
+    differentiating through the SVD, which is numerically fragile.
+
+    Labels with fewer than ``min_voxels`` voxels are skipped: the fit is
+    ill-posed for a handful of points. Each surviving label contributes its own
+    mean, so a rib counts as much as the pelvis rather than being drowned by it.
+
+    NOTE: the units are voxel^2, not the dimensionless strain measures of
+    ``enforce_rigidity_loss``, so ``config.w_bone_rigidity`` must be retuned when
+    switching. Compare ``train_lvl3/rig_residual`` against the old
+    ``train_lvl3/rigidity`` to pick the new scale.
+
+    Args:
+        flow: (B, D, H, W, 3) displacement in voxel units.
+        labels: (B, 1, D, H, W) or (B, D, H, W) integer label map.
+        label_values: 1-D tensor of the label values to constrain (e.g. bones).
+        min_voxels: labels smaller than this are ignored.
+        eps: guard for empty groups.
+
+    Returns:
+        (loss, {"n_labels": .., "worst": ..}) -- the count of labels that
+        contributed and the largest per-label residual, both as scalar tensors.
+    """
+    work = torch.float32  # the SVD is not safe in bf16/fp16
+    flow = flow.to(work)
+    b, d, h, w, _ = flow.shape
+    device = flow.device
+    zero = torch.zeros((), device=device, dtype=work)
+
+    lab = labels.reshape(b, -1).long()
+    values = label_values.reshape(-1).long()
+    if values.numel() == 0 or lab.numel() == 0:
+        return zero, {"n_labels": zero, "worst": zero}
+
+    # value -> compact column index, -1 for everything we do not constrain
+    n_lut = int(max(int(lab.max().item()), int(values.max().item()))) + 1
+    lut = torch.full((n_lut,), -1, device=device, dtype=torch.long)
+    lut[values] = torch.arange(values.numel(), device=device)
+    lab_idx = lut[lab.clamp_min(0)]
+
+    n_lab = values.numel()
+    batch_of = torch.arange(b, device=device).view(b, 1).expand_as(lab_idx)
+    group_all = (lab_idx + batch_of * n_lab).reshape(-1)
+    keep = (lab_idx >= 0).reshape(-1)
+    if not bool(keep.any()):
+        return zero, {"n_labels": zero, "worst": zero}
+    group = group_all[keep]
+
+    grid = jacobian.identity_grid((d, h, w), device, work)  # (1, D, H, W, 3)
+    p_all = grid.reshape(1, -1, 3).expand(b, -1, -1).contiguous().reshape(-1, 3)
+    p = p_all[keep]
+    q = p + flow.reshape(-1, 3)[keep]
+
+    n_groups = b * n_lab
+    counts = torch.zeros(n_groups, device=device, dtype=work).index_add_(
+        0, group, torch.ones_like(group, dtype=work)
+    )
+    sum_p = torch.zeros(n_groups, 3, device=device, dtype=work).index_add_(0, group, p)
+    sum_q = torch.zeros(n_groups, 3, device=device, dtype=work).index_add_(0, group, q)
+
+    safe_n = counts.clamp_min(1.0).unsqueeze(-1)
+    pbar = sum_p / safe_n
+    qbar = sum_q / safe_n
+
+    # Second pass, centring BEFORE the outer products. The one-pass identity
+    # sum(p q^T) - n pbar qbar^T is algebraically equal but numerically wrong
+    # here: p holds absolute voxel indices, so for a small bone far from the
+    # origin (centroid ~200, spread ~10) the two terms are ~400x larger than
+    # their difference and cancel away most of the mantissa. The rotation then
+    # comes out visibly wrong for exactly-rigid input on small structures.
+    # Centred vectors are O(the structure's radius), so no cancellation.
+    p_c = p - pbar[group]
+    q_c = q - qbar[group]
+    cov = torch.zeros(n_groups, 3, 3, device=device, dtype=work).index_add_(
+        0, group, p_c.unsqueeze(2) * q_c.unsqueeze(1)
+    )
+
+    # Kabsch: with cov = sum p~ q~^T = U S V^T, the minimiser of
+    # sum ||q~ - R p~||^2 is R = V diag(1, 1, sign(det(V U^T))) U^T. The sign
+    # term is what forbids a reflection -- the role det(J) = 1 played before.
+    u_mat, _, vh = torch.linalg.svd(cov.double())
+    v_mat = vh.transpose(-2, -1)
+    sign = torch.sign(torch.det(v_mat @ u_mat.transpose(-2, -1)))
+    sign = torch.where(sign == 0, torch.ones_like(sign), sign)
+    flip = torch.eye(3, device=device, dtype=torch.float64).expand(n_groups, 3, 3)
+    flip = flip.clone()
+    flip[:, 2, 2] = sign
+    rot = (v_mat @ flip @ u_mat.transpose(-2, -1)).to(work).detach()
+
+    # Residual in centred coordinates. With t = qbar - R pbar this is exactly
+    #     q - (R p + t) = (q - qbar) - R (p - pbar)
+    # but both sides are O(radius) instead of O(distance from the origin), so
+    # the subtraction does not cancel away the mantissa. pbar/qbar are detached,
+    # which makes this identical to the detached-t formulation.
+    pbar_d, qbar_d = pbar.detach(), qbar.detach()
+    resid_vec = (q - qbar_d[group]) - torch.einsum(
+        "gij,gj->gi", rot[group], p - pbar_d[group]
+    )
+    resid = (resid_vec**2).sum(-1)
+    sum_res = torch.zeros(n_groups, device=device, dtype=work).index_add_(
+        0, group, resid
+    )
+    per_label = sum_res / counts.clamp_min(eps)
+
+    usable = counts >= min_voxels
+    if not bool(usable.any()):
+        return zero, {"n_labels": zero, "worst": zero, "worst_label": zero}
+    kept = per_label[usable]
+    # Which bone is worst, not just how bad. The loss is a mean over labels, so
+    # one structure blowing up is invisible in the total; this names it.
+    worst_pos = torch.argmax(kept)
+    worst_group = torch.nonzero(usable, as_tuple=False).reshape(-1)[worst_pos]
+    worst_label = values[worst_group % n_lab]
+    return (
+        kept.mean(),
+        {
+            "n_labels": usable.sum().to(work),
+            "worst": kept.max(),
+            "worst_label": worst_label.to(work),
+        },
+    )
 
 
 def warp_binary_mask(

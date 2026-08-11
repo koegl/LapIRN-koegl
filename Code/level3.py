@@ -63,6 +63,7 @@ def evaluate_lvl3(
         "rig_det": 0.0,
         "rig_ortho": 0.0,
         "rig_affine": 0.0,
+        "rig_worst": 0.0,
         "ndv": 0.0,
     }
     if config.use_seg_head:
@@ -269,11 +270,20 @@ def evaluate_lvl3(
             )
             bone_mask = torch.isin(X_lbl_ct, bone_labels_tensor).float()
 
+            zero_rig = torch.tensor(0.0, device=device)
+            loss_rig_det = loss_rig_ortho = loss_rig_affine = zero_rig
+            loss_rig_worst = zero_rig
             if batch["is_abdomen"]:
                 # empty loss
-                zero_rig = torch.tensor(0.0, device=device)
                 loss_rigidity = zero_rig
-                loss_rig_det = loss_rig_ortho = loss_rig_affine = zero_rig
+            elif config.use_per_label_rigidity:
+                loss_rigidity, rig_info = utils.per_label_rigid_loss(
+                    F_X_Y_norm,
+                    X_lbl_ct,
+                    bone_labels_tensor,
+                    min_voxels=config.rigidity_min_voxels,
+                )
+                loss_rig_worst = rig_info["worst"]
             else:
                 loss_rigidity, (loss_rig_det, loss_rig_ortho, loss_rig_affine) = (
                     utils.enforce_rigidity_loss(
@@ -312,6 +322,7 @@ def evaluate_lvl3(
             val_losses["rig_det"] += loss_rig_det.item()
             val_losses["rig_ortho"] += loss_rig_ortho.item()
             val_losses["rig_affine"] += loss_rig_affine.item()
+            val_losses["rig_worst"] += loss_rig_worst.item()
             val_losses["ndv"] += ndv
 
             if config.use_seg_head:
@@ -803,10 +814,23 @@ def train_lvl3(
         )
         bone_mask = torch.isin(X_lbl_ct, bone_labels_tensor).float()
 
+        zero_rig = torch.tensor(0.0, device=device)
+        loss_rig_det = loss_rig_ortho = loss_rig_affine = zero_rig
+        loss_rig_worst = zero_rig
+        rig_worst_label = zero_rig
+        n_rig_labels = zero_rig
         if batch["is_abdomen"]:
-            zero_rig = torch.tensor(0.0, device=device)
             loss_rigidity = zero_rig
-            loss_rig_det = loss_rig_ortho = loss_rig_affine = zero_rig
+        elif config.use_per_label_rigidity:
+            loss_rigidity, rig_info = utils.per_label_rigid_loss(
+                F_X_Y_norm,
+                X_lbl_ct,
+                bone_labels_tensor,
+                min_voxels=config.rigidity_min_voxels,
+            )
+            n_rig_labels = rig_info["n_labels"]
+            loss_rig_worst = rig_info["worst"]
+            rig_worst_label = rig_info["worst_label"]
         else:
             loss_rigidity, (loss_rig_det, loss_rig_ortho, loss_rig_affine) = (
                 utils.enforce_rigidity_loss(
@@ -1068,6 +1092,10 @@ def train_lvl3(
             "train_lvl3/w_rig_det": config.w_rig_det * loss_rig_det.item(),
             "train_lvl3/w_rig_ortho": config.w_rig_ortho * loss_rig_ortho.item(),
             "train_lvl3/w_rig_affine": config.w_rig_affine * loss_rig_affine.item(),
+            # per-label rigid fit (zero unless config.use_per_label_rigidity)
+            "train_lvl3/rig_worst": loss_rig_worst.item(),
+            "train_lvl3/rig_worst_label": rig_worst_label.item(),
+            "train_lvl3/rig_n_labels": n_rig_labels.item(),
             "train_lvl3/ndv": ndv,
             "train_lvl3/dvf": loss_dvf.item(),
             "train_lvl3/lr": current_lr,
