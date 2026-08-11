@@ -62,6 +62,16 @@ def evaluate_lvl3(
         "rigidity": 0.0,
         "ndv": 0.0,
     }
+    if config.use_seg_head:
+        val_losses.update(
+            {
+                "seg": 0.0,
+                "seg_dice_loss": 0.0,
+                "seg_bce": 0.0,
+                "seg_dice_fixed": 0.0,
+                "seg_dice_moving": 0.0,
+            }
+        )
     n_batches = 0
 
     transform_nearest = SpatialTransformNearest_unit().to(device)
@@ -288,6 +298,20 @@ def evaluate_lvl3(
             val_losses["rigidity"] += loss_rigidity.item()
             val_losses["ndv"] += ndv
 
+            if config.use_seg_head:
+                loss_seg, seg_metrics = utils.seg_head_terms(
+                    model.seg_logits,
+                    model.lvl2_disp_up_inv,
+                    Y_lbl_pet,
+                    moving_pet_mask,
+                    transform,
+                    grid_full,
+                    body_mask,
+                )
+                val_losses["seg"] += loss_seg.item()
+                for key, value in seg_metrics.items():
+                    val_losses[key] += value
+
             if loss_dice_ct is not None:
                 val_losses["dice_ct"] += loss_dice_ct.item()
                 n_dice_ct += 1
@@ -424,6 +448,8 @@ def train_lvl3(
         model_lvl2=model_lvl2,
         n_resblocks=config.n_resblocks,
         resblock_expansion=config.resblock_expansion,
+        use_seg_head=config.use_seg_head,
+        seg_head_channels=config.seg_head_channels,
     ).to(device)
 
     loss_similarity_ct = build_similarity_loss(config, level=3)
@@ -768,12 +794,37 @@ def train_lvl3(
                 utils.enforce_rigidity_loss(jac_det, jac, F_X_Y_norm, bone_mask)
             )
 
+        # Auxiliary PET-tumour segmentation. Both target channels live in the
+        # fixed frame, because that is what the lvl3 trunk sees: its input is
+        # warped_x (moving resampled by the lvl2 field), not x. So channel 1 is
+        # supervised with the moving mask carried over by that same field.
+        if config.use_seg_head:
+            loss_seg, seg_metrics = utils.seg_head_terms(
+                model.seg_logits,
+                model.lvl2_disp_up_inv,
+                Y_lbl_pet,
+                moving_pet_mask,
+                transform,
+                grid_full,
+                body_mask,
+            )
+            w_seg = config.w_seg * (
+                min(1.0, (epoch + 1) / config.seg_warmup_epochs)
+                if config.seg_warmup_epochs > 0
+                else 1.0
+            )
+        else:
+            loss_seg = torch.zeros((), device=device)
+            seg_metrics = {}
+            w_seg = 0.0
+
         loss = (
             loss_multiNCC
             + config.w_jacobian * loss_jacobian
             + config.w_smooth * loss_regulation
             + config.w_jacobian_tumor * loss_jacobian_tumor
             + config.w_bone_rigidity * loss_rigidity
+            + w_seg * loss_seg
         )
         if loss_dice_ct is not None:
             loss = loss + config.w_dice_ct_lvl3 * loss_dice_ct
@@ -978,6 +1029,11 @@ def train_lvl3(
             "train_lvl3/dvf": loss_dvf.item(),
             "train_lvl3/lr": current_lr,
         }
+        if config.use_seg_head:
+            train_metrics["train_lvl3/seg"] = loss_seg.item()
+            train_metrics["train_lvl3/w_seg"] = w_seg * loss_seg.item()
+            for key, value in seg_metrics.items():
+                train_metrics[f"train_lvl3/{key}"] = value
         if loss_dice_ct is not None:
             train_metrics["train_lvl3/dice_ct"] = loss_dice_ct.item()
         if loss_dice_pet is not None:

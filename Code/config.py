@@ -169,9 +169,28 @@ class TrainingConfig:
     w_bone_rigidity: float = 0.0
     w_dvf: float = 100.0
 
+    # --- auxiliary PET-tumour segmentation head (lvl3 only) ---------------
+    # A second head on the lvl3 trunk predicts the fixed and the (lvl2-warped)
+    # moving lesion mask, both in the fixed frame. Labels are needed at training
+    # time only, so this costs nothing at inference -- and the predicted mask
+    # comes out of the same forward pass, which is what makes a tumour-aware IO
+    # objective affordable inside the challenge time limit.
+    # Single-session patients can be used here through the synthetic branch,
+    # which is the point: they carry no registration signal but full lesion
+    # supervision.
+    use_seg_head: bool = True
+    # width of the head's hidden conv. It runs at full resolution, so this is
+    # the memory knob: each channel costs a 192x192x288 activation.
+    seg_head_channels: int = 16
+    w_seg: float = 0.1
+    # linear ramp of w_seg over this many epochs (0 = full weight immediately).
+    # The head starts from noise; without a ramp its early gradients reach the
+    # shared trunk while the flow head is still warming up.
+    seg_warmup_epochs: float = 5.0
+
     # gradient-conflict diagnostic: splits the lvl3 objective into
-    #   A = accuracy + regularisation (ncc, dice, jacobian, smooth, dvf)
-    #   B = tumour                    (tlg, jacobian_tumor, rigidity)
+    #   A = accuracy + regularisation (ncc, dice, jacobian, smooth, rigidity)
+    #   B = tumour                    (tlg, jacobian_tumor)
     # and logs cos(grad_A, grad_B) w.r.t. the shared parameters. Persistently
     # negative => the groups genuinely fight and a multi-stage model / gradient
     # surgery is justified; positive or near-zero => it is only a weighting

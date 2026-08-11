@@ -398,6 +398,10 @@ def create_model(
         model_lvl2=model_lvl2,
         n_resblocks=cfg.n_resblocks,
         resblock_expansion=cfg.resblock_expansion,
+        # must match the checkpoint: a seg-head checkpoint carries seg_head.*
+        # weights that load_state_dict would otherwise reject
+        use_seg_head=cfg.use_seg_head,
+        seg_head_channels=cfg.seg_head_channels,
     ).to(device)
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.eval()

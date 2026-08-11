@@ -673,6 +673,8 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
         model_lvl2=None,
         n_resblocks=5,
         resblock_expansion=1,
+        use_seg_head=False,
+        seg_head_channels=16,
     ):
         super(Miccai2020_LDR_laplacian_unit_add_lvl3, self).__init__()
         self.in_channel = in_channel
@@ -743,6 +745,32 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
             padding=1,
             bias=False,
         )
+
+        # Auxiliary PET-tumour segmentation head, sharing the whole lvl3 trunk
+        # with the flow head. Both channels are *predicted* in the fixed frame,
+        # since that is the frame cat_input is built in:
+        #   channel 0 -> tumour of y (fixed), used as-is
+        #   channel 1 -> tumour of x (moving), warped back into the moving frame
+        #                with lvl2_disp_up_inv before it is scored or consumed
+        # Supervision is training-only; at test time seg_logits comes for free
+        # out of the same forward pass, and channel 1 is exactly the moving
+        # lesion mask the IO objective (MTV / TLG / masked Jacobian) needs.
+        self.use_seg_head = use_seg_head
+        self.seg_logits = None
+        self.lvl2_disp_up_inv = None
+        if self.use_seg_head:
+            self.seg_head = nn.Sequential(
+                nn.Conv3d(
+                    self.start_channel * 8,
+                    seg_head_channels,
+                    3,
+                    stride=1,
+                    padding=1,
+                    bias=True,
+                ),
+                nn.LeakyReLU(0.2),
+                nn.Conv3d(seg_head_channels, 2, 1, bias=True),
+            )
 
     def unfreeze_modellvl2(self):
         # unFreeze model_lvl1 weight
@@ -883,11 +911,31 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
             e0 = e0 + lvl2_embedding
             e0 = self.resblock_group_lvl1(e0)
             e0 = self.up(e0)
-            output_disp_e0_v = (
-                self.output_lvl1(torch.cat([e0, fea_e0], dim=1)) * self.range_flow
-            )
+            trunk_out = torch.cat([e0, fea_e0], dim=1)
+            output_disp_e0_v = self.output_lvl1(trunk_out) * self.range_flow
+            seg_logits = self.seg_head(trunk_out) if self.use_seg_head else None
         output_disp_e0_v = output_disp_e0_v.float()
         e0 = e0.float()
+
+        # Stashed rather than returned: the forward's return tuple is unpacked
+        # positionally in level3 / inference / instance_opt, and both of these
+        # are side outputs.
+        #
+        # The trunk sees warpped_x, so both seg channels are predicted in the
+        # fixed frame. IO consumes the lesion mask of the *moving* image in its
+        # own (prereg) frame, so channel 1 has to be pulled back through the
+        # inverse of the lvl2 warp -- that is lvl2_disp_up_inv, the exponential
+        # of the negated lvl2 velocity. Approximate in the same way the forward
+        # direction is: that one upsamples the exponentiated field, this one
+        # exponentiates the upsampled velocity, and the two commute only up to
+        # the interpolation. Detached: the seg loss must not reach the lvl2
+        # field, which is what makes the inverse valid to treat as a constant.
+        self.seg_logits = seg_logits.float() if seg_logits is not None else None
+        if self.use_seg_head:
+            self.lvl2_disp_up_inv = self.diff_transform(
+                -compose_lvl2_v_up.float(), self.grid_1
+            ).detach()
+
         compose_field_e0_lvl2_compose = output_disp_e0_v + compose_lvl2_v_up.float()
         output_disp_e0 = self.diff_transform(compose_field_e0_lvl2_compose, self.grid_1)
 

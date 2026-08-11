@@ -162,7 +162,13 @@ def io_objective(
         assert bone_values is not None, "include_rigidity requires bone_values"
         moving_bone_mask = torch.isin(x_lbl_ct, bone_values).float()
         loss_rigidity, _ = utils.enforce_rigidity_loss(
-            jac_det, jac, disp_voxel, moving_bone_mask
+            jac_det,
+            jac,
+            disp_voxel,
+            moving_bone_mask,
+            w_det=cfg.w_rig_det,
+            w_ortho=cfg.w_rig_ortho,
+            w_affine=cfg.w_rig_affine,
         )
         loss = loss + cfg.w_bone_rigidity * loss_rigidity
 

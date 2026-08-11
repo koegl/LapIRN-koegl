@@ -1111,6 +1111,173 @@ def tlg_bias_loss(
     return torch.abs(tlg_warped - tlg_moving) / (tlg_moving + eps)
 
 
+def seg_head_loss(
+    probs: torch.Tensor,
+    target: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
+    eps: float = 1e-5,
+) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    """Auxiliary segmentation loss: soft Dice + BCE, per channel.
+
+    Takes probabilities rather than logits because one of the two channels is
+    warped into another frame before it is scored: interpolating probabilities
+    is meaningful and grid_sample's zero padding reads as "background", whereas
+    a zero-padded logit would read as p=0.5 outside the field of view.
+
+    Args:
+        probs: (B, C, D, H, W) head output after sigmoid, in [0, 1].
+        target: (B, C, D, H, W) binary float ground truth.
+        mask: optional (B, 1, D, H, W) binary float mask (e.g. body); voxels
+            outside it are excluded from both terms.
+        eps: Smoothing term.
+
+    Returns:
+        (loss, (dice_term, bce_term)), each a scalar meaned over channels. The
+        two terms are returned separately because they behave very differently
+        during training: BCE is near-zero from the start (lesions are ~0.1% of
+        the volume, so predicting background is already almost right), while
+        Dice is the term that actually reports whether lesions are found.
+    """
+    if mask is not None:
+        probs = probs * mask
+        target = target * mask
+
+    intersection = (probs * target).sum(dim=(2, 3, 4))
+    denominator = probs.sum(dim=(2, 3, 4)) + target.sum(dim=(2, 3, 4))
+    dice = 1.0 - (2.0 * intersection + eps) / (denominator + eps)
+
+    bce = torch.nn.functional.binary_cross_entropy(
+        probs.clamp(eps, 1.0 - eps), target, reduction="none"
+    )
+    if mask is not None:
+        bce = (bce * mask).sum(dim=(2, 3, 4)) / (mask.sum(dim=(2, 3, 4)) + eps)
+    else:
+        bce = bce.mean(dim=(2, 3, 4))
+
+    dice = dice.mean()
+    bce = bce.mean()
+    return dice + bce, (dice, bce)
+
+
+def seg_head_dice_scores(
+    probs: torch.Tensor,
+    target: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
+    threshold: float = 0.5,
+    eps: float = 1e-5,
+) -> torch.Tensor:
+    """Hard Dice per channel, for logging (not for backprop).
+
+    The soft Dice inside seg_head_loss is a training signal; this is the number
+    you would quote. A channel whose target is empty (no lesion in that scan)
+    scores 1.0 when the prediction is empty too and 0.0 otherwise.
+
+    Args:
+        probs: (B, C, D, H, W) head output after sigmoid, in [0, 1].
+        target: (B, C, D, H, W) binary float ground truth.
+        mask: optional (B, 1, D, H, W) binary float mask (e.g. body).
+        threshold: probability above which a voxel counts as lesion.
+        eps: Smoothing term.
+
+    Returns:
+        (C,) tensor of Dice scores, meaned over the batch.
+    """
+    prediction = (probs > threshold).float()
+    target = (target > 0.5).float()
+    if mask is not None:
+        prediction = prediction * mask
+        target = target * mask
+
+    intersection = (prediction * target).sum(dim=(2, 3, 4))
+    denominator = prediction.sum(dim=(2, 3, 4)) + target.sum(dim=(2, 3, 4))
+    return ((2.0 * intersection + eps) / (denominator + eps)).mean(dim=0)
+
+
+def seg_head_moving_probs(
+    seg_logits: torch.Tensor,
+    lvl2_disp_up_inv: torch.Tensor,
+    transform: torch.nn.Module,
+    grid_full: torch.Tensor,
+) -> torch.Tensor:
+    """Channel 1 of the seg head, pulled back into the moving (prereg) frame.
+
+    The head predicts in the fixed frame, but the moving lesion mask is what the
+    IO objective consumes (MTV / TLG / masked Jacobian all key off the moving
+    tumour). Warping the soft probabilities with the inverse lvl2 field, rather
+    than warping a hard label the other way, keeps the interpolation continuous
+    and avoids the nearest-neighbour quantisation that would otherwise put a
+    small lesion a voxel off its own intensity blob.
+
+    Args:
+        seg_logits: (B, 2, D, H, W) head output stashed by the lvl3 forward.
+        lvl2_disp_up_inv: (B, 3, D, H, W) inverse lvl2 displacement, detached.
+        transform: trilinear warper.
+        grid_full: full-resolution unit sampling grid.
+
+    Returns:
+        (B, 1, D, H, W) lesion probabilities in the moving frame.
+    """
+    moving_prob_fixed_frame = torch.sigmoid(seg_logits[:, 1:2])
+    return transform(
+        moving_prob_fixed_frame,
+        lvl2_disp_up_inv.permute(0, 2, 3, 4, 1),
+        grid_full,
+    )
+
+
+def seg_head_terms(
+    seg_logits: torch.Tensor,
+    lvl2_disp_up_inv: torch.Tensor,
+    y_label_pet: torch.Tensor,
+    moving_pet_mask: torch.Tensor,
+    transform: torch.nn.Module,
+    grid_full: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
+) -> Tuple[torch.Tensor, Dict[str, float]]:
+    """Score the auxiliary seg head against both lesion labels, each in its own frame.
+
+    Channel 0 stays in the fixed frame and is compared with the fixed scan's own
+    label. Channel 1 is warped back into the moving (prereg) frame and compared
+    with the untouched moving label -- so neither target is resampled, and
+    channel 1 is scored as the thing IO will actually consume.
+
+    Args:
+        seg_logits: (B, 2, D, H, W) head output stashed by the lvl3 forward.
+        lvl2_disp_up_inv: (B, 3, D, H, W) inverse lvl2 displacement, detached.
+        y_label_pet: (B, 1, D, H, W) fixed lesion label.
+        moving_pet_mask: (B, 1, D, H, W) moving lesion mask, affine/prereg frame.
+        transform: trilinear warper.
+        grid_full: full-resolution unit sampling grid.
+        mask: optional body mask. It is the fixed scan's, applied to both
+            channels: the prereg brings the moving body into close enough
+            alignment that it serves as a support for the moving frame too.
+
+    Returns:
+        (loss, metrics) where metrics holds the split Dice/BCE terms and the
+        hard Dice of each channel, as plain floats for logging.
+    """
+    probs = torch.cat(
+        [
+            torch.sigmoid(seg_logits[:, 0:1]),
+            seg_head_moving_probs(seg_logits, lvl2_disp_up_inv, transform, grid_full),
+        ],
+        dim=1,
+    )
+    target = torch.cat([(y_label_pet == 1).float(), moving_pet_mask], dim=1)
+
+    loss, (dice_term, bce_term) = seg_head_loss(probs, target, mask)
+    with torch.no_grad():
+        scores = seg_head_dice_scores(probs, target, mask)
+
+    metrics = {
+        "seg_dice_loss": dice_term.item(),
+        "seg_bce": bce_term.item(),
+        "seg_dice_fixed": scores[0].item(),
+        "seg_dice_moving": scores[1].item(),
+    }
+    return loss, metrics
+
+
 def masked_jac_det_loss(
     jac_det: torch.Tensor,
     mask: torch.Tensor,
