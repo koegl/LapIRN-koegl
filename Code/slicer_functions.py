@@ -1,10 +1,3 @@
-from pathlib import Path
-from typing import Sequence
-
-import numpy as np
-import slicer
-
-
 def load_bone_labels(seg_path: str):
     """Load a segmentation, merge all bone labels into one red outline segment.
 
@@ -14,6 +7,12 @@ def load_bone_labels(seg_path: str):
     Returns:
         The created segmentation node.
     """
+    from pathlib import Path
+    from typing import Sequence
+
+    import numpy as np
+    import slicer
+
     bone_label_values: Sequence[int] = (
         26,
         27,
@@ -117,8 +116,10 @@ def load_rib_labels(seg_path: str):
         The created segmentation node.
     """
     from pathlib import Path
+    from typing import Sequence
 
     import numpy as np
+    import slicer
     import vtk
 
     rib_label_values: Sequence[int] = (
@@ -201,8 +202,10 @@ def load_abdomen_labels(seg_path: str):
         The created segmentation node.
     """
     from pathlib import Path
+    from typing import Sequence
 
     import numpy as np
+    import slicer
     import vtk
 
     abdomen_label_values: Sequence[int] = (
@@ -268,8 +271,10 @@ def load_nlst_labels(seg_path: str):
         The created segmentation node.
     """
     from pathlib import Path
+    from typing import Sequence
 
     import numpy as np
+    import slicer
     import vtk
 
     abdomen_label_values: Sequence[int] = (
@@ -445,6 +450,8 @@ def merge_all_segments(seg_node_name: str, node_name: str = None):
     Returns:
         The new segmentation node with a single merged segment.
     """
+    import slicer
+
     src_node = slicer.util.getNode(seg_node_name)
 
     if node_name is None:
