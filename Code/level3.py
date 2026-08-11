@@ -919,10 +919,20 @@ def train_lvl3(
             # does, so their agreement cancels part of ncc's disagreement and
             # makes the group cosine look milder than the real conflict.
             # Gradients are linear, so the group aggregates still come free.
+            #
+            # rigidity sits in group A, not B. Measured over run
+            # wise-swan-39232655 it behaves as a regulariser, not a tumour term:
+            # cos(rigidity, smooth) = +0.53 and cos(rigidity, ncc) = -0.53,
+            # against cos(rigidity, tlg) = 0.00 and cos(rigidity, jactum) =
+            # +0.26. With it in B it supplied ~100% of the A-vs-B conflict
+            # (damage -0.20 of -0.25 total) while tlg and jactum contributed
+            # ~0.00, i.e. the group cosine was measuring bone-rigidity vs
+            # image-matching and calling it accuracy vs tumour preservation.
             losses_accuracy = {
                 "ncc": loss_multiNCC,
                 "jacob": config.w_jacobian * loss_jacobian,
                 "smooth": config.w_smooth * loss_regulation,
+                "rigidity": config.w_bone_rigidity * loss_rigidity,
             }
             if loss_dice_ct is not None:
                 losses_accuracy["dice"] = config.w_dice_ct_lvl3 * loss_dice_ct
@@ -932,7 +942,6 @@ def train_lvl3(
             losses_tumour = {
                 "tlg": config.w_tlg * loss_tlg,
                 "jactum": config.w_jacobian_tumor * loss_jacobian_tumor,
-                "rigidity": config.w_bone_rigidity * loss_rigidity,
             }
 
             # Diagnostic probes: Dice restricted to bone labels and to
