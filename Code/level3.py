@@ -309,6 +309,9 @@ def evaluate_lvl3(
             val_losses["tlg_bias"] += loss_tlg.item()
             val_losses["jacobian_tumor"] += loss_jacobian_tumor.item()
             val_losses["rigidity"] += loss_rigidity.item()
+            val_losses["rig_det"] += loss_rig_det.item()
+            val_losses["rig_ortho"] += loss_rig_ortho.item()
+            val_losses["rig_affine"] += loss_rig_affine.item()
             val_losses["ndv"] += ndv
 
             if config.use_seg_head:
