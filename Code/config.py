@@ -167,6 +167,15 @@ class TrainingConfig:
     w_tlg: float = 2.0
     w_jacobian_tumor: float = 2.0
     w_bone_rigidity: float = 0.0
+    # Sub-weights inside the rigidity term, applied before w_bone_rigidity.
+    # The three conditions have different natural magnitudes (det and ortho are
+    # dimensionless strain measures, affine is a bending energy in voxel units),
+    # so summing them with equal weight lets whichever is largest be the only
+    # one w_bone_rigidity actually controls. Log train_lvl3/rig_{det,ortho,
+    # affine} first, then set these. Defaults reproduce the old equal sum.
+    w_rig_det: float = 1.0
+    w_rig_ortho: float = 1.0
+    w_rig_affine: float = 1.0
     w_dvf: float = 100.0
 
     # --- auxiliary PET-tumour segmentation head (lvl3 only) ---------------
