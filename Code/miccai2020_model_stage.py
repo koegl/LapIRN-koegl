@@ -775,17 +775,31 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
             self.seg_bone_head = self.segmentation_head(bone_head_channels)
 
     def segmentation_head(self, hidden_channels):
-        """Two-conv readout on the trunk features, 2 logit channels out.
+        """Three-conv readout on the deep trunk features (e0), 2 logit channels out.
 
-        Deliberately thin: it is a readout, not a decoder. A deep head could
-        solve segmentation from generic features on its own, which would leave
-        the shared trunk unshaped and defeat the point of the auxiliary task.
+        Two 3x3x3 convs (receptive field ~7 voxels) then a 1x1x1 classifier.
+        Still a readout, not a decoder: a deep head could solve segmentation
+        from generic features on its own, which would leave the shared trunk
+        unshaped and defeat the point of the auxiliary task.
+        Fed e0 only (not cat(e0, fea_e0)): fea_e0 is a 2-conv shortcut to the
+        raw PET/CT, so including it lets the head threshold intensity without
+        the deep trunk ever representing lesions -- the opposite of what the
+        auxiliary task is for.
         Channel 0 is the fixed frame, channel 1 the moving structure (warped
         back into the moving frame by the caller).
         """
         return nn.Sequential(
             nn.Conv3d(
-                self.start_channel * 8,
+                self.start_channel * 4,
+                hidden_channels,
+                3,
+                stride=1,
+                padding=1,
+                bias=True,
+            ),
+            nn.LeakyReLU(0.2),
+            nn.Conv3d(
+                hidden_channels,
                 hidden_channels,
                 3,
                 stride=1,
@@ -937,12 +951,9 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
             e0 = self.up(e0)
             trunk_out = torch.cat([e0, fea_e0], dim=1)
             output_disp_e0_v = self.output_lvl1(trunk_out) * self.range_flow
-            seg_pet_logits = (
-                self.seg_pet_head(trunk_out) if self.use_seg_pet_head else None
-            )
-            seg_bone_logits = (
-                self.seg_bone_head(trunk_out) if self.use_seg_bone_head else None
-            )
+            # heads read e0 only (deep features), not the fea_e0 shortcut
+            seg_pet_logits = self.seg_pet_head(e0) if self.use_seg_pet_head else None
+            seg_bone_logits = self.seg_bone_head(e0) if self.use_seg_bone_head else None
         output_disp_e0_v = output_disp_e0_v.float()
         e0 = e0.float()
 

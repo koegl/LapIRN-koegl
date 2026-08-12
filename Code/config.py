@@ -201,7 +201,7 @@ class TrainingConfig:
     use_seg_pet_head: bool = True
     # width of the head's hidden conv. It runs at full resolution, so this is
     # the memory knob: each channel costs a 192x192x288 activation.
-    seg_pet_head_channels: int = 16
+    seg_pet_head_channels: int = 32
     w_seg_pet: float = 0.1
     # linear ramp of w_seg over this many epochs (0 = full weight immediately).
     # The head starts from noise; without a ramp its early gradients reach the
@@ -219,7 +219,7 @@ class TrainingConfig:
     # predicted mask (a regional regulariser tolerates an eroded/dilated mask),
     # but validate bone_dice_moving before feeding it anything.
     use_seg_bone_head: bool = False
-    seg_bone_head_channels: int = 16
+    seg_bone_head_channels: int = 32
     w_seg_bone: float = 0.1
     seg_bone_warmup_epochs: float = 5.0
 
