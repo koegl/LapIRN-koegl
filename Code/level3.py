@@ -331,7 +331,7 @@ def evaluate_lvl3(
 
             if config.use_seg_pet_head:
                 loss_seg, seg_metrics = utils.seg_head_terms(
-                    model.seg_logits,
+                    model.seg_pet_logits,
                     model.lvl2_disp_up_inv,
                     (Y_lbl_pet == 1).float(),
                     moving_pet_mask,
@@ -346,7 +346,7 @@ def evaluate_lvl3(
 
             if config.use_seg_bone_head:
                 loss_seg_bone, seg_bone_metrics = utils.seg_head_terms(
-                    model.bone_logits,
+                    model.seg_bone_logits,
                     model.lvl2_disp_up_inv,
                     torch.isin(Y_lbl_ct, bone_labels_tensor).float(),
                     bone_mask,
@@ -872,7 +872,7 @@ def train_lvl3(
         # seg_head_terms so that neither target has to be resampled.
         if config.use_seg_pet_head:
             loss_seg_pet, seg_metrics = utils.seg_head_terms(
-                model.seg_logits,
+                model.seg_pet_logits,
                 model.lvl2_disp_up_inv,
                 (Y_lbl_pet == 1).float(),
                 moving_pet_mask,
@@ -895,7 +895,7 @@ def train_lvl3(
             # bone_mask is already the moving (prereg) frame bone mask built for
             # the rigidity term; the fixed one is its counterpart on Y_lbl_ct
             loss_seg_bone, seg_bone_metrics = utils.seg_head_terms(
-                model.bone_logits,
+                model.seg_bone_logits,
                 model.lvl2_disp_up_inv,
                 torch.isin(Y_lbl_ct, bone_labels_tensor).float(),
                 bone_mask,

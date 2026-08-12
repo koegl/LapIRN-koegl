@@ -757,11 +757,11 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
         # Supervision is training-only; at test time seg_logits comes for free
         # out of the same forward pass, and channel 1 is exactly the moving
         # lesion mask the IO objective (MTV / TLG / masked Jacobian) needs.
-        self.use_seg_head = use_seg_pet_head
-        self.seg_logits = None
+        self.use_seg_pet_head = use_seg_pet_head
+        self.seg_pet_logits = None
         self.lvl2_disp_up_inv = None
-        if self.use_seg_head:
-            self.seg_head = self.segmentation_head(seg_pet_head_channels)
+        if self.use_seg_pet_head:
+            self.seg_pet_head = self.segmentation_head(seg_pet_head_channels)
 
         # Second auxiliary head, same shape, predicting bone instead of lesion.
         # Kept separate rather than widening seg_head: the two tasks key off
@@ -769,10 +769,10 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
         # one narrow bottleneck between them would make them compete. Two heads
         # of width w cost the same activation memory as one of width 2w, so the
         # separation is free, and it keeps the two independently ablatable.
-        self.use_bone_head = use_bone_head
-        self.bone_logits = None
-        if self.use_bone_head:
-            self.bone_head = self.segmentation_head(bone_head_channels)
+        self.use_seg_bone_head = use_bone_head
+        self.seg_bone_logits = None
+        if self.use_seg_bone_head:
+            self.seg_bone_head = self.segmentation_head(bone_head_channels)
 
     def segmentation_head(self, hidden_channels):
         """Two-conv readout on the trunk features, 2 logit channels out.
@@ -937,8 +937,12 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
             e0 = self.up(e0)
             trunk_out = torch.cat([e0, fea_e0], dim=1)
             output_disp_e0_v = self.output_lvl1(trunk_out) * self.range_flow
-            seg_logits = self.seg_head(trunk_out) if self.use_seg_head else None
-            bone_logits = self.bone_head(trunk_out) if self.use_bone_head else None
+            seg_pet_logits = (
+                self.seg_pet_head(trunk_out) if self.use_seg_pet_head else None
+            )
+            seg_bone_logits = (
+                self.seg_bone_head(trunk_out) if self.use_seg_bone_head else None
+            )
         output_disp_e0_v = output_disp_e0_v.float()
         e0 = e0.float()
 
@@ -955,9 +959,13 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
         # exponentiates the upsampled velocity, and the two commute only up to
         # the interpolation. Detached: the seg loss must not reach the lvl2
         # field, which is what makes the inverse valid to treat as a constant.
-        self.seg_logits = seg_logits.float() if seg_logits is not None else None
-        self.bone_logits = bone_logits.float() if bone_logits is not None else None
-        if self.use_seg_head or self.use_bone_head:
+        self.seg_pet_logits = (
+            seg_pet_logits.float() if seg_pet_logits is not None else None
+        )
+        self.seg_bone_logits = (
+            seg_bone_logits.float() if seg_bone_logits is not None else None
+        )
+        if self.use_seg_pet_head or self.use_seg_bone_head:
             self.lvl2_disp_up_inv = self.diff_transform(
                 -compose_lvl2_v_up.float(), self.grid_1
             ).detach()
