@@ -198,15 +198,30 @@ class TrainingConfig:
     # Single-session patients can be used here through the synthetic branch,
     # which is the point: they carry no registration signal but full lesion
     # supervision.
-    use_seg_head: bool = True
+    use_seg_pet_head: bool = True
     # width of the head's hidden conv. It runs at full resolution, so this is
     # the memory knob: each channel costs a 192x192x288 activation.
-    seg_head_channels: int = 16
-    w_seg: float = 0.1
+    seg_pet_head_channels: int = 16
+    w_seg_pet: float = 0.1
     # linear ramp of w_seg over this many epochs (0 = full weight immediately).
     # The head starts from noise; without a ramp its early gradients reach the
     # shared trunk while the flow head is still warming up.
-    seg_warmup_epochs: float = 5.0
+    seg_pet_warmup_epochs: float = 5.0
+
+    # --- auxiliary bone segmentation head (lvl3 only) ---------------------
+    # Same shape as the lesion head but predicting BONE_LABEL_VALUES vs rest.
+    # Separate from the lesion head on purpose: the two tasks key off different
+    # evidence (CT density vs PET uptake) and should not share one narrow
+    # bottleneck. The dice loss only supervises the *field* (make warped labels
+    # overlap); nothing in it forces the trunk to decide "this voxel is bone",
+    # which is what this head adds.
+    # NB: not wired into IO. Rigidity is the most forgiving consumer of a
+    # predicted mask (a regional regulariser tolerates an eroded/dilated mask),
+    # but validate bone_dice_moving before feeding it anything.
+    use_seg_bone_head: bool = False
+    seg_bone_head_channels: int = 16
+    w_seg_bone: float = 0.1
+    seg_bone_warmup_epochs: float = 5.0
 
     # gradient-conflict diagnostic: splits the lvl3 objective into
     #   A = accuracy + regularisation (ncc, dice, jacobian, smooth, rigidity)

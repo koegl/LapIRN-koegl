@@ -1229,29 +1229,34 @@ def seg_head_moving_probs(
 def seg_head_terms(
     seg_logits: torch.Tensor,
     lvl2_disp_up_inv: torch.Tensor,
-    y_label_pet: torch.Tensor,
-    moving_pet_mask: torch.Tensor,
+    fixed_target: torch.Tensor,
+    moving_target: torch.Tensor,
     transform: torch.nn.Module,
     grid_full: torch.Tensor,
     mask: Optional[torch.Tensor] = None,
+    prefix: str = "seg",
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
-    """Score the auxiliary seg head against both lesion labels, each in its own frame.
+    """Score an auxiliary seg head against both labels, each in its own frame.
 
     Channel 0 stays in the fixed frame and is compared with the fixed scan's own
     label. Channel 1 is warped back into the moving (prereg) frame and compared
     with the untouched moving label -- so neither target is resampled, and
-    channel 1 is scored as the thing IO will actually consume.
+    channel 1 is scored as the thing IO would actually consume.
+
+    Shared by the lesion head and the bone head; they differ only in the targets
+    handed in and in the metric prefix.
 
     Args:
         seg_logits: (B, 2, D, H, W) head output stashed by the lvl3 forward.
         lvl2_disp_up_inv: (B, 3, D, H, W) inverse lvl2 displacement, detached.
-        y_label_pet: (B, 1, D, H, W) fixed lesion label.
-        moving_pet_mask: (B, 1, D, H, W) moving lesion mask, affine/prereg frame.
+        fixed_target: (B, 1, D, H, W) binary target in the fixed frame.
+        moving_target: (B, 1, D, H, W) binary target in the moving (prereg) frame.
         transform: trilinear warper.
         grid_full: full-resolution unit sampling grid.
         mask: optional body mask. It is the fixed scan's, applied to both
             channels: the prereg brings the moving body into close enough
             alignment that it serves as a support for the moving frame too.
+        prefix: name the returned metrics are keyed under.
 
     Returns:
         (loss, metrics) where metrics holds the split Dice/BCE terms and the
@@ -1264,17 +1269,17 @@ def seg_head_terms(
         ],
         dim=1,
     )
-    target = torch.cat([(y_label_pet == 1).float(), moving_pet_mask], dim=1)
+    target = torch.cat([fixed_target, moving_target], dim=1)
 
     loss, (dice_term, bce_term) = seg_head_loss(probs, target, mask)
     with torch.no_grad():
         scores = seg_head_dice_scores(probs, target, mask)
 
     metrics = {
-        "seg_dice_loss": dice_term.item(),
-        "seg_bce": bce_term.item(),
-        "seg_dice_fixed": scores[0].item(),
-        "seg_dice_moving": scores[1].item(),
+        f"{prefix}_dice_loss": dice_term.item(),
+        f"{prefix}_bce": bce_term.item(),
+        f"{prefix}_dice_fixed": scores[0].item(),
+        f"{prefix}_dice_moving": scores[1].item(),
     }
     return loss, metrics
 

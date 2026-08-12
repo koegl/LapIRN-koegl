@@ -673,8 +673,10 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
         model_lvl2=None,
         n_resblocks=5,
         resblock_expansion=1,
-        use_seg_head=False,
-        seg_head_channels=16,
+        use_seg_pet_head=False,
+        seg_pet_head_channels=16,
+        use_bone_head=False,
+        bone_head_channels=16,
     ):
         super(Miccai2020_LDR_laplacian_unit_add_lvl3, self).__init__()
         self.in_channel = in_channel
@@ -755,22 +757,44 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
         # Supervision is training-only; at test time seg_logits comes for free
         # out of the same forward pass, and channel 1 is exactly the moving
         # lesion mask the IO objective (MTV / TLG / masked Jacobian) needs.
-        self.use_seg_head = use_seg_head
+        self.use_seg_head = use_seg_pet_head
         self.seg_logits = None
         self.lvl2_disp_up_inv = None
         if self.use_seg_head:
-            self.seg_head = nn.Sequential(
-                nn.Conv3d(
-                    self.start_channel * 8,
-                    seg_head_channels,
-                    3,
-                    stride=1,
-                    padding=1,
-                    bias=True,
-                ),
-                nn.LeakyReLU(0.2),
-                nn.Conv3d(seg_head_channels, 2, 1, bias=True),
-            )
+            self.seg_head = self.segmentation_head(seg_pet_head_channels)
+
+        # Second auxiliary head, same shape, predicting bone instead of lesion.
+        # Kept separate rather than widening seg_head: the two tasks key off
+        # different evidence (CT density and edges vs PET uptake), and sharing
+        # one narrow bottleneck between them would make them compete. Two heads
+        # of width w cost the same activation memory as one of width 2w, so the
+        # separation is free, and it keeps the two independently ablatable.
+        self.use_bone_head = use_bone_head
+        self.bone_logits = None
+        if self.use_bone_head:
+            self.bone_head = self.segmentation_head(bone_head_channels)
+
+    def segmentation_head(self, hidden_channels):
+        """Two-conv readout on the trunk features, 2 logit channels out.
+
+        Deliberately thin: it is a readout, not a decoder. A deep head could
+        solve segmentation from generic features on its own, which would leave
+        the shared trunk unshaped and defeat the point of the auxiliary task.
+        Channel 0 is the fixed frame, channel 1 the moving structure (warped
+        back into the moving frame by the caller).
+        """
+        return nn.Sequential(
+            nn.Conv3d(
+                self.start_channel * 8,
+                hidden_channels,
+                3,
+                stride=1,
+                padding=1,
+                bias=True,
+            ),
+            nn.LeakyReLU(0.2),
+            nn.Conv3d(hidden_channels, 2, 1, bias=True),
+        )
 
     def unfreeze_modellvl2(self):
         # unFreeze model_lvl1 weight
@@ -914,6 +938,7 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
             trunk_out = torch.cat([e0, fea_e0], dim=1)
             output_disp_e0_v = self.output_lvl1(trunk_out) * self.range_flow
             seg_logits = self.seg_head(trunk_out) if self.use_seg_head else None
+            bone_logits = self.bone_head(trunk_out) if self.use_bone_head else None
         output_disp_e0_v = output_disp_e0_v.float()
         e0 = e0.float()
 
@@ -931,7 +956,8 @@ class Miccai2020_LDR_laplacian_unit_add_lvl3(nn.Module):
         # the interpolation. Detached: the seg loss must not reach the lvl2
         # field, which is what makes the inverse valid to treat as a constant.
         self.seg_logits = seg_logits.float() if seg_logits is not None else None
-        if self.use_seg_head:
+        self.bone_logits = bone_logits.float() if bone_logits is not None else None
+        if self.use_seg_head or self.use_bone_head:
             self.lvl2_disp_up_inv = self.diff_transform(
                 -compose_lvl2_v_up.float(), self.grid_1
             ).detach()
