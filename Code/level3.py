@@ -1005,49 +1005,42 @@ def train_lvl3(
         # Gradient-conflict diagnostic. Must run before the backward in
         # optimizer_step_with_guard (it needs the graph alive) but it uses
         # autograd.grad, so it neither writes .grad nor disturbs accumulation.
-        # The unrolled-IO meta-loss is deliberately excluded: it mixes both
-        # groups and would blur the split.
+        # The unrolled-IO meta-loss is deliberately excluded: it is a weighted
+        # mixture of the other terms and would appear as a copy of the objective.
         if config.log_grad_conflict and (
             global_step % (val_step_interval * config.grad_conflict_every_n_val) == 0
         ):
-            # Both groups are passed term-by-term. Lumping the accuracy group
-            # together hides which half of it a tumour term actually fights:
-            # smooth/jacobian penalise violent deformation just like rigidity
-            # does, so their agreement cancels part of ncc's disagreement and
-            # makes the group cosine look milder than the real conflict.
-            # Gradients are linear, so the group aggregates still come free.
-            #
-            # rigidity sits in group A, not B. Measured over run
-            # wise-swan-39232655 it behaves as a regulariser, not a tumour term:
-            # cos(rigidity, smooth) = +0.53 and cos(rigidity, ncc) = -0.53,
-            # against cos(rigidity, tlg) = 0.00 and cos(rigidity, jactum) =
-            # +0.26. With it in B it supplied ~100% of the A-vs-B conflict
-            # (damage -0.20 of -0.25 total) while tlg and jactum contributed
-            # ~0.00, i.e. the group cosine was measuring bone-rigidity vs
-            # image-matching and calling it accuracy vs tumour preservation.
-            losses_accuracy = {
+            # One flat dict, no accuracy/tumour grouping. The original split was
+            # the hypothesis under test and run wise-swan-39232655 falsified it:
+            # of the -0.25 group cosine, bone rigidity supplied -0.20 while tlg
+            # and jactum supplied ~0.00, and rigidity's own cosines (+0.53 with
+            # smooth, -0.53 with ncc, 0.00 with tlg) mark it a regulariser, not a
+            # tumour term. Worse, an aggregate dilutes every cosine it enters: an
+            # orthogonal member adds norm but no alignment, so cos(ncc, B) read
+            # -0.30 where the pairwise cos(ncc, rigidity) driving it was -0.53.
+            # The pairwise matrix is the signal; the only aggregate kept is the
+            # whole objective, which needs no assumption about what groups with
+            # what.
+            losses = {
                 "ncc": loss_multiNCC,
                 "jacob": config.w_jacobian * loss_jacobian,
                 "smooth": config.w_smooth * loss_regulation,
                 "rigidity": config.w_bone_rigidity * loss_rigidity,
-            }
-            if loss_dice_ct is not None:
-                losses_accuracy["dice"] = config.w_dice_ct_lvl3 * loss_dice_ct
-            if loss_dice_pet is not None and use_dice_pet:
-                losses_accuracy["dice_pet"] = config.w_dice_pet * loss_dice_pet
-
-            losses_tumour = {
                 "tlg": config.w_tlg * loss_tlg,
                 "jactum": config.w_jacobian_tumor * loss_jacobian_tumor,
             }
+            if loss_dice_ct is not None:
+                losses["dice"] = config.w_dice_ct_lvl3 * loss_dice_ct
+            if loss_dice_pet is not None and use_dice_pet:
+                losses["dice_pet"] = config.w_dice_pet * loss_dice_pet
 
             # Diagnostic probes: Dice restricted to bone labels and to
             # everything else. The rigidity loss is masked to bone, but its
             # gradient still reaches every conv weight and the field it produces
             # is smooth, so it can move soft tissue too -- which is why this is
-            # measured rather than assumed. Probes, not group-A members: the two
+            # measured rather than assumed. Probes, not objective terms: the two
             # class means do not sum back to the full dice term, so folding them
-            # into the group would corrupt cos / norm_ratio / the shares.
+            # in would corrupt g_total and the shares.
             probes: Dict[str, torch.Tensor] = {}
             if loss_dice_ct is not None:
                 is_bone_x = torch.isin(X_lbl_ct, bone_labels_tensor)
@@ -1067,18 +1060,17 @@ def train_lvl3(
                     if probe_dice is not None:
                         probes[probe_name] = config.w_dice_ct_lvl3 * probe_dice
 
-            # exactly what runs 1 and 2 used as group A: one tensor, one
-            # backward. Logged alongside the summed-per-term version so any
-            # discrepancy between the two shows up as agg_rel_err rather than
-            # being mistaken for a change in the training trajectory.
-            loss_a_single = sum(losses_accuracy.values())
+            # The same objective as one tensor, one backward. Logged alongside
+            # the summed-per-term version so any bf16/checkpointing discrepancy
+            # between the two shows up as agg_rel_err rather than being mistaken
+            # for a change in the training trajectory.
+            loss_single = sum(losses.values())
 
             raw = utils.gradient_conflict_report(
-                losses_accuracy,
-                losses_tumour,
+                losses,
                 model,
                 named_probes=probes,
-                loss_a_single=loss_a_single,
+                loss_total=loss_single,
             )
             if raw:
                 windowed = grad_conflict_tracker.update(raw)
@@ -1198,13 +1190,42 @@ def train_lvl3(
                 step=global_step,
             )
             if config.overfit:
-                print(
-                    f"ep: {epoch}\t"
-                    f"ncc={epoch_metrics['train_lvl3/ncc_ct']:.4f}\t"
-                    f"dice={epoch_metrics['train_lvl3/dice_ct']:.4f}\t"
-                    f"jacob={epoch_metrics['train_lvl3/jacobian']:.6f}\t"
-                    # f"unrolled={epoch_metrics['train_lvl3/unrolled_io']:.4f}\t"
-                )
+                if config.use_seg_pet_head and not config.use_seg_bone_head:
+                    print(
+                        f"ep: {epoch}\t"
+                        f"ncc={epoch_metrics['train_lvl3/ncc_ct']:.4f}\t"
+                        f"dice_ct={epoch_metrics['train_lvl3/dice_ct']:.4f}\t"
+                        f"jacob={epoch_metrics['train_lvl3/jacobian']:.6f}\t"
+                        f"seg_dice_pet_fix={epoch_metrics['train_lvl3/seg_pet_dice_fixed']:.4f}\t"
+                        f"seg_dice_pet_mov={epoch_metrics['train_lvl3/seg_pet_dice_moving']:.4f}\t"
+                    )
+                elif config.use_seg_bone_head and not config.use_seg_pet_head:
+                    print(
+                        f"ep: {epoch}\t"
+                        f"ncc={epoch_metrics['train_lvl3/ncc_ct']:.4f}\t"
+                        f"dice_ct={epoch_metrics['train_lvl3/dice_ct']:.4f}\t"
+                        f"jacob={epoch_metrics['train_lvl3/jacobian']:.6f}\t"
+                        f"seg_dice_bone_fix={epoch_metrics['train_lvl3/seg_bone_dice_fixed']:.4f}\t"
+                        f"seg_dice_bone_mov={epoch_metrics['train_lvl3/seg_bone_dice_moving']:.4f}\t"
+                    )
+                elif config.use_seg_pet_head and config.use_seg_bone_head:
+                    print(
+                        f"ep: {epoch}\t"
+                        f"ncc={epoch_metrics['train_lvl3/ncc_ct']:.4f}\t"
+                        f"dice_ct={epoch_metrics['train_lvl3/dice_ct']:.4f}\t"
+                        f"jacob={epoch_metrics['train_lvl3/jacobian']:.6f}\t"
+                        f"seg_dice_pet_fix={epoch_metrics['train_lvl3/seg_pet_dice_fixed']:.4f}\t"
+                        f"seg_dice_pet_mov={epoch_metrics['train_lvl3/seg_pet_dice_moving']:.4f}\t"
+                        f"seg_dice_bone_fix={epoch_metrics['train_lvl3/seg_bone_dice_fixed']:.4f}\t"
+                        f"seg_dice_bone_mov={epoch_metrics['train_lvl3/seg_bone_dice_moving']:.4f}\t"
+                    )
+                else:
+                    print(
+                        f"ep: {epoch}\t"
+                        f"ncc={epoch_metrics['train_lvl3/ncc_ct']:.4f}\t"
+                        f"dice_ct={epoch_metrics['train_lvl3/dice_ct']:.4f}\t"
+                        f"jacob={epoch_metrics['train_lvl3/jacobian']:.6f}\t"
+                    )
         if config.overfit is False and (
             global_step % val_step_interval == 0 or is_last_step
         ):

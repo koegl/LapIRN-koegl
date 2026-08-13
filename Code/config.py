@@ -223,14 +223,16 @@ class TrainingConfig:
     w_seg_bone: float = 0.1
     seg_bone_warmup_epochs: float = 5.0
 
-    # gradient-conflict diagnostic: splits the lvl3 objective into
-    #   A = accuracy + regularisation (ncc, dice, jacobian, smooth, rigidity)
-    #   B = tumour                    (tlg, jacobian_tumor)
-    # and logs cos(grad_A, grad_B) w.r.t. the shared parameters. Persistently
-    # negative => the groups genuinely fight and a multi-stage model / gradient
-    # surgery is justified; positive or near-zero => it is only a weighting
-    # problem. Costs two extra backward passes per measurement.
-    log_grad_conflict: bool = False
+    # gradient-conflict diagnostic: logs the full pairwise matrix of cosines
+    # between every lvl3 loss term's gradient w.r.t. the shared parameters, plus
+    # each term's share of the total gradient norm and its cosine against the
+    # whole objective. Persistently negative pairs genuinely fight, so gradient
+    # surgery or a multi-stage model is justified; near-zero means the terms are
+    # orthogonal and any tension is a weighting problem. There is no
+    # accuracy/tumour grouping: an aggregate dilutes the cosines of everything
+    # inside it (see the comment at the call site in level3.py).
+    # Costs one extra backward pass per term per measurement.
+    log_grad_conflict: bool = True
     # measured every N validation intervals (1 = at every validation)
     grad_conflict_every_n_val: int = 1
     # window length for the running cos mean / std / fraction-negative

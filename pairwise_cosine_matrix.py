@@ -27,21 +27,23 @@ import pandas as pd
 
 PREFIX = "grad_conflict_lvl3"
 
-# Group A (accuracy + regularisation), group B (tumour), then the diagnostic
-# probes. Order is the plot order, so keep the groups contiguous.
+# Objective terms first, then the diagnostic probes. The order is the plot
+# order and carries no grouping claim: the point of the matrix is to let the
+# block structure emerge from the data rather than assuming it. The only line
+# drawn separates objective terms from probes, which really are different
+# things (probes are not part of the optimised total).
 TERMS = [
     "ncc",
     "dice",
     "jacob",
     "smooth",
+    "rigidity",
     "tlg",
     "jactum",
-    "rigidity",
     "dice_bone",
     "dice_soft",
 ]
-GROUP_A = {"ncc", "dice", "jacob", "smooth"}
-GROUP_B = {"tlg", "jactum", "rigidity"}
+PROBES = {"dice_bone", "dice_soft"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -144,16 +146,16 @@ def plot(mat, counts, present, run_name, n_points, out_path):
             ax.text(j, i, f"{mat[i, j]:.2f}", ha="center", va="center",
                     color=shade, fontsize=8)
 
-    # separators between group A | group B | probes
-    for pos in (len(GROUP_A) - 0.5, len(GROUP_A) + len(GROUP_B) - 0.5):
-        ax.axhline(pos, color="black", lw=1.5)
-        ax.axvline(pos, color="black", lw=1.5)
+    # one separator: optimised objective terms | diagnostic probes
+    split = len([t for t in TERMS if t not in PROBES]) - 0.5
+    ax.axhline(split, color="black", lw=1.5)
+    ax.axvline(split, color="black", lw=1.5)
 
     fig.colorbar(im, ax=ax, shrink=0.8, label="cosine of gradients")
     ax.set_title(
         f"Gradient-cosine matrix -- {run_name}\n"
         f"averaged over {n_points} logged points "
-        f"(blocks: accuracy | tumour | probes)",
+        f"(objective terms | probes)",
         fontsize=11,
     )
     fig.tight_layout()
