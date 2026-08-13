@@ -195,6 +195,9 @@ def main() -> None:
             f"dice(tumour,bone)={bone_rows[-1]['dice_tumour_bone']}"
         )
 
+    # a scan with an empty tumour label has no defined tumour fraction
+    bone_rows = drop_nan_rows(bone_rows, "image")
+
     bone_csv = args.output_dir / "tumour_bone_overlap_per_image.csv"
     with open(bone_csv, "w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(bone_rows[0]))
@@ -238,18 +241,7 @@ def main() -> None:
         )
 
     # labels that never occur in any image only produce nans - drop those rows
-    n_before = len(label_rows)
-    label_rows = [
-        row
-        for row in label_rows
-        if not any(
-            isinstance(value, float) and np.isnan(value) for value in row.values()
-        )
-    ]
-    if len(label_rows) < n_before:
-        print(f"dropped {n_before - len(label_rows)} label rows containing nan")
-    if not label_rows:
-        raise SystemExit("all label rows contained nan - nothing to write")
+    label_rows = drop_nan_rows(label_rows, "label")
 
     label_rows.sort(key=lambda row: -row["mean_frac_label_covered_by_tumour"])
     label_csv = args.output_dir / "tumour_ct_label_overlap.csv"

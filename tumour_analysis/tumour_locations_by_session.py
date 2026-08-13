@@ -89,7 +89,7 @@ def paired_table(frame: pd.DataFrame, metric: str) -> pd.DataFrame:
             last_session.set_index("patient")[metric].rename("followup_last"),
         ],
         axis=1,
-    ).dropna(subset=["baseline", "followup_mean"])
+    )  # .dropna(subset=["baseline", "followup_mean"])
     table["delta_mean"] = table["followup_mean"] - table["baseline"]
     table["delta_last"] = table["followup_last"] - table["baseline"]
     return table.reset_index()
@@ -113,7 +113,7 @@ def wilcoxon(table: pd.DataFrame, column: str = "delta_mean") -> dict:
 
 
 def group_stats(frame: pd.DataFrame, metric: str, group: str) -> dict:
-    values = frame.loc[frame["group"] == group, metric].dropna()
+    values = frame.loc[frame["group"] == group, metric]  # .dropna()
     if values.empty:
         return {}
     return {
@@ -244,7 +244,59 @@ def plot_metric(frame: pd.DataFrame, metric: str, table: pd.DataFrame, path: Pat
     print(f"wrote {path}")
 
 
+def print_bone_fraction(frame: pd.DataFrame) -> None:
+    """Fraction of the tumour that sits inside bone, baseline vs. follow-ups.
+
+    One patient is one sample: a patient's follow-ups are averaged first, so the
+    few heavily-imaged patients do not dominate. Reported as median [IQR]
+    because the fraction is bounded in [0, 1] and skewed -- a mean +- std would
+    describe a symmetric spread that is not there.
+
+    The two group lines are NOT directly comparable: every patient has a
+    baseline, but only those with a follow-up appear in the second line, and
+    that subset is not a random one. The third line is the honest comparison --
+    the within-patient change, over the patients who have both.
+    """
+    metric = "frac_tumour_in_bone"
+    if metric not in frame.columns:
+        print(f"cannot print bone fractions: no '{metric}' column")
+        return
+
+    def median_iqr(values: pd.Series, label: str) -> str:
+        return (
+            f"{values.median():.4f} "
+            f"[{values.quantile(0.25):.4f}-{values.quantile(0.75):.4f}] "
+            f"(n={len(values)} {label})"
+        )
+
+    per_patient = (
+        frame.groupby(["patient", "group"])[metric].mean()
+        # frame.dropna(subset=[metric]).groupby(["patient", "group"])[metric].mean()
+    ).reset_index()
+    baseline = per_patient.loc[per_patient["group"] == BASELINE, metric]
+    followup = per_patient.loc[per_patient["group"] == FOLLOWUP, metric]
+
+    print(
+        "tumour fraction inside bone, baseline:   " + median_iqr(baseline, "patients")
+    )
+    print(
+        "tumour fraction inside bone, follow-ups: " + median_iqr(followup, "patients")
+    )
+
+    table = paired_table(frame, metric)
+    if len(table):
+        test = wilcoxon(table)
+        deltas = table["delta_mean"]  # .dropna()
+        print(
+            "within-patient change (follow-up - baseline): "
+            + median_iqr(deltas, "paired patients")
+            + f", Wilcoxon p={test['wilcoxon_p']:.3g}"
+        )
+
+
 def analyse_bone(frame: pd.DataFrame, output_dir: Path) -> None:
+    print_bone_fraction(frame)
+
     summary_rows = []
     paired_rows = []
     for metric in BONE_METRICS:
@@ -354,11 +406,30 @@ def analyse_labels(frame: pd.DataFrame, output_dir: Path, top_n: int) -> None:
             )
 
 
+def keep_registration_cohort(frame: pd.DataFrame) -> pd.DataFrame:
+    """Keep only patients with a baseline and at least one follow-up.
+
+    That is the cohort the registration is trained and evaluated on, and it also
+    removes the confound in the group summaries: with every patient contributing
+    to both groups, a baseline/follow-up difference can no longer be explained
+    by which patients happened to be re-scanned.
+    """
+    sessions = frame.groupby("patient")["session"]
+    paired = sessions.min().eq(0) & sessions.max().gt(0)
+    keep = set(paired[paired].index)
+    dropped = frame["patient"].nunique() - len(keep)
+    if dropped:
+        print(
+            f"restricted to {len(keep)} patients with baseline + follow-up ({dropped} dropped)"
+        )
+    return frame[frame["patient"].isin(keep)].copy()
+
+
 def read_csv(path: Path) -> Optional[pd.DataFrame]:
     if not path.is_file():
         print(f"missing input {path} - skipping")
         return None
-    return add_session_columns(pd.read_csv(path))
+    return keep_registration_cohort(add_session_columns(pd.read_csv(path)))
 
 
 def main() -> None:
