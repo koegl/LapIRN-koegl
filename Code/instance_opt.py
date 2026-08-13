@@ -124,14 +124,14 @@ def io_objective(
     x_y_ct = x_y[:, 0:1]
     loss_ncc_ct = loss_ncc(x_y_ct, y_ct)
 
-    # loss_dice_ct = dice_loss_with_grad(
-    #     x_lbl_ct, y_lbl_ct, disp_unit, grid, transform, class_weights=class_weights
-    # )
-    # loss_dice_ct = None
+    loss_dice_ct = dice_loss_with_grad(
+        x_lbl_ct, y_lbl_ct, disp_unit, grid, transform, class_weights=class_weights
+    )
 
-    loss = ncc_weight * loss_ncc_ct + cfg.w_jacobian * loss_jac
-    # + cfg.w_smooth * loss_smooth
-    """
+    loss = (
+        ncc_weight * loss_ncc_ct + cfg.w_jacobian * loss_jac
+    )  # + cfg.w_smooth * loss_smooth
+
     if loss_dice_ct is not None:
         loss = loss + cfg.w_dice_ct_lvl3 * loss_dice_ct
 
@@ -160,24 +160,12 @@ def io_objective(
     loss_rigidity = zero
     if include_rigidity:
         assert bone_values is not None, "include_rigidity requires bone_values"
-        if cfg.use_per_label_rigidity:
-            loss_rigidity, _ = utils.per_label_rigid_loss(
-                disp_voxel,
-                x_lbl_ct,
-                bone_values,
-                min_voxels=cfg.rigidity_min_voxels,
-            )
-        else:
-            moving_bone_mask = torch.isin(x_lbl_ct, bone_values).float()
-            loss_rigidity, _ = utils.enforce_rigidity_loss(
-                jac_det,
-                jac,
-                disp_voxel,
-                moving_bone_mask,
-                w_det=cfg.w_rig_det,
-                w_ortho=cfg.w_rig_ortho,
-                w_affine=cfg.w_rig_affine,
-            )
+        loss_rigidity, _ = utils.per_label_rigid_loss(
+            disp_voxel,
+            x_lbl_ct,
+            bone_values,
+            min_voxels=cfg.rigidity_min_voxels,
+        )
         loss = loss + cfg.w_bone_rigidity * loss_rigidity
 
     hard_dice = float("nan")
@@ -201,17 +189,17 @@ def io_objective(
                 )
                 hard_dices.append(dice)
             hard_dice = float(np.mean(hard_dices))
-    """
+
     logs = {
         "ncc_ct": loss_ncc_ct.item(),
-        # "dice_ct": loss_dice_ct.item() if loss_dice_ct is not None else float("nan"),
-        # "hard_dice_ct": hard_dice,
+        "dice_ct": loss_dice_ct.item() if loss_dice_ct is not None else float("nan"),
+        "hard_dice_ct": hard_dice,
         # "smooth": loss_smooth.item(),
         "jac": loss_jac.item(),
-        # "masked_jac": loss_masked_jac.item(),
-        # "bone_rigidity": loss_rigidity.item(),
-        # "mtv": loss_mtv.item(),
-        # "tlg": loss_tlg.item(),
+        "masked_jac": loss_masked_jac.item(),
+        "bone_rigidity": loss_rigidity.item(),
+        "mtv": loss_mtv.item(),
+        "tlg": loss_tlg.item(),
     }
     return loss, logs
 
@@ -230,6 +218,8 @@ def compute_io_loss(
     bone_values: torch.Tensor,
     loss_ncc: NCC,
     ncc_weight: float,
+    include_pet: bool,
+    include_rigidity: bool,
     class_weights: torch.Tensor | None,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
     """Deploy-time IO objective (used by run_io). Thin wrapper over io_objective
@@ -249,8 +239,8 @@ def compute_io_loss(
         x_lbl_pet=x_lbl_pet,
         bone_values=bone_values,
         transform_nearest=transform_nearest,
-        include_pet=True,
-        include_rigidity=True,
+        include_pet=include_pet,
+        include_rigidity=include_rigidity,
         compute_hard_dice=True,
     )
 
@@ -420,6 +410,8 @@ def run_io(
     grid: torch.Tensor,
     cfg: config.TrainingConfig,
     device: torch.device,
+    include_pet: bool,
+    include_rigidity: bool,
     use_class_weights: bool = False,
     n_steps: int = 100,
     lr: float = 1e-1,
@@ -477,6 +469,8 @@ def run_io(
             bone_values,
             loss_ncc=loss_ncc,
             ncc_weight=ncc_weight,
+            include_pet=include_pet,
+            include_rigidity=include_rigidity,
             class_weights=class_weights,
         )
         loss.backward()

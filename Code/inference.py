@@ -589,6 +589,8 @@ def evaluate_split(
     cfg: TrainingConfig,
     device: torch.device,
     use_io: bool,
+    include_pet: bool,
+    include_rigidity: bool,
     use_class_weights: bool,
     use_polyaffine: bool,
     io_lr: float,
@@ -635,6 +637,8 @@ def evaluate_split(
             seg_dir,
             model_name=model_name,
             use_io=use_io,
+            include_pet=include_pet,
+            include_rigidity=include_rigidity,
             use_class_weights=use_class_weights,
             use_polyaffine=use_polyaffine,
             skip_model=skip_model,
@@ -698,6 +702,8 @@ def process_subject(
     seg_dir: Path,
     model_name: str,
     use_io: bool = False,
+    include_pet: bool = True,
+    include_rigidity: bool = True,
     use_class_weights: bool = False,
     use_polyaffine: bool = False,
     skip_model: bool = False,
@@ -823,6 +829,8 @@ def process_subject(
             grid_full,
             cfg,
             device,
+            include_pet=include_pet,
+            include_rigidity=include_rigidity,
             use_class_weights=use_class_weights,
             lr=io_lr,
             n_steps=io_it,
@@ -1186,6 +1194,8 @@ def main() -> None:
         # pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
         use_io: bool = False
+        include_pet: bool = True
+        include_rigidity: bool = True
         use_class_weights = False
         use_polyaffine: bool = False
         io_lr: float = 2e-1
@@ -1231,6 +1241,8 @@ def main() -> None:
                         cfg=cfg,
                         device=device,
                         use_io=False,
+                        include_pet=include_pet,
+                        include_rigidity=include_rigidity,
                         use_class_weights=False,
                         use_polyaffine=baseline_polyaffine,
                         skip_model=True,
@@ -1273,6 +1285,8 @@ def main() -> None:
                         cfg=cfg,
                         device=device,
                         use_io=False,
+                        include_pet=include_pet,
+                        include_rigidity=include_rigidity,
                         use_class_weights=False,
                         use_polyaffine=baseline_polyaffine,
                         skip_model=True,
@@ -1318,6 +1332,8 @@ def main() -> None:
                 cfg=cfg,
                 device=device,
                 use_io=use_io,
+                include_pet=include_pet,
+                include_rigidity=include_rigidity,
                 use_class_weights=use_class_weights,
                 use_polyaffine=use_polyaffine,
                 ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
@@ -1360,6 +1376,8 @@ def main() -> None:
                 cfg=cfg,
                 device=device,
                 use_io=use_io,
+                include_pet=include_pet,
+                include_rigidity=include_rigidity,
                 use_class_weights=use_class_weights,
                 use_polyaffine=use_polyaffine,
                 io_it=io_it,
