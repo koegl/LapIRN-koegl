@@ -22,3 +22,5 @@ wandb/*
 *.model
 *.pkl
 Code/.fuse_hidden000000b700000002
+._*.tex
+._*.bib
