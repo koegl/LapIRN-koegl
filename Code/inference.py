@@ -1158,7 +1158,7 @@ def main() -> None:
         )
         # IO optimization only has access to the fast segmentations
         official_seg_dir_fast = Path(
-            "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTs_fast"
+            "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTs"
         )
 
         # note: create_model reads mutable cfg fields (start_channel, cost_volume_*),
