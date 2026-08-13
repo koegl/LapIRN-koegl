@@ -854,6 +854,9 @@ def train_lvl3(
             loss_rig_worst = rig_info["worst"]
             rig_worst_label = rig_info["worst_label"]
         else:
+            raise NotImplementedError(
+                "per-label rigidity is required for lvl3; the old single-mask rigidity is not supported"
+            )
             loss_rigidity, (loss_rig_det, loss_rig_ortho, loss_rig_affine) = (
                 utils.enforce_rigidity_loss(
                     jac_det,
