@@ -136,21 +136,13 @@ class TrainingConfig:
     accumulation_steps: int = field(init=False)
 
     # --- lvl3 checkpoint selection ---------------------------------------
-    # Three best-checkpoints are kept: best dice_ct, best tumour (mtv+tlg), and
-    # best combined. All three val metrics are already "lower is better", so the
-    # combined score is just a weighted sum of scale-normalised terms:
-    #     0.5 * dice_ct/s_d + 0.25 * mtv/s_m + 0.25 * tlg/s_t
-    # Only the *scales* matter: subtracting a per-metric mean would shift every
-    # checkpoint's score by the same constant and cannot change the argmin.
-    # Set each scale to that metric's spread across validation evaluations
-    # (see calibration snippet in the notes), so each term contributes in
-    # proportion to its weight rather than to its raw units.
-    # NB: mtv/tlg bias are both minimised by the identity transform, so a
-    # combined score that over-weights them will select degenerate near-identity
-    # fields. Keep the tumour half at or below 0.5 in total.
-    sel_w_dice: float = 0.5
-    sel_w_mtv: float = 0.25
-    sel_w_tlg: float = 0.25
+    sel_ref_dice_ct: float = 0.164
+    sel_ref_hd95: float = 6.66
+    sel_ref_mtv: float = 0.0278
+    sel_ref_tlg: float = 0.0140
+
+    sel_scale_hd95: float = 0.3
+    sel_scale_ndv: float = 0.005
     sel_scale_dice_ct: float = 0.008345
     sel_scale_mtv: float = 0.0113
     sel_scale_tlg: float = 0.01242
@@ -168,9 +160,9 @@ class TrainingConfig:
     w_dice_ct_lvl3: float = 5.0
     w_dice_pet: float = 0.0
     w_tlg: float = 100.0
-    w_jacobian_tumor: float = 10.0
-    w_mtv: float = 1000.0
-    w_mtv_mean: float = 10000.0
+    w_jacobian_tumor: float = 5.0
+    w_mtv: float = 500.0
+    w_mtv_mean: float = 5000.0
     w_bone_rigidity: float = 2.0
 
     # io params
@@ -217,7 +209,7 @@ class TrainingConfig:
     # Single-session patients can be used here through the synthetic branch,
     # which is the point: they carry no registration signal but full lesion
     # supervision.
-    use_seg_pet_head: bool = True
+    use_seg_pet_head: bool = False
     # width of the head's hidden conv. It runs at full resolution, so this is
     # the memory knob: each channel costs a 192x192x288 activation.
     seg_pet_head_channels: int = 32
