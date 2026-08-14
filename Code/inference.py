@@ -1377,16 +1377,15 @@ def main() -> None:
         io_lr: float = 0.1e-1
         io_it: float = 40
 
-        # cfg.w_tlg = 0.0
-        # cfg.w_jacobian_tumor = 0.0
-        # cfg.w_ct = 0.0
-        # cfg.w_jacobian = 0.0
-        # cfg.w_smooth = 0.0
-        # cfg.w_dice_ct_lvl3 = 0.0
-
         if use_io:
             model_name += "_IO_"
-            model_name += f"lr{io_lr:.1e}_it{io_it}_wncc{cfg.w_ct:.2f}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct_lvl3:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_jacobian_tumor:.2f}_wBoneRigid{cfg.w_bone_rigidity if include_rigidity else 0.0:.2f} "
+            model_name += f"lr{io_lr:.1e}_it{io_it}"
+            model_name += f"_wNCC{cfg.w_io_ncc:.2f}_wDiceCT{cfg.w_io_dice:.2f}"
+            model_name += f"_wJac{cfg.w_io_non_diff:.2f}_wSmooth{cfg.w_io_smooth:.2f}"
+            model_name += (
+                f"_wBoneRigid{cfg.w_io_bone_rigidity if include_rigidity else 0.0:.2f}"
+            )
+            model_name += f"_wMTV{cfg.w_io_mtv:.2f}_wMTVmean{cfg.w_io_mtv_mean:.2f}_wJactum{cfg.w_io_jacobian_tumor:.2f}_wTLG{cfg.w_tlg:.2f}"
             print("warning using IO")
             if use_class_weights:
                 model_name += "_classweights"

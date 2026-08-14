@@ -156,7 +156,7 @@ class TrainingConfig:
     sel_scale_tlg: float = 0.01242
 
     # loss weights
-    w_jacobian: float = 2000.0
+    w_non_diff: float = 2000.0
     w_smooth: float = 2.0
     w_ct: float = 5.0
     w_pet: float = 0.0
@@ -164,11 +164,23 @@ class TrainingConfig:
     w_dice_ct_lvl2: float = 4.0
     w_dice_ct_lvl3: float = 5.0
     w_dice_pet: float = 0.0
-    w_tlg: float = 2.0
-    w_jacobian_tumor: float = 2.0
+    w_tlg: float = 100.0
+    w_jacobian_tumor: float = 10.0
     w_mtv: float = 1000.0
-    w_mtv_mean: float = 1000.0
+    w_mtv_mean: float = 10000.0
     w_bone_rigidity: float = 2.0
+
+    # io weights
+    w_io_ncc = 5.0
+    w_io_dice = 5.0
+    w_io_non_diff = 2000.0
+    w_io_smooth = 2.0
+    w_io_mtv = 500.0
+    w_io_mtv_mean = 5000.0
+    w_io_tlg = 100.0
+    w_io_jacobian_tumor = 5.0
+    w_io_bone_rigidity = 2.0
+
     # Sub-weights inside the rigidity term, applied before w_bone_rigidity.
     # The three conditions have different natural magnitudes (det and ortho are
     # dimensionless strain measures, affine is a bending energy in voxel units),

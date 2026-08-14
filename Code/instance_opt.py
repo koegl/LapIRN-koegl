@@ -83,8 +83,6 @@ def multilabel_dice(
 # weights of the two MTV terms in io_objective. W_MTV is also used by run_io
 # to swap the soft squared-MTV contribution for the hard (nearest-counted) one
 # when selecting the best step, so keep them defined in one place.
-W_MTV = 10000
-W_MTV_MEAN = 10000
 
 
 def io_objective(
@@ -138,11 +136,11 @@ def io_objective(
     )
 
     loss = (
-        ncc_weight * loss_ncc_ct + cfg.w_jacobian * loss_jac
-    )  # + cfg.w_smooth * loss_smooth
+        ncc_weight * loss_ncc_ct + cfg.w_io_non_diff * loss_jac
+    )  # + cfg.w_io_smooth * loss_smooth
 
     if loss_dice_ct is not None:
-        loss = loss + cfg.w_dice_ct_lvl3 * loss_dice_ct
+        loss = loss + cfg.w_io_dice * loss_dice_ct
 
     # jac_det / jac are only needed by the PET-tumor and rigidity terms
     jac_det = jac = None
@@ -174,9 +172,10 @@ def io_objective(
         loss_mtv_mean = utils.mtv_mean_bias_loss(jac_det, fixed_pet_mask)
 
         loss += (
-            W_MTV * loss_mtv**2
-            + W_MTV_MEAN * loss_mtv_mean
-            + cfg.w_jacobian_tumor * loss_masked_jac
+            cfg.w_io_mtv * loss_mtv**2
+            + cfg.w_io_mtv_mean * loss_mtv_mean
+            + cfg.w_io_jacobian_tumor * loss_masked_jac
+            + cfg.w_io_tlg * loss_tlg
         )
 
     loss_rigidity = zero
@@ -188,7 +187,7 @@ def io_objective(
             bone_values,
             min_voxels=cfg.rigidity_min_voxels,
         )
-        loss = loss + cfg.w_bone_rigidity * loss_rigidity
+        loss = loss + cfg.w_io_bone_rigidity * loss_rigidity
 
     hard_dice = float("nan")
     hard_mtv = float("nan")
@@ -546,7 +545,7 @@ def run_io(
         # actually sees rather than the bilinear proxy the optimizer descends
         sel_score = loss.item()
         if not np.isnan(logs["hard_mtv"]):
-            sel_score += W_MTV * (logs["hard_mtv"] ** 2 - logs["mtv"] ** 2)
+            sel_score += cfg.w_io_mtv * (logs["hard_mtv"] ** 2 - logs["mtv"] ** 2)
         if sel_score < best_loss:
             best_loss = sel_score
             best_disp = disp_unit.detach().clone()
