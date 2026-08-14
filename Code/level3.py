@@ -54,6 +54,7 @@ def evaluate_lvl3(
         "smooth": 0.0,
         "dice_ct": 0.0,
         "dice_pet": 0.0,
+        "hd95": 0.0,
         "non_diff_loss": 0.0,
         "mtv_bias": 0.0,
         "mtv_mean": 0.0,
@@ -95,6 +96,7 @@ def evaluate_lvl3(
 
     n_dice_ct = 0
     n_dice_pet = 0
+    n_hd95 = 0
 
     with torch.no_grad():
         saved = False
@@ -272,6 +274,16 @@ def evaluate_lvl3(
                 use_checkpoint=True,
             )
 
+            warped_lbl_ct = transform_nearest(
+                X_lbl_ct_orig.float(), flow_total, grid_full
+            )
+            hd95 = utils.hd95_ct_labels(
+                warped_lbl_ct,
+                Y_lbl_ct,
+                X_lbl_ct_orig,
+                config.hd95_spacing_mm,
+            )
+
             moving_pet_mask = (X_lbl_pet == 1).float()
             moving_pet_mask_orig = (X_lbl_pet_orig == 1).float()
             warped_pet_mask = transform(moving_pet_mask_orig, flow_total, grid_full)
@@ -398,6 +410,9 @@ def evaluate_lvl3(
             if loss_dice_pet is not None:
                 val_losses["dice_pet"] += loss_dice_pet.item()
                 n_dice_pet += 1
+            if np.isfinite(hd95):
+                val_losses["hd95"] += hd95
+                n_hd95 += 1
             n_batches += 1
 
     model.train()
@@ -405,7 +420,7 @@ def evaluate_lvl3(
     averaged = {
         key: value / n_batches
         for key, value in val_losses.items()
-        if key not in ("dice_ct", "dice_pet")
+        if key not in ("dice_ct", "dice_pet", "hd95")
     }
     averaged["dice_ct"] = (
         val_losses["dice_ct"] / n_dice_ct if n_dice_ct > 0 else float("nan")
@@ -413,6 +428,7 @@ def evaluate_lvl3(
     averaged["dice_pet"] = (
         val_losses["dice_pet"] / n_dice_pet if n_dice_pet > 0 else float("nan")
     )
+    averaged["hd95"] = val_losses["hd95"] / n_hd95 if n_hd95 > 0 else float("nan")
     return averaged
 
 
@@ -1443,6 +1459,7 @@ def train_lvl3(
                 f"- ncc_pet {val_losses['ncc_pet']:.4f} "
                 f"- dice_ct {val_losses['dice_ct']:.4f} "
                 f"- dice_pet {val_losses['dice_pet']:.4f} "
+                f"- hd95 {val_losses['hd95']:.4f} "
                 f"- mtv {val_losses['mtv_bias']:.4f} "
                 f"- tlg {val_losses['tlg_bias']:.4f}"
             )

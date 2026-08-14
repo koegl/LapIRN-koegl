@@ -155,6 +155,9 @@ class TrainingConfig:
     sel_scale_mtv: float = 0.0113
     sel_scale_tlg: float = 0.01242
 
+    # --- HD95 validation logging ------------------------------------------
+    hd95_spacing_mm: Tuple[float, float, float] = (2.7344, 2.7344, 3.27)
+
     # loss weights
     w_non_diff: float = 2000.0
     w_smooth: float = 2.0
