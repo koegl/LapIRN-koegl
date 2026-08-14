@@ -38,7 +38,6 @@ def evaluate_lvl3(
     loss_similarity_ct: torch.nn.Module,
     loss_similarity_pet: torch.nn.Module,
     loss_smooth: Callable,
-    loss_Jdet: Callable,
     transform: SpatialTransform_unit,
     grid: torch.Tensor,
     epoch: int,
@@ -55,7 +54,7 @@ def evaluate_lvl3(
         "smooth": 0.0,
         "dice_ct": 0.0,
         "dice_pet": 0.0,
-        "jacobian": 0.0,
+        "non_diff_loss": 0.0,
         "mtv_bias": 0.0,
         "mtv_mean": 0.0,
         "tlg_bias": 0.0,
@@ -240,7 +239,9 @@ def evaluate_lvl3(
             jac_det, jac = jacobian.jacobian_matrix(F_X_Y_norm)
             body_mask = batch["y_body_mask"].to(device)  # full res at lvl3
             ndv = jacobian.percent_ndv(F_X_Y_norm, mask=body_mask)
-            loss_jacobian = loss_Jdet(F_X_Y_norm, grid, mask=body_mask)
+            loss_non_diff = jacobian.non_diff_volume_loss(
+                F_X_Y_norm, grid, mask=body_mask
+            )
 
             _, _, x, y, z = F_xy.shape
             F_xy[:, 0, :, :, :] = F_xy[:, 0, :, :, :] * (z - 1)
@@ -332,7 +333,7 @@ def evaluate_lvl3(
 
             loss = (
                 loss_multiNCC
-                + config.w_jacobian * loss_jacobian
+                + config.w_non_diff * loss_non_diff
                 + config.w_smooth * loss_regulation
                 + config.w_tlg * loss_tlg
                 + config.w_mtv * loss_mtv**2
@@ -349,7 +350,7 @@ def evaluate_lvl3(
             val_losses["ncc_ct"] += loss_ncc_ct.item()
             val_losses["ncc_pet"] += loss_ncc_pet.item()
             val_losses["smooth"] += loss_regulation.item()
-            val_losses["jacobian"] += loss_jacobian.item()
+            val_losses["non_diff_loss"] += loss_non_diff.item()
             val_losses["mtv_bias"] += loss_mtv.item()
             val_losses["mtv_mean"] += loss_mtv_mean.item()
             val_losses["tlg_bias"] += loss_tlg.item()
@@ -536,7 +537,6 @@ def train_lvl3(
     loss_similarity_ct = build_similarity_loss(config, level=3)
     loss_similarity_pet = build_similarity_loss(config, level=3)
     loss_smooth = smoothloss
-    loss_Jdet = jacobian.non_diff_volume_loss
 
     # single-resolution NCC used by the unrolled-IO objective, matching the loss
     # that test-time run_io optimizes (compute_io_loss)
@@ -799,7 +799,7 @@ def train_lvl3(
         jac_det, jac = jacobian.jacobian_matrix(F_X_Y_norm)
         body_mask = batch["y_body_mask"].to(device)  # full res at lvl3
         ndv = jacobian.percent_ndv(F_X_Y_norm, mask=body_mask)
-        loss_jacobian = loss_Jdet(F_X_Y_norm, grid, mask=body_mask)
+        loss_non_diff = jacobian.non_diff_volume_loss(F_X_Y_norm, grid, mask=body_mask)
 
         _, _, x, y, z = F_xy.shape
         F_xy[:, 0, :, :, :] = F_xy[:, 0, :, :, :] * (z - 1)
@@ -992,7 +992,7 @@ def train_lvl3(
 
         loss = (
             loss_multiNCC
-            + config.w_jacobian * loss_jacobian
+            + config.w_non_diff * loss_non_diff
             + config.w_smooth * loss_regulation
             + config.w_jacobian_tumor * loss_jacobian_tumor
             + config.w_bone_rigidity * loss_rigidity
@@ -1118,7 +1118,7 @@ def train_lvl3(
             # what.
             losses = {
                 "ncc": loss_multiNCC,
-                "jacob": config.w_jacobian * loss_jacobian,
+                "non_diff_loss": config.w_non_diff * loss_non_diff,
                 "smooth": config.w_smooth * loss_regulation,
                 "rigidity": config.w_bone_rigidity * loss_rigidity,
                 "tlg": config.w_tlg * loss_tlg,
@@ -1194,7 +1194,7 @@ def train_lvl3(
             [
                 loss.item(),
                 loss_multiNCC.item(),
-                loss_jacobian.item(),
+                loss_non_diff.item(),
                 loss_regulation.item(),
             ]
         )
@@ -1210,7 +1210,7 @@ def train_lvl3(
                 else "n/a",
                 mtv=f"{loss_mtv.item():.4f}",
                 tlg=f"{loss_tlg.item():.4f}",
-                Jdet=f"{loss_jacobian.item():.6f}",
+                non_diff=f"{loss_non_diff.item():.6f}",
                 smo=f"{loss_regulation.item():.4f}",
                 dvf=f"{loss_dvf.item():.8f}",
             )
@@ -1223,7 +1223,7 @@ def train_lvl3(
             "train_lvl3/mtv_mean": loss_mtv_mean.item(),
             "train_lvl3/tlg_bias": loss_tlg.item(),
             "train_lvl3/jacobian_tumor": loss_jacobian_tumor.item(),
-            "train_lvl3/jacobian": loss_jacobian.item(),
+            "train_lvl3/non_diff_loss": loss_non_diff.item(),
             "train_lvl3/rigidity": loss_rigidity.item(),
             # the three rigidity conditions on their own (unweighted) scale, so
             # their relative magnitudes are visible before w_rig_* is tuned
@@ -1260,7 +1260,9 @@ def train_lvl3(
         train_metrics["train_lvl3/w_ncc_pet"] = (
             config.w_pet * loss_ncc_pet.item() if use_ncc_pet else 0.0
         )
-        train_metrics["train_lvl3/w_jacob"] = config.w_jacobian * loss_jacobian.item()
+        train_metrics["train_lvl3/w_non_diff"] = (
+            config.w_non_diff * loss_non_diff.item()
+        )
         train_metrics["train_lvl3/w_smooth"] = config.w_smooth * loss_regulation.item()
         train_metrics["train_lvl3/w_jacob_tumor"] = (
             config.w_jacobian_tumor * loss_jacobian_tumor.item()
@@ -1301,7 +1303,7 @@ def train_lvl3(
                         f"ep: {epoch}\t"
                         f"ncc={epoch_metrics['train_lvl3/ncc_ct']:.4f}\t"
                         f"dice_ct={epoch_metrics['train_lvl3/dice_ct']:.4f}\t"
-                        f"jacob={epoch_metrics['train_lvl3/jacobian']:.6f}\t"
+                        f"non_diff={epoch_metrics['train_lvl3/non_diff_loss']:.6f}\t"
                         f"seg_dice_pet_fix={epoch_metrics['train_lvl3/seg_pet_dice_fixed']:.4f}\t"
                         f"seg_dice_pet_mov={epoch_metrics['train_lvl3/seg_pet_dice_moving']:.4f}\t"
                     )
@@ -1310,7 +1312,7 @@ def train_lvl3(
                         f"ep: {epoch}\t"
                         f"ncc={epoch_metrics['train_lvl3/ncc_ct']:.4f}\t"
                         f"dice_ct={epoch_metrics['train_lvl3/dice_ct']:.4f}\t"
-                        f"jacob={epoch_metrics['train_lvl3/jacobian']:.6f}\t"
+                        f"non_diff={epoch_metrics['train_lvl3/non_diff_loss']:.6f}\t"
                         f"seg_dice_bone_fix={epoch_metrics['train_lvl3/seg_bone_dice_fixed']:.4f}\t"
                         f"seg_dice_bone_mov={epoch_metrics['train_lvl3/seg_bone_dice_moving']:.4f}\t"
                     )
@@ -1319,7 +1321,7 @@ def train_lvl3(
                         f"ep: {epoch}\t"
                         f"ncc={epoch_metrics['train_lvl3/ncc_ct']:.4f}\t"
                         f"dice_ct={epoch_metrics['train_lvl3/dice_ct']:.4f}\t"
-                        f"jacob={epoch_metrics['train_lvl3/jacobian']:.6f}\t"
+                        f"non_diff={epoch_metrics['train_lvl3/non_diff_loss']:.6f}\t"
                         f"seg_dice_pet_fix={epoch_metrics['train_lvl3/seg_pet_dice_fixed']:.4f}\t"
                         f"seg_dice_pet_mov={epoch_metrics['train_lvl3/seg_pet_dice_moving']:.4f}\t"
                         f"seg_dice_bone_fix={epoch_metrics['train_lvl3/seg_bone_dice_fixed']:.4f}\t"
@@ -1330,7 +1332,7 @@ def train_lvl3(
                         f"ep: {epoch}\t"
                         f"ncc={epoch_metrics['train_lvl3/ncc_ct']:.4f}\t"
                         f"dice_ct={epoch_metrics['train_lvl3/dice_ct']:.4f}\t"
-                        f"jacob={epoch_metrics['train_lvl3/jacobian']:.6f}\t"
+                        f"non_diff={epoch_metrics['train_lvl3/non_diff_loss']:.6f}\t"
                     )
         if config.overfit is False and (
             global_step % val_step_interval == 0 or is_last_step
@@ -1343,7 +1345,6 @@ def train_lvl3(
                 loss_similarity_ct=loss_similarity_ct,
                 loss_similarity_pet=loss_similarity_pet,
                 loss_smooth=loss_smooth,
-                loss_Jdet=loss_Jdet,
                 transform=transform,
                 grid=grid,
                 epoch=epoch,
@@ -1370,7 +1371,6 @@ def train_lvl3(
                     loss_similarity_ct=loss_similarity_ct,
                     loss_similarity_pet=loss_similarity_pet,
                     loss_smooth=loss_smooth,
-                    loss_Jdet=loss_Jdet,
                     transform=transform,
                     grid=grid,
                     epoch=epoch,
@@ -1396,7 +1396,6 @@ def train_lvl3(
                     loss_similarity_ct=loss_similarity_ct,
                     loss_similarity_pet=loss_similarity_pet,
                     loss_smooth=loss_smooth,
-                    loss_Jdet=loss_Jdet,
                     transform=transform,
                     grid=grid,
                     epoch=epoch,
@@ -1422,7 +1421,6 @@ def train_lvl3(
                     loss_similarity_ct=loss_similarity_ct,
                     loss_similarity_pet=loss_similarity_pet,
                     loss_smooth=loss_smooth,
-                    loss_Jdet=loss_Jdet,
                     transform=transform,
                     grid=grid,
                     epoch=epoch,
