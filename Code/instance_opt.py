@@ -78,6 +78,31 @@ def multilabel_dice(
     return mean
 
 
+def mtv_jac_loss(jac_det, mask, eps=1e-5):
+    # jac_det: (B,1,D,H,W) already computed in io_objective
+    # mask:    (B,1,D,H,W) lesion mask
+    mean_det = (jac_det * mask).sum() / (mask.sum() + eps)  # net volume ratio
+    return (mean_det - 1.0) ** 2  # smooth, no abs-kink
+
+
+def mtv_jac_loss_inv(jac_det, mask, eps=1e-5):
+    """MTV via the pull-back Jacobian.
+
+    For a sampling (pull-back) warp, warped_mask(x) = moving_mask(phi(x)), so the
+    warped lesion volume is Sum 1/det(J) over the lesion and the net volume ratio
+    is mean(1/det(J)) inside the mask. Targets net volume preservation (MTV bias
+    -> 0) while still allowing local deformation (only the mean is pinned).
+
+    Use this variant instead of mtv_jac_loss (mean det) when reducing the mean-det
+    version *raises* the scored MTV, i.e. the warp convention is pull-back.
+
+    jac_det: (B,1,D,H,W) determinant field. mask: (B,1,D,H,W) lesion mask.
+    """
+    inv_det = 1.0 / jac_det.clamp_min(eps)
+    mean_inv_det = (inv_det * mask).sum() / (mask.sum() + eps)
+    return (mean_inv_det - 1.0) ** 2
+
+
 def io_objective(
     disp_unit: torch.Tensor,
     x_moving: torch.Tensor,
@@ -108,7 +133,7 @@ def io_objective(
     include_* groups to deliberately diverge (e.g. a CT-only unroll).
 
     x_moving: moving image, channel 0 = CT, channel 1 = PET (the PET channel is
-        only read when include_pet). y_ct: fixed CT (1 channel).
+        only read when include_p
 
     Differentiability note: with unroll_mode="full" the PET and rigidity terms
     are differentiated twice (double-backward); they are only guaranteed
@@ -155,7 +180,12 @@ def io_objective(
             warped_pet_image, warped_pet_mask, moving_pet_image, moving_pet_mask
         )
         loss_masked_jac = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
-        loss = loss + cfg.w_tlg * loss_tlg + cfg.w_jacobian_tumor * loss_masked_jac
+
+        new_mtv_loss = mtv_jac_loss(jac_det, moving_pet_mask)
+
+        loss += 100000 * new_mtv_loss
+
+        # loss = loss + cfg.w_tlg * loss_tlg + cfg.w_jacobian_tumor * loss_masked_jac
 
     loss_rigidity = zero
     if include_rigidity:
@@ -284,15 +314,19 @@ def svf_to_disp(
     identity_vox: torch.Tensor,
     cfg: config.TrainingConfig,
     n_integration: int,
+    shape: Optional[Tuple[int, int, int]] = None,
 ) -> torch.Tensor:
-    """base (unit flow) + refinement decoded from a full-res velocity field.
+    """base (unit flow) + refinement decoded from a velocity field.
 
-    Returns a full-resolution unit-flow displacement. Fully differentiable in
-    both `velocity` (inner loop) and `base` (network output)."""
+    Returns a unit-flow displacement at `shape` (defaults to cfg.img_shape).
+    `shape` must match the velocity / identity_vox / base spatial size so the
+    voxel->unit conversion uses the right dims; pass the half shape to optimise
+    a half-resolution field. Fully differentiable in both `velocity` (inner
+    loop) and `base` (network output)."""
+    if shape is None:
+        shape = cfg.img_shape
     disp_res_full = synthetic.integrate_svf(velocity, identity_vox, n_integration)
-    disp_res_unit = synthetic.unit_flow_from_voxel_disp(
-        disp_res_full, cfg.img_shape
-    ).flip(1)
+    disp_res_unit = synthetic.unit_flow_from_voxel_disp(disp_res_full, shape).flip(1)
     return base + disp_res_unit
 
 
@@ -417,6 +451,7 @@ def run_io(
     lr: float = 1e-1,
     n_integration: int = 7,
     ncc_weight: Optional[float] = None,
+    opt_shape: Optional[Tuple[int, int, int]] = None,
 ) -> torch.Tensor:
     # NCC is not scored by the challenge; keep it as a modest dense proxy that
     # fills gradient where label-dice is flat. Try a small value (e.g. 1-3);
@@ -424,9 +459,24 @@ def run_io(
     if ncc_weight is None:
         ncc_weight = cfg.w_ct
 
+    # `opt_shape` (chase_leaderboard) optimises a half-resolution field: the
+    # velocity / identity grid / `base` all live at `opt_shape`, and each step
+    # the decoded field is upsampled to full res so the loss (dice / NCC / TLG /
+    # rigidity, against full-res images and labels) sees exactly what the
+    # challenge scorer evaluates after it upsamples the submitted half-res field.
+    # The returned field stays at `opt_shape`. opt_shape=None keeps full-res IO.
     full_shape = tuple(cfg.img_shape)
-    identity_vox_full = synthetic.build_identity_grid(full_shape, device)
-    velocity = torch.zeros((1, 3) + full_shape, device=device)
+    var_shape = tuple(opt_shape) if opt_shape is not None else full_shape
+
+    def to_full(disp_unit: torch.Tensor) -> torch.Tensor:
+        if opt_shape is None:
+            return disp_unit
+        return torch.nn.functional.interpolate(
+            disp_unit, size=full_shape, mode="trilinear", align_corners=False
+        )
+
+    identity_vox = synthetic.build_identity_grid(var_shape, device)
+    velocity = torch.zeros((1, 3) + var_shape, device=device)
     velocity.requires_grad_(True)
     optimizer = torch.optim.Adam([velocity], lr=lr)
 
@@ -438,7 +488,7 @@ def run_io(
     base = f_x_y.detach()
     if use_class_weights:
         x_lbl_ct_start = warp_label(
-            x_lbl_ct, base, grid, transform_nearest
+            x_lbl_ct, to_full(base), grid, transform_nearest
         )  # or transform w/ nearest
         class_weights = build_class_weights(
             x_lbl_ct_start, y_lbl_ct, n_labels=118, device=device
@@ -446,7 +496,6 @@ def run_io(
     else:
         class_weights = None
 
-    base = f_x_y.detach()
     best_loss = float("inf")
     best_disp = base.clone()
     best_disp_i = 0
@@ -454,9 +503,11 @@ def run_io(
     for i in pbar:
         start_time = time.time()
         optimizer.zero_grad()
-        disp_unit = svf_to_disp(base, velocity, identity_vox_full, cfg, n_integration)
+        disp_unit = svf_to_disp(
+            base, velocity, identity_vox, cfg, n_integration, shape=var_shape
+        )
         loss, logs = compute_io_loss(
-            disp_unit,
+            to_full(disp_unit),
             y,
             X_affine,
             x_lbl_ct,
@@ -482,12 +533,13 @@ def run_io(
             best_disp_i = i
 
         pbar.set_postfix(
-            # dice_weighted=f"{1 - logs['dice_ct']:.4f}",
-            # dice_hard=f"{logs['hard_dice_ct']:.4f}",
+            dice=f"{logs['hard_dice_ct']:.4f}",
+            masked_jac=f"{logs['masked_jac']:.4f}",
+            mtv=f"{logs['mtv']:.4f}",
+            tlg=f"{logs['tlg']:.4f}",
             loss=f"{loss.item():.4f}",
             best=f"{best_loss:.4f}",
             best_i=best_disp_i,
-            time=f"{time.time() - start_time:.2f}s",
         )
 
     print(f"Best loss: {best_loss:.4f} at step {best_disp_i}")

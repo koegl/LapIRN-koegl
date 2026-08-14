@@ -411,6 +411,22 @@ def create_model(
     return model
 
 
+def unit_flow_to_voxel_flow_fullres(
+    unit_ch: torch.Tensor, full_shape: Tuple[int, int, int]
+) -> torch.Tensor:
+    """Unit flow (1, 3, ·, ·, ·) on any grid -> voxel displacement, scaled by the
+    FULL-resolution dims. Used for the submitted half-res field: the challenge
+    stores displacements in full-res voxel units and upsamples the field
+    spatially, so a half-grid field keeps full-res magnitudes. Component order
+    matches Functions.transform_unit_flow_to_flow_cuda (channel 0 <-> last axis)."""
+    h, w, d = full_shape
+    out = unit_ch.clone()
+    out[:, 0] = out[:, 0] * (d - 1) / 2.0
+    out[:, 1] = out[:, 1] * (w - 1) / 2.0
+    out[:, 2] = out[:, 2] * (h - 1) / 2.0
+    return out
+
+
 def save_disp(disp_half: torch.Tensor, out_dir: Path, case_id: str) -> None:
     disp_np = disp_half.squeeze(0).cpu().numpy().astype(np.float32)
     disp_np = disp_np[::-1].copy()
@@ -604,6 +620,7 @@ def evaluate_split(
     ct_label_template: str = "PSMARegPSMA_{case_id}_0000_{tp}",
     pet_label_template: str = "PSMARegPSMA_{case_id}_0001_{tp}",
     skip_model: bool = False,
+    chase_flag: str = "chase_best_model",
 ) -> None:
     dices: Dict[str, float] = {}
     dices_before: Dict[str, float] = {}
@@ -647,6 +664,7 @@ def evaluate_split(
             pet_label_template=pet_label_template,
             io_lr=io_lr,
             io_it=io_it,
+            chase_flag=chase_flag,
         )
         dices[case_id] = dice_after
         dices_before[case_id] = dice_before
@@ -712,6 +730,7 @@ def process_subject(
     pet_label_template: str = "PSMARegPSMA_{case_id}_0001_{tp}",
     io_lr: float = 1e-1,
     io_it: int = 100,
+    chase_flag: str = "chase_best_model",
 ) -> Tuple[float, float, float, float, float, float, float, Dict[int, float]]:
 
     if case_id in image_pair_memory_cache:
@@ -806,6 +825,36 @@ def process_subject(
                 F_X_Y = models[0].diff_transform(velocity, grid_full)
                 warped = transform(X_affine, F_X_Y.permute(0, 2, 3, 4, 1), grid_full)
 
+    # chase_leaderboard: the submitted field is a half-resolution field that the
+    # organizers upsample and score. Mirror that exactly — downsample the
+    # deformable field and the affine flow to half res, run IO / composition /
+    # submission there, and evaluate on the upsampled version. chase_best_model
+    # keeps everything at full res. unit flow is resolution-independent, so
+    # resampling it preserves the represented deformation.
+    leaderboard = chase_flag == "chase_leaderboard"
+    full_shape = tuple(cfg.img_shape)
+    half_shape = tuple(s // 2 for s in full_shape)
+
+    if leaderboard:
+        F_X_Y = torch.nn.functional.interpolate(
+            F_X_Y, size=half_shape, mode="trilinear", align_corners=False
+        )
+        gh = Functions.generate_grid_unit(half_shape)
+        grid_compose = (
+            torch.from_numpy(np.reshape(gh, (1,) + gh.shape)).to(device).float()
+        )
+        flow_affine_compose = torch.nn.functional.interpolate(
+            flow_affine.permute(0, 4, 1, 2, 3),
+            size=half_shape,
+            mode="trilinear",
+            align_corners=False,
+        ).permute(0, 2, 3, 4, 1)
+        io_opt_shape: Optional[Tuple[int, int, int]] = half_shape
+    else:
+        grid_compose = grid_full
+        flow_affine_compose = flow_affine
+        io_opt_shape = None
+
     if use_io and not skip_model:
         x_lbl_ct, x_lbl_pet, y_lbl_ct, y_lbl_pet = load_io_labels(
             seg_dir_fast,
@@ -834,6 +883,7 @@ def process_subject(
             use_class_weights=use_class_weights,
             lr=io_lr,
             n_steps=io_it,
+            opt_shape=io_opt_shape,
         )
 
     if False:
@@ -855,8 +905,8 @@ def process_subject(
         )
         tqdm.tqdm.write(f"{case_id}: dice diag (IO path replica)={dice_diag:.4f}")
 
-    deform_grid = grid_full + F_X_Y.permute(0, 2, 3, 4, 1)
-    affine_grid = grid_full + flow_affine
+    deform_grid = grid_compose + F_X_Y.permute(0, 2, 3, 4, 1)
+    affine_grid = grid_compose + flow_affine_compose
 
     affine_grid_ch = affine_grid.permute(0, 4, 1, 2, 3)
     composed_grid = torch.nn.functional.grid_sample(
@@ -867,11 +917,30 @@ def process_subject(
         align_corners=False,
     ).permute(0, 2, 3, 4, 1)
 
-    total_unit_flow = (composed_grid - grid_full).permute(0, 4, 1, 2, 3)
+    # total_unit_flow is at the compose resolution (half for chase_leaderboard,
+    # full otherwise).
+    total_unit_flow = (composed_grid - grid_compose).permute(0, 4, 1, 2, 3)
 
-    total_voxel = Functions.transform_unit_flow_to_flow_cuda(
-        total_unit_flow.permute(0, 2, 3, 4, 1).clone()
-    ).permute(0, 4, 1, 2, 3)
+    if leaderboard:
+        # submitted field: half grid, full-res voxel magnitudes.
+        disp_submit: Optional[torch.Tensor] = unit_flow_to_voxel_flow_fullres(
+            total_unit_flow, full_shape
+        )
+        # evaluate on the upsampled submission. Upsampling the half-res unit flow
+        # then scaling by full-res dims equals interpolate(disp_submit, x2)
+        # exactly (the scaling is a per-channel constant that commutes with the
+        # linear interpolation), so this is the field the scorer actually sees.
+        total_unit_full = torch.nn.functional.interpolate(
+            total_unit_flow, size=full_shape, mode="trilinear", align_corners=False
+        )
+        total_voxel = Functions.transform_unit_flow_to_flow_cuda(
+            total_unit_full.permute(0, 2, 3, 4, 1).clone()
+        ).permute(0, 4, 1, 2, 3)
+    else:
+        disp_submit = None
+        total_voxel = Functions.transform_unit_flow_to_flow_cuda(
+            total_unit_flow.permute(0, 2, 3, 4, 1).clone()
+        ).permute(0, 4, 1, 2, 3)
 
     their_st = SpatialTransformer(size=cfg.img_shape, mode="nearest").to(device)
 
@@ -1012,9 +1081,13 @@ def process_subject(
         )
 
     # submission format: half-resolution displacement field
-    disp_half = torch.nn.functional.interpolate(
-        total_voxel, scale_factor=0.5, mode="trilinear", align_corners=False
-    )
+    if leaderboard:
+        # already the exact half-res field we optimised and evaluated (upsampled)
+        disp_half = disp_submit
+    else:
+        disp_half = torch.nn.functional.interpolate(
+            total_voxel, scale_factor=0.5, mode="trilinear", align_corners=False
+        )
     save_disp(disp_half, out_dir / f"submission_{model_name}", case_id)
 
     return dice_their, dice_before, mtv, tlg, ndv, hd95, hd95_before, per_label
@@ -1142,6 +1215,58 @@ def main() -> None:
     cfg.resblock_expansion = 1
     cfg.n_resblocks = 5
 
+    # --- chase flag: what is this run for ---
+    # 'chase_best_model':  IO + evaluation on the full-res displacement field
+    #                      (continued development / the final container).
+    # 'chase_leaderboard': optimise (IO) and evaluate the *exact* half-res field
+    #                      we submit — the organizers upsample it and score at
+    #                      full res, so we mirror that — and restrict to the
+    #                      challenge cases (ids starting with '0'; the '4xxx'
+    #                      ids are from a different dataset).
+    chase_flag: str = "chase_leaderboard"
+    assert chase_flag in ("chase_leaderboard", "chase_best_model")
+
+    # csvs are written under csvs/<chase_flag>/ (per-label ones under its
+    # per_label/ subdir); the filenames are unchanged. These local names shadow
+    # the module-level defaults for the whole of main() (and run_baseline).
+    csv_root = (
+        Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs")
+        / chase_flag
+    )
+    (csv_root / "per_label").mkdir(parents=True, exist_ok=True)
+
+    results_csv_my_val_dice = csv_root / "results_my_val_dice.csv"
+    results_csv_official_val_dice = csv_root / "results_official_val_dice.csv"
+    results_csv_my_val_dice_per_label = csv_root / "results_my_val_dice_per_label.csv"
+    results_csv_official_val_dice_per_label = (
+        csv_root / "results_official_val_dice_per_label.csv"
+    )
+    results_csv_official_mtv = csv_root / "results_official_val_mtv.csv"
+    results_csv_official_tlg = csv_root / "results_official_val_tlg.csv"
+    results_csv_my_val_mtv = csv_root / "results_my_val_mtv.csv"
+    results_csv_my_val_tlg = csv_root / "results_my_val_tlg.csv"
+    results_csv_official_ndv = csv_root / "results_official_val_ndv.csv"
+    results_csv_my_val_ndv = csv_root / "results_my_val_ndv.csv"
+    results_csv_official_hd95 = csv_root / "results_official_val_hd95.csv"
+    results_csv_my_val_hd95 = csv_root / "results_my_val_hd95.csv"
+
+    def to_per_label(csv_path: Path) -> Path:
+        return Path(
+            csv_path.as_posix().replace(
+                f"csvs/{chase_flag}/", f"csvs/{chase_flag}/per_label/"
+            )
+        )
+
+    # official leaderboard uses only the challenge cases (ids starting with '0').
+    official_val_subjects = (
+        [s for s in val_subjects if s.startswith("0")]
+        if chase_flag == "chase_leaderboard"
+        else val_subjects
+    )
+
+    # official_val_subjects = official_val_subjects[0:3]
+    # print("warning reduced subject size")
+
     # --- what to evaluate ---
     eval_official: bool = True
     eval_my_val: bool = False
@@ -1193,16 +1318,24 @@ def main() -> None:
         # PET labels (IO and evaluation) come from io_labels_pet: pet_{case_id}_{tp}
         # pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
-        use_io: bool = False
+        use_io: bool = True
         include_pet: bool = True
-        include_rigidity: bool = True
+        include_rigidity: bool = False
         use_class_weights = False
         use_polyaffine: bool = False
-        io_lr: float = 2e-1
-        io_it: float = 60
+        io_lr: float = 0.1e-1
+        io_it: float = 40
+
+        cfg.w_tlg = 0.0
+        cfg.w_jacobian_tumor = 0.0
+        cfg.w_ct = 10.0
+        cfg.w_jacobian = 0.0
+        cfg.w_smooth = 0.0
+        cfg.w_dice_ct_lvl3 = 10.0
+
         if use_io:
             model_name += "_IO_"
-            model_name += f"lr{io_lr:.1e}_it{io_it}_wncc{cfg.w_ct:.2f}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wCT{cfg.w_ct:.2f}_wPET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct_lvl3:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_jacobian_tumor:.2f}_wBoneRigid{cfg.w_bone_rigidity:.2f} "
+            model_name += f"lr{io_lr:.1e}_it{io_it}_wncc{cfg.w_ct:.2f}_wJac{cfg.w_jacobian:.2f}_wSmooth{cfg.w_smooth:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wDiceCT{cfg.w_dice_ct_lvl3:.2f}_wDicePET{cfg.w_dice_pet:.2f}_wTLG{cfg.w_tlg:.2f}_wMaskedJac{cfg.w_jacobian_tumor:.2f}_wBoneRigid{cfg.w_bone_rigidity if include_rigidity else 0.0:.2f} "
             print("warning using IO")
             if use_class_weights:
                 model_name += "_classweights"
@@ -1219,15 +1352,13 @@ def main() -> None:
                 per_label_csv = results_csv_official_val_dice_per_label.with_stem(
                     results_csv_official_val_dice_per_label.stem + baseline_name
                 )
-                per_label_csv = Path(
-                    per_label_csv.as_posix().replace("csvs/", "csvs/per_label/")
-                )
+                per_label_csv = to_per_label(per_label_csv)
                 if per_label_csv.exists():
                     print(f"skipping baseline '{baseline_name}' (official val): exists")
                 else:
                     print(f"running baseline '{baseline_name}' on official val")
                     evaluate_split(
-                        subjects=val_subjects,
+                        subjects=official_val_subjects,
                         image_dir=val_image_dir,
                         seg_dir=official_seg_dir,
                         seg_dir_fast=official_seg_dir_fast,
@@ -1256,15 +1387,14 @@ def main() -> None:
                         ndv_csv=results_csv_official_ndv,
                         hd95_csv=results_csv_official_hd95,
                         per_label_csv=per_label_csv,
+                        chase_flag=chase_flag,
                     )
 
             if eval_my_val:
                 per_label_csv = results_csv_my_val_dice_per_label.with_stem(
                     results_csv_my_val_dice_per_label.stem + baseline_name
                 )
-                per_label_csv = Path(
-                    per_label_csv.as_posix().replace("csvs/", "csvs/per_label/")
-                )
+                per_label_csv = to_per_label(per_label_csv)
                 if per_label_csv.exists():
                     print(f"skipping baseline '{baseline_name}' (my val): exists")
                 else:
@@ -1300,6 +1430,7 @@ def main() -> None:
                         ndv_csv=results_csv_my_val_ndv,
                         hd95_csv=results_csv_my_val_hd95,
                         per_label_csv=per_label_csv,
+                        chase_flag=chase_flag,
                     )
 
         if baselines_done is False:
@@ -1313,11 +1444,9 @@ def main() -> None:
             per_label_dice_csv = results_csv_official_val_dice_per_label.with_stem(
                 results_csv_official_val_dice_per_label.stem + model_name
             )
-            per_label_dice_csv = Path(
-                per_label_dice_csv.as_posix().replace("csvs/", "csvs/per_label/")
-            )
+            per_label_dice_csv = to_per_label(per_label_dice_csv)
             evaluate_split(
-                subjects=val_subjects,
+                subjects=official_val_subjects,
                 image_dir=val_image_dir,
                 seg_dir=official_seg_dir,
                 seg_dir_fast=official_seg_dir_fast,
@@ -1346,6 +1475,7 @@ def main() -> None:
                 ndv_csv=results_csv_official_ndv,
                 hd95_csv=results_csv_official_hd95,
                 per_label_csv=per_label_dice_csv,
+                chase_flag=chase_flag,
             )
             compress_to_zip(
                 out_dir / f"submission_{model_name}",
@@ -1356,9 +1486,7 @@ def main() -> None:
             per_label_dice_csv = results_csv_my_val_dice_per_label.with_stem(
                 results_csv_my_val_dice_per_label.stem + model_name
             )
-            per_label_dice_csv = Path(
-                per_label_dice_csv.as_posix().replace("csvs/", "csvs/per_label/")
-            )
+            per_label_dice_csv = to_per_label(per_label_dice_csv)
             _, my_val_subjects = load_split(split_path)
             # my_val_subjects = my_val_subjects[0:1]
             # print("warning: reducing number of my val subjects")
@@ -1392,6 +1520,7 @@ def main() -> None:
                 ndv_csv=results_csv_my_val_ndv,
                 hd95_csv=results_csv_my_val_hd95,
                 per_label_csv=per_label_dice_csv,
+                chase_flag=chase_flag,
             )
 
 
