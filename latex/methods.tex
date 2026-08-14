@@ -1,0 +1,55 @@
+\section{Methods}
+\subsection{Data}
+\subsection{Preprocessing}
+\subsection{Registration Pipeline}
+\subsubsection{Preservation of PET quantification}
+The scored MTV bias only constrains the \emph{net} lesion volume, so we
+penalize it directly while supplying dense gradients through a Jacobian-based
+surrogate. All terms are evaluated on the total transformation
+$\varphi = \varphi_{\mathrm{aff}} \circ \varphi_{\theta}$, i.e.\ the affine
+pre-registration composed with the predicted displacement, against the
+original moving lesion mask $M$, since the affine itself is generally not
+volume-preserving. First, we minimize the squared relative volume error
+%
+\begin{equation}
+  \mathcal{L}_{\mathrm{MTV}}
+  = \left( \frac{\lvert M \circ \varphi \rvert - \lvert M \rvert}
+                {\lvert M \rvert} \right)^{2},
+  \label{eq:mtv}
+\end{equation}
+%
+where $M \circ \varphi$ denotes the linearly resampled mask. This matches the
+scored metric exactly, but its gradient is confined to the sub-voxel boundary
+shell of the lesion. We therefore add a complementary term exploiting the
+identity $\sum_{x \in W} \det J_{\varphi}(x) = \lvert M \rvert$, where
+$W = \{\, x : M(\varphi(x)) = 1 \,\}$ is the fixed-frame (warped) lesion
+region:
+%
+\begin{equation}
+  \mathcal{L}_{\mathrm{MTV\text{-}J}}
+  = \left( \frac{1}{\lvert W \rvert} \sum_{x \in W}
+    \det J_{\varphi}(x) - 1 \right)^{2}
+  \label{eq:mtvjac}
+\end{equation}
+%
+pins the same net volume ratio while providing gradients throughout the
+lesion interior and, unlike a per-voxel constraint, still permits internal
+redistribution of volume. Note that masking the determinant with the
+moving-frame lesion, as is tempting, samples $\det J_{\varphi}$ at locations
+unrelated to the lesion once the affine is composed in; empirically, this
+decorrelated the surrogate from the scored MTV. Finally, the per-voxel
+penalty
+%
+\begin{equation}
+  \mathcal{L}_{\mathrm{jac}}
+  = \frac{1}{\lvert W \rvert} \sum_{x \in W}
+    \left( \det J_{\varphi}(x) - 1 \right)^{2}
+  \label{eq:jactum}
+\end{equation}
+%
+acts as a stricter local regulariser, discouraging compensating compression
+and expansion within the lesion. The same terms
+(\ref{eq:mtv})--(\ref{eq:jactum}) are used during training and descended at
+test time by our instance optimization, so the network is trained on the
+objective it is later refined under.
+\subsection{Implementation Details}

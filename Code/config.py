@@ -166,7 +166,9 @@ class TrainingConfig:
     w_dice_pet: float = 0.0
     w_tlg: float = 2.0
     w_jacobian_tumor: float = 2.0
-    w_bone_rigidity: float = 0.0
+    w_mtv: float = 1000.0
+    w_mtv_mean: float = 1000.0
+    w_bone_rigidity: float = 2.0
     # Sub-weights inside the rigidity term, applied before w_bone_rigidity.
     # The three conditions have different natural magnitudes (det and ortho are
     # dimensionless strain measures, affine is a bending energy in voxel units),
@@ -184,7 +186,7 @@ class TrainingConfig:
     # nothing and lets bones move relative to each other.
     # Units are voxel^2 rather than dimensionless strain, so w_bone_rigidity
     # MUST be retuned when this is switched on. w_rig_* are ignored.
-    use_per_label_rigidity: bool = False
+    use_per_label_rigidity: bool = True
     # labels smaller than this are skipped: the rigid fit is ill-posed
     rigidity_min_voxels: int = 50
     w_dvf: float = 100.0

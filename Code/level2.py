@@ -957,11 +957,6 @@ def train_lvl2(
         pbar.close()
 
     torch.save(model.state_dict(), final_model_path)
-    np.save(
-        config.save_dir
-        / f"loss_{config.mlflow_experiment}_stagelvl2_{total_steps}.npy",
-        lossall,
-    )
 
     result = {
         "final": final_model_path,

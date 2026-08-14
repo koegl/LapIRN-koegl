@@ -57,6 +57,7 @@ def evaluate_lvl3(
         "dice_pet": 0.0,
         "jacobian": 0.0,
         "mtv_bias": 0.0,
+        "mtv_mean": 0.0,
         "tlg_bias": 0.0,
         "jacobian_tumor": 0.0,
         "rigidity": 0.0,
@@ -213,10 +214,21 @@ def evaluate_lvl3(
                     )
                     saved = True
 
-            X_Y_ct = X_Y[:, 0:1, ...]
-            X_Y_pet = X_Y[:, 1:2, ...]
             Y_4x_ct = Y_4x[:, 0:1, ...]
             Y_4x_pet = Y_4x[:, 1:2, ...]
+
+            # scored terms (NCC / dice / tumour / rigidity) are measured on the
+            # TOTAL warp (prereg + network) of the ORIGINAL moving image and
+            # labels — single interpolation, det(A) included — matching the
+            # final eval. The residual-only version resampled twice and was
+            # blind to any distortion the pre-registration introduced.
+            flow_total = poly_affine_reg.compose_flows(
+                flow_prereg, F_X_Y.permute(0, 2, 3, 4, 1), grid_full
+            )
+            flow_total_norm = transform_unit_flow_to_flow_cuda(flow_total.clone())
+            X_Y_total = transform(X, flow_total, grid_full)
+            X_Y_ct = X_Y_total[:, 0:1]
+            X_Y_pet = X_Y_total[:, 1:2]
 
             loss_ncc_ct = loss_similarity_ct(X_Y_ct, Y_4x_ct)
             loss_ncc_pet = loss_similarity_pet(X_Y_pet, Y_4x_pet)
@@ -236,38 +248,52 @@ def evaluate_lvl3(
             F_xy[:, 2, :, :, :] = F_xy[:, 2, :, :, :] * (x - 1)
             loss_regulation = loss_smooth(F_xy)
 
+            X_lbl_ct_orig = X_lbl_ct
+            X_lbl_pet_orig = X_lbl_pet
             X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_prereg, grid_full)
             X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_prereg, grid_full)
 
+            flow_total_ch = flow_total.permute(0, 4, 1, 2, 3)
             loss_dice_ct = utils.dice_loss_with_grad_bbox(
-                X_lbl_ct,
+                X_lbl_ct_orig.float(),
                 Y_lbl_ct,
-                F_X_Y,
+                flow_total_ch,
                 model.grid_1,
                 transform,
                 use_checkpoint=True,
             )
             loss_dice_pet = utils.dice_loss_with_grad_bbox(
-                X_lbl_pet,
+                X_lbl_pet_orig.float(),
                 Y_lbl_pet,
-                F_X_Y,
+                flow_total_ch,
                 model.grid_1,
                 transform,
                 use_checkpoint=True,
             )
 
             moving_pet_mask = (X_lbl_pet == 1).float()
-            warped_pet_mask = utils.warp_binary_mask(
-                moving_pet_mask, F_X_Y, model.grid_1, transform
-            )
-            warped_pet_image = X_Y[:, 1:2]
-            moving_pet_image = X_prereg[:, 1:2]
+            moving_pet_mask_orig = (X_lbl_pet_orig == 1).float()
+            warped_pet_mask = transform(moving_pet_mask_orig, flow_total, grid_full)
 
-            loss_mtv = utils.mtv_bias_loss(warped_pet_mask, moving_pet_mask)
+            loss_mtv = utils.mtv_bias_loss(warped_pet_mask, moving_pet_mask_orig)
             loss_tlg = utils.tlg_bias_loss(
-                warped_pet_image, warped_pet_mask, moving_pet_image, moving_pet_mask
+                X_Y_pet,
+                warped_pet_mask,
+                X[:, 1:2],
+                moving_pet_mask_orig,
             )
-            loss_jacobian_tumor = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
+            jac_det_total, _ = jacobian.jacobian_matrix(flow_total_norm)
+            # det(J_total) lives on the fixed grid, so mask it with the
+            # fixed-frame lesion (the composed-warped mask)
+            warped_pet_mask_hard = transform_nearest(
+                moving_pet_mask_orig, flow_total, grid_full
+            )
+            loss_jacobian_tumor = utils.masked_jac_det_loss(
+                jac_det_total, warped_pet_mask_hard
+            )
+            loss_mtv_mean = utils.mtv_mean_bias_loss(
+                jac_det_total, warped_pet_mask.detach()
+            )
 
             bone_labels_tensor = torch.tensor(
                 synthetic.BONE_LABEL_VALUES, device=device, dtype=X_lbl_ct.dtype
@@ -281,9 +307,12 @@ def evaluate_lvl3(
                 # empty loss
                 loss_rigidity = zero_rig
             elif config.use_per_label_rigidity:
+                # rigidity on the TOTAL field over the FIXED-frame bones: no
+                # label resampling, and the net is pushed to undo non-rigid
+                # bone motion the affine introduced (scale/shear)
                 loss_rigidity, rig_info = utils.per_label_rigid_loss(
-                    F_X_Y_norm,
-                    X_lbl_ct,
+                    flow_total_norm,
+                    Y_lbl_ct.float(),
                     bone_labels_tensor,
                     min_voxels=config.rigidity_min_voxels,
                 )
@@ -306,6 +335,8 @@ def evaluate_lvl3(
                 + config.w_jacobian * loss_jacobian
                 + config.w_smooth * loss_regulation
                 + config.w_tlg * loss_tlg
+                + config.w_mtv * loss_mtv**2
+                + config.w_mtv_mean * loss_mtv_mean
                 + config.w_jacobian_tumor * loss_jacobian_tumor
                 + config.w_bone_rigidity * loss_rigidity
             )
@@ -320,6 +351,7 @@ def evaluate_lvl3(
             val_losses["smooth"] += loss_regulation.item()
             val_losses["jacobian"] += loss_jacobian.item()
             val_losses["mtv_bias"] += loss_mtv.item()
+            val_losses["mtv_mean"] += loss_mtv_mean.item()
             val_losses["tlg_bias"] += loss_tlg.item()
             val_losses["jacobian_tumor"] += loss_jacobian_tumor.item()
             val_losses["rigidity"] += loss_rigidity.item()
@@ -571,6 +603,12 @@ def train_lvl3(
     grad_conflict_tracker = utils.GradConflictTracker(
         window=config.grad_conflict_window
     )
+    # A scheduled measurement is *armed* at the interval, then *taken* on the
+    # next batch where every objective term is live. Measuring on the scheduled
+    # step directly would land on lesion-free batches ~half the time (tlg/jactum
+    # have no gradient there), so those keys would be absent and every wandb
+    # expression joining them against an always-present key would misalign.
+    grad_conflict_pending = False
 
     # re-apply unfreeze if resuming past the threshold
     if start_global_step >= unfreeze_step:
@@ -752,8 +790,6 @@ def train_lvl3(
                 name=f"warped_ct_lvl3_{run_name}_{batch['case_id'][0]}",
             )
 
-        X_Y_ct = X_Y[:, 0:1, ...]
-        X_Y_pet = X_Y[:, 1:2, ...]
         Y_4x_ct = Y_4x[:, 0:1, ...]
         Y_4x_pet = Y_4x[:, 1:2, ...]
 
@@ -772,10 +808,28 @@ def train_lvl3(
         loss_regulation = loss_smooth(F_xy)
 
         # synthetic labels are already in the (deformed) moving frame; the
-        # real branch needs the affine applied first
+        # real branch needs the affine applied first. The pre-affine labels are
+        # kept: the scored terms (NCC / dice / tumour / rigidity) are measured
+        # on the TOTAL warp of the ORIGINAL moving image and labels — single
+        # interpolation, det(A) included — matching the final eval.
+        X_lbl_ct_orig = X_lbl_ct
+        X_lbl_pet_orig = X_lbl_pet
         if not is_synthetic:
             X_lbl_ct = transform_nearest(X_lbl_ct.float(), flow_prereg, grid_full)
             X_lbl_pet = transform_nearest(X_lbl_pet.float(), flow_prereg, grid_full)
+            flow_total = poly_affine_reg.compose_flows(
+                flow_prereg, F_X_Y.permute(0, 2, 3, 4, 1), grid_full
+            )
+            flow_total_norm = transform_unit_flow_to_flow_cuda(flow_total.clone())
+        else:
+            # no pre-registration on this branch: the network field IS the total
+            flow_total = F_X_Y.permute(0, 2, 3, 4, 1)
+            flow_total_norm = F_X_Y_norm
+
+        # single-interpolation warp of the original moving for NCC / TLG
+        X_Y_total = transform(X, flow_total, grid_full)
+        X_Y_ct = X_Y_total[:, 0:1]
+        X_Y_pet = X_Y_total[:, 1:2]
 
         if is_synthetic:
             use_dice_pet = True
@@ -810,26 +864,42 @@ def train_lvl3(
 
         x = 0
 
+        flow_total_ch = flow_total.permute(0, 4, 1, 2, 3)
         loss_dice_ct = utils.dice_loss_with_grad_bbox(
-            X_lbl_ct,
+            X_lbl_ct_orig.float(),
             Y_lbl_ct,
-            F_X_Y,
+            flow_total_ch,
             model.grid_1,
             transform,
             use_checkpoint=True,
         )
         with torch.no_grad():
             loss_dice_pet = utils.dice_loss_with_grad_bbox(
-                X_lbl_pet,
+                X_lbl_pet_orig.float(),
                 Y_lbl_pet,
-                F_X_Y,
+                flow_total_ch,
                 model.grid_1,
                 transform,
                 use_checkpoint=True,
             )
 
         moving_pet_mask = (X_lbl_pet == 1).float()
-        loss_jacobian_tumor = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
+        moving_pet_mask_orig = (X_lbl_pet_orig == 1).float()
+        # tumour-jac on det(J_total): the residual-only det(J) was blind to
+        # volume changes the pre-registration introduced (det(A) != 1)
+        if is_synthetic:
+            jac_det_total = jac_det
+        else:
+            jac_det_total, _ = jacobian.jacobian_matrix(flow_total_norm)
+        # det(J_total) lives on the fixed grid, so mask it with the
+        # fixed-frame lesion (the composed-warped mask)
+        with torch.no_grad():
+            warped_pet_mask_hard = transform_nearest(
+                moving_pet_mask_orig, flow_total, grid_full
+            )
+        loss_jacobian_tumor = utils.masked_jac_det_loss(
+            jac_det_total, warped_pet_mask_hard
+        )
 
         bone_labels_tensor = torch.tensor(
             synthetic.BONE_LABEL_VALUES, device=device, dtype=X_lbl_ct.dtype
@@ -844,9 +914,12 @@ def train_lvl3(
         if batch["is_abdomen"]:
             loss_rigidity = zero_rig
         elif config.use_per_label_rigidity:
+            # rigidity on the TOTAL field over the FIXED-frame bones: no label
+            # resampling, and the net is pushed to undo non-rigid bone motion
+            # the affine introduced (scale/shear)
             loss_rigidity, rig_info = utils.per_label_rigid_loss(
-                F_X_Y_norm,
-                X_lbl_ct,
+                flow_total_norm,
+                Y_lbl_ct.float(),
                 bone_labels_tensor,
                 min_voxels=config.rigidity_min_voxels,
             )
@@ -936,20 +1009,31 @@ def train_lvl3(
             loss = loss + config.w_dvf * loss_dvf
             loss_mtv = torch.zeros((), device=device)
             loss_tlg = torch.zeros((), device=device)
+            loss_mtv_mean = torch.zeros((), device=device)
         else:
-            warped_pet_mask = utils.warp_binary_mask(
-                moving_pet_mask, F_X_Y, model.grid_1, transform
-            )
-            warped_pet_image = X_Y[:, 1:2]
-            moving_pet_image = X_prereg[:, 1:2]
-            loss_mtv = utils.mtv_bias_loss(warped_pet_mask, moving_pet_mask)
+            # MTV/TLG on the total warp against the ORIGINAL moving PET:
+            # single interpolation, det(A) included, matches the final eval
+            warped_pet_mask = transform(moving_pet_mask_orig, flow_total, grid_full)
+            loss_mtv = utils.mtv_bias_loss(warped_pet_mask, moving_pet_mask_orig)
             loss_tlg = utils.tlg_bias_loss(
-                warped_pet_image,
+                X_Y_pet,
                 warped_pet_mask,
-                moving_pet_image,
-                moving_pet_mask,
+                X[:, 1:2],
+                moving_pet_mask_orig,
             )
-            loss = loss + config.w_tlg * loss_tlg
+            # same recipe as deploy-time IO: squared soft-count MTV is exactly
+            # the scored metric but only has gradient at the lesion boundary;
+            # mean-det over the (detached) warped lesion pins the same net
+            # volume with dense gradients in the interior
+            loss_mtv_mean = utils.mtv_mean_bias_loss(
+                jac_det_total, warped_pet_mask.detach()
+            )
+            loss = (
+                loss
+                + config.w_tlg * loss_tlg
+                + config.w_mtv * loss_mtv**2
+                + config.w_mtv_mean * loss_mtv_mean
+            )
             loss_dvf = torch.zeros((), device=device)
 
         # meta-learned / unrolled IO: run a few differentiable IO steps starting
@@ -1013,6 +1097,14 @@ def train_lvl3(
         if config.log_grad_conflict and (
             global_step % (val_step_interval * config.grad_conflict_every_n_val) == 0
         ):
+            grad_conflict_pending = True
+
+        # Take the armed measurement on the first batch that exercises every
+        # term, so all keys share one x-axis. moving_pet_mask exists only on the
+        # real branch; synthetic is off, but guard anyway.
+        pet_live = (not is_synthetic) and bool(moving_pet_mask.any())
+        if grad_conflict_pending and not batch["is_abdomen"] and pet_live:
+            grad_conflict_pending = False
             # One flat dict, no accuracy/tumour grouping. The original split was
             # the hypothesis under test and run wise-swan-39232655 falsified it:
             # of the -0.25 group cosine, bone rigidity supplied -0.20 while tlg
@@ -1030,6 +1122,8 @@ def train_lvl3(
                 "smooth": config.w_smooth * loss_regulation,
                 "rigidity": config.w_bone_rigidity * loss_rigidity,
                 "tlg": config.w_tlg * loss_tlg,
+                "mtv": config.w_mtv * loss_mtv**2,
+                "mtv_mean": config.w_mtv_mean * loss_mtv_mean,
                 "jactum": config.w_jacobian_tumor * loss_jacobian_tumor,
             }
             if loss_dice_ct is not None:
@@ -1046,16 +1140,20 @@ def train_lvl3(
             # in would corrupt g_total and the shares.
             probes: Dict[str, torch.Tensor] = {}
             if loss_dice_ct is not None:
-                is_bone_x = torch.isin(X_lbl_ct, bone_labels_tensor)
+                # mirror the objective's dice term: original labels, total field
+                x_lbl_ct_probe = X_lbl_ct_orig.float()
+                is_bone_x = torch.isin(
+                    x_lbl_ct_probe, bone_labels_tensor.to(x_lbl_ct_probe.dtype)
+                )
                 is_bone_y = torch.isin(Y_lbl_ct, bone_labels_tensor)
                 for probe_name, keep_x, keep_y in (
                     ("dice_bone", is_bone_x, is_bone_y),
                     ("dice_soft", ~is_bone_x, ~is_bone_y),
                 ):
                     probe_dice = utils.dice_loss_with_grad_bbox(
-                        X_lbl_ct * keep_x,
+                        x_lbl_ct_probe * keep_x,
                         Y_lbl_ct * keep_y,
-                        F_X_Y,
+                        flow_total_ch,
                         model.grid_1,
                         transform,
                         use_checkpoint=True,
@@ -1122,6 +1220,7 @@ def train_lvl3(
             "train_lvl3/ncc_pet": loss_ncc_pet.item(),
             "train_lvl3/smooth": loss_regulation.item(),
             "train_lvl3/mtv_bias": loss_mtv.item(),
+            "train_lvl3/mtv_mean": loss_mtv_mean.item(),
             "train_lvl3/tlg_bias": loss_tlg.item(),
             "train_lvl3/jacobian_tumor": loss_jacobian_tumor.item(),
             "train_lvl3/jacobian": loss_jacobian.item(),
@@ -1170,6 +1269,10 @@ def train_lvl3(
             config.w_bone_rigidity * loss_rigidity.item()
         )
         train_metrics["train_lvl3/w_tlg"] = config.w_tlg * loss_tlg.item()
+        train_metrics["train_lvl3/w_mtv"] = config.w_mtv * loss_mtv.item() ** 2
+        train_metrics["train_lvl3/w_mtv_mean"] = (
+            config.w_mtv_mean * loss_mtv_mean.item()
+        )
         train_metrics["train_lvl3/w_dvf"] = config.w_dvf * loss_dvf.item()
         if loss_dice_ct is not None:
             train_metrics["train_lvl3/w_dice_ct"] = (
@@ -1414,11 +1517,6 @@ def train_lvl3(
         pbar.close()
 
     torch.save(model.state_dict(), final_model_path)
-    np.save(
-        config.save_dir
-        / f"loss_{config.mlflow_experiment}_stagelvl3_{total_steps}.npy",
-        lossall,
-    )
 
     result = {
         "final": final_model_path,

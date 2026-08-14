@@ -1069,6 +1069,11 @@ def mtv_bias_loss(
     return torch.abs(mtv_warped - mtv_moving) / (mtv_moving + eps)
 
 
+def mtv_mean_bias_loss(jac_det, mask, eps=1e-5):
+    mean_det = (jac_det * mask).sum() / (mask.sum() + eps)  # net volume ratio
+    return (mean_det - 1.0) ** 2  # smooth, no abs-kink
+
+
 def tlg_bias_loss(
     warped_pet_image: torch.Tensor,
     warped_pet_mask: torch.Tensor,
