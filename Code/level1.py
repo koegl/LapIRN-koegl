@@ -50,7 +50,7 @@ def evaluate_lvl1(
         "smooth": 0.0,
         "dice_ct": 0.0,
         "dice_pet": 0.0,
-        "jacobian": 0.0,
+        "non_diff_loss": 0.0,
         "ndv": 0.0,
     }
     n_batches = 0
