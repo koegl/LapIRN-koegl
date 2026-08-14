@@ -6,6 +6,7 @@ from contextlib import ExitStack
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, Optional, Tuple
 
+import hd95_official
 import jacobian
 import mlflow
 import my_data
@@ -23,6 +24,12 @@ import wandb
 
 _ACTIVE_RUN_NAME: str | None = None
 _WANDB_RUN = None
+
+SEL_NDV_EQUIVALENCE = 0.005
+SEL_W_ACCURACY = 0.4
+SEL_W_BIOMARKER = 0.4
+SEL_W_REGULARITY = 0.2
+SEL_REF_NDV = 0.0
 
 
 def stop_flag_path(save_dir: Path, level: int) -> Path:
@@ -1096,6 +1103,122 @@ def tlg_bias_loss(
     tlg_moving = (moving_pet_image * moving_pet_mask).sum()
     tlg_warped = (warped_pet_image * warped_pet_mask).sum()
     return torch.abs(tlg_warped - tlg_moving) / (tlg_moving + eps)
+
+
+def hd95_ct_labels(
+    warped_label: torch.Tensor,
+    fixed_label: torch.Tensor,
+    moving_label: torch.Tensor,
+    spacing_mm: Tuple[float, float, float],
+) -> float:
+    """Mean HD95 (mm) over the CT labels, via the official scorer.
+
+    Same call the submission scorer makes (`inference.compute_hd95_official`):
+    a label is scored only if it is present in *both* the fixed and the original
+    (unwarped) moving segmentation, and non-finite per-label distances are
+    dropped before averaging.
+
+    HD95 is a surface-distance percentile computed on hard labels, so it has no
+    usable gradient -- this is a metric for logging and checkpoint selection
+    only, never a loss.
+
+    Args:
+        warped_label: (1, 1, D, H, W) integer-valued warped moving CT labels.
+        fixed_label: (1, 1, D, H, W) integer-valued fixed CT labels.
+        moving_label: (1, 1, D, H, W) integer-valued original moving CT labels.
+        spacing_mm: voxel spacing of the grid the labels live on.
+        label_ids: labels to score; defaults to range(1, 118).
+
+    Returns:
+        Mean HD95 in mm, or NaN if no label was scorable.
+    """
+
+    def to_numpy(tensor: torch.Tensor) -> np.ndarray:
+        return tensor[0, 0].round().long().cpu().numpy().astype(np.int16)
+
+    return float(
+        hd95_official.compute_average_ct_label_hd95(
+            to_numpy(fixed_label),
+            to_numpy(moving_label),
+            to_numpy(warped_label),
+            tuple(spacing_mm),
+            label_ids=range(1, 118),
+        )
+    )
+
+
+def challenge_selection_score(
+    config: TrainingConfig,
+    dice_ct_loss: float,
+    hd95: float,
+    mtv_bias: float,
+    tlg_bias: float,
+    ndv_percent: float,
+) -> Dict[str, float]:
+    """Surrogate for the official final score, for checkpoint selection.
+
+    Mirrors the challenge's component structure and its weighted geometric mean
+
+        100 * accuracy^0.4 * pet_biomarker^0.4 * regularity^0.2
+
+    with the per-metric significance scores replaced by qualities in (0, 1),
+    q = sigmoid((ref - value) / scale), so that every metric reads 0.5 at its
+    own reference and the arithmetic mean inside a component is not swamped by
+    whichever metric happens to have the larger magnitude. See the long note
+    next to `sel_w_accuracy` in config.py for why the significance scores
+    themselves are not reproducible at selection time, and for how to calibrate
+    the refs and scales. Higher is better, unlike every other score in this file.
+
+    PET DSC and PET HD95 are not evaluated here, so `accuracy` is the mean over
+    CT DSC and CT HD95 only -- the same reduction `order.py` makes locally.
+
+    Non-finite inputs are dropped from their component (an evaluation round that
+    skipped HD95 scores accuracy on dice_ct alone); a component with no finite
+    term at all yields a NaN final score, which never wins a `>` comparison.
+    """
+
+    def quality(value: float, ref: float, scale: float) -> float:
+        if not np.isfinite(value):
+            return float("nan")
+        # sigmoid without the overflow warning on large |z|
+        z = (ref - float(value)) / scale
+        return float(0.5 * (1.0 + np.tanh(0.5 * z)))
+
+    def component(*qualities: float) -> float:
+        finite = [q for q in qualities if np.isfinite(q)]
+        return float(np.mean(finite)) if finite else float("nan")
+
+    q_dice_ct = quality(dice_ct_loss, config.sel_ref_dice_ct, config.sel_scale_dice_ct)
+    q_hd95 = quality(hd95, config.sel_ref_hd95, config.sel_scale_hd95)
+    q_mtv = quality(mtv_bias, config.sel_ref_mtv, config.sel_scale_mtv)
+    q_tlg = quality(tlg_bias, config.sel_ref_tlg, config.sel_scale_tlg)
+    # official practical-equivalence band: %NDV at or below the threshold is
+    # treated as equivalent, so it cannot separate near-diffeomorphic fields
+    ndv_adjusted = max(float(ndv_percent) - SEL_NDV_EQUIVALENCE, 0.0)
+    q_ndv = quality(ndv_adjusted, SEL_REF_NDV, config.sel_scale_ndv)
+
+    accuracy = component(q_dice_ct, q_hd95)
+    biomarker = component(q_mtv, q_tlg)
+    regularity = component(q_ndv)
+
+    final = 100.0 * (
+        accuracy**SEL_W_ACCURACY
+        * biomarker**SEL_W_BIOMARKER
+        * regularity**SEL_W_REGULARITY
+    )
+
+    return {
+        "q_dice_ct": q_dice_ct,
+        "q_hd95": q_hd95,
+        "q_mtv": q_mtv,
+        "q_tlg": q_tlg,
+        "q_ndv": q_ndv,
+        "ndv_adjusted": ndv_adjusted,
+        "accuracy": accuracy,
+        "biomarker": biomarker,
+        "regularity": regularity,
+        "final": final,
+    }
 
 
 def seg_head_loss(

@@ -452,17 +452,16 @@ def train_lvl3(
 
     run_name = utils.get_run_name()
 
-    best_dice_ct = float("inf")
+    # accuracy and combined are challenge-style scores: HIGHER is better, unlike
+    # the tumour score (a weighted sum of biases). Hence -inf, not inf.
+    best_accuracy = float("-inf")
     best_tumour = float("inf")
-    best_combined = float("inf")
+    best_combined = float("-inf")
     config.model_save_dir.mkdir(parents=True, exist_ok=True)
-    best_model_path = (
+    best_accuracy_model_path = (
         config.model_save_dir
-        / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best.pth"
+        / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best_accuracy.pth"
     )
-    # tumour val metrics turn upward long before dice_ct plateaus, so selecting
-    # on dice alone ships a checkpoint deep into the tumour-overfitting region.
-    # Keep a checkpoint per objective and let the test set decide.
     best_tumour_model_path = (
         config.model_save_dir
         / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best_tumour.pth"
@@ -480,12 +479,10 @@ def train_lvl3(
             "For resuming, provide both resume_model_path and "
             "resume_optimizer_path (or neither)."
         )
-    best_optimizer_path = (
+    best_accuracy_optimizer_path = (
         config.model_save_dir
-        / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best_optimizer.pth"
+        / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best_accuracy_optimizer.pth"
     )
-    # one optimizer checkpoint per selection criterion, written at the same
-    # moment as its model, so any of the three can be resumed from
     best_tumour_optimizer_path = (
         config.model_save_dir
         / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best_tumour_optimizer.pth"
@@ -590,11 +587,9 @@ def train_lvl3(
         opt_ckpt = torch.load(resume_optimizer_path, map_location=device)
         optimizer.load_state_dict(opt_ckpt["optimizer"])
         start_global_step = opt_ckpt["global_step"]
-        best_dice_ct = opt_ckpt["best_dice_ct"]
-        # .get: optimizer checkpoints written before the extra selection
-        # criteria existed only carry best_dice_ct
+        best_accuracy = opt_ckpt.get("best_accuracy", float("-inf"))
         best_tumour = opt_ckpt.get("best_tumour", float("inf"))
-        best_combined = opt_ckpt.get("best_combined", float("inf"))
+        best_combined = opt_ckpt.get("best_combined_final", float("-inf"))
 
     train_iter = utils.cycle(train_generator)
 
@@ -1464,19 +1459,33 @@ def train_lvl3(
                 f"- tlg {val_losses['tlg_bias']:.4f}"
             )
 
-            # all three are "lower is better"; scales make the terms comparable
+            # both biases are "lower is better"; the scales make them comparable
             tumour_score = (
-                config.sel_w_mtv * val_losses["mtv_bias"] / config.sel_scale_mtv
-                + config.sel_w_tlg * val_losses["tlg_bias"] / config.sel_scale_tlg
+                0.5 * val_losses["mtv_bias"] / config.sel_scale_mtv
+                + 0.5 * val_losses["tlg_bias"] / config.sel_scale_tlg
             )
-            combined_score = (
-                config.sel_w_dice * val_losses["dice_ct"] / config.sel_scale_dice_ct
-                + tumour_score
+            # replica of the official ranking: accuracy (CT DSC + CT HD95) and
+            # PET-biomarker preservation (|MTV| + |TLG| bias) and deformation
+            # regularity (threshold-adjusted %NDV), combined with the 0.4/0.4/0.2
+            # weighted geometric mean. HIGHER is better for both scores below.
+            selection = utils.challenge_selection_score(
+                config,
+                dice_ct_loss=val_losses["dice_ct"],
+                hd95=val_losses["hd95"],
+                mtv_bias=val_losses["mtv_bias"],
+                tlg_bias=val_losses["tlg_bias"],
+                ndv_percent=val_losses["ndv"],
             )
+            accuracy_score = selection["accuracy"]
+            combined_score = selection["final"]
             utils.log_metrics(
                 {
                     "valid_lvl3/sel_tumour_score": tumour_score,
-                    "valid_lvl3/sel_combined_score": combined_score,
+                    **{
+                        f"valid_lvl3/sel_{key}": value
+                        for key, value in selection.items()
+                        if not (isinstance(value, float) and np.isnan(value))
+                    },
                 },
                 step=global_step,
             )
@@ -1489,18 +1498,22 @@ def train_lvl3(
                     {
                         "optimizer": optimizer.state_dict(),
                         "global_step": global_step,
-                        "best_dice_ct": best_dice_ct,
+                        "best_accuracy": best_accuracy,
                         "best_tumour": best_tumour,
-                        "best_combined": best_combined,
+                        "best_combined_final": best_combined,
                     },
                     optimizer_path,
                 )
 
-            if val_losses["dice_ct"] < best_dice_ct:
-                best_dice_ct = val_losses["dice_ct"]
-                save_selected(best_model_path, best_optimizer_path)
+            # NaN never satisfies `>`, so a round that produced no accuracy
+            # component at all simply does not save.
+            if accuracy_score > best_accuracy:
+                best_accuracy = accuracy_score
+                save_selected(best_accuracy_model_path, best_accuracy_optimizer_path)
                 tqdm.tqdm.write(
-                    f"step {global_step}: new best dice_ct {best_dice_ct:.4f} -> saved best"
+                    f"step {global_step}: new best accuracy {best_accuracy:.4f} "
+                    f"(dice_ct {val_losses['dice_ct']:.4f} "
+                    f"hd95 {val_losses['hd95']:.4f}) -> saved best_accuracy"
                 )
 
             if tumour_score < best_tumour:
@@ -1512,11 +1525,14 @@ def train_lvl3(
                     " -> saved best_tumour"
                 )
 
-            if combined_score < best_combined:
+            if combined_score > best_combined:
                 best_combined = combined_score
                 save_selected(best_combined_model_path, best_combined_optimizer_path)
                 tqdm.tqdm.write(
-                    f"step {global_step}: new best combined {best_combined:.4f}"
+                    f"step {global_step}: new best combined {best_combined:.4f} "
+                    f"(acc {selection['accuracy']:.4f} "
+                    f"bio {selection['biomarker']:.4f} "
+                    f"reg {selection['regularity']:.4f})"
                     " -> saved best_combined"
                 )
 
@@ -1535,10 +1551,10 @@ def train_lvl3(
 
     result = {
         "final": final_model_path,
-        "best": best_model_path,
+        "best_accuracy": best_accuracy_model_path,
         "best_tumour": best_tumour_model_path,
         "best_combined": best_combined_model_path,
-        "best_optimizer": best_optimizer_path,
+        "best_accuracy_optimizer": best_accuracy_optimizer_path,
         "best_tumour_optimizer": best_tumour_optimizer_path,
         "best_combined_optimizer": best_combined_optimizer_path,
     }
