@@ -170,16 +170,18 @@ class TrainingConfig:
     w_mtv_mean: float = 10000.0
     w_bone_rigidity: float = 2.0
 
-    # io weights
-    w_io_ncc = 5.0
-    w_io_dice = 5.0
-    w_io_non_diff = 2000.0
-    w_io_smooth = 2.0
-    w_io_mtv = 500.0
-    w_io_mtv_mean = 5000.0
-    w_io_tlg = 100.0
-    w_io_jacobian_tumor = 5.0
-    w_io_bone_rigidity = 2.0
+    # io params
+    io_lr: float = 0.1e-1
+    io_it: int = 40
+    w_io_ncc: float = 5.0
+    w_io_dice: float = 5.0
+    w_io_non_diff: float = 2000.0
+    w_io_smooth: float = 2.0
+    w_io_mtv: float = 500.0
+    w_io_mtv_mean: float = 5000.0
+    w_io_tlg: float = 100.0
+    w_io_jacobian_tumor: float = 5.0
+    w_io_bone_rigidity: float = 2.0
 
     # Sub-weights inside the rigidity term, applied before w_bone_rigidity.
     # The three conditions have different natural magnitudes (det and ortho are

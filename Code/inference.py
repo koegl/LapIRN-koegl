@@ -609,8 +609,6 @@ def evaluate_split(
     include_rigidity: bool,
     use_class_weights: bool,
     use_polyaffine: bool,
-    io_lr: float,
-    io_it: int,
     desc: str,
     mtv_csv: Path,
     tlg_csv: Path,
@@ -662,8 +660,6 @@ def evaluate_split(
             seg_dir_fast=seg_dir_fast,
             ct_label_template=ct_label_template,
             pet_label_template=pet_label_template,
-            io_lr=io_lr,
-            io_it=io_it,
             chase_flag=chase_flag,
         )
         dices[case_id] = dice_after
@@ -728,8 +724,6 @@ def process_subject(
     seg_dir_fast: Optional[Path] = None,
     ct_label_template: str = "PSMARegPSMA_{case_id}_0000_{tp}",
     pet_label_template: str = "PSMARegPSMA_{case_id}_0001_{tp}",
-    io_lr: float = 1e-1,
-    io_it: int = 100,
     chase_flag: str = "chase_best_model",
 ) -> Tuple[float, float, float, float, float, float, float, Dict[int, float]]:
 
@@ -902,8 +896,6 @@ def process_subject(
             include_pet=include_pet,
             include_rigidity=include_rigidity,
             use_class_weights=use_class_weights,
-            lr=io_lr,
-            n_steps=io_it,
             opt_shape=io_opt_shape,
             history_csv=out_dir / "io_history" / f"{case_id}.csv",
         )
@@ -1315,8 +1307,8 @@ def main() -> None:
         else val_subjects
     )
 
-    official_val_subjects = official_val_subjects[0:3]
-    print("warning reduced subject size")
+    # official_val_subjects = official_val_subjects[0:3]
+    # print("warning reduced subject size")
 
     # --- what to evaluate ---
     eval_official: bool = True
@@ -1374,12 +1366,10 @@ def main() -> None:
         include_rigidity: bool = False
         use_class_weights = False
         use_polyaffine: bool = False
-        io_lr: float = 0.1e-1
-        io_it: float = 40
 
         if use_io:
             model_name += "_IO_"
-            model_name += f"lr{io_lr:.1e}_it{io_it}"
+            model_name += f"lr{cfg.io_lr:.1e}_it{cfg.io_it}"
             model_name += f"_wNCC{cfg.w_io_ncc:.2f}_wDiceCT{cfg.w_io_dice:.2f}"
             model_name += f"_wJac{cfg.w_io_non_diff:.2f}_wSmooth{cfg.w_io_smooth:.2f}"
             model_name += (
@@ -1429,8 +1419,6 @@ def main() -> None:
                         skip_model=True,
                         ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
                         pet_label_template="PSMARegPSMA_{case_id}_0001_{tp}",
-                        io_lr=io_lr,
-                        io_it=io_it,
                         desc=f"official val [{baseline_name}]",
                         mtv_csv=results_csv_official_mtv,
                         tlg_csv=results_csv_official_tlg,
@@ -1472,8 +1460,6 @@ def main() -> None:
                         skip_model=True,
                         ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
                         pet_label_template="PSMARegPSMA_{case_id}_0001_{tp}",
-                        io_lr=io_lr,
-                        io_it=io_it,
                         desc=f"my val [{baseline_name}]",
                         mtv_csv=results_csv_my_val_mtv,
                         tlg_csv=results_csv_my_val_tlg,
@@ -1517,8 +1503,6 @@ def main() -> None:
                 use_polyaffine=use_polyaffine,
                 ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
                 pet_label_template="PSMARegPSMA_{case_id}_0001_{tp}",
-                io_lr=io_lr,
-                io_it=io_it,
                 desc="official val",
                 mtv_csv=results_csv_official_mtv,
                 tlg_csv=results_csv_official_tlg,
@@ -1558,12 +1542,10 @@ def main() -> None:
                 include_rigidity=include_rigidity,
                 use_class_weights=use_class_weights,
                 use_polyaffine=use_polyaffine,
-                io_it=io_it,
                 seg_dir_fast=my_val_seg_dir,
                 pet_label_dir=my_val_seg_dir,
                 ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
                 pet_label_template="PSMARegPSMA_{case_id}_0001_{tp}",
-                io_lr=io_lr,
                 desc="my val",
                 mtv_csv=results_csv_my_val_mtv,
                 tlg_csv=results_csv_my_val_tlg,

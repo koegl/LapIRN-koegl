@@ -458,8 +458,6 @@ def run_io(
     include_pet: bool,
     include_rigidity: bool,
     use_class_weights: bool = False,
-    n_steps: int = 100,
-    lr: float = 1e-1,
     n_integration: int = 7,
     ncc_weight: Optional[float] = None,
     opt_shape: Optional[Tuple[int, int, int]] = None,
@@ -490,7 +488,7 @@ def run_io(
     identity_vox = synthetic.build_identity_grid(var_shape, device)
     velocity = torch.zeros((1, 3) + var_shape, device=device)
     velocity.requires_grad_(True)
-    optimizer = torch.optim.Adam([velocity], lr=lr)
+    optimizer = torch.optim.Adam([velocity], lr=cfg.io_lr)
 
     bone_values = torch.tensor(
         synthetic.BONE_LABEL_VALUES, dtype=torch.float32, device=device
@@ -512,7 +510,7 @@ def run_io(
     best_disp = base.clone()
     best_disp_i = 0
     history: list[Dict[str, float]] = []
-    pbar = tqdm.tqdm(range(n_steps), desc="IO optimization")
+    pbar = tqdm.tqdm(range(cfg.io_it), desc="IO optimization")
     for i in pbar:
         start_time = time.time()
         optimizer.zero_grad()
@@ -567,7 +565,7 @@ def run_io(
 
     print(f"Best selection score: {best_loss:.4f} at step {best_disp_i}")
 
-    if history_csv is not None and history:
+    if False and history_csv is not None and history:
         history_csv.parent.mkdir(parents=True, exist_ok=True)
         with open(history_csv, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=list(history[0].keys()))
