@@ -855,6 +855,28 @@ def process_subject(
         flow_affine_compose = flow_affine
         io_opt_shape = None
 
+    # Compose affine (outer) with the network field (inner) BEFORE IO, so IO
+    # optimises the TOTAL transform against the original moving image/labels.
+    # This makes the volume terms (MTV / tumour-jac) see det(A) — the affine's
+    # own volume distortion — which the residual-only objective was blind to,
+    # and matches exactly what the final eval measures. It also gives IO the
+    # freedom to undo implausible affine deformations.
+    deform_grid = grid_compose + F_X_Y.permute(0, 2, 3, 4, 1)
+    affine_grid = grid_compose + flow_affine_compose
+
+    affine_grid_ch = affine_grid.permute(0, 4, 1, 2, 3)
+    composed_grid = torch.nn.functional.grid_sample(
+        affine_grid_ch,
+        deform_grid,
+        mode="bilinear",
+        padding_mode="border",
+        align_corners=False,
+    ).permute(0, 2, 3, 4, 1)
+
+    # total_unit_flow is at the compose resolution (half for chase_leaderboard,
+    # full otherwise).
+    total_unit_flow = (composed_grid - grid_compose).permute(0, 4, 1, 2, 3)
+
     if use_io and not skip_model:
         x_lbl_ct, x_lbl_pet, y_lbl_ct, y_lbl_pet = load_io_labels(
             seg_dir_fast,
@@ -863,13 +885,12 @@ def process_subject(
             ct_template=ct_label_template,
             pet_template=pet_label_template,
         )
-        x_lbl_ct = transform_nearest(x_lbl_ct, flow_affine, grid_full)
-        x_lbl_pet = transform_nearest(x_lbl_pet, flow_affine, grid_full)
-
-        F_X_Y = instance_opt.run_io(
+        # labels stay in the ORIGINAL moving frame (no affine pre-warp): the IO
+        # objective warps them with the total field, single interpolation
+        total_unit_flow = instance_opt.run_io(
             Y,
-            F_X_Y,
-            X_affine,
+            total_unit_flow,
+            X,
             x_lbl_ct,
             x_lbl_pet,
             y_lbl_ct,
@@ -884,6 +905,7 @@ def process_subject(
             lr=io_lr,
             n_steps=io_it,
             opt_shape=io_opt_shape,
+            history_csv=out_dir / "io_history" / f"{case_id}.csv",
         )
 
     if False:
@@ -904,22 +926,6 @@ def process_subject(
             warped_diag[0, 0].round().long(), y_lbl_ct_diag[0, 0].round().long()
         )
         tqdm.tqdm.write(f"{case_id}: dice diag (IO path replica)={dice_diag:.4f}")
-
-    deform_grid = grid_compose + F_X_Y.permute(0, 2, 3, 4, 1)
-    affine_grid = grid_compose + flow_affine_compose
-
-    affine_grid_ch = affine_grid.permute(0, 4, 1, 2, 3)
-    composed_grid = torch.nn.functional.grid_sample(
-        affine_grid_ch,
-        deform_grid,
-        mode="bilinear",
-        padding_mode="border",
-        align_corners=False,
-    ).permute(0, 2, 3, 4, 1)
-
-    # total_unit_flow is at the compose resolution (half for chase_leaderboard,
-    # full otherwise).
-    total_unit_flow = (composed_grid - grid_compose).permute(0, 4, 1, 2, 3)
 
     if leaderboard:
         # submitted field: half grid, full-res voxel magnitudes.
@@ -1206,6 +1212,51 @@ def model_path_for(model_full_name: str) -> Path:
     return Path(f"/home/iml/fryderyk.koegl/data/PSMAReg/models/{model_full_name}")
 
 
+def plot_io_histories(history_dir: Path) -> None:
+    """One PNG per case from the run_io per-step CSVs: the scored soft-count
+    MTV bias vs the jac-det surrogate (mtv_mean). If the surrogate's mask is in
+    the right (fixed) space the two curves fall together; the title reports
+    their Pearson correlation as the summary number."""
+    if not history_dir.exists():
+        return
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    for csv_path in sorted(history_dir.glob("*.csv")):
+        df = pd.read_csv(csv_path)
+        if "mtv" not in df.columns or "mtv_mean" not in df.columns:
+            continue
+        fig, ax = plt.subplots(figsize=(8, 4))
+        ax.plot(df["step"], df["mtv"], color="tab:blue", label="mtv (soft count)")
+        if "hard_mtv" in df.columns and df["hard_mtv"].notna().any():
+            ax.plot(
+                df["step"],
+                df["hard_mtv"],
+                color="tab:cyan",
+                linestyle="--",
+                label="hard_mtv (scored count)",
+            )
+            ax.legend(loc="upper right", fontsize=8)
+        ax.set_xlabel("IO step")
+        ax.set_ylabel("MTV bias (scored)", color="tab:blue")
+        ax.tick_params(axis="y", labelcolor="tab:blue")
+        ax2 = ax.twinx()
+        ax2.plot(
+            df["step"], df["mtv_mean"], color="tab:red", label="mtv_mean (surrogate)"
+        )
+        ax2.set_ylabel("mtv_mean (jac-det surrogate)", color="tab:red")
+        ax2.tick_params(axis="y", labelcolor="tab:red")
+        corr = float(df["mtv"].corr(df["mtv_mean"]))
+        ax.set_title(f"{csv_path.stem} - corr(mtv, mtv_mean) = {corr:.3f}")
+        fig.tight_layout()
+        png_path = csv_path.with_suffix(".png")
+        fig.savefig(png_path, dpi=150)
+        plt.close(fig)
+        print(f"io history plot: {png_path} (corr={corr:.3f})")
+
+
 def main() -> None:
     cfg = TrainingConfig()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -1264,8 +1315,8 @@ def main() -> None:
         else val_subjects
     )
 
-    # official_val_subjects = official_val_subjects[0:3]
-    # print("warning reduced subject size")
+    official_val_subjects = official_val_subjects[0:3]
+    print("warning reduced subject size")
 
     # --- what to evaluate ---
     eval_official: bool = True
@@ -1326,12 +1377,12 @@ def main() -> None:
         io_lr: float = 0.1e-1
         io_it: float = 40
 
-        cfg.w_tlg = 0.0
-        cfg.w_jacobian_tumor = 0.0
-        cfg.w_ct = 10.0
-        cfg.w_jacobian = 0.0
-        cfg.w_smooth = 0.0
-        cfg.w_dice_ct_lvl3 = 10.0
+        # cfg.w_tlg = 0.0
+        # cfg.w_jacobian_tumor = 0.0
+        # cfg.w_ct = 0.0
+        # cfg.w_jacobian = 0.0
+        # cfg.w_smooth = 0.0
+        # cfg.w_dice_ct_lvl3 = 0.0
 
         if use_io:
             model_name += "_IO_"
@@ -1522,6 +1573,13 @@ def main() -> None:
                 per_label_csv=per_label_dice_csv,
                 chase_flag=chase_flag,
             )
+
+    # mtv vs mtv_mean correlation plots from the per-case IO step histories
+    submission_root = Path(
+        "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results"
+    )
+    plot_io_histories(submission_root / "io_history")
+    plot_io_histories(submission_root / "my_val" / "io_history")
 
 
 if __name__ == "__main__":

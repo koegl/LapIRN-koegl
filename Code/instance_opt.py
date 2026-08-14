@@ -1,4 +1,6 @@
+import csv
 import time
+from pathlib import Path
 from typing import Callable, Dict, Optional, Tuple
 
 import config
@@ -78,29 +80,11 @@ def multilabel_dice(
     return mean
 
 
-def mtv_jac_loss(jac_det, mask, eps=1e-5):
-    # jac_det: (B,1,D,H,W) already computed in io_objective
-    # mask:    (B,1,D,H,W) lesion mask
-    mean_det = (jac_det * mask).sum() / (mask.sum() + eps)  # net volume ratio
-    return (mean_det - 1.0) ** 2  # smooth, no abs-kink
-
-
-def mtv_jac_loss_inv(jac_det, mask, eps=1e-5):
-    """MTV via the pull-back Jacobian.
-
-    For a sampling (pull-back) warp, warped_mask(x) = moving_mask(phi(x)), so the
-    warped lesion volume is Sum 1/det(J) over the lesion and the net volume ratio
-    is mean(1/det(J)) inside the mask. Targets net volume preservation (MTV bias
-    -> 0) while still allowing local deformation (only the mean is pinned).
-
-    Use this variant instead of mtv_jac_loss (mean det) when reducing the mean-det
-    version *raises* the scored MTV, i.e. the warp convention is pull-back.
-
-    jac_det: (B,1,D,H,W) determinant field. mask: (B,1,D,H,W) lesion mask.
-    """
-    inv_det = 1.0 / jac_det.clamp_min(eps)
-    mean_inv_det = (inv_det * mask).sum() / (mask.sum() + eps)
-    return (mean_inv_det - 1.0) ** 2
+# weights of the two MTV terms in io_objective. W_MTV is also used by run_io
+# to swap the soft squared-MTV contribution for the hard (nearest-counted) one
+# when selecting the best step, so keep them defined in one place.
+W_MTV = 10000
+W_MTV_MEAN = 10000
 
 
 def io_objective(
@@ -166,7 +150,7 @@ def io_objective(
         jac_det, jac = jacobian.jacobian_matrix(disp_voxel)
 
     zero = torch.zeros((), device=device)
-    loss_mtv = loss_tlg = loss_masked_jac = zero
+    loss_mtv = loss_tlg = loss_masked_jac = loss_mtv_mean = zero
     if include_pet:
         assert x_lbl_pet is not None, "include_pet requires x_lbl_pet"
         moving_pet_mask = (x_lbl_pet == 1).float()
@@ -179,13 +163,21 @@ def io_objective(
         loss_tlg = utils.tlg_bias_loss(
             warped_pet_image, warped_pet_mask, moving_pet_image, moving_pet_mask
         )
-        loss_masked_jac = utils.masked_jac_det_loss(jac_det, moving_pet_mask)
+        # det(J) lives on the FIXED grid, so the jac-based volume terms are
+        # masked with the fixed-frame lesion (the warped mask), not the moving
+        # one — with the total field those regions sit a whole affine apart.
+        # Detached: gradient must flow through det(J), not through shifting the
+        # mask off the high-det region.
+        fixed_pet_mask = warped_pet_mask.detach()
+        loss_masked_jac = utils.masked_jac_det_loss(jac_det, fixed_pet_mask)
 
-        new_mtv_loss = mtv_jac_loss(jac_det, moving_pet_mask)
+        loss_mtv_mean = utils.mtv_mean_bias_loss(jac_det, fixed_pet_mask)
 
-        loss += 100000 * new_mtv_loss
-
-        # loss = loss + cfg.w_tlg * loss_tlg + cfg.w_jacobian_tumor * loss_masked_jac
+        loss += (
+            W_MTV * loss_mtv**2
+            + W_MTV_MEAN * loss_mtv_mean
+            + cfg.w_jacobian_tumor * loss_masked_jac
+        )
 
     loss_rigidity = zero
     if include_rigidity:
@@ -199,11 +191,24 @@ def io_objective(
         loss = loss + cfg.w_bone_rigidity * loss_rigidity
 
     hard_dice = float("nan")
+    hard_mtv = float("nan")
     if compute_hard_dice:
         assert transform_nearest is not None, (
             "compute_hard_dice needs transform_nearest"
         )
         with torch.no_grad():
+            if include_pet:
+                # MTV exactly as the scorer counts it: nearest-warped binary
+                # mask, whole voxels (the soft bilinear `mtv` sits between the
+                # scorer's integer rounding levels)
+                warped_pet_hard = warp_label(
+                    moving_pet_mask, disp_unit, grid, transform_nearest
+                )
+                n_moving = moving_pet_mask.sum()
+                n_warped = (warped_pet_hard > 0.5).float().sum()
+                hard_mtv = (
+                    torch.abs(n_warped - n_moving) / n_moving.clamp_min(1)
+                ).item()
             warped_lbl_ct = warp_label(x_lbl_ct, disp_unit, grid, transform_nearest)
             pred = warped_lbl_ct[0, 0].round().long()
             target = y_lbl_ct[0, 0].round().long()
@@ -229,6 +234,8 @@ def io_objective(
         "masked_jac": loss_masked_jac.item(),
         "bone_rigidity": loss_rigidity.item(),
         "mtv": loss_mtv.item(),
+        "hard_mtv": hard_mtv,
+        "mtv_mean": loss_mtv_mean.item(),
         "tlg": loss_tlg.item(),
     }
     return loss, logs
@@ -237,7 +244,7 @@ def io_objective(
 def compute_io_loss(
     disp_unit: torch.Tensor,
     y: torch.Tensor,
-    X_affine: torch.Tensor,
+    x_moving: torch.Tensor,
     x_lbl_ct: torch.Tensor,
     x_lbl_pet: torch.Tensor,
     y_lbl_ct: torch.Tensor,
@@ -253,10 +260,15 @@ def compute_io_loss(
     class_weights: torch.Tensor | None,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
     """Deploy-time IO objective (used by run_io). Thin wrapper over io_objective
-    with every term on and hard-dice logging enabled."""
+    with every term on and hard-dice logging enabled.
+
+    x_moving / x_lbl_ct / x_lbl_pet are in whatever frame disp_unit maps from:
+    the inference pipeline passes the ORIGINAL moving image and labels together
+    with the TOTAL (affine-composed) field, so the volume terms include the
+    affine's det(A) and match the final eval."""
     return io_objective(
         disp_unit,
-        x_moving=X_affine,
+        x_moving=x_moving,
         y_ct=y[:, 0:1],
         x_lbl_ct=x_lbl_ct,
         y_lbl_ct=y_lbl_ct,
@@ -435,7 +447,7 @@ def unrolled_refine(
 def run_io(
     y: torch.Tensor,
     f_x_y: torch.Tensor,
-    X_affine: torch.Tensor,
+    x_moving: torch.Tensor,
     x_lbl_ct: torch.Tensor,
     x_lbl_pet: torch.Tensor,
     y_lbl_ct: torch.Tensor,
@@ -452,6 +464,7 @@ def run_io(
     n_integration: int = 7,
     ncc_weight: Optional[float] = None,
     opt_shape: Optional[Tuple[int, int, int]] = None,
+    history_csv: Optional[Path] = None,
 ) -> torch.Tensor:
     # NCC is not scored by the challenge; keep it as a modest dense proxy that
     # fills gradient where label-dice is flat. Try a small value (e.g. 1-3);
@@ -499,6 +512,7 @@ def run_io(
     best_loss = float("inf")
     best_disp = base.clone()
     best_disp_i = 0
+    history: list[Dict[str, float]] = []
     pbar = tqdm.tqdm(range(n_steps), desc="IO optimization")
     for i in pbar:
         start_time = time.time()
@@ -509,7 +523,7 @@ def run_io(
         loss, logs = compute_io_loss(
             to_full(disp_unit),
             y,
-            X_affine,
+            x_moving,
             x_lbl_ct,
             x_lbl_pet,
             y_lbl_ct,
@@ -527,22 +541,39 @@ def run_io(
         loss.backward()
         optimizer.step()
 
-        if loss.item() < best_loss:
-            best_loss = loss.item()
+        # step selection: swap the soft squared-MTV contribution for the hard
+        # (nearest-counted) one, so best_disp is chosen on the MTV the scorer
+        # actually sees rather than the bilinear proxy the optimizer descends
+        sel_score = loss.item()
+        if not np.isnan(logs["hard_mtv"]):
+            sel_score += W_MTV * (logs["hard_mtv"] ** 2 - logs["mtv"] ** 2)
+        if sel_score < best_loss:
+            best_loss = sel_score
             best_disp = disp_unit.detach().clone()
             best_disp_i = i
+
+        history.append({"step": i, "loss": loss.item(), "sel_score": sel_score, **logs})
 
         pbar.set_postfix(
             dice=f"{logs['hard_dice_ct']:.4f}",
             masked_jac=f"{logs['masked_jac']:.4f}",
             mtv=f"{logs['mtv']:.4f}",
+            hard_mtv=f"{logs['hard_mtv']:.4f}",
+            mtv_mean=f"{logs['mtv_mean']:.6f}",
             tlg=f"{logs['tlg']:.4f}",
             loss=f"{loss.item():.4f}",
             best=f"{best_loss:.4f}",
             best_i=best_disp_i,
         )
 
-    print(f"Best loss: {best_loss:.4f} at step {best_disp_i}")
+    print(f"Best selection score: {best_loss:.4f} at step {best_disp_i}")
+
+    if history_csv is not None and history:
+        history_csv.parent.mkdir(parents=True, exist_ok=True)
+        with open(history_csv, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=list(history[0].keys()))
+            writer.writeheader()
+            writer.writerows(history)
 
     refined = best_disp
     return refined
