@@ -89,7 +89,7 @@ class TrainingConfig:
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
     warmup_epochs: float = 5
-    start_channel: int = 7
+    start_channel: int = 24
 
     # Per-level res-block trunk capacity, independent of start_channel (so no
     # inter-level tensor shape changes).
@@ -298,7 +298,7 @@ class TrainingConfig:
     # (MIND-SSC descriptor MSE, uses mind_radius / mind_dilation below).
     # NB: MIND is a plain MSE in [0, 1] while NCC is in [-1, 0], so w_ct / w_pet
     # have to be re-tuned when switching.
-    similarity_metric: Literal["ncc", "mind"] = "mind"
+    similarity_metric: Literal["ncc", "mind"] = "ncc"
     mind_radius: int = 2
     mind_dilation: int = 2
 
