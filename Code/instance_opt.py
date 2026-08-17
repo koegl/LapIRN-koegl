@@ -148,7 +148,7 @@ def io_objective(
         jac_det, jac = jacobian.jacobian_matrix(disp_voxel)
 
     zero = torch.zeros((), device=device)
-    loss_mtv = loss_tlg = loss_masked_jac = loss_mtv_mean = zero
+    loss_mtv = loss_tlg = loss_masked_jac = loss_mtv_avg = zero
     if include_pet:
         assert x_lbl_pet is not None, "include_pet requires x_lbl_pet"
         moving_pet_mask = (x_lbl_pet == 1).float()
@@ -169,11 +169,11 @@ def io_objective(
         fixed_pet_mask = warped_pet_mask.detach()
         loss_masked_jac = utils.masked_jac_det_loss(jac_det, fixed_pet_mask)
 
-        loss_mtv_mean = utils.mtv_mean_bias_loss(jac_det, fixed_pet_mask)
+        loss_mtv_avg = utils.mtv_mean_bias_loss(jac_det, fixed_pet_mask)
 
         loss += (
             cfg.w_io_mtv * loss_mtv**2
-            + cfg.w_io_mtv_mean * loss_mtv_mean
+            + cfg.w_io_mtv_avg * loss_mtv_avg
             + cfg.w_io_jacobian_tumor * loss_masked_jac
             + cfg.w_io_tlg * loss_tlg
         )
@@ -234,7 +234,7 @@ def io_objective(
         "bone_rigidity": loss_rigidity.item(),
         "mtv": loss_mtv.item(),
         "hard_mtv": hard_mtv,
-        "mtv_mean": loss_mtv_mean.item(),
+        "mtv_avg": loss_mtv_avg.item(),
         "tlg": loss_tlg.item(),
     }
     return loss, logs
@@ -553,10 +553,11 @@ def run_io(
 
         pbar.set_postfix(
             dice=f"{logs['hard_dice_ct']:.4f}",
+            non_diff=f"{logs['jac']:.4f}",
             masked_jac=f"{logs['masked_jac']:.4f}",
             mtv=f"{logs['mtv']:.4f}",
             hard_mtv=f"{logs['hard_mtv']:.4f}",
-            mtv_mean=f"{logs['mtv_mean']:.6f}",
+            mtv_avg=f"{logs['mtv_avg']:.6f}",
             tlg=f"{logs['tlg']:.4f}",
             loss=f"{loss.item():.4f}",
             best=f"{best_loss:.4f}",

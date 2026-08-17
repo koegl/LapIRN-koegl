@@ -1167,7 +1167,7 @@ def update_config_from_dict(cfg: TrainingConfig, model_name: str) -> None:
 
 
 models_to_evaluate = [
-    # "PSMAReg_LapIRN_polite-snake-38577202_stagelvl3_best.pth",
+    "PSMAReg_LapIRN_polite-snake-38577202_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_exultant-hawk-38756587_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_rumbling-yak-38789486_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_secretive-dolphin-38622192_stagelvl3_best.pth",
@@ -1179,7 +1179,7 @@ models_to_evaluate = [
     # "PSMAReg_LapIRN_worried-elk-38863657_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_charming-trout-38863973_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_rebellious-stork-38993360_stagelvl3_best.pth",
-    "PSMAReg_LapIRN_nervous-pig-39235734_stagelvl3_best_combined.pth",
+    # "PSMAReg_LapIRN_nervous-pig-39235734_stagelvl3_best_combined.pth",
 ]
 
 # each inner list is one ensemble: the velocity fields of its models are
@@ -1206,7 +1206,7 @@ def model_path_for(model_full_name: str) -> Path:
 
 def plot_io_histories(history_dir: Path) -> None:
     """One PNG per case from the run_io per-step CSVs: the scored soft-count
-    MTV bias vs the jac-det surrogate (mtv_mean). If the surrogate's mask is in
+    MTV bias vs the jac-det surrogate (mtv_avg). If the surrogate's mask is in
     the right (fixed) space the two curves fall together; the title reports
     their Pearson correlation as the summary number."""
     if not history_dir.exists():
@@ -1218,7 +1218,7 @@ def plot_io_histories(history_dir: Path) -> None:
 
     for csv_path in sorted(history_dir.glob("*.csv")):
         df = pd.read_csv(csv_path)
-        if "mtv" not in df.columns or "mtv_mean" not in df.columns:
+        if "mtv" not in df.columns or "mtv_avg" not in df.columns:
             continue
         fig, ax = plt.subplots(figsize=(8, 4))
         ax.plot(df["step"], df["mtv"], color="tab:blue", label="mtv (soft count)")
@@ -1236,12 +1236,12 @@ def plot_io_histories(history_dir: Path) -> None:
         ax.tick_params(axis="y", labelcolor="tab:blue")
         ax2 = ax.twinx()
         ax2.plot(
-            df["step"], df["mtv_mean"], color="tab:red", label="mtv_mean (surrogate)"
+            df["step"], df["mtv_avg"], color="tab:red", label="mtv_avg (surrogate)"
         )
-        ax2.set_ylabel("mtv_mean (jac-det surrogate)", color="tab:red")
+        ax2.set_ylabel("mtv_avg (jac-det surrogate)", color="tab:red")
         ax2.tick_params(axis="y", labelcolor="tab:red")
-        corr = float(df["mtv"].corr(df["mtv_mean"]))
-        ax.set_title(f"{csv_path.stem} - corr(mtv, mtv_mean) = {corr:.3f}")
+        corr = float(df["mtv"].corr(df["mtv_avg"]))
+        ax.set_title(f"{csv_path.stem} - corr(mtv, mtv_avg) = {corr:.3f}")
         fig.tight_layout()
         png_path = csv_path.with_suffix(".png")
         fig.savefig(png_path, dpi=150)
@@ -1375,11 +1375,13 @@ def main() -> None:
             model_name += (
                 f"_wBoneRigid{cfg.w_io_bone_rigidity if include_rigidity else 0.0:.2f}"
             )
-            model_name += f"_wMTV{cfg.w_io_mtv:.2f}_wMTVmean{cfg.w_io_mtv_mean:.2f}_wJactum{cfg.w_io_jacobian_tumor:.2f}_wTLG{cfg.w_tlg:.2f}"
+            model_name += f"_wMTV{cfg.w_io_mtv:.2f}_wMTVmean{cfg.w_io_mtv_avg:.2f}_wJactum{cfg.w_io_jacobian_tumor:.2f}_wTLG{cfg.w_tlg:.2f}"
             print("warning using IO")
             if use_class_weights:
                 model_name += "_classweights"
                 print("warning using class weights")
+            if include_pet is False:
+                model_name += "_noPET"
 
         if use_polyaffine:
             model_name += "_polyaffine"
@@ -1555,7 +1557,7 @@ def main() -> None:
                 chase_flag=chase_flag,
             )
 
-    # mtv vs mtv_mean correlation plots from the per-case IO step histories
+    # mtv vs mtv_avg correlation plots from the per-case IO step histories
     submission_root = Path(
         "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results"
     )

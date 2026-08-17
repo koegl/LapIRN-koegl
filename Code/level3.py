@@ -57,7 +57,7 @@ def evaluate_lvl3(
         "hd95": 0.0,
         "non_diff_loss": 0.0,
         "mtv_bias": 0.0,
-        "mtv_mean": 0.0,
+        "mtv_avg": 0.0,
         "tlg_bias": 0.0,
         "jacobian_tumor": 0.0,
         "rigidity": 0.0,
@@ -304,7 +304,7 @@ def evaluate_lvl3(
             loss_jacobian_tumor = utils.masked_jac_det_loss(
                 jac_det_total, warped_pet_mask_hard
             )
-            loss_mtv_mean = utils.mtv_mean_bias_loss(
+            loss_mtv_avg = utils.mtv_mean_bias_loss(
                 jac_det_total, warped_pet_mask.detach()
             )
 
@@ -349,7 +349,7 @@ def evaluate_lvl3(
                 + config.w_smooth * loss_regulation
                 + config.w_tlg * loss_tlg
                 + config.w_mtv * loss_mtv**2
-                + config.w_mtv_mean * loss_mtv_mean
+                + config.w_mtv_avg * loss_mtv_avg
                 + config.w_jacobian_tumor * loss_jacobian_tumor
                 + config.w_bone_rigidity * loss_rigidity
             )
@@ -364,7 +364,7 @@ def evaluate_lvl3(
             val_losses["smooth"] += loss_regulation.item()
             val_losses["non_diff_loss"] += loss_non_diff.item()
             val_losses["mtv_bias"] += loss_mtv.item()
-            val_losses["mtv_mean"] += loss_mtv_mean.item()
+            val_losses["mtv_avg"] += loss_mtv_avg.item()
             val_losses["tlg_bias"] += loss_tlg.item()
             val_losses["jacobian_tumor"] += loss_jacobian_tumor.item()
             val_losses["rigidity"] += loss_rigidity.item()
@@ -1020,7 +1020,7 @@ def train_lvl3(
             loss = loss + config.w_dvf * loss_dvf
             loss_mtv = torch.zeros((), device=device)
             loss_tlg = torch.zeros((), device=device)
-            loss_mtv_mean = torch.zeros((), device=device)
+            loss_mtv_avg = torch.zeros((), device=device)
         else:
             # MTV/TLG on the total warp against the ORIGINAL moving PET:
             # single interpolation, det(A) included, matches the final eval
@@ -1036,14 +1036,14 @@ def train_lvl3(
             # the scored metric but only has gradient at the lesion boundary;
             # mean-det over the (detached) warped lesion pins the same net
             # volume with dense gradients in the interior
-            loss_mtv_mean = utils.mtv_mean_bias_loss(
+            loss_mtv_avg = utils.mtv_mean_bias_loss(
                 jac_det_total, warped_pet_mask.detach()
             )
             loss = (
                 loss
                 + config.w_tlg * loss_tlg
                 + config.w_mtv * loss_mtv**2
-                + config.w_mtv_mean * loss_mtv_mean
+                + config.w_mtv_avg * loss_mtv_avg
             )
             loss_dvf = torch.zeros((), device=device)
 
@@ -1134,7 +1134,7 @@ def train_lvl3(
                 "rigidity": config.w_bone_rigidity * loss_rigidity,
                 "tlg": config.w_tlg * loss_tlg,
                 "mtv": config.w_mtv * loss_mtv**2,
-                "mtv_mean": config.w_mtv_mean * loss_mtv_mean,
+                "mtv_avg": config.w_mtv_avg * loss_mtv_avg,
                 "jactum": config.w_jacobian_tumor * loss_jacobian_tumor,
             }
             if loss_dice_ct is not None:
@@ -1231,7 +1231,7 @@ def train_lvl3(
             "train_lvl3/ncc_pet": loss_ncc_pet.item(),
             "train_lvl3/smooth": loss_regulation.item(),
             "train_lvl3/mtv_bias": loss_mtv.item(),
-            "train_lvl3/mtv_mean": loss_mtv_mean.item(),
+            "train_lvl3/mtv_avg": loss_mtv_avg.item(),
             "train_lvl3/tlg_bias": loss_tlg.item(),
             "train_lvl3/jacobian_tumor": loss_jacobian_tumor.item(),
             "train_lvl3/non_diff_loss": loss_non_diff.item(),
@@ -1283,9 +1283,7 @@ def train_lvl3(
         )
         train_metrics["train_lvl3/w_tlg"] = config.w_tlg * loss_tlg.item()
         train_metrics["train_lvl3/w_mtv"] = config.w_mtv * loss_mtv.item() ** 2
-        train_metrics["train_lvl3/w_mtv_mean"] = (
-            config.w_mtv_mean * loss_mtv_mean.item()
-        )
+        train_metrics["train_lvl3/w_mtv_avg"] = config.w_mtv_avg * loss_mtv_avg.item()
         train_metrics["train_lvl3/w_dvf"] = config.w_dvf * loss_dvf.item()
         if loss_dice_ct is not None:
             train_metrics["train_lvl3/w_dice_ct"] = (
