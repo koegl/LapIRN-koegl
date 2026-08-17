@@ -152,18 +152,18 @@ class TrainingConfig:
 
     # loss weights
     w_non_diff: float = 10000.0
-    w_smooth: float = 10.0
+    w_smooth: float = 5.0
     w_ct: float = 5.0
     w_pet: float = 0.0
     w_dice_ct_lvl1: float = 3.0
     w_dice_ct_lvl2: float = 4.0
     w_dice_ct_lvl3: float = 5.0
     w_dice_pet: float = 0.0
-    w_tlg: float = 5.0
-    w_jacobian_tumor: float = 5.0
-    w_mtv: float = 20.0
-    w_mtv_avg: float = 0.5
-    w_bone_rigidity: float = 0.2
+    w_tlg: float = 2.5
+    w_jacobian_tumor: float = 2.5
+    w_mtv: float = 10.0
+    w_mtv_avg: float = 0.25
+    w_bone_rigidity: float = 0.1
 
     # io params
     io_lr: float = 0.1e-1
