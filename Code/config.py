@@ -151,19 +151,19 @@ class TrainingConfig:
     hd95_spacing_mm: Tuple[float, float, float] = (2.7344, 2.7344, 3.27)
 
     # loss weights
-    w_non_diff: float = 2000.0
-    w_smooth: float = 2.0
+    w_non_diff: float = 10000.0
+    w_smooth: float = 10.0
     w_ct: float = 5.0
     w_pet: float = 0.0
     w_dice_ct_lvl1: float = 3.0
     w_dice_ct_lvl2: float = 4.0
     w_dice_ct_lvl3: float = 5.0
     w_dice_pet: float = 0.0
-    w_tlg: float = 100.0
+    w_tlg: float = 5.0
     w_jacobian_tumor: float = 5.0
-    w_mtv: float = 500.0
-    w_mtv_avg: float = 5000.0
-    w_bone_rigidity: float = 2.0
+    w_mtv: float = 20.0
+    w_mtv_avg: float = 0.5
+    w_bone_rigidity: float = 0.2
 
     # io params
     io_lr: float = 0.1e-1
