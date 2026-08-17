@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
-CONFIG=$(realpath "$1")
+# default config; override by passing a path as the first argument
+CONFIG=$(realpath "${1:-/home/iml/fryderyk.koegl/code/LapIRN-koegl/Code/config.py}")
 STAMP=$(date +%Y%m%d_%H%M%S)
 SNAP_DIR=/home/iml/fryderyk.koegl/config_snapshots
 mkdir -p "$SNAP_DIR"
