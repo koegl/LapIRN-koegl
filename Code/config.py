@@ -163,7 +163,7 @@ class TrainingConfig:
     w_jacobian_tumor: float = 5.0
     w_mtv: float = 500.0
     w_mtv_avg: float = 5000.0
-    w_bone_rigidity: float = 0.0
+    w_bone_rigidity: float = 2.0
 
     # io params
     io_lr: float = 0.1e-1
@@ -243,7 +243,7 @@ class TrainingConfig:
     # accuracy/tumour grouping: an aggregate dilutes the cosines of everything
     # inside it (see the comment at the call site in level3.py).
     # Costs one extra backward pass per term per measurement.
-    log_grad_conflict: bool = False
+    log_grad_conflict: bool = True
     # measured every N validation intervals (1 = at every validation)
     grad_conflict_every_n_val: int = 1
     # window length for the running cos mean / std / fraction-negative
