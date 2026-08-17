@@ -89,7 +89,7 @@ class TrainingConfig:
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
     warmup_epochs: float = 5
-    start_channel: int = 7
+    start_channel: int = 24
 
     # Per-level res-block trunk capacity, independent of start_channel (so no
     # inter-level tensor shape changes).
@@ -209,7 +209,7 @@ class TrainingConfig:
     # Single-session patients can be used here through the synthetic branch,
     # which is the point: they carry no registration signal but full lesion
     # supervision.
-    use_seg_pet_head: bool = True
+    use_seg_pet_head: bool = False
     # width of the head's hidden conv. It runs at full resolution, so this is
     # the memory knob: each channel costs a 192x192x288 activation.
     seg_pet_head_channels: int = 32
@@ -229,7 +229,7 @@ class TrainingConfig:
     # NB: not wired into IO. Rigidity is the most forgiving consumer of a
     # predicted mask (a regional regulariser tolerates an eroded/dilated mask),
     # but validate bone_dice_moving before feeding it anything.
-    use_seg_bone_head: bool = True
+    use_seg_bone_head: bool = False
     seg_bone_head_channels: int = 32
     w_seg_bone: float = 0.1
     seg_bone_warmup_epochs: float = 5.0
