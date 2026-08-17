@@ -243,7 +243,7 @@ class TrainingConfig:
     # accuracy/tumour grouping: an aggregate dilutes the cosines of everything
     # inside it (see the comment at the call site in level3.py).
     # Costs one extra backward pass per term per measurement.
-    log_grad_conflict: bool = True
+    log_grad_conflict: bool = False
     # measured every N validation intervals (1 = at every validation)
     grad_conflict_every_n_val: int = 1
     # window length for the running cos mean / std / fraction-negative
