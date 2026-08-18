@@ -973,7 +973,7 @@ def process_subject(
 
     # --- same after-registration dice, but on the fast segmentations used by IO ---
     dice_after_fast = float("nan")
-    if seg_dir_fast is not None:
+    if False and seg_dir_fast is not None:
         stem_m = ct_label_template.format(case_id=case_id, tp="01")
         stem_f = ct_label_template.format(case_id=case_id, tp="00")
 
@@ -993,12 +993,6 @@ def process_subject(
         dice_after_fast = multilabel_dice(
             seg_their_fast[0, 0].round().long(), seg_fixed_fast
         )
-
-    tqdm.tqdm.write(
-        f"{case_id}: before={dice_before:.4f}\t"
-        f"after_fast={dice_after_fast:.4f}\t"
-        f"after={dice_their:.4f}"
-    )
 
     fixed_seg_stem = ct_label_template.format(case_id=case_id, tp="00")
     fixed_seg_path = seg_dir / f"{fixed_seg_stem}.nii"
@@ -1088,6 +1082,10 @@ def process_subject(
         )
     save_disp(disp_half, out_dir / f"submission_{model_name}", case_id)
 
+    tqdm.tqdm.write(
+        f"FINAL:\t{case_id}: dice={dice_their:.4f},\t hd95={hd95:.4f}\t mtv={mtv:.4f}\t tlg={tlg:.4f}\t"
+    )
+
     return dice_their, dice_before, mtv, tlg, ndv, hd95, hd95_before, per_label
 
 
@@ -1167,7 +1165,7 @@ def update_config_from_dict(cfg: TrainingConfig, model_name: str) -> None:
 
 
 models_to_evaluate = [
-    "PSMAReg_LapIRN_polite-snake-38577202_stagelvl3_best.pth",
+    # "PSMAReg_LapIRN_polite-snake-38577202_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_exultant-hawk-38756587_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_rumbling-yak-38789486_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_secretive-dolphin-38622192_stagelvl3_best.pth",
@@ -1180,6 +1178,7 @@ models_to_evaluate = [
     # "PSMAReg_LapIRN_charming-trout-38863973_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_rebellious-stork-38993360_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_nervous-pig-39235734_stagelvl3_best_combined.pth",
+    "PSMAReg_LapIRN_angry-mare-39459564_stagelvl3_best_combined.pth",
 ]
 
 # each inner list is one ensemble: the velocity fields of its models are
@@ -1361,7 +1360,7 @@ def main() -> None:
         # PET labels (IO and evaluation) come from io_labels_pet: pet_{case_id}_{tp}
         # pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
-        use_io: bool = True
+        use_io: bool = False
         include_pet: bool = True
         include_rigidity: bool = False
         use_class_weights = False
@@ -1375,7 +1374,8 @@ def main() -> None:
             model_name += (
                 f"_wBoneRigid{cfg.w_io_bone_rigidity if include_rigidity else 0.0:.2f}"
             )
-            model_name += f"_wMTV{cfg.w_io_mtv:.2f}_wMTVmean{cfg.w_io_mtv_avg:.2f}_wJactum{cfg.w_io_jacobian_tumor:.2f}_wTLG{cfg.w_tlg:.2f}"
+            model_name += f"_wMTV{cfg.w_io_mtv:.2f}_wMTVmean{cfg.w_io_mtv_avg:.2f}_wJactum{cfg.w_io_jacobian_tumor:.2f}_wTLG{cfg.w_io_tlg:.2f}"
+            model_name += f"_wMTVcc{cfg.w_io_mtv_cc:.2f}_wMTVavgcc{cfg.w_io_mtv_avg_cc:.2f}_wTLGcc{cfg.w_io_tlg_cc:.2f}"
             print("warning using IO")
             if use_class_weights:
                 model_name += "_classweights"
@@ -1386,6 +1386,8 @@ def main() -> None:
         if use_polyaffine:
             model_name += "_polyaffine"
             print("warning using polyaffine prereg")
+
+        tqdm.tqdm.write(f"Running {model_name=}")
 
         # --- baselines: affine-only and affine+polyaffine, no model inference.
         # each runs once, only if its per-label csv is missing.

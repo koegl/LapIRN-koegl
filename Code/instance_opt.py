@@ -6,6 +6,7 @@ from typing import Callable, Dict, Optional, Tuple
 import config
 import Functions
 import jacobian
+import numpy as np
 import synthetic
 import torch
 import tqdm
@@ -13,6 +14,7 @@ import utils
 from miccai2020_model_stage import (
     NCC,
     SpatialTransform_unit,
+    smoothloss,
 )
 
 
@@ -56,9 +58,6 @@ def dice_loss_with_grad(
     )
 
 
-import numpy as np
-
-
 def multilabel_dice(
     pred: torch.Tensor,
     target: torch.Tensor,
@@ -99,6 +98,7 @@ def io_objective(
     *,
     class_weights: torch.Tensor | None = None,
     x_lbl_pet: torch.Tensor | None = None,
+    pet_cc_masks: torch.Tensor | None = None,
     bone_values: torch.Tensor | None = None,
     transform_nearest: torch.nn.Module | None = None,
     include_pet: bool = True,
@@ -124,7 +124,7 @@ def io_objective(
     disp_flow = disp_unit.permute(0, 2, 3, 4, 1)
     disp_voxel = Functions.transform_unit_flow_to_flow_cuda(disp_flow.clone())
     loss_jac = jacobian.non_diff_volume_loss(disp_voxel)
-    # loss_smooth = smoothloss(disp_unit)
+    loss_smooth = smoothloss(disp_unit)
 
     # warp the moving image once, reuse the CT and PET channels
     x_y = transform(x_moving, disp_flow, grid)
@@ -136,8 +136,10 @@ def io_objective(
     )
 
     loss = (
-        ncc_weight * loss_ncc_ct + cfg.w_io_non_diff * loss_jac
-    )  # + cfg.w_io_smooth * loss_smooth
+        ncc_weight * loss_ncc_ct
+        + cfg.w_io_non_diff * loss_jac
+        + cfg.w_io_smooth * loss_smooth
+    )
 
     if loss_dice_ct is not None:
         loss = loss + cfg.w_io_dice * loss_dice_ct
@@ -149,6 +151,7 @@ def io_objective(
 
     zero = torch.zeros((), device=device)
     loss_mtv = loss_tlg = loss_masked_jac = loss_mtv_avg = zero
+    loss_mtv_cc = loss_tlg_cc = loss_mtv_avg_cc = zero
     if include_pet:
         assert x_lbl_pet is not None, "include_pet requires x_lbl_pet"
         moving_pet_mask = (x_lbl_pet == 1).float()
@@ -177,6 +180,32 @@ def io_objective(
             + cfg.w_io_jacobian_tumor * loss_masked_jac
             + cfg.w_io_tlg * loss_tlg
         )
+
+        # per-lesion terms. The global MTV / TLG above are sums over the whole
+        # mask, so a lesion that expands cancels one that contracts; these pin
+        # each component on its own. One extra warp of a (1, C, ...) stack --
+        # the components are disjoint, so warping the stack is the same as
+        # warping each mask separately, in a single grid_sample.
+        use_cc = pet_cc_masks is not None and (
+            cfg.w_io_mtv_cc > 0.0 or cfg.w_io_tlg_cc > 0.0 or cfg.w_io_mtv_avg_cc > 0.0
+        )
+        if use_cc:
+            warped_cc = utils.warp_binary_mask(pet_cc_masks, disp_unit, grid, transform)
+            loss_mtv_cc = utils.mtv_bias_loss_per_component(warped_cc, pet_cc_masks)
+            loss_tlg_cc = utils.tlg_bias_loss_per_component(
+                warped_pet_image, warped_cc, moving_pet_image, pet_cc_masks
+            )
+            # same convention as the global mtv_avg: det(J) lives on the fixed
+            # grid, so the mask is the warped stack, detached (gradient must
+            # flow through det(J), not through moving the mask)
+            loss_mtv_avg_cc = utils.mtv_mean_bias_loss_per_component(
+                jac_det, warped_cc.detach()
+            )
+            loss += (
+                cfg.w_io_mtv_cc * loss_mtv_cc
+                + cfg.w_io_tlg_cc * loss_tlg_cc
+                + cfg.w_io_mtv_avg_cc * loss_mtv_avg_cc
+            )
 
     loss_rigidity = zero
     if include_rigidity:
@@ -236,6 +265,9 @@ def io_objective(
         "hard_mtv": hard_mtv,
         "mtv_avg": loss_mtv_avg.item(),
         "tlg": loss_tlg.item(),
+        "mtv_cc": loss_mtv_cc.item(),
+        "tlg_cc": loss_tlg_cc.item(),
+        "mtv_avg_cc": loss_mtv_avg_cc.item(),
     }
     return loss, logs
 
@@ -257,6 +289,7 @@ def compute_io_loss(
     include_pet: bool,
     include_rigidity: bool,
     class_weights: torch.Tensor | None,
+    pet_cc_masks: torch.Tensor | None = None,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
     """Deploy-time IO objective (used by run_io). Thin wrapper over io_objective
     with every term on and hard-dice logging enabled.
@@ -278,6 +311,7 @@ def compute_io_loss(
         ncc_weight=ncc_weight,
         class_weights=class_weights,
         x_lbl_pet=x_lbl_pet,
+        pet_cc_masks=pet_cc_masks,
         bone_values=bone_values,
         transform_nearest=transform_nearest,
         include_pet=include_pet,
@@ -495,6 +529,22 @@ def run_io(
     )
     loss_ncc = NCC(cfg.lvl3_ncc_win)
 
+    # lesion connected components, computed once: the moving mask does not move
+    # during IO, only the field does. None when the per-lesion weights are all
+    # zero, when the case has no lesion, or when nothing survives the size
+    # filter -- the global MTV / TLG terms still cover those.
+    pet_cc_masks: Optional[torch.Tensor] = None
+    if include_pet and (
+        cfg.w_io_mtv_cc > 0.0 or cfg.w_io_tlg_cc > 0.0 or cfg.w_io_mtv_avg_cc > 0.0
+    ):
+        pet_cc_masks = utils.lesion_component_masks(
+            (x_lbl_pet == 1).float(),
+            max_components=cfg.io_cc_max_components,
+            min_voxels=cfg.io_cc_min_voxels,
+        )
+        n_cc = 0 if pet_cc_masks is None else pet_cc_masks.shape[1]
+        print(f"IO: {n_cc} lesion component(s) under per-lesion tumour terms")
+
     base = f_x_y.detach()
     if use_class_weights:
         x_lbl_ct_start = warp_label(
@@ -534,6 +584,7 @@ def run_io(
             include_pet=include_pet,
             include_rigidity=include_rigidity,
             class_weights=class_weights,
+            pet_cc_masks=pet_cc_masks,
         )
         loss.backward()
         optimizer.step()
@@ -559,6 +610,8 @@ def run_io(
             hard_mtv=f"{logs['hard_mtv']:.4f}",
             mtv_avg=f"{logs['mtv_avg']:.6f}",
             tlg=f"{logs['tlg']:.4f}",
+            mtv_cc=f"{logs['mtv_cc']:.5f}",
+            tlg_cc=f"{logs['tlg_cc']:.4f}",
             loss=f"{loss.item():.4f}",
             best=f"{best_loss:.4f}",
             best_i=best_disp_i,

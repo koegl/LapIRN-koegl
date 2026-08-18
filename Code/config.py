@@ -167,16 +167,31 @@ class TrainingConfig:
 
     # io params
     io_lr: float = 0.1e-1
-    io_it: int = 80
-    w_io_ncc: float = 5.0
-    w_io_dice: float = 5.0
-    w_io_non_diff: float = 20.0  # 2000.0
+    io_it: int = 90
+    w_io_ncc: float = 6.0
+    w_io_dice: float = 6.0
+    w_io_non_diff: float = 10.0  # 2000.0
     w_io_smooth: float = 0.0  # 2.0
-    w_io_mtv: float = 0.0  # 500.0
+    w_io_mtv: float = 200.0  # 500.0
     w_io_mtv_avg: float = 0.0  # 5000.0
-    w_io_tlg: float = 0.0  # 100.0
-    w_io_jacobian_tumor: float = 0.0  # 5.0
-    w_io_bone_rigidity: float = 0.0  # 2.0
+    w_io_tlg: float = 20.0  # 100.0
+    w_io_jacobian_tumor: float = 20  # 5.0
+    w_io_bone_rigidity: float = 1.0  # 2.0
+
+    # --- per-lesion (connected component) tumour bias terms in IO -----------
+    # The scored MTV / TLG are global sums, so per-lesion errors cancel: on the
+    # validation set the size-weighted per-lesion bias is ~9.5% / ~9.8% while
+    # the scored global bias is ~1.8%. These terms pin each lesion individually
+    # and sit alongside (not instead of) the global ones. Set the weights to 0
+    # to disable and skip the component warp entirely.
+    w_io_mtv_cc: float = 80.0
+    w_io_tlg_cc: float = 20.0
+    w_io_mtv_avg_cc: float = 150.0
+    # each kept component costs one full-resolution channel in the warp, so this
+    # caps the memory; components beyond it are still covered by the global terms
+    io_cc_max_components: int = 8
+    # below this the relative bias is dominated by interpolation noise
+    io_cc_min_voxels: int = 20
 
     # Sub-weights inside the rigidity term, applied before w_bone_rigidity.
     # The three conditions have different natural magnitudes (det and ortho are

@@ -13,6 +13,7 @@ import my_data
 import numpy as np
 import torch
 import tqdm
+from scipy import ndimage
 from config import TrainingConfig
 from miccai2020_model_stage import (
     SpatialTransform_unit,
@@ -1103,6 +1104,142 @@ def tlg_bias_loss(
     tlg_moving = (moving_pet_image * moving_pet_mask).sum()
     tlg_warped = (warped_pet_image * warped_pet_mask).sum()
     return torch.abs(tlg_warped - tlg_moving) / (tlg_moving + eps)
+
+
+# ---------------------------------------------------------------------------
+# Per-lesion (connected component) variants of the tumour bias terms.
+#
+# The scored MTV / TLG are global sums over the whole lesion mask, so a lesion
+# that expands cancels one that contracts. Measured on the validation set that
+# cancellation is large: the size-weighted per-lesion bias is ~9.5% (MTV) and
+# ~9.8% (TLG) while the scored global bias is only ~1.8%, i.e. a factor of 7-12.
+# Nothing guarantees the signs cancel the same way on unseen data, so these
+# terms pin each lesion individually. They are meant to sit ALONGSIDE the global
+# terms, not to replace them: the global term is the metric and the free
+# cancellation is worth keeping when it is available, while these bound it.
+# ---------------------------------------------------------------------------
+
+
+def lesion_component_masks(
+    moving_pet_mask: torch.Tensor,
+    max_components: int,
+    min_voxels: int,
+) -> Optional[torch.Tensor]:
+    """One-hot stack of the largest lesion connected components.
+
+    Args:
+        moving_pet_mask: (1, 1, D, H, W) binary lesion mask in the moving frame.
+        max_components: keep at most this many components (largest first). Each
+            one costs a full-resolution channel in the warp, so this is the
+            memory knob.
+        min_voxels: drop components smaller than this; their relative bias is
+            dominated by interpolation noise.
+
+    Returns:
+        (1, C, D, H, W) float one-hot stack, or None if nothing survives the
+        filters. Components that are dropped are still covered by the global
+        MTV / TLG terms, they just get no individual constraint.
+    """
+    mask_np = moving_pet_mask[0, 0].detach().cpu().numpy() > 0.5
+    # 6-connectivity (ndimage default): 26-connectivity merges lesions that
+    # touch only at a corner, which would hide exactly the per-lesion error
+    # these terms exist to measure.
+    cc_np, n_cc = ndimage.label(mask_np)
+    if n_cc == 0:
+        return None
+
+    sizes = np.bincount(cc_np.ravel(), minlength=n_cc + 1)
+    sizes[0] = 0  # background
+    keep = [i for i in np.argsort(sizes)[::-1] if sizes[i] >= min_voxels]
+    keep = keep[:max_components]
+    if not keep:
+        return None
+
+    stack = np.stack([(cc_np == i) for i in keep]).astype(np.float32)
+    return torch.from_numpy(stack)[None].to(moving_pet_mask.device)
+
+
+def mtv_bias_loss_per_component(
+    warped_cc: torch.Tensor,
+    moving_cc: torch.Tensor,
+    eps: float = 1e-5,
+) -> torch.Tensor:
+    """Size-weighted mean of the SQUARED per-component relative volume bias.
+
+    Squared per component (mirroring the global ``w_mtv * mtv**2`` convention)
+    and only then aggregated, so components cannot cancel each other. Weighted
+    by component size because the scored metric is a voxel count: a 30-voxel
+    lesion must not carry the same weight as a 3000-voxel one.
+
+    Args:
+        warped_cc: (1, C, D, H, W) warped component stack (soft, differentiable).
+        moving_cc: (1, C, D, H, W) original component stack.
+        eps: Smoothing term.
+
+    Returns:
+        Scalar.
+    """
+    n_moving = moving_cc.sum(dim=(2, 3, 4))
+    n_warped = warped_cc.sum(dim=(2, 3, 4))
+    bias = (n_warped - n_moving) / (n_moving + eps)
+    weight = n_moving / (n_moving.sum() + eps)
+    return (weight * bias**2).sum()
+
+
+def tlg_bias_loss_per_component(
+    warped_pet_image: torch.Tensor,
+    warped_cc: torch.Tensor,
+    moving_pet_image: torch.Tensor,
+    moving_cc: torch.Tensor,
+    eps: float = 1e-5,
+) -> torch.Tensor:
+    """Size-weighted mean of the ABSOLUTE per-component relative TLG bias.
+
+    Absolute rather than squared, mirroring the global TLG term: its gradient
+    does not vanish as the residual bias approaches zero, which is where the
+    squared MTV terms go flat.
+
+    Args:
+        warped_pet_image: (1, 1, D, H, W) warped moving PET image.
+        warped_cc: (1, C, D, H, W) warped component stack.
+        moving_pet_image: (1, 1, D, H, W) original moving PET image.
+        moving_cc: (1, C, D, H, W) original component stack.
+        eps: Smoothing term.
+
+    Returns:
+        Scalar.
+    """
+    tlg_moving = (moving_pet_image * moving_cc).sum(dim=(2, 3, 4))
+    tlg_warped = (warped_pet_image * warped_cc).sum(dim=(2, 3, 4))
+    bias = (tlg_warped - tlg_moving).abs() / (tlg_moving + eps)
+    weight = tlg_moving / (tlg_moving.sum() + eps)
+    return (weight * bias).sum()
+
+
+def mtv_mean_bias_loss_per_component(
+    jac_det: torch.Tensor,
+    cc_masks: torch.Tensor,
+    eps: float = 1e-5,
+) -> torch.Tensor:
+    """Per-component version of ``mtv_mean_bias_loss``.
+
+    The single-mask form averages det(J) over every lesion at once, so it is
+    blind to one lesion expanding while another contracts -- the exact failure
+    this whole family of terms targets.
+
+    Args:
+        jac_det: (1, 1, D, H, W) Jacobian determinant field (fixed frame).
+        cc_masks: (1, C, D, H, W) component stack in the FIXED frame (i.e. the
+            warped stack), detached by the caller.
+        eps: Smoothing term.
+
+    Returns:
+        Scalar.
+    """
+    sizes = cc_masks.sum(dim=(2, 3, 4))
+    mean_det = (jac_det * cc_masks).sum(dim=(2, 3, 4)) / (sizes + eps)
+    weight = sizes / (sizes.sum() + eps)
+    return (weight * (mean_det - 1.0) ** 2).sum()
 
 
 def hd95_ct_labels(
