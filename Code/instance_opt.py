@@ -103,6 +103,7 @@ def io_objective(
     transform_nearest: torch.nn.Module | None = None,
     include_pet: bool = True,
     include_rigidity: bool = True,
+    include_dice: bool = True,
     compute_hard_dice: bool = False,
     n_hard_dice_labels: int = 118,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
@@ -131,9 +132,15 @@ def io_objective(
     x_y_ct = x_y[:, 0:1]
     loss_ncc_ct = loss_ncc(x_y_ct, y_ct)
 
-    loss_dice_ct = dice_loss_with_grad(
-        x_lbl_ct, y_lbl_ct, disp_unit, grid, transform, class_weights=class_weights
-    )
+    # include_dice=False drops the only term that reads the CT segmentations,
+    # which together with include_pet=False / include_rigidity=False leaves a
+    # purely image-driven objective (NCC + smoothness + the Jacobian barrier) --
+    # the label-free setting we may face at test time.
+    loss_dice_ct = None
+    if include_dice:
+        loss_dice_ct = dice_loss_with_grad(
+            x_lbl_ct, y_lbl_ct, disp_unit, grid, transform, class_weights=class_weights
+        )
 
     loss = (
         ncc_weight * loss_ncc_ct
@@ -303,6 +310,7 @@ def compute_io_loss(
     include_rigidity: bool,
     class_weights: torch.Tensor | None,
     pet_cc_masks: torch.Tensor | None = None,
+    include_dice: bool = True,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
     """Deploy-time IO objective (used by run_io). Thin wrapper over io_objective
     with every term on and hard-dice logging enabled.
@@ -329,6 +337,7 @@ def compute_io_loss(
         transform_nearest=transform_nearest,
         include_pet=include_pet,
         include_rigidity=include_rigidity,
+        include_dice=include_dice,
         compute_hard_dice=True,
     )
 
@@ -504,6 +513,7 @@ def run_io(
     device: torch.device,
     include_pet: bool,
     include_rigidity: bool,
+    include_dice: bool = True,
     use_class_weights: bool = False,
     n_integration: int = 7,
     ncc_weight: Optional[float] = None,
@@ -559,7 +569,9 @@ def run_io(
         print(f"IO: {n_cc} lesion component(s) under per-lesion tumour terms")
 
     base = f_x_y.detach()
-    if use_class_weights:
+    # class weights are derived from the starting label overlap, so they are
+    # meaningless (and unavailable) without the CT labels
+    if use_class_weights and include_dice:
         x_lbl_ct_start = warp_label(
             x_lbl_ct, to_full(base), grid, transform_nearest
         )  # or transform w/ nearest
@@ -596,6 +608,7 @@ def run_io(
             ncc_weight=ncc_weight,
             include_pet=include_pet,
             include_rigidity=include_rigidity,
+            include_dice=include_dice,
             class_weights=class_weights,
             pet_cc_masks=pet_cc_masks,
         )

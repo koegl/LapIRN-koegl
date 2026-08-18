@@ -607,6 +607,7 @@ def evaluate_split(
     use_io: bool,
     include_pet: bool,
     include_rigidity: bool,
+    include_dice: bool,
     use_class_weights: bool,
     use_polyaffine: bool,
     desc: str,
@@ -654,6 +655,7 @@ def evaluate_split(
             use_io=use_io,
             include_pet=include_pet,
             include_rigidity=include_rigidity,
+            include_dice=include_dice,
             use_class_weights=use_class_weights,
             use_polyaffine=use_polyaffine,
             skip_model=skip_model,
@@ -718,6 +720,7 @@ def process_subject(
     use_io: bool = False,
     include_pet: bool = True,
     include_rigidity: bool = True,
+    include_dice: bool = True,
     use_class_weights: bool = False,
     use_polyaffine: bool = False,
     skip_model: bool = False,
@@ -895,6 +898,7 @@ def process_subject(
             device,
             include_pet=include_pet,
             include_rigidity=include_rigidity,
+            include_dice=include_dice,
             use_class_weights=use_class_weights,
             opt_shape=io_opt_shape,
             history_csv=out_dir / "io_history" / f"{case_id}.csv",
@@ -1360,11 +1364,22 @@ def main() -> None:
         # PET labels (IO and evaluation) come from io_labels_pet: pet_{case_id}_{tp}
         # pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
-        use_io: bool = False
+        use_io: bool = True
+        # label-free IO: drop every term that reads a segmentation (CT dice,
+        # all PET/tumour terms, bone rigidity) and optimise on the images alone
+        # (NCC + smoothness + the Jacobian barrier). Test-time segmentations may
+        # not be available, so this measures what IO is worth without them.
+        # Overrides include_pet / include_rigidity below.
+        io_label_free: bool = True
         include_pet: bool = True
         include_rigidity: bool = False
         use_class_weights = False
         use_polyaffine: bool = False
+
+        include_dice: bool = not io_label_free
+        if io_label_free:
+            include_pet = False
+            include_rigidity = False
 
         if use_io:
             model_name += "_IO_"
@@ -1380,6 +1395,8 @@ def main() -> None:
             if use_class_weights:
                 model_name += "_classweights"
                 print("warning using class weights")
+            if io_label_free:
+                model_name += "_labelfree"
             if include_pet is False:
                 model_name += "_noPET"
 
@@ -1418,6 +1435,7 @@ def main() -> None:
                         use_io=False,
                         include_pet=include_pet,
                         include_rigidity=include_rigidity,
+                        include_dice=include_dice,
                         use_class_weights=False,
                         use_polyaffine=baseline_polyaffine,
                         skip_model=True,
@@ -1459,6 +1477,7 @@ def main() -> None:
                         use_io=False,
                         include_pet=include_pet,
                         include_rigidity=include_rigidity,
+                        include_dice=include_dice,
                         use_class_weights=False,
                         use_polyaffine=baseline_polyaffine,
                         skip_model=True,
@@ -1503,6 +1522,7 @@ def main() -> None:
                 use_io=use_io,
                 include_pet=include_pet,
                 include_rigidity=include_rigidity,
+                include_dice=include_dice,
                 use_class_weights=use_class_weights,
                 use_polyaffine=use_polyaffine,
                 ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
@@ -1544,6 +1564,7 @@ def main() -> None:
                 use_io=use_io,
                 include_pet=include_pet,
                 include_rigidity=include_rigidity,
+                include_dice=include_dice,
                 use_class_weights=use_class_weights,
                 use_polyaffine=use_polyaffine,
                 seg_dir_fast=my_val_seg_dir,
