@@ -220,6 +220,7 @@ def io_objective(
 
     hard_dice = float("nan")
     hard_mtv = float("nan")
+    hard_tlg = float("nan")
     if compute_hard_dice:
         assert transform_nearest is not None, (
             "compute_hard_dice needs transform_nearest"
@@ -233,9 +234,20 @@ def io_objective(
                     moving_pet_mask, disp_unit, grid, transform_nearest
                 )
                 n_moving = moving_pet_mask.sum()
-                n_warped = (warped_pet_hard > 0.5).float().sum()
+                warped_pet_hard = (warped_pet_hard > 0.5).float()
+                n_warped = warped_pet_hard.sum()
                 hard_mtv = (
                     torch.abs(n_warped - n_moving) / n_moving.clamp_min(1)
+                ).item()
+                # TLG exactly as the scorer computes it: the lesion mask warped
+                # with NEAREST, the PET image warped with bilinear. The soft
+                # `tlg` above uses the bilinear mask for both, which is not a
+                # quantity the scorer ever evaluates.
+                tlg_moving_hard = (moving_pet_image * moving_pet_mask).sum()
+                tlg_warped_hard = (warped_pet_image * warped_pet_hard).sum()
+                hard_tlg = (
+                    torch.abs(tlg_warped_hard - tlg_moving_hard)
+                    / tlg_moving_hard.clamp_min(1e-5)
                 ).item()
             warped_lbl_ct = warp_label(x_lbl_ct, disp_unit, grid, transform_nearest)
             pred = warped_lbl_ct[0, 0].round().long()
@@ -265,6 +277,7 @@ def io_objective(
         "hard_mtv": hard_mtv,
         "mtv_avg": loss_mtv_avg.item(),
         "tlg": loss_tlg.item(),
+        "hard_tlg": hard_tlg,
         "mtv_cc": loss_mtv_cc.item(),
         "tlg_cc": loss_tlg_cc.item(),
         "mtv_avg_cc": loss_mtv_avg_cc.item(),
@@ -595,6 +608,10 @@ def run_io(
         sel_score = loss.item()
         if not np.isnan(logs["hard_mtv"]):
             sel_score += cfg.w_io_mtv * (logs["hard_mtv"] ** 2 - logs["mtv"] ** 2)
+        # same substitution for TLG: swap the soft-mask proxy the optimizer
+        # descends for the nearest-mask value the scorer actually reports
+        if not np.isnan(logs["hard_tlg"]):
+            sel_score += cfg.w_io_tlg * (logs["hard_tlg"] - logs["tlg"])
         if sel_score < best_loss:
             best_loss = sel_score
             best_disp = disp_unit.detach().clone()
@@ -610,6 +627,7 @@ def run_io(
             hard_mtv=f"{logs['hard_mtv']:.4f}",
             mtv_avg=f"{logs['mtv_avg']:.6f}",
             tlg=f"{logs['tlg']:.4f}",
+            hard_tlg=f"{logs['hard_tlg']:.4f}",
             mtv_cc=f"{logs['mtv_cc']:.5f}",
             tlg_cc=f"{logs['tlg_cc']:.4f}",
             loss=f"{loss.item():.4f}",
