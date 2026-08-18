@@ -89,7 +89,7 @@ class TrainingConfig:
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
     warmup_epochs: float = 5
-    start_channel: int = 7
+    start_channel: int = 24
 
     # Per-level res-block trunk capacity, independent of start_channel (so no
     # inter-level tensor shape changes).
@@ -159,11 +159,11 @@ class TrainingConfig:
     w_dice_ct_lvl2: float = 4.0
     w_dice_ct_lvl3: float = 5.0
     w_dice_pet: float = 0.0
-    w_tlg: float = 5.0
-    w_jacobian_tumor: float = 5.0
-    w_mtv: float = 20.0
-    w_mtv_avg: float = 0.5
-    w_bone_rigidity: float = 0.2
+    w_tlg: float = 10.0
+    w_jacobian_tumor: float = 10.0
+    w_mtv: float = 40.0
+    w_mtv_avg: float = 1.0
+    w_bone_rigidity: float = 0.4
 
     # io params
     io_lr: float = 0.1e-1
@@ -243,7 +243,7 @@ class TrainingConfig:
     # accuracy/tumour grouping: an aggregate dilutes the cosines of everything
     # inside it (see the comment at the call site in level3.py).
     # Costs one extra backward pass per term per measurement.
-    log_grad_conflict: bool = True
+    log_grad_conflict: bool = False
     # measured every N validation intervals (1 = at every validation)
     grad_conflict_every_n_val: int = 1
     # window length for the running cos mean / std / fraction-negative
