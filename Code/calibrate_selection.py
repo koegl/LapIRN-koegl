@@ -1,78 +1,121 @@
 """Calibrate the sel_ref_* / sel_scale_* checkpoint-selection constants.
 
-Pulls the lvl3 validation metric history of a finished run from MLflow and
-prints a config block to paste. ref = median over validation rounds, scale =
-robust spread (IQR / 1.349), so a metric one spread better than typical scores
-q ~ 0.73.
+Reads the lvl3 validation metric history of a finished run and prints a config
+block to paste. ref = median over validation rounds, scale = robust spread
+(IQR / 1.349), so a metric one spread better than typical scores q ~ 0.73.
+
+SOURCE = "wandb" pulls straight from the API (no download needed). SOURCE =
+"csv" reads chart exports from CSV_DIR instead: any .csv there is scanned and
+columns are matched to metrics by name, so one combined export or one file per
+chart both work.
 
 sel_scale_ndv is not calibrated: %NDV sits at 0 for a healthy run, so its spread
 carries no information. It is a judgement call -- the amount of folding, in %
 above the equivalence threshold, that should visibly cost regularity.
 """
 
-import os
+import glob
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-os.environ["MLFLOW_ALLOW_FILE_STORE"] = "true"
-
-import mlflow
 import numpy as np
 import utils
-from mlflow.tracking import MlflowClient
 
-TRACKING_URI = "file:///home/iml/fryderyk.koegl/mlflow_hpc/mlruns"
-EXPERIMENT_NAME = "PSMAReg_LapIRN"
-RUN_NAME: Optional[str] = None  # None -> latest run
+SOURCE = "wandb"  # "wandb" or "csv"
 
-# (config field stem, mlflow metric key)
+# --- wandb source ---
+WANDB_PROJECT = "PSMAReg_LapIRN"
+WANDB_ENTITY: Optional[str] = None  # None -> your default entity
+RUN_NAME: Optional[str] = (
+    "angry-mare-39459564"  # None -> most recent run in the project
+)
+
+# --- csv source ---
+CSV_DIR = Path("~/Downloads").expanduser()
+
+# (config field stem, logged metric key)
 METRICS: List[Tuple[str, str]] = [
     ("dice_ct", "valid_lvl3/val_dice_ct"),
     ("hd95", "valid_lvl3/val_hd95"),
     ("mtv", "valid_lvl3/val_mtv_bias"),
     ("tlg", "valid_lvl3/val_tlg_bias"),
 ]
+NDV_KEY = "valid_lvl3/val_ndv"
 
 
-def get_run_id(client: MlflowClient, run_name: Optional[str]) -> str:
-    experiment = client.get_experiment_by_name(EXPERIMENT_NAME)
-    if run_name is None:
-        runs = client.search_runs(
-            experiment_ids=[experiment.experiment_id],
-            order_by=["attributes.start_time DESC"],
-            max_results=1,
-        )
+def clean(values: List[float]) -> np.ndarray:
+    array = np.asarray(values, dtype=float)
+    return array[np.isfinite(array)]
+
+
+def from_wandb() -> Dict[str, np.ndarray]:
+    import wandb
+
+    api = wandb.Api()
+    path = f"{WANDB_ENTITY}/{WANDB_PROJECT}" if WANDB_ENTITY else WANDB_PROJECT
+    if RUN_NAME is None:
+        runs = api.runs(path, order="-created_at")
+        run = runs[0]
     else:
-        runs = client.search_runs(
-            experiment_ids=[experiment.experiment_id],
-            filter_string=f"tags.mlflow.runName = '{run_name}'",
-            max_results=1,
-        )
-    return runs[0].info.run_id
+        matches = api.runs(path, filters={"display_name": RUN_NAME})
+        if len(matches) == 0:
+            raise SystemExit(f"no run named {RUN_NAME!r} in {path}")
+        run = matches[0]
+    print(f"run: {run.name}  ({run.url})\n")
+
+    keys = [key for _, key in METRICS] + [NDV_KEY]
+    # scan_history is exact; run.history() downsamples to ~500 points
+    rows = list(run.scan_history(keys=keys))
+    out = {}
+    for key in keys:
+        out[key] = clean([r[key] for r in rows if r.get(key) is not None])
+    return out
 
 
-def history(client: MlflowClient, run_id: str, key: str) -> np.ndarray:
-    values = [m.value for m in client.get_metric_history(run_id, key)]
-    return np.array([v for v in values if np.isfinite(v)], dtype=float)
+def from_csv() -> Dict[str, np.ndarray]:
+    import csv
+
+    files = sorted(glob.glob(str(CSV_DIR / "*.csv")))
+    if not files:
+        raise SystemExit(f"no .csv files in {CSV_DIR}")
+    print(f"reading {len(files)} csv file(s) from {CSV_DIR}\n")
+
+    keys = [key for _, key in METRICS] + [NDV_KEY]
+    collected: Dict[str, List[float]] = {key: [] for key in keys}
+    for path in files:
+        with open(path, newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        if not rows:
+            continue
+        for key in keys:
+            # wandb names columns "<run> - <metric>"; skip the __MIN/__MAX bands
+            columns = [
+                c
+                for c in rows[0]
+                if c and key in c and not c.endswith(("__MIN", "__MAX"))
+            ]
+            for column in columns:
+                for row in rows:
+                    try:
+                        collected[key].append(float(row[column]))
+                    except (TypeError, ValueError):
+                        pass
+    return {key: clean(values) for key, values in collected.items()}
 
 
 def main() -> None:
-    mlflow.set_tracking_uri(TRACKING_URI)
-    client = MlflowClient(tracking_uri=TRACKING_URI)
-    run_id = get_run_id(client, RUN_NAME)
-    print(f"run_id: {run_id}\n")
+    data = from_wandb() if SOURCE == "wandb" else from_csv()
 
-    header = f"{'metric':<10}{'n':>5}{'median':>12}{'spread':>12}{'min':>12}{'max':>12}"
-    print(header)
-
+    print(f"{'metric':<10}{'n':>5}{'median':>12}{'spread':>12}{'min':>12}{'max':>12}")
     refs: Dict[str, float] = {}
     scales: Dict[str, float] = {}
     warnings: List[str] = []
 
     for stem, key in METRICS:
-        values = history(client, run_id, key)
+        values = data.get(key, np.array([]))
         if values.size == 0:
             print(f"{stem:<10}{0:>5}   no data -- is it being logged?")
-            warnings.append(f"{stem}: no data, keeping the existing config value")
+            warnings.append(f"{stem}: no data, keeping the existing config values")
             continue
         median = float(np.median(values))
         q25, q75 = np.percentile(values, [25, 75])
@@ -89,9 +132,9 @@ def main() -> None:
         else:
             warnings.append(f"{stem}: zero spread, keeping the existing scale")
 
-    ndv = history(client, run_id, "valid_lvl3/val_ndv")
+    ndv = data.get(NDV_KEY, np.array([]))
     if ndv.size:
-        above = np.mean(ndv - utils.SEL_NDV_EQUIVALENCE > 0) * 100
+        above = float(np.mean(ndv - utils.SEL_NDV_EQUIVALENCE > 0) * 100)
         print(
             f"\n%NDV: median {np.median(ndv):.6f}, max {ndv.max():.6f}, "
             f"{above:.1f}% of rounds above the "
