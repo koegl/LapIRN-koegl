@@ -3,47 +3,7 @@ import os
 os.environ["MLFLOW_ALLOW_FILE_STORE"] = "true"
 
 
-import argparse
-import importlib.util
-import sys
 from pathlib import Path
-
-
-def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--config",
-        type=Path,
-        default=None,
-        help="path to a config.py to use instead of the one next to this script "
-        "(e.g. a snapshot taken at submit time, so edits to the repo config "
-        "while the job waits in the queue do not leak into the run)",
-    )
-    return parser.parse_args()
-
-
-def _load_config_module(config_path: Path) -> None:
-    """Import config_path as the module `config`.
-
-    Registered in sys.modules before any repo module is imported, so every
-    `from config import ...` in the repo resolves to this file.
-    """
-    config_path = config_path.expanduser().resolve()
-    if not config_path.is_file():
-        raise FileNotFoundError(f"config file not found: {config_path}")
-
-    spec = importlib.util.spec_from_file_location("config", config_path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["config"] = module
-    spec.loader.exec_module(module)
-    print(f"using config: {config_path}")
-
-
-ARGS = _parse_args()
-if ARGS.config is not None:
-    _load_config_module(ARGS.config)
-
 
 import level1
 import level2
@@ -197,6 +157,21 @@ def main() -> None:
                 path_model_level_2 = Path(
                     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_gentle-rat-39450513_stagelvl2_best.pth"
                 )
+                # path_model_level3 = level3.train_lvl3(
+                #     config,
+                #     path_model_level_2,
+                #     train_generator,
+                #     valid_generator,
+                #     valid_tubingen_generator,
+                #     valid_nlst_generator,
+                #     valid_abdomen_generator,
+                # )
+                resume_model_path_lvl3 = Path(
+                    "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_angry-mare-39459564_stagelvl3_best_combined.pth"
+                )
+                resume_optimizer_path_lvl3 = Path(
+                    "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_angry-mare-39459564_stagelvl3_best_combined_optimizer.pth"
+                )
                 path_model_level3 = level3.train_lvl3(
                     config,
                     path_model_level_2,
@@ -205,6 +180,8 @@ def main() -> None:
                     valid_tubingen_generator,
                     valid_nlst_generator,
                     valid_abdomen_generator,
+                    resume_model_path=resume_model_path_lvl3,
+                    resume_optimizer_path=resume_optimizer_path_lvl3,
                 )
 
         # print(f"Final model path: {path_model_level3}")

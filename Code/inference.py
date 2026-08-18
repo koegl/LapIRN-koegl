@@ -1365,11 +1365,6 @@ def main() -> None:
         # pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
         use_io: bool = True
-        # label-free IO: drop every term that reads a segmentation (CT dice,
-        # all PET/tumour terms, bone rigidity) and optimise on the images alone
-        # (NCC + smoothness + the Jacobian barrier). Test-time segmentations may
-        # not be available, so this measures what IO is worth without them.
-        # Overrides include_pet / include_rigidity below.
         io_label_free: bool = True
         include_pet: bool = True
         include_rigidity: bool = False
