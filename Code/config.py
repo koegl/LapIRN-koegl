@@ -136,16 +136,16 @@ class TrainingConfig:
     accumulation_steps: int = field(init=False)
 
     # --- lvl3 checkpoint selection ---------------------------------------
-    sel_ref_dice_ct: float = 0.164
-    sel_ref_hd95: float = 6.66
-    sel_ref_mtv: float = 0.0278
-    sel_ref_tlg: float = 0.0140
+    sel_ref_dice_ct: float = 0.278
+    sel_ref_hd95: float = 8.3319
+    sel_ref_mtv: float = 0.044138
+    sel_ref_tlg: float = 0.045699
 
-    sel_scale_hd95: float = 0.3
+    sel_scale_hd95: float = 0.13427
     sel_scale_ndv: float = 0.005
-    sel_scale_dice_ct: float = 0.008345
-    sel_scale_mtv: float = 0.0113
-    sel_scale_tlg: float = 0.01242
+    sel_scale_dice_ct: float = 0.0090181
+    sel_scale_mtv: float = 0.0051981
+    sel_scale_tlg: float = 0.0050091
 
     # --- HD95 validation logging ------------------------------------------
     hd95_spacing_mm: Tuple[float, float, float] = (2.7344, 2.7344, 3.27)
