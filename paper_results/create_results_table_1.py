@@ -56,8 +56,8 @@ EXCLUDED_MODELS = ["convexadam", "niftyreg"]
 # Reference rows keep fixed labels; every variant is auto-labelled V1, V2, ...
 # in the order it appears in the CSVs, so adding a row needs no code change.
 REFERENCE_LABELS = {
-    "before_registration": "No registration",
-    "affine": "Affine only",
+    "before_registration": "Initial",
+    "affine": "Affine",
 }
 VARIANT_LABEL_PREFIX = "V"
 
