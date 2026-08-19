@@ -6,10 +6,11 @@ predictions/disp_<id>_00_<id>_01.nii.gz, channel-first (3, X/f, Y/f, Z/f),
 full-resolution voxel units, on the half-resolution grid. inference.py reads
 that directory as its external_disp_dir.
 
-Pipeline per case: reg_aladin (affine) -> reg_f3d initialised with that affine
-(-aff), so the resulting control point grid encodes the TOTAL transform ->
-reg_transform -disp to expand it to a dense displacement field in world mm ->
-convert mm to voxel deltas -> downsample to the submission grid.
+Pipeline per case: bed removal (the ConvexAdam body mask, cached on disk) ->
+reg_aladin (affine) -> reg_f3d initialised with that affine (-aff), so the
+resulting control point grid encodes the TOTAL transform -> reg_transform -disp
+to expand it to a dense displacement field in world mm -> convert mm to voxel
+deltas -> downsample to the submission grid.
 """
 
 import argparse
@@ -127,6 +128,18 @@ def parse_args():
         default=None,
         help="Use LNCC with this kernel std instead of the default NMI.",
     )
+    parser.add_argument(
+        "--no-remove-bed",
+        action="store_true",
+        help="Register the raw CTs instead of the bed-removed ones. Bed removal "
+        "reuses baseline_ConvexAdam's body mask, so both baselines see the same "
+        "inputs.",
+    )
+    parser.add_argument(
+        "--refresh-bed-cache",
+        action="store_true",
+        help="Recompute the bed-removed volumes even if cached.",
+    )
     parser.add_argument("--keep-temp", action="store_true")
     return parser.parse_args()
 
@@ -159,6 +172,36 @@ def resolve_executable(path, name):
             name, path, name.replace("_", "-")
         )
     )
+
+
+def load_remove_bed():
+    """The ConvexAdam body mask, reused so both baselines register identical
+    volumes. Imported lazily: baseline_ConvexAdam pulls in ants at import time,
+    which we do not otherwise need."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from baseline_ConvexAdam import remove_bed
+
+    return remove_bed
+
+
+def preprocess_ct_path(args, ct_path, cache_dir):
+    """Bed-removed copy of one CT, cached on disk — the mask is slow and the
+    same volumes get re-registered whenever f3d parameters are retuned. Geometry
+    is untouched, so the displacement field still lives on the original grid.
+    Returns the path NiftyReg should register."""
+    if args.no_remove_bed:
+        return ct_path, 0.0
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    out_path = cache_dir / ct_path.name
+    if out_path.exists() and not args.refresh_bed_cache:
+        return out_path, 0.0
+    start = time.time()
+    source = nib.load(str(ct_path))
+    cleaned = load_remove_bed()(source.get_fdata(dtype=np.float32))
+    image = nib.Nifti1Image(cleaned.astype(np.float32), source.affine, source.header)
+    image.set_data_dtype(np.float32)
+    nib.save(image, str(out_path))
+    return out_path, time.time() - start
 
 
 def run_command(command, log_path):
@@ -382,12 +425,24 @@ def run_case(entry, args, prediction_dir, temp_root, log_dir):
     temp_dir = temp_root / subject
     temp_dir.mkdir(parents=True, exist_ok=True)
 
+    # everything below registers the bed-removed volumes; fixed_nii / fixed_path
+    # stay the originals, and the grid is shared, so the geometry used for the
+    # mm -> voxel conversion is unaffected.
+    bed_cache_dir = args.output_dir / "bed_removed"
+    fixed_reg_path, fixed_bed_seconds = preprocess_ct_path(
+        args, fixed_path, bed_cache_dir
+    )
+    moving_reg_path, moving_bed_seconds = preprocess_ct_path(
+        args, moving_path, bed_cache_dir
+    )
+    bed_seconds = fixed_bed_seconds + moving_bed_seconds
+
     affine_path = temp_dir / "affine.txt"
     aladin_start = time.time()
     run_aladin(
         args,
-        fixed_path,
-        moving_path,
+        fixed_reg_path,
+        moving_reg_path,
         affine_path,
         temp_dir / "aladin_res.nii.gz",
         log_path,
@@ -400,8 +455,8 @@ def run_case(entry, args, prediction_dir, temp_root, log_dir):
         f3d_start = time.time()
         run_f3d(
             args,
-            fixed_path,
-            moving_path,
+            fixed_reg_path,
+            moving_reg_path,
             affine_path,
             transform_path,
             temp_dir / "f3d_res.nii.gz",
@@ -412,7 +467,7 @@ def run_case(entry, args, prediction_dir, temp_root, log_dir):
         transform_path = affine_path
 
     disp_mm_path = convert_transformation_to_displacement_field(
-        args, transform_path, fixed_path, temp_dir / "disp_mm.nii.gz", log_path
+        args, transform_path, fixed_reg_path, temp_dir / "disp_mm.nii.gz", log_path
     )
     disp_mm = load_displacement_mm(disp_mm_path)
     if tuple(disp_mm.shape[:3]) != fullres_shape:
@@ -452,6 +507,8 @@ def run_case(entry, args, prediction_dir, temp_root, log_dir):
         "status": "ok",
         "prediction": str(prediction_path),
         "stage": args.stage,
+        "bed_removed": not args.no_remove_bed,
+        "bed_seconds": bed_seconds,
         "aladin_seconds": aladin_seconds,
         "f3d_seconds": f3d_seconds,
         "total_seconds": time.time() - t0,
