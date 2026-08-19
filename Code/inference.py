@@ -1258,6 +1258,8 @@ def short_model_name(model_full_name: str) -> str:
         short_name = model_full_name.split("_")[2] + "_combined"
     elif "tumour" in model_full_name:
         short_name = model_full_name.split("_")[2] + "_tumour"
+    elif "accuracy" in model_full_name:
+        short_name = model_full_name.split("_")[2] + "_accuracy"
     else:
         short_name = model_full_name.split("_")[2]
 
