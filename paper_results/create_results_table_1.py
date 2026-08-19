@@ -61,8 +61,10 @@ WEIGHTS = {"accuracy": 0.4, "biomarker": 0.4, "regularity": 0.2}
 
 ALPHA = 0.05
 
-# Second line per row with the median [IQR]. Off for the short method paper;
-# turn back on for the journal extension.
+# Both off for the short method paper (width); turn back on for the journal
+# extension. SHOW_STD adds "+- std" to the mean, SHOW_MEDIAN_IQR adds a second
+# line per row with the median [IQR].
+SHOW_STD = False
 SHOW_MEDIAN_IQR = False
 
 # Rows shown for context at the top of the table but excluded from the ranking
@@ -181,20 +183,19 @@ def format_cell(values, metric):
     median_decimals = decimals_for(median)
 
     if DISPLAY_NOTATION[metric] == "fixed":
-        mean_line = (
-            f"{format_number(mean, metric, mean_decimals)} $\\pm$ "
-            f"{format_number(std, metric, mean_decimals)}"
-        )
+        mean_line = format_number(mean, metric, mean_decimals)
+        if SHOW_STD:
+            mean_line += f" $\\pm$ {format_number(std, metric, mean_decimals)}"
         median_line = (
             f"{format_number(median, metric, median_decimals)} "
             f"[{format_number(q1, metric, median_decimals)}, "
             f"{format_number(q3, metric, median_decimals)}]"
         )
     else:
-        mean_line = (
-            f"${format_number(mean, metric, mean_decimals)} \\pm "
-            f"{format_number(std, metric, mean_decimals)}$"
-        )
+        mean_line = format_number(mean, metric, mean_decimals)
+        if SHOW_STD:
+            mean_line += f" \\pm {format_number(std, metric, mean_decimals)}"
+        mean_line = f"${mean_line}$"
         median_line = (
             f"${format_number(median, metric, median_decimals)} "
             f"[{format_number(q1, metric, median_decimals)}, "
@@ -217,6 +218,15 @@ def main():
     references = [m for m in REFERENCE_MODELS if m in per_case["dice"].index]
 
     display_names = build_display_names(variants)
+
+    mean_description = r"mean $\pm$ std" if SHOW_STD else "mean"
+    if SHOW_MEDIAN_IQR:
+        cell_description = (
+            f"Each cell reports the {mean_description} over cases (top) and the "
+            r"median [IQR] (bottom). "
+        )
+    else:
+        cell_description = f"Each cell reports the {mean_description} over cases. "
 
     n_cases = per_case["dice"].shape[1]
     means = {metric: per_case[metric].mean(axis=1) for metric in METRICS}
@@ -332,11 +342,7 @@ def main():
         r"\caption{LapIRN variants on the official validation set ($n="
         + str(n_cases)
         + r"$ cases). "
-        + (
-            r"Each cell reports mean $\pm$ std over cases (top) and median [IQR] (bottom). "
-            if SHOW_MEDIAN_IQR
-            else r"Each cell reports mean $\pm$ std over cases. "
-        )
+        + cell_description
         + r"DSC and the MTV/TLG errors are given in \%, NDV in ppm. Score reproduces the challenge ranking: "
         r"each metric is ranked separately (ties take the worst rank spanned), turned into "
         r"$(K-\mathrm{rank}+1)/K$, and combined as "
