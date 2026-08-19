@@ -67,7 +67,7 @@ WEIGHTS = {"accuracy": 0.4, "biomarker": 0.4, "regularity": 0.2}
 ALPHA = 0.05
 
 # Vertical space between the tabular's bottom rule and the caption.
-CAPTION_SKIP = "10pt"
+CAPTION_SKIP = "5pt"
 
 # Both off for the short method paper (width); turn back on for the journal
 # extension. SHOW_STD adds "+- std" to the mean, SHOW_MEDIAN_IQR adds a second
@@ -219,9 +219,7 @@ def main():
     # baselines and the reference rows.
     complete = set.intersection(*(set(df.index) for df in per_case.values()))
     variants = [
-        m
-        for m in per_case["dice"].index
-        if m in complete and m not in EXCLUDED_MODELS
+        m for m in per_case["dice"].index if m in complete and m not in EXCLUDED_MODELS
     ]
 
     display_names = build_display_names(variants)
@@ -290,10 +288,28 @@ def main():
     pd.DataFrame(pval_records).to_csv(OUT_PVALS, index=False)
 
     # --- LaTeX ------------------------------------------------------------
+    caption_lines = [
+        r"\caption{LapIRN variants on the official challenge validation set ($n="
+        + str(n_cases)
+        + r"$ cases), evaluated against the surrogate labels of "
+        r"Sec.~\ref{sec:evaluation}. "
+        + cell_description
+        + r"DSC and the MTV/TLG errors are given in \%, NDV in ppm. "
+        r"Score is the challenge score of Eq.~\eqref{eq:score}; variants are listed in "
+        r"ranking order, highest score first. "
+        r"Bold marks the best value in each column, and the Model and Score entries of "
+        r"the best-scoring variant. "
+        r"$^{*}$ marks metrics on which that variant is significantly better than the "
+        r"variant in the given row (paired Wilcoxon signed-rank, Holm-corrected within "
+        r"each metric, $p<0.05$).}",
+        r"\label{tab:lapirn_variants}",
+    ]
+
     lines = [
         r"\begin{table}[t]",
         r"\centering",
-        r"\setlength{\abovecaptionskip}{" + CAPTION_SKIP + "}",
+        r"\setlength{\belowcaptionskip}{" + CAPTION_SKIP + "}",
+        *caption_lines,
         r"\small",
         r"\setlength{\tabcolsep}{4pt}",
         r"\begin{tabular}{l" + "c" * len(METRICS) + "c}",
@@ -344,20 +360,6 @@ def main():
     lines += [
         r"\bottomrule",
         r"\end{tabular}",
-        r"\caption{LapIRN variants on the official challenge validation set ($n="
-        + str(n_cases)
-        + r"$ cases), evaluated against the surrogate labels of "
-        r"Sec.~\ref{sec:evaluation}. "
-        + cell_description
-        + r"DSC and the MTV/TLG errors are given in \%, NDV in ppm. "
-        r"Score is the challenge score of Eq.~\eqref{eq:score}; variants are listed in "
-        r"ranking order, highest score first. "
-        r"Bold marks the best value in each column, and the Model and Score entries of "
-        r"the best-scoring variant. "
-        r"$^{*}$ marks metrics on which that variant is significantly better than the "
-        r"variant in the given row (paired Wilcoxon signed-rank, Holm-corrected within "
-        r"each metric, $p<0.05$).}",
-        r"\label{tab:lapirn_variants}",
         r"\end{table}",
         "",
     ]
