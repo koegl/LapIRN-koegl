@@ -173,9 +173,13 @@ val_subjects = [
 ]
 split_path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/split.json")
 # externally produced displacement fields in submission format (channel-first,
-# full-res voxel units, half grid) — written by Code/baseline_ConvexAdam.py.
+# full-res voxel units, half grid) — written by Code/baseline_ConvexAdam.py and
+# Code/baseline_NiftyReg.py.
 convexadam_disp_dir = Path(
     "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/convexadam/predictions"
+)
+niftyreg_disp_dir = Path(
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/niftyreg/predictions"
 )
 my_val_image_dir = Path(
     "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTr"
@@ -1387,11 +1391,19 @@ def main() -> None:
         include_pet = False
         include_rigidity = False
 
-    # --- ConvexAdam baseline ------------------------------------------------
-    eval_convexadam: bool = True
+    # --- external-field baseline ----------------------------------------------
+    # scores a directory of submission-format fields (ConvexAdam or NiftyReg)
+    # through the same metrics and csvs as every model.
+    eval_external: bool = True
+    external_baseline: str = "convexadam"
+    external_disp_dirs: Dict[str, Path] = {
+        "convexadam": convexadam_disp_dir,
+        "niftyreg": niftyreg_disp_dir,
+    }
 
-    if eval_convexadam and eval_official:
-        baseline_name = "convexadam"
+    if eval_external and eval_official:
+        external_dir = external_disp_dirs[external_baseline]
+        baseline_name = external_baseline
         if use_io:
             baseline_name = model_name = (
                 inference_utils.extend_model_names_with_io_params(
@@ -1413,7 +1425,7 @@ def main() -> None:
                 f"skipping baseline '{baseline_name}': {baseline_per_label_csv} exists"
             )
         else:
-            print(f"running baseline '{baseline_name}' from {convexadam_disp_dir}")
+            print(f"running baseline '{baseline_name}' from {external_dir}")
             baseline_grid_full = Functions.generate_grid_unit(cfg.img_shape)
             baseline_grid_full = (
                 torch.from_numpy(
@@ -1452,7 +1464,7 @@ def main() -> None:
                 use_class_weights=use_class_weights,
                 use_polyaffine=use_polyaffine,
                 skip_model=True,
-                external_disp_dir=convexadam_disp_dir,
+                external_disp_dir=external_dir,
                 ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
                 pet_label_template="PSMARegPSMA_{case_id}_0001_{tp}",
                 desc=f"official val [{baseline_name}]",
