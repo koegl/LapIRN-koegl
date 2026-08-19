@@ -224,7 +224,7 @@ class TrainingConfig:
     # Single-session patients can be used here through the synthetic branch,
     # which is the point: they carry no registration signal but full lesion
     # supervision.
-    use_seg_pet_head: bool = False
+    use_seg_pet_head: bool = True
     # width of the head's hidden conv. It runs at full resolution, so this is
     # the memory knob: each channel costs a 192x192x288 activation.
     seg_pet_head_channels: int = 32
@@ -244,7 +244,7 @@ class TrainingConfig:
     # NB: not wired into IO. Rigidity is the most forgiving consumer of a
     # predicted mask (a regional regulariser tolerates an eroded/dilated mask),
     # but validate bone_dice_moving before feeding it anything.
-    use_seg_bone_head: bool = False
+    use_seg_bone_head: bool = True
     seg_bone_head_channels: int = 32
     w_seg_bone: float = 0.1
     seg_bone_warmup_epochs: float = 5.0
