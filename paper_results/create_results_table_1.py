@@ -200,6 +200,17 @@ def main():
     n_cases = per_case["dice"].shape[1]
     means = {metric: per_case[metric].mean(axis=1) for metric in METRICS}
 
+    # Best value per metric among the ranked variants; the reference rows do not
+    # compete for the bolding.
+    best_per_metric = {
+        metric: (
+            means[metric][variants].idxmax()
+            if HIGHER_IS_BETTER[metric]
+            else means[metric][variants].idxmin()
+        )
+        for metric in METRICS
+    }
+
     scores = challenge_scores(means, variants)
     scores = scores.sort_values("score", ascending=False)
     ordered_variants = list(scores.index)
@@ -263,13 +274,14 @@ def main():
                 table.loc[model].to_numpy(dtype=float) if model in table.index else None
             )
             mean_line, median_line = format_cell(values, metric)
+            if best_per_metric[metric] == model:
+                mean_line = r"\textbf{" + mean_line + "}"
             if significant.get((model, metric)):
                 mean_line += r"$^{*}$"
             mean_cells.append(mean_line)
             median_cells.append(median_line)
         if bold:
             name = r"\textbf{" + name + "}"
-            mean_cells = [r"\textbf{" + c + "}" for c in mean_cells]
             score_cell = r"\textbf{" + score_cell + "}"
         lines.append(
             f"{name} & " + " & ".join(mean_cells) + f" & {score_cell} " + r"\\"
@@ -332,7 +344,7 @@ def main():
     print("\nranking:")
     for position, model in enumerate(ordered_variants, start=1):
         print(
-            f"  {position:2d}. {display_names.get(model, model):<4s} {scores.loc[model, 'score']:6.2f}   {model[:70]}"
+            f"  {position:2d}. {display_names.get(model, model)} {scores.loc[model, 'score']:6.2f}   {model}"
         )
 
 
