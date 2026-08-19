@@ -100,7 +100,7 @@ def evaluate_lvl3(
 
     with torch.no_grad():
         saved = False
-        for batch in val_generator:
+        for idx, batch in enumerate(val_generator):
             X = batch["x"].to(device).float()
             Y = batch["y"].to(device).float()
             X_lbl_ct = batch["x_label_ct"].to(device)

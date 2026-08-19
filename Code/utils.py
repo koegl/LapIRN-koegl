@@ -13,11 +13,11 @@ import my_data
 import numpy as np
 import torch
 import tqdm
-from scipy import ndimage
 from config import TrainingConfig
 from miccai2020_model_stage import (
     SpatialTransform_unit,
 )
+from scipy import ndimage
 from torch.utils import checkpoint as torch_checkpoint
 from torch.utils import data as torch_data
 
@@ -31,6 +31,23 @@ SEL_W_ACCURACY = 0.4
 SEL_W_BIOMARKER = 0.4
 SEL_W_REGULARITY = 0.2
 SEL_REF_NDV = 0.0
+
+
+def overwrite_run_name(new_name: str) -> None:
+    """Overwrite the run name for the active logger run.
+
+    This is useful when the run name is auto-generated and you want to set a
+    more descriptive name after the run has started. The new name will be
+    applied to both MLflow and WandB if they are active.
+    """
+    global _ACTIVE_RUN_NAME, _WANDB_RUN
+
+    if mlflow.active_run() is not None:
+        mlflow.set_tag("mlflow.runName", new_name)
+    if _WANDB_RUN is not None:
+        _WANDB_RUN.name = new_name
+
+    _ACTIVE_RUN_NAME = new_name
 
 
 def stop_flag_path(save_dir: Path, level: int) -> Path:

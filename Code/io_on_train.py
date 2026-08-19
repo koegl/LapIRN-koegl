@@ -199,7 +199,7 @@ def main() -> None:
         with open(failures_path, "a") as f:
             f.write(f"{name}\t{reason}\n")
 
-    for batch in tqdm.tqdm(loader, desc="IO on train pairs", ncols=120):
+    for batch in tqdm.tqdm(loader, desc="IO on train pairs", ncols=20):
         case_id = batch["case_id"][0]
         tp_x = batch["tp_x"][0]
         tp_y = batch["tp_y"][0]

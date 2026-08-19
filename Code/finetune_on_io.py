@@ -79,7 +79,11 @@ class IODistillDataset(torch_data.Dataset):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model-path", type=Path, required=True)
+    parser.add_argument(
+        "--model-path",
+        type=Path,
+        default="/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_auspicious-sloth-39469081_stagelvl3_best_combined.pth",
+    )
     parser.add_argument(
         "--dvf-dir", type=Path, default=DATA_PATH / "PSMAReg/io_train_dvfs"
     )
@@ -98,7 +102,6 @@ def main() -> None:
 
     cfg = TrainingConfig()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    run_name = utils.get_run_name()
 
     train_ids, val_ids = my_data.get_train_val_split(
         data_dir=cfg.data_dir,
@@ -159,17 +162,20 @@ def main() -> None:
     loss_similarity_pet = build_similarity_loss(cfg, level=3)
 
     cfg.model_save_dir.mkdir(parents=True, exist_ok=True)
-    last_path = (
-        cfg.model_save_dir
-        / f"{cfg.mlflow_experiment}_{run_name}_iodistill_last.pth"
-    )
-    best_path = (
-        cfg.model_save_dir
-        / f"{cfg.mlflow_experiment}_{run_name}_iodistill_best_combined.pth"
-    )
+    experiment_name = "IO_finetune"
     best_combined = float("-inf")
 
     with utils.start_logging_run(cfg):
+        utils.overwrite_run_name(experiment_name)
+        run_name = utils.get_run_name()
+        last_path = (
+            cfg.model_save_dir / f"{experiment_name}_{run_name}_iodistill_last.pth"
+        )
+        best_path = (
+            cfg.model_save_dir
+            / f"{experiment_name}_{run_name}_iodistill_best_combined.pth"
+        )
+
         utils.log_config(
             {
                 **cfg.to_mlflow_params(),
@@ -182,11 +188,12 @@ def main() -> None:
         )
 
         global_step = 0
-        for epoch in range(args.epochs):
+        pbar_outer = tqdm.tqdm(range(args.epochs), desc="iodistill epoch", ncols=20)
+        for epoch in pbar_outer:
             model.train()
             epoch_loss = 0.0
             optimizer.zero_grad()
-            pbar = tqdm.tqdm(train_loader, desc=f"iodistill epoch {epoch}")
+            pbar = tqdm.tqdm(train_loader, desc=f"iodistill epoch {epoch}", ncols=20)
             for step, batch in enumerate(pbar):
                 X_prereg, _, _, Y, _, _ = io_on_train.prereg_batch(
                     batch, cfg, device, transform, transform_nearest, grid_full
@@ -206,9 +213,7 @@ def main() -> None:
 
                 epoch_loss += loss_dvf.item()
                 pbar.set_postfix(dvf=f"{loss_dvf.item():.8f}")
-                utils.log_metrics(
-                    {"finetune/dvf": loss_dvf.item()}, step=global_step
-                )
+                utils.log_metrics({"finetune/dvf": loss_dvf.item()}, step=global_step)
                 global_step += 1
 
             utils.log_metrics(
