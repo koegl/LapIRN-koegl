@@ -402,9 +402,8 @@ def report(
 
 
 def main() -> None:
-    # TODO: point at the real submission zip
     zip_path = Path(
-        "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/submission_polite-snake-38577202_IO_lr1.0e-02_it90_wNCC5.00_wDiceCT5.00_wJac10.00_wSmooth1.00_wBoneRigid0.00_wMTV50.00_wMTVmean500.00_wJactum2.50_wTLG1.50.zip"
+        "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/submission_polite-snake-38577202_IO_lr1.0e-02_it90_wNCC6.00_wDiceCT6.00_wJac10.00_wSmooth0.00_wBoneRigid0.00_wMTV200.00_wMTVmean0.00_wJactum20.00_wTLG20.00_wMTVcc80.00_wMTVavgcc150.00_wTLGcc20.00.zip"
     )
     out_dir = Path(
         "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/csvs/analysis"
