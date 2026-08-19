@@ -56,6 +56,10 @@ WEIGHTS = {"accuracy": 0.4, "biomarker": 0.4, "regularity": 0.2}
 
 ALPHA = 0.05
 
+# Second line per row with the median [IQR]. Off for the short method paper;
+# turn back on for the journal extension.
+SHOW_MEDIAN_IQR = False
+
 # Rows shown for context at the top of the table but excluded from the ranking
 # and from the statistical tests (they are missing some of the five metrics).
 REFERENCE_MODELS = ["before_registration", "affine"]
@@ -267,14 +271,15 @@ def main():
         lines.append(
             f"{name} & " + " & ".join(mean_cells) + f" & {score_cell} " + r"\\"
         )
-        lines.append(
-            r"\scriptsize\textcolor{gray}{median [IQR]} & "
-            + " & ".join(
-                r"\scriptsize\textcolor{gray}{" + c + "}" for c in median_cells
+        if SHOW_MEDIAN_IQR:
+            lines.append(
+                r"\scriptsize\textcolor{gray}{median [IQR]} & "
+                + " & ".join(
+                    r"\scriptsize\textcolor{gray}{" + c + "}" for c in median_cells
+                )
+                + r" & \\"
             )
-            + r" & \\"
-        )
-        lines.append(r"\addlinespace[2pt]")
+            lines.append(r"\addlinespace[2pt]")
 
     for model in references:
         emit(model, "--")
@@ -290,8 +295,12 @@ def main():
         r"\caption{LapIRN variants on the official validation set ($n="
         + str(n_cases)
         + r"$ cases). "
-        r"Each cell reports mean $\pm$ std over cases (top) and median [IQR] (bottom). "
-        r"MTV, TLG and NDV are given in \%. Score reproduces the challenge ranking: "
+        + (
+            r"Each cell reports mean $\pm$ std over cases (top) and median [IQR] (bottom). "
+            if SHOW_MEDIAN_IQR
+            else r"Each cell reports mean $\pm$ std over cases. "
+        )
+        + r"MTV, TLG and NDV are given in \%. Score reproduces the challenge ranking: "
         r"each metric is ranked separately (ties take the worst rank spanned), turned into "
         r"$(K-\mathrm{rank}+1)/K$, and combined as "
         r"$100 \times \mathrm{accuracy}^{0.4}\,\mathrm{biomarker}^{0.4}\,\mathrm{regularity}^{0.2}$ "
