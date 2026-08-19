@@ -100,7 +100,11 @@ def prereg_batch(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model-path", type=Path, required=True)
+    parser.add_argument(
+        "--model-path",
+        type=Path,
+        default="/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_auspicious-sloth-39469081_stagelvl3_best_combined.pth",
+    )
     parser.add_argument(
         "--out-dir",
         type=Path,
@@ -169,7 +173,7 @@ def main() -> None:
             ["case_id", "tp_x", "tp_y", "dice_base", "dice_refined", "file"]
         )
 
-    for batch in tqdm.tqdm(loader, desc="IO on train pairs"):
+    for batch in tqdm.tqdm(loader, desc="IO on train pairs", ncols=120):
         case_id = batch["case_id"][0]
         tp_x = batch["tp_x"][0]
         tp_y = batch["tp_y"][0]
