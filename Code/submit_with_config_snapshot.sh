@@ -19,5 +19,12 @@ tar -cf - -C "$SRC" \
 git -C "$SRC" rev-parse HEAD > "$SNAP/.snapshot_git_head" 2>/dev/null || true
 git -C "$SRC" diff HEAD > "$SNAP/.snapshot_git_diff" 2>/dev/null || true
 
-sbatch --export=ALL,CODE_DIR="$SNAP" /home/iml/fryderyk.koegl/jobs/psmareg.sh
-echo "Submitted with snapshot: $SNAP"
+JOBID=$(sbatch --parsable --export=ALL,CODE_DIR="$SNAP" \
+                /home/iml/fryderyk.koegl/jobs/psmareg.sh)
+
+# record the job <-> snapshot link at submit time, so runs never have to be
+# matched back to a snapshot by timestamp arithmetic
+echo "$JOBID" > "$SNAP/.snapshot_jobid"
+printf '%s\t%s\t%s\n' "$JOBID" "$STAMP" "$SNAP" >> "$SNAP_DIR/index.tsv"
+
+echo "Submitted job $JOBID with snapshot: $SNAP"

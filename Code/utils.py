@@ -126,6 +126,10 @@ def start_logging_run(config: TrainingConfig) -> Iterator[None]:
                 entity=config.wandb_entity,
                 name=run_name,
                 group=get_slurm_job_id(),
+                config={
+                    "slurm_job_id": get_slurm_job_id(),
+                    "code_snapshot": os.environ.get("CODE_DIR", "unsnapshotted"),
+                },
             )
             _WANDB_RUN.define_metric("global_step")
             _WANDB_RUN.define_metric("*", step_metric="global_step")
@@ -571,6 +575,7 @@ def add_jobid_to_mlflow_run() -> None:
 
     mlflow.set_tag("mlflow.runName", new_name)
     mlflow.set_tag("slurm_job_id", job_id)
+    mlflow.set_tag("code_snapshot", os.environ.get("CODE_DIR", "unsnapshotted"))
 
 
 def get_mlflow_run_name() -> str:
