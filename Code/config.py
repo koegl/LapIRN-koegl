@@ -89,7 +89,7 @@ class TrainingConfig:
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
     warmup_epochs: float = 5
-    start_channel: int = 24
+    start_channel: int = 7
 
     # Per-level res-block trunk capacity, independent of start_channel (so no
     # inter-level tensor shape changes).
@@ -152,7 +152,7 @@ class TrainingConfig:
 
     # loss weights
     w_non_diff: float = 10000.0
-    w_smooth: float = 5.0
+    w_smooth: float = 10.0
     w_ct: float = 5.0
     w_pet: float = 0.0
     w_dice_ct_lvl1: float = 3.0
