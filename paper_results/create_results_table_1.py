@@ -353,29 +353,21 @@ def main():
     lines += [
         r"\bottomrule",
         r"\end{tabular}",
-        r"\caption{LapIRN variants on the official validation set ($n="
+        r"\caption{LapIRN variants on the official challenge validation set ($n="
         + str(n_cases)
-        + r"$ cases). "
+        + r"$ cases), evaluated against the surrogate labels of "
+        r"Sec.~\ref{sec:evaluation}. "
         + cell_description
-        + r"DSC and the MTV/TLG errors are given in \%, NDV in ppm. Score reproduces the challenge ranking: "
-        r"each metric is ranked separately (ties take the worst rank spanned), turned into "
-        r"$(K-\mathrm{rank}+1)/K$, and combined as "
-        r"$100 \times \mathrm{accuracy}^{0.4}\,\mathrm{biomarker}^{0.4}\,\mathrm{regularity}^{0.2}$ "
-        r"with accuracy $=$ geometric mean of DSC and HD95, biomarker $=$ geometric mean of "
-        r"MTV and TLG \%err, and regularity $=$ NDV after the challenge tolerance "
-        r"$\max(\mathrm{NDV}-50\,\mathrm{ppm},\,0)$. "
-        r"Variants are listed in ranking order, highest score first. The best value in "
-        r"each column is set in bold, as are the Model and Score entries of the "
-        r"best-scoring variant; "
+        + r"DSC and the MTV/TLG errors are given in \%, NDV in ppm. "
+        r"Score is the challenge score of Eq.~\eqref{eq:score}; variants are listed in "
+        r"ranking order, highest score first. "
+        r"Bold marks the best value in each column, and the Model and Score entries of "
+        r"the best-scoring variant. "
         r"$^{*}$ marks metrics on which that variant is significantly better than the "
-        r"given variant "
-        r"(paired Wilcoxon signed-rank over the "
-        + str(n_cases)
-        + r" cases, Holm-corrected "
-        r"within each metric, $p<0.05$). The unregistered and affine-only rows are shown for "
-        r"reference; they lack some metrics and are excluded from the ranking and the tests. "
-        r"Because the winning variant is selected on the same cases, these tests are "
-        r"exploratory rather than confirmatory.}",
+        r"variant in the given row (paired Wilcoxon signed-rank, Holm-corrected within "
+        r"each metric, $p<0.05$). "
+        r"The unregistered and affine-only rows are shown for reference and take part in "
+        r"neither the ranking nor the tests.}",
         r"\label{tab:lapirn_variants}",
         r"\end{table}",
         "",
