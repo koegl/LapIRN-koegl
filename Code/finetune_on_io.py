@@ -165,9 +165,9 @@ def main() -> None:
     )
     best_path = (
         cfg.model_save_dir
-        / f"{cfg.mlflow_experiment}_{run_name}_iodistill_best_dice.pth"
+        / f"{cfg.mlflow_experiment}_{run_name}_iodistill_best_combined.pth"
     )
-    best_dice_loss = float("inf")
+    best_combined = float("-inf")
 
     with utils.start_logging_run(cfg):
         utils.log_config(
@@ -232,20 +232,40 @@ def main() -> None:
                     saved_initial=True,
                     is_last=is_last,
                 )
+                # same selection as level3.train_lvl3: replica of the official
+                # ranking (accuracy / tumour-bias / regularity, 0.4/0.4/0.2
+                # weighted geometric mean). HIGHER is better.
+                selection = utils.challenge_selection_score(
+                    cfg,
+                    dice_ct_loss=val_metrics["dice_ct"],
+                    hd95=val_metrics["hd95"],
+                    mtv_bias=val_metrics["mtv_bias"],
+                    tlg_bias=val_metrics["tlg_bias"],
+                    ndv_percent=val_metrics["ndv"],
+                )
+                combined_score = selection["final"]
                 utils.log_metrics(
-                    {f"finetune_val/{k}": v for k, v in val_metrics.items()},
+                    {
+                        **{f"finetune_val/{k}": v for k, v in val_metrics.items()},
+                        **{
+                            f"finetune_val/sel_{k}": v
+                            for k, v in selection.items()
+                            if not (isinstance(v, float) and np.isnan(v))
+                        },
+                    },
                     step=epoch,
                 )
                 print(f"epoch {epoch} val: {val_metrics}")
+                print(f"epoch {epoch} combined score: {combined_score:.4f}")
 
                 torch.save(model.state_dict(), last_path)
-                # dice_ct is a loss (lower is better). Swap the criterion if a
-                # tumour- or combined-selected checkpoint is wanted instead.
-                if val_metrics["dice_ct"] < best_dice_loss:
-                    best_dice_loss = val_metrics["dice_ct"]
+                # NaN never satisfies `>`, so a round with a missing component
+                # simply does not save (same convention as train_lvl3)
+                if combined_score > best_combined:
+                    best_combined = combined_score
                     torch.save(model.state_dict(), best_path)
                     print(
-                        f"  new best dice_ct {best_dice_loss:.6f} -> {best_path.name}"
+                        f"  new best combined {best_combined:.4f} -> {best_path.name}"
                     )
 
     print(f"Done. last: {last_path}\n      best: {best_path}")
