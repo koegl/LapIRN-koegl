@@ -31,9 +31,10 @@ HIGHER_IS_BETTER = {
 # DSC and the MTV/TLG errors are reported in %, NDV in ppm (its values span
 # several orders of magnitude and are tiny, so % would be all leading zeros).
 DISPLAY_SCALE = {"dice": 100.0, "hd95": 1.0, "mtv": 100.0, "tlg": 100.0, "ndv": 1e6}
-DISPLAY_DECIMALS = {"dice": 1, "hd95": 2, "mtv": 2, "tlg": 2, "ndv": 1}
-# Mantissa decimals used only in scientific notation, so switching a metric
-# between notations does not require retuning its precision.
+# Fixed notation prints this many significant figures; the decimal places are
+# derived from the cell's mean and reused for its std, so the two align.
+SIGNIFICANT_FIGURES = 3
+# Mantissa decimals used only in scientific notation.
 SCIENTIFIC_DECIMALS = {"dice": 1, "hd95": 1, "mtv": 1, "tlg": 1, "ndv": 1}
 # "fixed" prints plain decimals, "scientific" prints m.m x 10^e.
 DISPLAY_NOTATION = {
@@ -149,19 +150,22 @@ def challenge_scores(means, models):
     )
 
 
-def format_number(value, metric):
+def decimals_for(value, significant_figures=SIGNIFICANT_FIGURES):
+    """Decimal places needed to show `value` to the given significant figures."""
+    if value == 0 or not np.isfinite(value):
+        return significant_figures - 1
+    exponent = int(np.floor(np.log10(abs(value))))
+    return max(significant_figures - 1 - exponent, 0)
+
+
+def format_number(value, metric, decimals):
     """Format one number in the notation configured for its metric."""
     if DISPLAY_NOTATION[metric] == "fixed":
-        return f"{value:.{DISPLAY_DECIMALS[metric]}f}"
+        return f"{value:.{decimals}f}"
     if value == 0:
         return "0"
     mantissa, exponent = f"{value:.{SCIENTIFIC_DECIMALS[metric]}e}".split("e")
     return f"{mantissa}\\!\\times\\!10^{{{int(exponent)}}}"
-
-
-def wrap_math(text, metric):
-    """Scientific notation needs math mode; fixed notation does not."""
-    return f"${text}$" if DISPLAY_NOTATION[metric] == "scientific" else text
 
 
 def format_cell(values, metric):
@@ -169,16 +173,33 @@ def format_cell(values, metric):
     if values is None:
         return "--", "--"
     scaled = np.asarray(values, dtype=float) * DISPLAY_SCALE[metric]
+    mean, std = scaled.mean(), scaled.std(ddof=1)
     q1, median, q3 = np.percentile(scaled, [25, 50, 75])
 
-    def number(value):
-        return format_number(value, metric)
+    # The mean sets the precision; the std follows it so the pair lines up.
+    mean_decimals = decimals_for(mean)
+    median_decimals = decimals_for(median)
 
     if DISPLAY_NOTATION[metric] == "fixed":
-        mean_line = f"{number(scaled.mean())} $\\pm$ {number(scaled.std(ddof=1))}"
+        mean_line = (
+            f"{format_number(mean, metric, mean_decimals)} $\\pm$ "
+            f"{format_number(std, metric, mean_decimals)}"
+        )
+        median_line = (
+            f"{format_number(median, metric, median_decimals)} "
+            f"[{format_number(q1, metric, median_decimals)}, "
+            f"{format_number(q3, metric, median_decimals)}]"
+        )
     else:
-        mean_line = f"${number(scaled.mean())} \\pm {number(scaled.std(ddof=1))}$"
-    median_line = wrap_math(f"{number(median)} [{number(q1)}, {number(q3)}]", metric)
+        mean_line = (
+            f"${format_number(mean, metric, mean_decimals)} \\pm "
+            f"{format_number(std, metric, mean_decimals)}$"
+        )
+        median_line = (
+            f"${format_number(median, metric, median_decimals)} "
+            f"[{format_number(q1, metric, median_decimals)}, "
+            f"{format_number(q3, metric, median_decimals)}]$"
+        )
     return mean_line, median_line
 
 
@@ -302,7 +323,8 @@ def main():
         lines.append(r"\midrule")
 
     for model in ordered_variants:
-        emit(model, f"{scores.loc[model, 'score']:.2f}", bold=(model == best))
+        score = scores.loc[model, "score"]
+        emit(model, f"{score:.{decimals_for(score)}f}", bold=(model == best))
 
     lines += [
         r"\bottomrule",
