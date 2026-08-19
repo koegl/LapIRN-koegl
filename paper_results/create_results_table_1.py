@@ -44,6 +44,11 @@ DISPLAY_NOTATION = {
     "tlg": "fixed",
     "ndv": "fixed",
 }
+# Degrees to rotate the metric column headers (needs \usepackage{graphicx}).
+# 0 keeps them upright, 45 is a good compromise, 90 makes the columns as narrow
+# as their numbers.
+HEADER_ROTATION = 45
+
 HEADERS = {
     "dice": r"DSC (\%) $\uparrow$",
     "hd95": r"HD95 (mm) $\downarrow$",
@@ -150,6 +155,13 @@ def challenge_scores(means, models):
         },
         index=models,
     )
+
+
+def rotate_header(text):
+    """Rotated headers let a column be as narrow as its numbers."""
+    if not HEADER_ROTATION:
+        return text
+    return r"\rotatebox[origin=l]{" + str(HEADER_ROTATION) + "}{" + text + "}"
 
 
 def decimals_for(value, significant_figures=SIGNIFICANT_FIGURES):
@@ -291,8 +303,10 @@ def main():
         r"\begin{tabular}{l" + "c" * len(METRICS) + "c}",
         r"\toprule",
         "Model & "
-        + " & ".join(HEADERS[m] for m in METRICS)
-        + r" & Score $\uparrow$ \\",
+        + " & ".join(rotate_header(HEADERS[m]) for m in METRICS)
+        + " & "
+        + rotate_header(r"Score $\uparrow$")
+        + r" \\",
         r"\midrule",
     ]
 
