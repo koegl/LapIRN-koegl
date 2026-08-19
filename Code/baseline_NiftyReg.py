@@ -39,7 +39,20 @@ CT_TEMPLATE = "PSMARegPSMA_{case_id}_0000_{tp}.nii.gz"
 
 REG_ALADIN = Path("/home/iml/fryderyk.koegl/.local/bin/reg_aladin")
 REG_F3D = Path("/home/iml/fryderyk.koegl/.local/bin/reg_f3d")
-REG_TRANSFORM = Path("/home/iml/fryderyk.koegl/.local/bin/reg_transform")
+# reg_transform is not in .local/bin, but the same NiftyReg build ships it under
+# registrationbaselines (reg_aladin / reg_f3d there are byte-identical to the
+# .local/bin copies). Prefer .local/bin if it ever appears there.
+REG_TRANSFORM_CANDIDATES = (
+    Path("/home/iml/fryderyk.koegl/.local/bin/reg_transform"),
+    Path(
+        "/home/iml/fryderyk.koegl/code/registrationbaselines/registrationbaselines"
+        "/libraries/NiftyReg/reg_transform_ubuntu"
+    ),
+)
+REG_TRANSFORM = next(
+    (path for path in REG_TRANSFORM_CANDIDATES if path.exists()),
+    REG_TRANSFORM_CANDIDATES[-1],
+)
 
 # reg_f3d documents "-platf <uint>", reg_aladin "--platf <uint>". Same meaning:
 # 0 = CPU, 1 = CUDA.
