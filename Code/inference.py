@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import affine_reg
 import Functions
+import inference_utils
 import instance_opt
 import miccai2020_model_stage
 import my_data
@@ -171,6 +172,11 @@ val_subjects = [
     "4068",
 ]
 split_path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/split.json")
+# externally produced displacement fields in submission format (channel-first,
+# full-res voxel units, half grid) — written by Code/baseline_ConvexAdam.py.
+convexadam_disp_dir = Path(
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/convexadam/predictions"
+)
 my_val_image_dir = Path(
     "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTr"
 )
@@ -427,6 +433,35 @@ def unit_flow_to_voxel_flow_fullres(
     return out
 
 
+def load_external_disp_as_unit_flow(
+    disp_dir: Path,
+    case_id: str,
+    full_shape: Tuple[int, int, int],
+    target_shape: Tuple[int, int, int],
+    device: torch.device,
+) -> torch.Tensor:
+    """Inverse of save_disp: read a submission-format displacement field
+    (channel-first, full-res voxel units, on any grid) and return it as a unit
+    flow on target_shape. Unit flow is resolution-independent, so resampling it
+    preserves the represented deformation. Lets us score any externally produced
+    field — the ConvexAdam baseline, an old submission — through this pipeline."""
+    path = disp_dir / f"disp_{case_id}_00_{case_id}_01.nii.gz"
+    arr = my_data.nib.load(str(path)).get_fdata().astype(np.float32)
+    if arr.shape[0] != 3:
+        raise ValueError(f"{path}: expected a channel-first field, got {arr.shape}")
+    # save_disp writes disp_np[::-1]; undo it so channel 0 <-> last axis again
+    disp = torch.from_numpy(arr[::-1].copy()).unsqueeze(0).to(device).float()
+    h, w, d = full_shape
+    disp[:, 0] /= (d - 1) / 2.0
+    disp[:, 1] /= (w - 1) / 2.0
+    disp[:, 2] /= (h - 1) / 2.0
+    if tuple(disp.shape[2:]) != tuple(target_shape):
+        disp = torch.nn.functional.interpolate(
+            disp, size=target_shape, mode="trilinear", align_corners=False
+        )
+    return disp
+
+
 def save_disp(disp_half: torch.Tensor, out_dir: Path, case_id: str) -> None:
     disp_np = disp_half.squeeze(0).cpu().numpy().astype(np.float32)
     disp_np = disp_np[::-1].copy()
@@ -597,8 +632,7 @@ def evaluate_split(
     results_csv: Path,
     model_name: str,
     out_dir: Path,
-    model: Union[torch.nn.Module, List[torch.nn.Module]],
-    model_path: Path,
+    model: Optional[Union[torch.nn.Module, List[torch.nn.Module]]],
     transform: torch.nn.Module,
     transform_nearest: torch.nn.Module,
     grid_full: torch.Tensor,
@@ -620,6 +654,8 @@ def evaluate_split(
     pet_label_template: str = "PSMARegPSMA_{case_id}_0001_{tp}",
     skip_model: bool = False,
     chase_flag: str = "chase_best_model",
+    external_disp_dir: Optional[Path] = None,
+    model_path: Optional[Path] = None,
 ) -> None:
     dices: Dict[str, float] = {}
     dices_before: Dict[str, float] = {}
@@ -663,6 +699,7 @@ def evaluate_split(
             ct_label_template=ct_label_template,
             pet_label_template=pet_label_template,
             chase_flag=chase_flag,
+            external_disp_dir=external_disp_dir,
         )
         dices[case_id] = dice_after
         dices_before[case_id] = dice_before
@@ -708,8 +745,8 @@ def process_subject(
     case_id: str,
     val_image_dir: Path,
     out_dir: Path,
-    model: Union[torch.nn.Module, List[torch.nn.Module]],
-    model_path: Path,
+    model: Optional[Union[torch.nn.Module, List[torch.nn.Module]]],
+    model_path: Optional[Path],
     transform: torch.nn.Module,
     grid_full: torch.Tensor,
     cfg: TrainingConfig,
@@ -728,12 +765,16 @@ def process_subject(
     ct_label_template: str = "PSMARegPSMA_{case_id}_0000_{tp}",
     pet_label_template: str = "PSMARegPSMA_{case_id}_0001_{tp}",
     chase_flag: str = "chase_best_model",
+    external_disp_dir: Optional[Path] = None,
 ) -> Tuple[float, float, float, float, float, float, float, Dict[int, float]]:
+    # an external displacement field replaces the affine prereg AND the network:
+    # it already is the total transform. IO still runs on top if use_io is set.
+    use_external = external_disp_dir is not None
 
     if case_id in image_pair_memory_cache:
         pair = image_pair_memory_cache[case_id]
     else:
-        if is_old_model(model_path):
+        if model_path is not None and is_old_model(model_path):
             pair = load_val_pair_OLD(val_image_dir, case_id)
         else:
             pair = load_val_pair(val_image_dir, case_id)
@@ -758,70 +799,6 @@ def process_subject(
             ants_affine_to_fullres_voxel_disp_fn=affine_reg.ants_affine_to_fullres_voxel_disp,
         )
 
-    dvf = get_affine_dvf_canon()
-    dvf = affine_reg.apply_augmentation_to_dvf(
-        dvf=dvf, flipped=False, crop_head=0, crop_feet=0
-    )
-    dvf_tensor = affine_reg.dvf_to_tensor(dvf, device)
-    h, w, d = cfg.img_shape
-    d_h = dvf_tensor[:, 0] / (h / 2.0)
-    d_w = dvf_tensor[:, 1] / (w / 2.0)
-    d_d = dvf_tensor[:, 2] / (d / 2.0)
-    flow_affine = torch.stack([d_d, d_w, d_h], dim=1).permute(0, 2, 3, 4, 1)
-
-    if use_polyaffine:
-
-        def resolve_seg_path(tp: str) -> Path:
-            stem = ct_label_template.format(case_id=case_id, tp=tp)
-            path = seg_dir / f"{stem}.nii"
-            if not path.exists():
-                path = seg_dir / f"{stem}.nii.gz"
-            return path
-
-        poly_dvf = poly_affine_reg.get_polyaffine_dvf(
-            case_id_x=case_id,
-            case_id_y=case_id,
-            tp_x="01",
-            tp_y="00",
-            fixed_seg_path=resolve_seg_path("00"),
-            moving_seg_path=resolve_seg_path("01"),
-            get_affine_dvf_fn=get_affine_dvf_canon,
-            cfg=cfg,
-            device=device,
-        )
-        flow_poly = poly_affine_reg.create_polyaffine_flow(
-            poly_dvf=poly_dvf,
-            aug_flipped=False,
-            aug_crop_head=0,
-            aug_crop_feet=0,
-            cfg=cfg,
-            device=device,
-        )
-        flow_affine = poly_affine_reg.compose_flows(flow_affine, flow_poly, grid_full)
-
-    X_affine = transform(X, flow_affine, grid_full)
-
-    if skip_model:
-        # affine-only / polyaffine-only baseline: identity deformable field
-        F_X_Y = torch.zeros_like(flow_affine.permute(0, 4, 1, 2, 3))
-        warped = X_affine
-    else:
-        models = model if isinstance(model, (list, tuple)) else [model]
-        with torch.no_grad():
-            if len(models) == 1:
-                F_X_Y, warped, _, _, _, _, _ = models[0](X_affine, Y)
-            else:
-                # log-euclidean mean of the ensemble: average the stationary
-                # velocity fields, then integrate the mean once. averaging the
-                # already-integrated displacements can fold, the velocities cannot.
-                velocity = None
-                for m in models:
-                    _, _, _, v, _, _, _ = m(X_affine, Y)
-                    velocity = v if velocity is None else velocity + v
-                velocity = velocity / len(models)
-                F_X_Y = models[0].diff_transform(velocity, grid_full)
-                warped = transform(X_affine, F_X_Y.permute(0, 2, 3, 4, 1), grid_full)
-
     # chase_leaderboard: the submitted field is a half-resolution field that the
     # organizers upsample and score. Mirror that exactly — downsample the
     # deformable field and the affine flow to half res, run IO / composition /
@@ -831,50 +808,130 @@ def process_subject(
     leaderboard = chase_flag == "chase_leaderboard"
     full_shape = tuple(cfg.img_shape)
     half_shape = tuple(s // 2 for s in full_shape)
+    io_opt_shape: Optional[Tuple[int, int, int]] = half_shape if leaderboard else None
 
-    if leaderboard:
-        F_X_Y = torch.nn.functional.interpolate(
-            F_X_Y, size=half_shape, mode="trilinear", align_corners=False
+    if use_external:
+        # the external field is the TOTAL transform (it carries its own affine),
+        # so neither our affine prereg nor the network runs. It is stored at the
+        # submission resolution; bring it to the resolution we compose /
+        # optimise on.
+        total_unit_flow = load_external_disp_as_unit_flow(
+            external_disp_dir,
+            case_id,
+            full_shape,
+            half_shape if leaderboard else full_shape,
+            device,
         )
-        gh = Functions.generate_grid_unit(half_shape)
-        grid_compose = (
-            torch.from_numpy(np.reshape(gh, (1,) + gh.shape)).to(device).float()
+    else:
+        dvf = get_affine_dvf_canon()
+        dvf = affine_reg.apply_augmentation_to_dvf(
+            dvf=dvf, flipped=False, crop_head=0, crop_feet=0
         )
-        flow_affine_compose = torch.nn.functional.interpolate(
-            flow_affine.permute(0, 4, 1, 2, 3),
-            size=half_shape,
-            mode="trilinear",
+        dvf_tensor = affine_reg.dvf_to_tensor(dvf, device)
+        h, w, d = cfg.img_shape
+        d_h = dvf_tensor[:, 0] / (h / 2.0)
+        d_w = dvf_tensor[:, 1] / (w / 2.0)
+        d_d = dvf_tensor[:, 2] / (d / 2.0)
+        flow_affine = torch.stack([d_d, d_w, d_h], dim=1).permute(0, 2, 3, 4, 1)
+
+        if use_polyaffine:
+
+            def resolve_seg_path(tp: str) -> Path:
+                stem = ct_label_template.format(case_id=case_id, tp=tp)
+                path = seg_dir / f"{stem}.nii"
+                if not path.exists():
+                    path = seg_dir / f"{stem}.nii.gz"
+                return path
+
+            poly_dvf = poly_affine_reg.get_polyaffine_dvf(
+                case_id_x=case_id,
+                case_id_y=case_id,
+                tp_x="01",
+                tp_y="00",
+                fixed_seg_path=resolve_seg_path("00"),
+                moving_seg_path=resolve_seg_path("01"),
+                get_affine_dvf_fn=get_affine_dvf_canon,
+                cfg=cfg,
+                device=device,
+            )
+            flow_poly = poly_affine_reg.create_polyaffine_flow(
+                poly_dvf=poly_dvf,
+                aug_flipped=False,
+                aug_crop_head=0,
+                aug_crop_feet=0,
+                cfg=cfg,
+                device=device,
+            )
+            flow_affine = poly_affine_reg.compose_flows(
+                flow_affine, flow_poly, grid_full
+            )
+
+        X_affine = transform(X, flow_affine, grid_full)
+
+        if skip_model:
+            # affine-only / polyaffine-only baseline: identity deformable field
+            F_X_Y = torch.zeros_like(flow_affine.permute(0, 4, 1, 2, 3))
+            warped = X_affine
+        else:
+            models = model if isinstance(model, (list, tuple)) else [model]
+            with torch.no_grad():
+                if len(models) == 1:
+                    F_X_Y, warped, _, _, _, _, _ = models[0](X_affine, Y)
+                else:
+                    # log-euclidean mean of the ensemble: average the stationary
+                    # velocity fields, then integrate the mean once. averaging the
+                    # already-integrated displacements can fold, the velocities cannot.
+                    velocity = None
+                    for m in models:
+                        _, _, _, v, _, _, _ = m(X_affine, Y)
+                        velocity = v if velocity is None else velocity + v
+                    velocity = velocity / len(models)
+                    F_X_Y = models[0].diff_transform(velocity, grid_full)
+                    warped = transform(
+                        X_affine, F_X_Y.permute(0, 2, 3, 4, 1), grid_full
+                    )
+
+        if leaderboard:
+            F_X_Y = torch.nn.functional.interpolate(
+                F_X_Y, size=half_shape, mode="trilinear", align_corners=False
+            )
+            gh = Functions.generate_grid_unit(half_shape)
+            grid_compose = (
+                torch.from_numpy(np.reshape(gh, (1,) + gh.shape)).to(device).float()
+            )
+            flow_affine_compose = torch.nn.functional.interpolate(
+                flow_affine.permute(0, 4, 1, 2, 3),
+                size=half_shape,
+                mode="trilinear",
+                align_corners=False,
+            ).permute(0, 2, 3, 4, 1)
+        else:
+            grid_compose = grid_full
+            flow_affine_compose = flow_affine
+
+        # Compose affine (outer) with the network field (inner) BEFORE IO, so IO
+        # optimises the TOTAL transform against the original moving image/labels.
+        # This makes the volume terms (MTV / tumour-jac) see det(A) — the affine's
+        # own volume distortion — which the residual-only objective was blind to,
+        # and matches exactly what the final eval measures. It also gives IO the
+        # freedom to undo implausible affine deformations.
+        deform_grid = grid_compose + F_X_Y.permute(0, 2, 3, 4, 1)
+        affine_grid = grid_compose + flow_affine_compose
+
+        affine_grid_ch = affine_grid.permute(0, 4, 1, 2, 3)
+        composed_grid = torch.nn.functional.grid_sample(
+            affine_grid_ch,
+            deform_grid,
+            mode="bilinear",
+            padding_mode="border",
             align_corners=False,
         ).permute(0, 2, 3, 4, 1)
-        io_opt_shape: Optional[Tuple[int, int, int]] = half_shape
-    else:
-        grid_compose = grid_full
-        flow_affine_compose = flow_affine
-        io_opt_shape = None
 
-    # Compose affine (outer) with the network field (inner) BEFORE IO, so IO
-    # optimises the TOTAL transform against the original moving image/labels.
-    # This makes the volume terms (MTV / tumour-jac) see det(A) — the affine's
-    # own volume distortion — which the residual-only objective was blind to,
-    # and matches exactly what the final eval measures. It also gives IO the
-    # freedom to undo implausible affine deformations.
-    deform_grid = grid_compose + F_X_Y.permute(0, 2, 3, 4, 1)
-    affine_grid = grid_compose + flow_affine_compose
+        # total_unit_flow is at the compose resolution (half for chase_leaderboard,
+        # full otherwise).
+        total_unit_flow = (composed_grid - grid_compose).permute(0, 4, 1, 2, 3)
 
-    affine_grid_ch = affine_grid.permute(0, 4, 1, 2, 3)
-    composed_grid = torch.nn.functional.grid_sample(
-        affine_grid_ch,
-        deform_grid,
-        mode="bilinear",
-        padding_mode="border",
-        align_corners=False,
-    ).permute(0, 2, 3, 4, 1)
-
-    # total_unit_flow is at the compose resolution (half for chase_leaderboard,
-    # full otherwise).
-    total_unit_flow = (composed_grid - grid_compose).permute(0, 4, 1, 2, 3)
-
-    if use_io and not skip_model:
+    if use_io and (use_external or not skip_model):
         x_lbl_ct, x_lbl_pet, y_lbl_ct, y_lbl_pet = load_io_labels(
             seg_dir_fast,
             case_id,
@@ -1169,7 +1226,7 @@ def update_config_from_dict(cfg: TrainingConfig, model_name: str) -> None:
 
 
 models_to_evaluate = [
-    # "PSMAReg_LapIRN_polite-snake-38577202_stagelvl3_best.pth",
+    "PSMAReg_LapIRN_polite-snake-38577202_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_exultant-hawk-38756587_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_rumbling-yak-38789486_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_secretive-dolphin-38622192_stagelvl3_best.pth",
@@ -1182,7 +1239,7 @@ models_to_evaluate = [
     # "PSMAReg_LapIRN_charming-trout-38863973_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_rebellious-stork-38993360_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_nervous-pig-39235734_stagelvl3_best_combined.pth",
-    "PSMAReg_LapIRN_angry-mare-39459564_stagelvl3_best_combined.pth",
+    # "PSMAReg_LapIRN_angry-mare-39459564_stagelvl3_best_combined.pth",
 ]
 
 # each inner list is one ensemble: the velocity fields of its models are
@@ -1318,6 +1375,96 @@ def main() -> None:
     eval_my_val: bool = False
     baselines_done: bool = False
 
+    use_io: bool = False
+    io_label_free: bool = False
+    include_pet: bool = True
+    include_rigidity: bool = False
+    use_class_weights = False
+    use_polyaffine: bool = False
+    include_dice: bool = not io_label_free
+
+    if io_label_free:
+        include_pet = False
+        include_rigidity = False
+
+    # --- ConvexAdam baseline ------------------------------------------------
+    eval_convexadam: bool = True
+
+    if eval_convexadam and eval_official:
+        baseline_name = "convexadam"
+        if use_io:
+            baseline_name = model_name = (
+                inference_utils.extend_model_names_with_io_params(
+                    baseline_name,
+                    cfg,
+                    include_rigidity,
+                    use_class_weights,
+                    io_label_free,
+                    include_pet,
+                )
+            )
+        baseline_per_label_csv = to_per_label(
+            results_csv_official_val_dice_per_label.with_stem(
+                results_csv_official_val_dice_per_label.stem + baseline_name
+            )
+        )
+        if baseline_per_label_csv.exists():
+            print(
+                f"skipping baseline '{baseline_name}': {baseline_per_label_csv} exists"
+            )
+        else:
+            print(f"running baseline '{baseline_name}' from {convexadam_disp_dir}")
+            baseline_grid_full = Functions.generate_grid_unit(cfg.img_shape)
+            baseline_grid_full = (
+                torch.from_numpy(
+                    np.reshape(baseline_grid_full, (1,) + baseline_grid_full.shape)
+                )
+                .to(device)
+                .float()
+            )
+            evaluate_split(
+                subjects=official_val_subjects,
+                image_dir=val_image_dir,
+                seg_dir=Path(
+                    "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTs"
+                ),
+                seg_dir_fast=Path(
+                    "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTs"
+                ),
+                results_csv=results_csv_official_val_dice,
+                model_name=baseline_name,
+                out_dir=Path(
+                    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results"
+                )
+                / f"baseline_{baseline_name}",
+                model=None,
+                transform=miccai2020_model_stage.SpatialTransform_unit().to(device),
+                transform_nearest=miccai2020_model_stage.SpatialTransformNearest_unit().to(
+                    device
+                ),
+                grid_full=baseline_grid_full,
+                cfg=cfg,
+                device=device,
+                use_io=use_io,
+                include_pet=include_pet,
+                include_rigidity=include_rigidity,
+                include_dice=include_dice,
+                use_class_weights=use_class_weights,
+                use_polyaffine=use_polyaffine,
+                skip_model=True,
+                external_disp_dir=convexadam_disp_dir,
+                ct_label_template="PSMARegPSMA_{case_id}_0000_{tp}",
+                pet_label_template="PSMARegPSMA_{case_id}_0001_{tp}",
+                desc=f"official val [{baseline_name}]",
+                mtv_csv=results_csv_official_mtv,
+                tlg_csv=results_csv_official_tlg,
+                ndv_csv=results_csv_official_ndv,
+                hd95_csv=results_csv_official_hd95,
+                per_label_csv=baseline_per_label_csv,
+                chase_flag=chase_flag,
+            )
+            return
+
     # single models first, then the ensembles
     eval_jobs: List[List[str]] = [[name] for name in models_to_evaluate]
     eval_jobs += [list(names) for names in models_to_average]
@@ -1364,36 +1511,15 @@ def main() -> None:
         # PET labels (IO and evaluation) come from io_labels_pet: pet_{case_id}_{tp}
         # pet_label_dir = Path("/home/iml/fryderyk.koegl/data/PSMAReg/io_labels_pet")
 
-        use_io: bool = True
-        io_label_free: bool = True
-        include_pet: bool = True
-        include_rigidity: bool = False
-        use_class_weights = False
-        use_polyaffine: bool = False
-
-        include_dice: bool = not io_label_free
-        if io_label_free:
-            include_pet = False
-            include_rigidity = False
-
         if use_io:
-            model_name += "_IO_"
-            model_name += f"lr{cfg.io_lr:.1e}_it{cfg.io_it}"
-            model_name += f"_wNCC{cfg.w_io_ncc:.2f}_wDiceCT{cfg.w_io_dice:.2f}"
-            model_name += f"_wJac{cfg.w_io_non_diff:.2f}_wSmooth{cfg.w_io_smooth:.2f}"
-            model_name += (
-                f"_wBoneRigid{cfg.w_io_bone_rigidity if include_rigidity else 0.0:.2f}"
+            model_name = inference_utils.extend_model_names_with_io_params(
+                model_name,
+                cfg,
+                include_rigidity,
+                use_class_weights,
+                io_label_free,
+                include_pet,
             )
-            model_name += f"_wMTV{cfg.w_io_mtv:.2f}_wMTVmean{cfg.w_io_mtv_avg:.2f}_wJactum{cfg.w_io_jacobian_tumor:.2f}_wTLG{cfg.w_io_tlg:.2f}"
-            model_name += f"_wMTVcc{cfg.w_io_mtv_cc:.2f}_wMTVavgcc{cfg.w_io_mtv_avg_cc:.2f}_wTLGcc{cfg.w_io_tlg_cc:.2f}"
-            print("warning using IO")
-            if use_class_weights:
-                model_name += "_classweights"
-                print("warning using class weights")
-            if io_label_free:
-                model_name += "_labelfree"
-            if include_pet is False:
-                model_name += "_noPET"
 
         if use_polyaffine:
             model_name += "_polyaffine"
@@ -1576,11 +1702,11 @@ def main() -> None:
             )
 
     # mtv vs mtv_avg correlation plots from the per-case IO step histories
-    submission_root = Path(
-        "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results"
-    )
-    plot_io_histories(submission_root / "io_history")
-    plot_io_histories(submission_root / "my_val" / "io_history")
+    # submission_root = Path(
+    #     "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results"
+    # )
+    # plot_io_histories(submission_root / "io_history")
+    # plot_io_histories(submission_root / "my_val" / "io_history")
 
 
 if __name__ == "__main__":
