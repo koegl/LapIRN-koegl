@@ -494,6 +494,9 @@ def train_lvl3(
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+    # constant for the run: 1.0 everywhere except the PET-visible organs
+    dice_class_weights = utils.build_dice_class_weights(config, device)
+
     if config.use_lvl1:
         model_lvl1 = Miccai2020_LDR_laplacian_unit_add_lvl1(
             in_channel=config.in_channel,
@@ -883,6 +886,7 @@ def train_lvl3(
             model.grid_1,
             transform,
             use_checkpoint=True,
+            class_weights=dice_class_weights,
         )
         with torch.no_grad():
             loss_dice_pet = utils.dice_loss_with_grad_bbox(

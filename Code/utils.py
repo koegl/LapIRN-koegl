@@ -698,6 +698,34 @@ def downsample_label(label: torch.Tensor, scale_factor: float) -> torch.Tensor:
     ).long()
 
 
+# TotalSegmentator organ ids run 1..117, so a weight vector indexed by label
+# value needs 118 entries.
+N_CT_LABELS = 118
+
+
+def build_dice_class_weights(
+    config: TrainingConfig, device: torch.device
+) -> Optional[torch.Tensor]:
+    """Per-label CT dice weights indexed by label value, or None if disabled.
+
+    Everything is 1.0 except config.pet_visible_labels, which get
+    config.w_dice_pet_visible -- the organs that are actually visible in PET
+    (see the comment on those fields in config.py). The dice losses renormalize
+    over the classes present in each subject, so the overall loss scale, and
+    hence w_dice_ct_lvl*, is unaffected.
+
+    Build this once per training run and pass it into the loss; it is a
+    constant, so there is no reason to rebuild it per iteration.
+    """
+    if config.w_dice_pet_visible == 1.0 or not config.pet_visible_labels:
+        return None
+
+    weights = torch.ones(N_CT_LABELS, device=device)
+    labels = torch.tensor(config.pet_visible_labels, device=device).long()
+    weights[labels] = config.w_dice_pet_visible
+    return weights
+
+
 def soft_dice_loss_binary(
     pred: torch.Tensor, target: torch.Tensor, eps: float = 1e-5
 ) -> torch.Tensor:
