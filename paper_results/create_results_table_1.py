@@ -29,7 +29,16 @@ HIGHER_IS_BETTER = {
 }
 # Multiplier applied for display only (the fractional errors are reported in %).
 DISPLAY_SCALE = {"dice": 1.0, "hd95": 1.0, "mtv": 100.0, "tlg": 100.0, "ndv": 100.0}
-DISPLAY_DECIMALS = {"dice": 3, "hd95": 2, "mtv": 2, "tlg": 2, "ndv": 4}
+DISPLAY_DECIMALS = {"dice": 3, "hd95": 2, "mtv": 2, "tlg": 2, "ndv": 1}
+# "fixed" prints plain decimals, "scientific" prints m.m x 10^e (%NDV spans
+# several orders of magnitude, so fixed notation wastes width on leading zeros).
+DISPLAY_NOTATION = {
+    "dice": "fixed",
+    "hd95": "fixed",
+    "mtv": "fixed",
+    "tlg": "fixed",
+    "ndv": "fixed",
+}
 HEADERS = {
     "dice": r"DSC $\uparrow$",
     "hd95": r"HD95 (mm) $\downarrow$",
@@ -132,15 +141,37 @@ def challenge_scores(means, models):
     )
 
 
+def format_number(value, metric):
+    """Format one number in the notation configured for its metric."""
+    decimals = DISPLAY_DECIMALS[metric]
+    if DISPLAY_NOTATION[metric] == "fixed":
+        return f"{value:.{decimals}f}"
+    if value == 0:
+        return "0"
+    mantissa, exponent = f"{value:.{decimals}e}".split("e")
+    return f"{mantissa}\\!\\times\\!10^{{{int(exponent)}}}"
+
+
+def wrap_math(text, metric):
+    """Scientific notation needs math mode; fixed notation does not."""
+    return f"${text}$" if DISPLAY_NOTATION[metric] == "scientific" else text
+
+
 def format_cell(values, metric):
     """mean +- std on the first line, median [IQR] on the second."""
     if values is None:
         return "--", "--"
     scaled = np.asarray(values, dtype=float) * DISPLAY_SCALE[metric]
-    decimals = DISPLAY_DECIMALS[metric]
     q1, median, q3 = np.percentile(scaled, [25, 50, 75])
-    mean_line = f"{scaled.mean():.{decimals}f} $\\pm$ {scaled.std(ddof=1):.{decimals}f}"
-    median_line = f"{median:.{decimals}f} [{q1:.{decimals}f}, {q3:.{decimals}f}]"
+
+    def number(value):
+        return format_number(value, metric)
+
+    if DISPLAY_NOTATION[metric] == "fixed":
+        mean_line = f"{number(scaled.mean())} $\\pm$ {number(scaled.std(ddof=1))}"
+    else:
+        mean_line = f"${number(scaled.mean())} \\pm {number(scaled.std(ddof=1))}$"
+    median_line = wrap_math(f"{number(median)} [{number(q1)}, {number(q3)}]", metric)
     return mean_line, median_line
 
 
@@ -208,15 +239,15 @@ def main():
         r"\centering",
         r"\small",
         r"\setlength{\tabcolsep}{4pt}",
-        r"\begin{tabular}{l" + "c" * len(METRICS) + "cc}",
+        r"\begin{tabular}{l" + "c" * len(METRICS) + "c}",
         r"\toprule",
         "Model & "
         + " & ".join(HEADERS[m] for m in METRICS)
-        + r" & Score $\uparrow$ & Rank \\",
+        + r" & Score $\uparrow$ \\",
         r"\midrule",
     ]
 
-    def emit(model, score_cell, rank_cell, bold=False):
+    def emit(model, score_cell, bold=False):
         name = display_names.get(model, model)
         mean_cells, median_cells = [], []
         for metric in METRICS:
@@ -233,34 +264,25 @@ def main():
             name = r"\textbf{" + name + "}"
             mean_cells = [r"\textbf{" + c + "}" for c in mean_cells]
             score_cell = r"\textbf{" + score_cell + "}"
-            rank_cell = r"\textbf{" + rank_cell + "}"
         lines.append(
-            f"{name} & "
-            + " & ".join(mean_cells)
-            + f" & {score_cell} & {rank_cell} "
-            + r"\\"
+            f"{name} & " + " & ".join(mean_cells) + f" & {score_cell} " + r"\\"
         )
         lines.append(
             r"\scriptsize\textcolor{gray}{median [IQR]} & "
             + " & ".join(
                 r"\scriptsize\textcolor{gray}{" + c + "}" for c in median_cells
             )
-            + r" & & \\"
+            + r" & \\"
         )
         lines.append(r"\addlinespace[2pt]")
 
     for model in references:
-        emit(model, "--", "--")
+        emit(model, "--")
     if references:
         lines.append(r"\midrule")
 
-    for position, model in enumerate(ordered_variants, start=1):
-        emit(
-            model,
-            f"{scores.loc[model, 'score']:.2f}",
-            str(position),
-            bold=(model == best),
-        )
+    for model in ordered_variants:
+        emit(model, f"{scores.loc[model, 'score']:.2f}", bold=(model == best))
 
     lines += [
         r"\bottomrule",
