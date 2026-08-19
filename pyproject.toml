@@ -5,13 +5,20 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "antspyx>=0.6.3",
+    "einops==0.8.1",
     "matplotlib>=3.11.0",
+    "ml-collections==0.1.1",
     "mlflow>=3.13.0",
+    "natsort>=8.4.0",
     "nibabel>=5.4.2",
     "nnunet==1.7.1",
     "pandas>=2.3.3",
     "psutil>=7.2.2",
-    "seaborn>=0.13.2",
+    "pymedio==0.2.5",
+    "seaborn==0.11.0",
+    "statsmodels>=0.14.6",
+    "timm==0.9.10",
     "torch>=2.6.0",
     "torchvision>=0.21.0",
     "totalsegmentator>=2.12.0",

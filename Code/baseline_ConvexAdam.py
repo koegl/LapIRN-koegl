@@ -25,16 +25,44 @@ from scipy.ndimage import zoom
 SpatialTransformer = None
 convex_adam_pt_svf = None
 
+# --- paths: mirror inference.py ---
+DATASET_ROOT = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset")
+VAL_IMAGE_DIR = DATASET_ROOT / "imagesTs"
+OUTPUT_DIR = Path(
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission_results/convexadam"
+)
+# inference.py evaluates only the challenge cases (ids starting with '0'); the
+# json's validation_paired list is exactly those 20 subjects.
+CT_TEMPLATE = "PSMARegPSMA_{case_id}_0000_{tp}.nii.gz"
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--reference-dir", type=Path, required=True)
+    parser.add_argument(
+        "--reference-dir",
+        type=Path,
+        default=DATASET_ROOT,
+        help="Dataset root holding PSMAReg_dataset.json.",
+    )
     parser.add_argument("--dataset-json", type=Path, default=None)
-    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument(
+        "--image-dir",
+        type=Path,
+        default=VAL_IMAGE_DIR,
+        help="Directory the CT volumes are read from. Defaults to the same "
+        "imagesTs used by inference.py (byte-identical to imagesVal).",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=OUTPUT_DIR,
+        help="Predictions land in <output-dir>/predictions, which is what "
+        "inference.py reads as its external displacement directory.",
+    )
     parser.add_argument(
         "--mir-src",
         type=Path,
-        default="/home/iml/fryderyk.koegl/code/MIR",
+        default="/home/iml/fryderyk.koegl/code/MIR/src",
         help="Path to MIR/src if MIR is not installed.",
     )
     parser.add_argument("--limit", type=int, default=None)
@@ -88,6 +116,15 @@ def resolve_reference_path(reference_dir, relative_path):
     if relative_path.startswith("./"):
         relative_path = relative_path[2:]
     return (reference_dir / relative_path).resolve()
+
+
+def resolve_ct_path(args, subject_id, tp, fallback_relative):
+    """CT path for one timepoint, from --image-dir (the imagesTs that
+    inference.py uses). Falls back to the json-relative path if absent."""
+    path = args.image_dir / CT_TEMPLATE.format(case_id=subject_id, tp=tp)
+    if path.exists():
+        return path
+    return resolve_reference_path(args.reference_dir, fallback_relative)
 
 
 def ct_window_normalize(volume, window):
@@ -415,8 +452,10 @@ def run_case(entry, args, prediction_dir, preview_dir):
         raise FileExistsError("Prediction exists: {}".format(prediction_path))
 
     t0 = time.time()
-    fixed_path = resolve_reference_path(args.reference_dir, entry["CT"])
-    moving_path = resolve_reference_path(args.reference_dir, entry["Follow-up 01 CT"])
+    # fixed = baseline (00), moving = follow-up (01) — same direction as
+    # inference.py (X = 01 moving, Y = 00 fixed).
+    fixed_path = resolve_ct_path(args, subject_id, "00", entry["Baseline CT"])
+    moving_path = resolve_ct_path(args, subject_id, "01", entry["Follow-up 01 CT"])
     fixed_nii = nib.load(str(fixed_path))
     moving_nii = nib.load(str(moving_path))
     fixed = fixed_nii.get_fdata(dtype=np.float32)
@@ -499,6 +538,16 @@ def run_case(entry, args, prediction_dir, preview_dir):
             np.float32
         )
 
+    # inference.py loads this field on the half-resolution grid it composes on,
+    # so the spatial dims must be exactly fixed_shape // downsample_factor.
+    expected_shape = tuple(dim // args.downsample_factor for dim in fixed.shape[:3])
+    if tuple(total_field.shape[1:]) != expected_shape:
+        raise ValueError(
+            "Field shape {} != expected {} for {}".format(
+                tuple(total_field.shape[1:]), expected_shape, subject
+            )
+        )
+
     save_disp(
         prediction_path,
         total_field,
@@ -530,6 +579,7 @@ def run_case(entry, args, prediction_dir, preview_dir):
         "total_seconds": time.time() - t0,
         "stage": args.stage,
         "affine_field_transform": args.affine_field_transform,
+        "field_shape": "x".join(str(dim) for dim in total_field.shape[1:]),
         "field_abs_mean": float(np.mean(np.abs(total_field))),
         "field_abs_max": float(np.max(np.abs(total_field))),
     }

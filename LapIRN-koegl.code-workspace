@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "../../data"
+		},
+		{
+			"path": "../Learn2Reg26_PSMA"
 		}
 	],
 	"settings": {
