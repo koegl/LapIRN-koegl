@@ -66,6 +66,9 @@ WEIGHTS = {"accuracy": 0.4, "biomarker": 0.4, "regularity": 0.2}
 
 ALPHA = 0.05
 
+# Vertical space between the tabular's bottom rule and the caption.
+CAPTION_SKIP = "10pt"
+
 # Both off for the short method paper (width); turn back on for the journal
 # extension. SHOW_STD adds "+- std" to the mean, SHOW_MEDIAN_IQR adds a second
 # line per row with the median [IQR].
@@ -290,6 +293,7 @@ def main():
     lines = [
         r"\begin{table}[t]",
         r"\centering",
+        r"\setlength{\abovecaptionskip}{" + CAPTION_SKIP + "}",
         r"\small",
         r"\setlength{\tabcolsep}{4pt}",
         r"\begin{tabular}{l" + "c" * len(METRICS) + "c}",
