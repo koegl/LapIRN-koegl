@@ -126,6 +126,12 @@ def main() -> None:
         action=argparse.BooleanOptionalAction,
         default=True,
     )
+    parser.add_argument(
+        "--reverse",
+        action="store_true",
+        help="process the pairs from the back, so a second run can work "
+        "towards a front-to-back run; both skip whatever is already done",
+    )
     args = parser.parse_args()
 
     cfg = TrainingConfig()
@@ -149,7 +155,12 @@ def main() -> None:
         include_intermediate_pairs=True,
         num_workers=cfg.num_workers,
     )
-    loader = torch_data.DataLoader(dataset, batch_size=1, shuffle=False)
+    order = list(range(len(dataset)))
+    if args.reverse:
+        order.reverse()
+    loader = torch_data.DataLoader(
+        torch_data.Subset(dataset, order), batch_size=1, shuffle=False
+    )
 
     model = create_model(device, cfg, args.model_path)
 
@@ -165,7 +176,17 @@ def main() -> None:
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     summary_path = args.out_dir / "io_summary.csv"
+    failures_path = args.out_dir / "io_failures.txt"
     write_header = not summary_path.exists()
+
+    # pairs already recorded in the csv (a .pt alone is not enough: a killed
+    # run can leave a file without its summary row, or vice versa)
+    recorded: set[Tuple[str, str, str]] = set()
+    if summary_path.exists():
+        with open(summary_path, newline="") as f:
+            for row in csv.DictReader(f):
+                recorded.add((row["case_id"], row["tp_x"], row["tp_y"]))
+
     summary_file = open(summary_path, "a", newline="")
     summary = csv.writer(summary_file)
     if write_header:
@@ -173,79 +194,135 @@ def main() -> None:
             ["case_id", "tp_x", "tp_y", "dice_base", "dice_refined", "file"]
         )
 
+    def log_failure(name: str, reason: str) -> None:
+        tqdm.tqdm.write(f"FAILURE {name}: {reason}")
+        with open(failures_path, "a") as f:
+            f.write(f"{name}\t{reason}\n")
+
     for batch in tqdm.tqdm(loader, desc="IO on train pairs", ncols=120):
         case_id = batch["case_id"][0]
         tp_x = batch["tp_x"][0]
         tp_y = batch["tp_y"][0]
         out_path = args.out_dir / dvf_filename(case_id, tp_x, tp_y)
-        if out_path.exists() and not args.overwrite:
-            tqdm.tqdm.write(f"{out_path.name}: exists, skipping")
+        pt_exists = out_path.exists()
+        csv_exists = (case_id, tp_x, tp_y) in recorded
+        if not args.overwrite:
+            if pt_exists and csv_exists:
+                tqdm.tqdm.write(f"{out_path.name}: done, skipping")
+                continue
+            if pt_exists != csv_exists:
+                # inconsistent leftovers (e.g. from a killed run): don't
+                # recompute, just record so they can be cleaned up later
+                log_failure(
+                    out_path.name,
+                    "pt exists but no csv row" if pt_exists else "csv row but no pt",
+                )
+                continue
+
+        try:
+            process_pair(
+                batch,
+                cfg,
+                device,
+                model,
+                transform,
+                transform_nearest,
+                grid_full,
+                args,
+                out_path,
+                summary,
+                summary_file,
+            )
+        except Exception as e:  # noqa: BLE001 - keep the sweep going
+            log_failure(out_path.name, f"{type(e).__name__}: {e}")
+            # a half-written .pt would poison the skip logic of the next run
+            out_path.unlink(missing_ok=True)
             continue
-
-        X_prereg, X_lbl_ct, X_lbl_pet, Y, Y_lbl_ct, _ = prereg_batch(
-            batch, cfg, device, transform, transform_nearest, grid_full
-        )
-
-        with torch.no_grad():
-            F_X_Y, _, _, _, _, _, _ = model(X_prereg, Y)
-
-        # run_io needs autograd on its inner velocity leaf: no no_grad here
-        refined = instance_opt.run_io(
-            Y,
-            F_X_Y,
-            X_prereg,
-            X_lbl_ct,
-            X_lbl_pet,
-            Y_lbl_ct,
-            transform,
-            transform_nearest,
-            grid_full,
-            cfg,
-            device,
-            include_pet=args.include_pet,
-            include_rigidity=args.include_rigidity,
-        )
-        refined = refined.detach()
-
-        # diagnostic: hard mean dice before/after, both on the prereg labels so
-        # the two numbers are comparable (double interpolation on both)
-        with torch.no_grad():
-            warped_base = instance_opt.warp_label(
-                X_lbl_ct, F_X_Y, grid_full, transform_nearest
-            )
-            warped_ref = instance_opt.warp_label(
-                X_lbl_ct, refined, grid_full, transform_nearest
-            )
-            target = Y_lbl_ct[0, 0].round().long()
-            dice_base = instance_opt.multilabel_dice(
-                warped_base[0, 0].round().long(), target
-            )
-            dice_ref = instance_opt.multilabel_dice(
-                warped_ref[0, 0].round().long(), target
-            )
-
-        # fp16 halves the disk cost; unit-flow values are O(1e-2), where fp16
-        # keeps ~3 significant digits — far below the IO refinement itself
-        torch.save(
-            {
-                "disp_unit": refined.squeeze(0).to(torch.float16).cpu(),
-                "case_id": case_id,
-                "tp_x": tp_x,
-                "tp_y": tp_y,
-                "model_path": str(args.model_path),
-            },
-            out_path,
-        )
-        summary.writerow(
-            [case_id, tp_x, tp_y, f"{dice_base:.4f}", f"{dice_ref:.4f}", out_path.name]
-        )
-        summary_file.flush()
-        tqdm.tqdm.write(
-            f"{case_id} {tp_x}->{tp_y}: dice {dice_base:.4f} -> {dice_ref:.4f}"
-        )
 
     summary_file.close()
     print(f"Done. Fields in {args.out_dir}, summary in {summary_path}")
+    if failures_path.exists():
+        print(f"Failures recorded in {failures_path}")
+
+
+def process_pair(
+    batch: dict,
+    cfg: TrainingConfig,
+    device: torch.device,
+    model: torch.nn.Module,
+    transform: torch.nn.Module,
+    transform_nearest: torch.nn.Module,
+    grid_full: torch.Tensor,
+    args: argparse.Namespace,
+    out_path: Path,
+    summary: "csv._writer",
+    summary_file,
+) -> None:
+    case_id = batch["case_id"][0]
+    tp_x = batch["tp_x"][0]
+    tp_y = batch["tp_y"][0]
+
+    X_prereg, X_lbl_ct, X_lbl_pet, Y, Y_lbl_ct, _ = prereg_batch(
+        batch, cfg, device, transform, transform_nearest, grid_full
+    )
+
+    with torch.no_grad():
+        F_X_Y, _, _, _, _, _, _ = model(X_prereg, Y)
+
+    # run_io needs autograd on its inner velocity leaf: no no_grad here
+    refined = instance_opt.run_io(
+        Y,
+        F_X_Y,
+        X_prereg,
+        X_lbl_ct,
+        X_lbl_pet,
+        Y_lbl_ct,
+        transform,
+        transform_nearest,
+        grid_full,
+        cfg,
+        device,
+        include_pet=args.include_pet,
+        include_rigidity=args.include_rigidity,
+    )
+    refined = refined.detach()
+
+    # diagnostic: hard mean dice before/after, both on the prereg labels so
+    # the two numbers are comparable (double interpolation on both)
+    with torch.no_grad():
+        warped_base = instance_opt.warp_label(
+            X_lbl_ct, F_X_Y, grid_full, transform_nearest
+        )
+        warped_ref = instance_opt.warp_label(
+            X_lbl_ct, refined, grid_full, transform_nearest
+        )
+        target = Y_lbl_ct[0, 0].round().long()
+        dice_base = instance_opt.multilabel_dice(
+            warped_base[0, 0].round().long(), target
+        )
+        dice_ref = instance_opt.multilabel_dice(
+            warped_ref[0, 0].round().long(), target
+        )
+
+    # fp16 halves the disk cost; unit-flow values are O(1e-2), where fp16
+    # keeps ~3 significant digits — far below the IO refinement itself
+    torch.save(
+        {
+            "disp_unit": refined.squeeze(0).to(torch.float16).cpu(),
+            "case_id": case_id,
+            "tp_x": tp_x,
+            "tp_y": tp_y,
+            "model_path": str(args.model_path),
+        },
+        out_path,
+    )
+    summary.writerow(
+        [case_id, tp_x, tp_y, f"{dice_base:.4f}", f"{dice_ref:.4f}", out_path.name]
+    )
+    summary_file.flush()
+    tqdm.tqdm.write(
+        f"{case_id} {tp_x}->{tp_y}: dice {dice_base:.4f} -> {dice_ref:.4f}"
+    )
 
 
 if __name__ == "__main__":
