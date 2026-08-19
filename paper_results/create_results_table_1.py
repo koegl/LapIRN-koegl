@@ -28,10 +28,10 @@ HIGHER_IS_BETTER = {
     "ndv": False,
 }
 # Multiplier applied for display only (the fractional errors are reported in %).
-# MTV/TLG errors are reported in %, NDV in ppm (its values span several orders
-# of magnitude and are tiny, so % would be all leading zeros).
-DISPLAY_SCALE = {"dice": 1.0, "hd95": 1.0, "mtv": 100.0, "tlg": 100.0, "ndv": 1e6}
-DISPLAY_DECIMALS = {"dice": 3, "hd95": 2, "mtv": 2, "tlg": 2, "ndv": 1}
+# DSC and the MTV/TLG errors are reported in %, NDV in ppm (its values span
+# several orders of magnitude and are tiny, so % would be all leading zeros).
+DISPLAY_SCALE = {"dice": 100.0, "hd95": 1.0, "mtv": 100.0, "tlg": 100.0, "ndv": 1e6}
+DISPLAY_DECIMALS = {"dice": 1, "hd95": 2, "mtv": 2, "tlg": 2, "ndv": 1}
 # Mantissa decimals used only in scientific notation, so switching a metric
 # between notations does not require retuning its precision.
 SCIENTIFIC_DECIMALS = {"dice": 1, "hd95": 1, "mtv": 1, "tlg": 1, "ndv": 1}
@@ -44,7 +44,7 @@ DISPLAY_NOTATION = {
     "ndv": "fixed",
 }
 HEADERS = {
-    "dice": r"DSC $\uparrow$",
+    "dice": r"DSC (\%) $\uparrow$",
     "hd95": r"HD95 (mm) $\downarrow$",
     "mtv": r"MTV \%err $\downarrow$",
     "tlg": r"TLG \%err $\downarrow$",
@@ -303,7 +303,7 @@ def main():
             if SHOW_MEDIAN_IQR
             else r"Each cell reports mean $\pm$ std over cases. "
         )
-        + r"MTV and TLG errors are given in \%, NDV in ppm. Score reproduces the challenge ranking: "
+        + r"DSC and the MTV/TLG errors are given in \%, NDV in ppm. Score reproduces the challenge ranking: "
         r"each metric is ranked separately (ties take the worst rank spanned), turned into "
         r"$(K-\mathrm{rank}+1)/K$, and combined as "
         r"$100 \times \mathrm{accuracy}^{0.4}\,\mathrm{biomarker}^{0.4}\,\mathrm{regularity}^{0.2}$ "
