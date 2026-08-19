@@ -151,12 +151,12 @@ def main() -> None:
                 # path_model_level_2 = paths_model_level2["best"]
                 # path_model_level_2 = paths_model_level2["final"]
                 print("skipping level 2, already trained")
-                # path_model_level_2 = Path(
-                # "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_nosy-shrike-707_stagelvl2_best.pth"
-                # )
                 path_model_level_2 = Path(
-                    "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_gentle-rat-39450513_stagelvl2_best.pth"
+                    "/home/iml/fryderyk.koegl/data/PSMAReg/models/PSMAReg_LapIRN_merciful-shrike-local_stagelvl2_best.pth"
                 )
+                # path_model_level_2 = Path(
+                #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_gentle-rat-39450513_stagelvl2_best.pth"
+                # )
                 # path_model_level3 = level3.train_lvl3(
                 #     config,
                 #     path_model_level_2,
