@@ -165,7 +165,7 @@ class TrainingConfig:
         default_factory=lambda: [1, 2, 3, 4, 5, 7, 19, 21, 22, 64]
     )
     # 1.0 disables the weighting entirely (all labels equal)
-    w_dice_pet_visible: float = 1.0
+    w_dice_pet_visible: float = 2.0
     w_tlg: float = 5.0
     w_jacobian_tumor: float = 5.0
     w_mtv: float = 20.0
