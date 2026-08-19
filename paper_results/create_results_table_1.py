@@ -28,10 +28,14 @@ HIGHER_IS_BETTER = {
     "ndv": False,
 }
 # Multiplier applied for display only (the fractional errors are reported in %).
-DISPLAY_SCALE = {"dice": 1.0, "hd95": 1.0, "mtv": 100.0, "tlg": 100.0, "ndv": 100.0}
+# MTV/TLG errors are reported in %, NDV in ppm (its values span several orders
+# of magnitude and are tiny, so % would be all leading zeros).
+DISPLAY_SCALE = {"dice": 1.0, "hd95": 1.0, "mtv": 100.0, "tlg": 100.0, "ndv": 1e6}
 DISPLAY_DECIMALS = {"dice": 3, "hd95": 2, "mtv": 2, "tlg": 2, "ndv": 1}
-# "fixed" prints plain decimals, "scientific" prints m.m x 10^e (%NDV spans
-# several orders of magnitude, so fixed notation wastes width on leading zeros).
+# Mantissa decimals used only in scientific notation, so switching a metric
+# between notations does not require retuning its precision.
+SCIENTIFIC_DECIMALS = {"dice": 1, "hd95": 1, "mtv": 1, "tlg": 1, "ndv": 1}
+# "fixed" prints plain decimals, "scientific" prints m.m x 10^e.
 DISPLAY_NOTATION = {
     "dice": "fixed",
     "hd95": "fixed",
@@ -44,11 +48,11 @@ HEADERS = {
     "hd95": r"HD95 (mm) $\downarrow$",
     "mtv": r"MTV \%err $\downarrow$",
     "tlg": r"TLG \%err $\downarrow$",
-    "ndv": r"\%NDV $\downarrow$",
+    "ndv": r"NDV (ppm) $\downarrow$",
 }
 
-# NDV tolerance from the challenge scoring: max(%NDV - 0.005%, 0). The CSVs
-# store NDV as a fraction, so 0.005% == 5e-5.
+# NDV tolerance from the challenge scoring: max(%NDV - 0.005%, 0), i.e. 50 ppm.
+# The CSVs store NDV as a fraction, so 0.005% == 5e-5.
 NDV_TOLERANCE = 5e-5
 
 # Challenge component weights.
@@ -147,12 +151,11 @@ def challenge_scores(means, models):
 
 def format_number(value, metric):
     """Format one number in the notation configured for its metric."""
-    decimals = DISPLAY_DECIMALS[metric]
     if DISPLAY_NOTATION[metric] == "fixed":
-        return f"{value:.{decimals}f}"
+        return f"{value:.{DISPLAY_DECIMALS[metric]}f}"
     if value == 0:
         return "0"
-    mantissa, exponent = f"{value:.{decimals}e}".split("e")
+    mantissa, exponent = f"{value:.{SCIENTIFIC_DECIMALS[metric]}e}".split("e")
     return f"{mantissa}\\!\\times\\!10^{{{int(exponent)}}}"
 
 
@@ -300,13 +303,13 @@ def main():
             if SHOW_MEDIAN_IQR
             else r"Each cell reports mean $\pm$ std over cases. "
         )
-        + r"MTV, TLG and NDV are given in \%. Score reproduces the challenge ranking: "
+        + r"MTV and TLG errors are given in \%, NDV in ppm. Score reproduces the challenge ranking: "
         r"each metric is ranked separately (ties take the worst rank spanned), turned into "
         r"$(K-\mathrm{rank}+1)/K$, and combined as "
         r"$100 \times \mathrm{accuracy}^{0.4}\,\mathrm{biomarker}^{0.4}\,\mathrm{regularity}^{0.2}$ "
         r"with accuracy $=$ geometric mean of DSC and HD95, biomarker $=$ geometric mean of "
-        r"MTV and TLG \%err, and regularity $=$ \%NDV after the challenge tolerance "
-        r"$\max(\%\mathrm{NDV}-0.005\%,\,0)$. The best-scoring variant is shown in bold; "
+        r"MTV and TLG \%err, and regularity $=$ NDV after the challenge tolerance "
+        r"$\max(\mathrm{NDV}-50\,\mathrm{ppm},\,0)$. The best-scoring variant is shown in bold; "
         r"$^{*}$ marks metrics on which it is significantly better than the given variant "
         r"(paired Wilcoxon signed-rank over the "
         + str(n_cases)
