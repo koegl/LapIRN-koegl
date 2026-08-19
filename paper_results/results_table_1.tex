@@ -6,9 +6,6 @@
 \toprule
 Model & \rotatebox[origin=l]{45}{DSC (\%) $\uparrow$} & \rotatebox[origin=l]{45}{HD95 (mm) $\downarrow$} & \rotatebox[origin=l]{45}{MTV \%err $\downarrow$} & \rotatebox[origin=l]{45}{TLG \%err $\downarrow$} & \rotatebox[origin=l]{45}{NDV (ppm) $\downarrow$} & \rotatebox[origin=l]{45}{Score $\uparrow$} \\
 \midrule
-Initial & 14.8 & 30.9 & -- & -- & -- & -- \\
-Affine & 52.9 & 11.7 & 5.47 & 4.70 & -- & -- \\
-\midrule
 \textbf{V5} & 88.3 & 4.77 & 1.83 & 1.80 & 20.7 & \textbf{69.0} \\
 V6 & 87.6$^{*}$ & 4.93$^{*}$ & 1.94 & 1.64 & 19.3 & 63.4 \\
 V4 & 87.5$^{*}$ & 5.02$^{*}$ & 1.89 & \textbf{1.64} & 6.49 & 60.3 \\
@@ -20,6 +17,6 @@ V8 & 78.8$^{*}$ & 6.54$^{*}$ & 7.96$^{*}$ & 12.2$^{*}$ & 7.64 & 26.1 \\
 V7 & 75.0$^{*}$ & 7.00$^{*}$ & 2.93 & 5.98$^{*}$ & \textbf{0.00} & 22.8 \\
 \bottomrule
 \end{tabular}
-\caption{LapIRN variants on the official challenge validation set ($n=20$ cases), evaluated against the surrogate labels of Sec.~\ref{sec:evaluation}. Each cell reports the mean over cases. DSC and the MTV/TLG errors are given in \%, NDV in ppm. Score is the challenge score of Eq.~\eqref{eq:score}; variants are listed in ranking order, highest score first. Bold marks the best value in each column, and the Model and Score entries of the best-scoring variant. $^{*}$ marks metrics on which that variant is significantly better than the variant in the given row (paired Wilcoxon signed-rank, Holm-corrected within each metric, $p<0.05$). The unregistered and affine-only rows are shown for reference and take part in neither the ranking nor the tests.}
+\caption{LapIRN variants on the official challenge validation set ($n=20$ cases), evaluated against the surrogate labels of Sec.~\ref{sec:evaluation}. Each cell reports the mean over cases. DSC and the MTV/TLG errors are given in \%, NDV in ppm. Score is the challenge score of Eq.~\eqref{eq:score}; variants are listed in ranking order, highest score first. Bold marks the best value in each column, and the Model and Score entries of the best-scoring variant. $^{*}$ marks metrics on which that variant is significantly better than the variant in the given row (paired Wilcoxon signed-rank, Holm-corrected within each metric, $p<0.05$).}
 \label{tab:lapirn_variants}
 \end{table}

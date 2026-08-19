@@ -72,23 +72,16 @@ ALPHA = 0.05
 SHOW_STD = False
 SHOW_MEDIAN_IQR = False
 
-# Rows shown for context at the top of the table but excluded from the ranking
-# and from the statistical tests (they are missing some of the five metrics).
-REFERENCE_MODELS = ["before_registration", "affine"]
-# Rows dropped entirely (reported in the baseline comparison table instead).
-EXCLUDED_MODELS = ["convexadam", "niftyreg"]
+# Non-variant rows; all of them live in the baseline comparison table instead.
+EXCLUDED_MODELS = ["before_registration", "affine", "convexadam", "niftyreg"]
 
-# Reference rows keep fixed labels; every variant is auto-labelled V1, V2, ...
-# in the order it appears in the CSVs, so adding a row needs no code change.
-REFERENCE_LABELS = {
-    "before_registration": "Initial",
-    "affine": "Affine",
-}
+# Every variant is auto-labelled V1, V2, ... in the order it appears in the
+# CSVs, so adding a row needs no code change.
 VARIANT_LABEL_PREFIX = "V"
 
 
 def build_display_names(variants_in_csv_order):
-    names = dict(REFERENCE_LABELS)
+    names = {}
     for number, model in enumerate(variants_in_csv_order, start=1):
         names[model] = f"{VARIANT_LABEL_PREFIX}{number}"
     return names
@@ -225,9 +218,8 @@ def main():
     variants = [
         m
         for m in per_case["dice"].index
-        if m in complete and m not in REFERENCE_MODELS and m not in EXCLUDED_MODELS
+        if m in complete and m not in EXCLUDED_MODELS
     ]
-    references = [m for m in REFERENCE_MODELS if m in per_case["dice"].index]
 
     display_names = build_display_names(variants)
 
@@ -341,11 +333,6 @@ def main():
             )
             lines.append(r"\addlinespace[2pt]")
 
-    for model in references:
-        emit(model, "--")
-    if references:
-        lines.append(r"\midrule")
-
     for model in ordered_variants:
         score = scores.loc[model, "score"]
         emit(model, f"{score:.{decimals_for(score)}f}", bold=(model == best))
@@ -365,9 +352,7 @@ def main():
         r"the best-scoring variant. "
         r"$^{*}$ marks metrics on which that variant is significantly better than the "
         r"variant in the given row (paired Wilcoxon signed-rank, Holm-corrected within "
-        r"each metric, $p<0.05$). "
-        r"The unregistered and affine-only rows are shown for reference and take part in "
-        r"neither the ranking nor the tests.}",
+        r"each metric, $p<0.05$).}",
         r"\label{tab:lapirn_variants}",
         r"\end{table}",
         "",
