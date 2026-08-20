@@ -23,7 +23,7 @@ HERE = Path(__file__).resolve().parent
 # --- the checkpoint we selected -------------------------------------------
 # Global step of the red dashed line, drawn in both panels. Set to None to
 # omit the line entirely.
-SELECTED_STEP = 60000
+SELECTED_STEP = 43000
 
 RUN = "rebellious_stork"
 CSV_DSC = HERE / f"dsc_{RUN}.csv"
@@ -41,8 +41,16 @@ STEP_SCALE = 1e-3
 # Fixed x range of both panels, in the units of the drawn axis (thousands of
 # steps). Set to None to let pgfplots pick the range from the data.
 XMIN, XMAX = 0.0, 120.0
-# DSC and the biomarker biases are stored as fractions and reported in %.
-VALUE_SCALE = 100.0
+# Spacing of the x ticks, in the same units.
+XTICK_DISTANCE = 20
+# Everything is logged as a fraction. Dice is shown as a fraction (0.80), the
+# biomarker biases in per cent.
+DSC_SCALE = 1.0
+BIAS_SCALE = 100.0
+# Decimals on the y tick labels of each panel; "zerofill" pads them so the
+# labels keep a constant width.
+DSC_PRECISION = 2
+BIAS_PRECISION = 0
 
 # Gap between an axis label and its tick labels. Negative values pull the label
 # towards the axis; "ylabel near ticks" already anchors it to the tick labels
@@ -55,7 +63,7 @@ XLABEL_SHIFT = "-2pt"
 # some 30pt wider once the y-label and tick labels are added; keep the pair
 # comfortably below 0.5\linewidth each or the second panel wraps onto its own
 # line.
-AXIS_WIDTH = "0.40\\linewidth"
+AXIS_WIDTH = "0.39\\linewidth"
 AXIS_HEIGHT = "0.26\\linewidth"
 
 COLOR_DSC = "0.12,0.34,0.62"  # blue
@@ -73,7 +81,7 @@ CAPTION = (
 )
 
 
-def read_metric(path: Path) -> pd.DataFrame:
+def read_metric(path: Path, scale: float) -> pd.DataFrame:
     """Return the (step, value) series of a W&B export.
 
     The exports carry a ``global_step`` column plus one column per run; the
@@ -95,7 +103,7 @@ def read_metric(path: Path) -> pd.DataFrame:
     out.columns = ["step", "value"]
     out = out.dropna().sort_values("step").reset_index(drop=True)
     out["step"] = out["step"].astype(float) * STEP_SCALE
-    out["value"] = out["value"].astype(float) * VALUE_SCALE
+    out["value"] = out["value"].astype(float) * scale
     return out
 
 
@@ -164,6 +172,7 @@ def axis(
     ylabel: str,
     ymin: float,
     ymax: float,
+    precision: int,
     legend: bool = False,
 ) -> list[str]:
     options = [
@@ -182,6 +191,10 @@ def axis(
             if XMIN is None or XMAX is None
             else [f"xmin={XMIN:g}", f"xmax={XMAX:g}"]
         ),
+        f"xtick distance={XTICK_DISTANCE}",
+        "yticklabel style={/pgf/number format/fixed, "
+        f"/pgf/number format/precision={precision}, "
+        "/pgf/number format/zerofill}",
         "tick align=outside",
         "tick pos=left",
         "grid=major",
@@ -204,9 +217,9 @@ def axis(
 
 
 def main() -> None:
-    dsc = read_metric(CSV_DSC)
-    mtv = read_metric(CSV_MTV)
-    tlg = read_metric(CSV_TLG)
+    dsc = read_metric(CSV_DSC, DSC_SCALE)
+    mtv = read_metric(CSV_MTV, BIAS_SCALE)
+    tlg = read_metric(CSV_TLG, BIAS_SCALE)
     for frame in (dsc, mtv, tlg):
         frame["smoothed"] = smooth(frame["value"])
 
@@ -233,14 +246,16 @@ def main() -> None:
         "label style={font=\\scriptsize}, tick label style={font=\\tiny}}}",
         "\\begin{tikzpicture}",
     ]
-    lines += axis(left, "validation DSC (\\%)", dsc_min, dsc_max)
+    lines += axis(left, "validation DSC", dsc_min, dsc_max, DSC_PRECISION)
     # The trailing %% are load-bearing: a line break between the two pictures
     # would become an interword space, which is enough to push the pair over
     # \linewidth and wrap the second one onto its own line.
     lines.append("\\end{tikzpicture}%")
     lines.append("\\hfill%")
     lines.append("\\begin{tikzpicture}")
-    lines += axis(right, "bias (\\%)", bio_min, bio_max, legend=True)
+    lines += axis(
+        right, "validation bias (\\%)", bio_min, bio_max, BIAS_PRECISION, legend=True
+    )
     lines += [
         "\\end{tikzpicture}",
         f"\\caption{{{CAPTION}}}",
@@ -253,18 +268,20 @@ def main() -> None:
     OUT_TEX.write_text("\n".join(lines))
     print(f"wrote {OUT_TEX}")
 
-    def summarise(name: str, frame: pd.DataFrame, higher_is_better: bool) -> None:
+    def summarise(
+        name: str, frame: pd.DataFrame, higher_is_better: bool, unit: str = ""
+    ) -> None:
         series = frame["smoothed"]
         best = series.idxmax() if higher_is_better else series.idxmin()
         step = frame["step"].iloc[best] / STEP_SCALE
         print(
-            f"  {name:<4} best (smoothed) {series.iloc[best]:7.3f}% "
+            f"  {name:<4} best (smoothed) {series.iloc[best]:7.3f}{unit} "
             f"at step {step:>7.0f}"
         )
         if SELECTED_STEP is not None:
             at = int(np.argmin(np.abs(frame["step"] / STEP_SCALE - SELECTED_STEP)))
             print(
-                f"       at the selected step {series.iloc[at]:7.3f}% "
+                f"       at the selected step {series.iloc[at]:7.3f}{unit} "
                 f"(step {frame['step'].iloc[at] / STEP_SCALE:.0f})"
             )
 
@@ -272,8 +289,8 @@ def main() -> None:
           f"steps {dsc['step'].min() / STEP_SCALE:.0f}"
           f"--{dsc['step'].max() / STEP_SCALE:.0f}")
     summarise("DSC", dsc, higher_is_better=True)
-    summarise("MTV", mtv, higher_is_better=False)
-    summarise("TLG", tlg, higher_is_better=False)
+    summarise("MTV", mtv, higher_is_better=False, unit="%")
+    summarise("TLG", tlg, higher_is_better=False, unit="%")
 
 
 if __name__ == "__main__":
