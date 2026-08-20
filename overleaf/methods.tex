@@ -275,13 +275,12 @@ confirmatory; the official validation leaderboard serves as the held-out check.
 
 \subsection{Baselines}
 \label{sec:baselines}
-% TODO -- note: this subsection previously reused the label
-% sec:model_selection, which silently broke every \ref to it.
-%   - unregistered and affine-only references
-%   - NiftyReg, ConvexAdam: versions, parameter settings, runtime
-%   - vanilla LapIRN without the proposed loss terms
-%   - state that all baselines are evaluated under the identical
-%     protocol of Sec.~\ref{sec:evaluation}
+We compare against two references and three competing methods, all evaluated on the same pairs and under the identical protocol of Sec.~\ref{sec:evaluation}.
+The two references bound the range in which a deformable method has to be useful: the unregistered pair, i.e.\ the identity transform, and our affine pre-registration alone, which is also the initialisation every method below starts from.
+
+As a classical iterative baseline we ran NiftyReg~\todo{cite NiftyReg}, using \texttt{reg\_aladin} for the affine stage followed by \texttt{reg\_f3d} initialised with it, so that the resulting control point grid encodes the total transform; all parameters were left at their defaults.
+As a learning-free optimisation baseline we ran ConvexAdam~\cite{ref_convexadam}, in the form provided by the challenge organisers as the official baseline of the task, so that our numbers are directly comparable to the reference entry on the leaderboard.
+Finally, we compare against vanilla LapIRN, i.e.\ the same architecture and training schedule as our model but with the original objective only, without the DSC, NDV loss, PET-biomarker terms and the bone-rigidity penalty, which isolates the contribution of the proposed losses from that of the backbone.
 
 \subsection{Implementation Details}
 \label{sec:implementation}
