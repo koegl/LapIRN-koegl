@@ -49,15 +49,18 @@
 
 \begin{document}
 %
-\title{Contribution Title}
+\title{Preserving PET Quantification in Longitudinal Whole-Body Registration}
 %
 %\titlerunning{Abbreviated paper title}
 % If the paper title is too long for the running head, you can set
 % an abbreviated paper title here
 %
-\author{Fryderyk K{\"o}gl\inst{1}\orcidID{0000-1111-2222-3333} \and
-Second Author\inst{2,3}\orcidID{1111-2222-3333-4444} \and
-Third Author\inst{3}\orcidID{2222--3333-4444-5555}}
+\author{Fryderyk K{\"o}gl\inst{1}\orcidID{0000-0000-0000-0000} \and
+Anna Reithmeir\inst{2,3}\orcidID{1111-1111-1111-1111} \and
+Daniel M. Lang\inst{2,3}\orcidID{1111-1111-1111-1111} \and
+Emily Chan\inst{2,3}\orcidID{1111-1111-1111-1111} \and
+Rickmer Braren\inst{2,3}\orcidID{1111-2222-3333-4444} \and
+Julia A. Schnabel\inst{3}\orcidID{2222--3333-4444-5555}}
 %
 \authorrunning{F. K{\"o}gl et al.}
 % First names are abbreviated in the running head.
@@ -73,10 +76,26 @@ ABC Institute, Rupert-Karls-University Heidelberg, Heidelberg, Germany\\
 \maketitle              % typeset the header of the contribution
 %
 \begin{abstract}
-% The abstract should briefly summarize the contents of the paper in
-% 150--250 words.
-\lipsum[1-2]
-\keywords{First keyword  \and Second keyword \and Another keyword.}
+Longitudinal PSMA PET/CT registration has to align whole-body scans that differ
+in field of view, positioning and bowel and bladder filling, while preserving
+the PET-derived biomarkers that the scans are acquired to measure. Accuracy and
+preservation pull against each other: a deformation that maximises organ overlap
+is free to compress or expand a lesion, changing exactly the quantity a
+clinician reads. We adapt the diffeomorphic, coarse-to-fine LapIRN architecture
+to this task for the Learn2Reg~2026 PSMAReg challenge, and add two anatomically
+motivated constraints to its objective. The first is a set of biomarker terms
+that pin the metabolic tumour volume and total lesion glycolysis under the
+estimated transformation, including a Jacobian-based surrogate that supplies
+gradients throughout the lesion interior rather than only at its boundary. The
+second is a bone-rigidity penalty formulated as a per-structure rigid fit:
+classical derivative-based rigidity terms read a finite-difference stencil that,
+on ribs and cortical bone at whole-body resolution, is dominated by surrounding
+soft tissue, whereas a closed-form rigid fit per skeletal label reads nothing
+outside it. The same objective is descended per case at test time by instance
+optimisation. \todo{results sentence: DSC, HD95, MTV/TLG bias and NDV against
+the baselines, plus the leaderboard placement}
+\keywords{Deformable image registration \and PSMA PET/CT \and Longitudinal
+imaging \and Biomarker preservation \and Learn2Reg.}
 \end{abstract}
 %
 %
@@ -88,20 +107,10 @@ ABC Institute, Rupert-Karls-University Heidelberg, Heidelberg, Germany\\
 \input{discussion}
 
 \begin{credits}
-\subsubsection{\ackname} A bold run-in heading in small font size at the end of the paper is
-used for general acknowledgments, for example: This study was funded
-by X (grant number Y).
+\subsubsection{\ackname} \todo{}
 
 \subsubsection{\discintname}
-It is now necessary to declare any competing interests or to specifically
-state that the authors have no competing interests. Please place the
-statement with a bold run-in heading in small font size beneath the
-(optional) acknowledgments\footnote{If EquinOCS, our proceedings submission
-system, is used, then the disclaimer can be provided directly in the system.},
-for example: The authors have no competing interests to declare that are
-relevant to the content of this article. Or: Author A has received research
-grants from Company W. Author B has received a speaker honorarium from
-Company X and owns stock in Company Y. Author C is a member of committee Z.
+\todo{}
 \end{credits}
 %
 % ---- Bibliography ----

@@ -84,7 +84,7 @@ The full objective combines image similarity, weak label supervision, the PET-bi
   \label{eq:total}
 \end{equation}
 %
-The weights are given in Table~\ref{tab:weights} \todo{add weight table once the final run is fixed; current values: $\lambda_{\mathrm{NCC}}=5$, $\lambda_{\mathrm{DSC}}=3/4/5$ for levels 1/2/3, $\lambda_{\mathrm{MTV}}=20$, $\lambda_{\mathrm{MTV\text{-}J}}=0.5$, $\lambda_{\mathrm{jac}}=5$, $\lambda_{\mathrm{TLG}}=5$, $\lambda_{\mathrm{rigid}}=0.2$, $\lambda_{\mathrm{smooth}}=5$, $\lambda_{\mathrm{NDV}}=10^{4}$}.
+The weights are given in Table~\ref{tab:weights}.
 All terms are evaluated on the composed transformation~(\ref{eq:composed}).
 Only the full-resolution level is trained with the complete objective.
 The two coarser levels use the similarity, label and regularisation terms alone, i.e.\ $\lambda_{\mathrm{MTV}} = \lambda_{\mathrm{MTV\text{-}J}} = \lambda_{\mathrm{jac}} = \lambda_{\mathrm{TLG}} = \lambda_{\mathrm{rigid}} = 0$ at a quarter and half resolution, because the lesion and bone masks they would be evaluated on are only a few voxels wide there: after downsampling, thin ribs and small lesions are largely partial-volume, so both the volume ratios and the per-structure rigid fits measure interpolation rather than anatomy.
