@@ -220,12 +220,12 @@ The supporting analysis is given in Sec.~\ref{sec:ablation}.
 
 \subsection{Instance Optimisation}
 \label{sec:io}
-% TODO -- currently only a single clause in the loss section.
-%   - which terms are descended at test time and with which weights
-%     (the training/test objective parity is a selling point)
-%   - optimiser, learning rate, number of iterations, stopping rule
-%   - runtime cost per case, and its effect on each metric
-%   - Code/instance_opt.py, Code/finetune_on_io.py
+At test time we refine each pair individually.
+Keeping the predicted field fixed, we optimise a residual stationary velocity field, initialised to zero and exponentiated by scaling and squaring, on top of it, so the refined transformation stays diffeomorphic by construction and the network is only ever corrected, never overwritten.
+The objective is the same one the network was trained under, only reweighted (Table~\ref{tab:weights}).
+We descend it for 90 Adam steps with a learning rate of $10^{-2}$ and keep the best rather than the last iterate, scoring each step with the hard, nearest-neighbour-counted DSC, HD05, MTV and TLG instead of the bilinear proxies the optimiser differentiates, so the selected step is the one the scorer would prefer.
+%Because the global biomarker terms constrain only net sums, in which per-lesion errors cancel, we additionally pin the largest lesions individually by evaluating the MTV and TLG terms per connected component \todo{keep or drop depending on the final configuration}.
+%Instance optimisation requires organ and lesion segmentations of both scans, which on our test set are the automatic labels described in Sec.~\ref{sec:data_and_preprocessing}, and adds \todo{n}~s per pair.
 
 \subsection{Model Selection}
 \label{sec:model_selection}
