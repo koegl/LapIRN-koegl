@@ -44,9 +44,19 @@ XMIN, XMAX = 0.0, 120.0
 # DSC and the biomarker biases are stored as fractions and reported in %.
 VALUE_SCALE = 100.0
 
-# Panel geometry, in fractions of \linewidth of the enclosing figure.
-AXIS_WIDTH = "0.42\\linewidth"
-AXIS_HEIGHT = "0.30\\linewidth"
+# Gap between an axis label and its tick labels. Negative values pull the label
+# towards the axis; "ylabel near ticks" already anchors it to the tick labels
+# rather than to the widest possible tick, so these are a fine adjustment.
+YLABEL_SHIFT = "-4pt"
+XLABEL_SHIFT = "-2pt"
+
+# Panel geometry, in fractions of \linewidth of the enclosing figure. This is
+# the width of the plotting area alone ("scale only axis"), so each picture is
+# some 30pt wider once the y-label and tick labels are added; keep the pair
+# comfortably below 0.5\linewidth each or the second panel wraps onto its own
+# line.
+AXIS_WIDTH = "0.40\\linewidth"
+AXIS_HEIGHT = "0.26\\linewidth"
 
 COLOR_DSC = "0.12,0.34,0.62"  # blue
 COLOR_MTV = "0.85,0.37,0.01"  # orange
@@ -162,6 +172,9 @@ def axis(
         "scale only axis",
         "xlabel={training steps ($\\times 10^{3}$)}",
         f"ylabel={{{ylabel}}}",
+        f"ylabel near ticks",
+        f"ylabel shift={YLABEL_SHIFT}",
+        f"xlabel shift={XLABEL_SHIFT}",
         f"ymin={ymin:.6f}",
         f"ymax={ymax:.6f}",
         *(
@@ -221,7 +234,11 @@ def main() -> None:
         "\\begin{tikzpicture}",
     ]
     lines += axis(left, "validation DSC (\\%)", dsc_min, dsc_max)
-    lines.append("\\end{tikzpicture}\\hfill")
+    # The trailing %% are load-bearing: a line break between the two pictures
+    # would become an interword space, which is enough to push the pair over
+    # \linewidth and wrap the second one onto its own line.
+    lines.append("\\end{tikzpicture}%")
+    lines.append("\\hfill%")
     lines.append("\\begin{tikzpicture}")
     lines += axis(right, "bias (\\%)", bio_min, bio_max, legend=True)
     lines += [

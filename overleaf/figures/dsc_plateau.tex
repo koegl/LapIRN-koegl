@@ -9,11 +9,14 @@
 \pgfplotsset{every axis/.append style={font=\scriptsize, label style={font=\scriptsize}, tick label style={font=\tiny}}}
 \begin{tikzpicture}
   \begin{axis}[
-    width=0.42\linewidth,
-    height=0.30\linewidth,
+    width=0.40\linewidth,
+    height=0.26\linewidth,
     scale only axis,
     xlabel={training steps ($\times 10^{3}$)},
     ylabel={validation DSC (\%)},
+    ylabel near ticks,
+    ylabel shift=-4pt,
+    xlabel shift=-2pt,
     ymin=25.687988,
     ymax=33.484085,
     xmin=0,
@@ -536,14 +539,18 @@
     };
     \addplot [selectionline, forget plot] coordinates {(60.0000,25.687988) (60.0000,33.484085)};
   \end{axis}
-\end{tikzpicture}\hfill
+\end{tikzpicture}%
+\hfill%
 \begin{tikzpicture}
   \begin{axis}[
-    width=0.42\linewidth,
-    height=0.30\linewidth,
+    width=0.40\linewidth,
+    height=0.26\linewidth,
     scale only axis,
     xlabel={training steps ($\times 10^{3}$)},
     ylabel={bias (\%)},
+    ylabel near ticks,
+    ylabel shift=-4pt,
+    xlabel shift=-2pt,
     ymin=3.121323,
     ymax=14.915233,
     xmin=0,
