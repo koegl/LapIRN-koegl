@@ -15,7 +15,8 @@
 % floor) live in Sec.~\ref{sec:ablation}; only their motivation is here.
 % ===============================================================
 
-\subsection{Data}
+\subsection{Data and Preprocessing}
+\label{sec:data_and_preprocessing}
 % TODO: PSMAReg cohort description
 %   - number of training / validation / test pairs, baseline+follow-up
 %   - modalities (CT, PET), voxel spacing, field of view, scanners
@@ -24,27 +25,18 @@
 %     Sec.~\ref{sec:evaluation}, since they are an evaluation choice
 % A dataset table is possible but the 2025 proceedings papers do this
 % in prose -- recommend prose.
-
-\subsection{Preprocessing}
-% TODO
-%   - resampling to isotropic/target spacing, cropping and FOV
-%     harmonisation between visits
 %   - intensity normalisation: CT HU windowing, PET SUV normalisation
 %   - label generation: CT organ labels (TotalSegmentator), PET lesion
 %     labels (autoPET-III), bone masks
-%   - the within-session PET/CT alignment assumption that the CT-derived
-%     supervision relies on (referenced again in Sec.~2.5)
 
 \subsection{Registration Pipeline}
 \label{sec:pipeline}
-  % TODO -- currently the affine only appears implicitly as
-% $\varphi_{\mathrm{aff}}$ in the loss definitions, so it needs to be
-% introduced before them.
+%   - refer to figure 1
+%   - 
 %   - what is optimised, on which modality, with which similarity
 %   - why a separate affine stage (large FOV and positioning shifts)
 %   - note that the affine is in general NOT volume preserving, which
 %     is why all biomarker terms are evaluated on the composed transform
-% TODO
 %   - LapIRN recap: Laplacian pyramid, three coarse-to-fine sub-networks,
 %     diffeomorphic parameterisation via a stationary velocity field
 %   - what we changed: input channels (PET + CT), channel widths,
@@ -54,17 +46,7 @@
 %     \varphi_{\theta}$, the moving PET image $I$, the moving lesion
 %     mask $M$, and the warped lesion region $W$.
 
-\begin{figure}[t]
-\centering
-\figplaceholder{0.30}{FIGURE 1 -- Pipeline overview. The single most
-important figure; every 2025 proceedings paper has one. Show
-preprocessing $\rightarrow$ affine pre-registration $\rightarrow$
-three-level LapIRN pyramid $\rightarrow$ instance optimisation
-$\rightarrow$ warped follow-up, with the loss terms of Sec.~2.5
-hanging off the composed transformation $\varphi$.}
-\caption{Overview of the proposed registration pipeline. \todo{caption}}
-\label{fig:pipeline}
-\end{figure}
+
 
 \subsection{Loss Functions}
 \label{sec:losses}
@@ -76,9 +58,8 @@ hanging off the composed transformation $\varphi$.}
 % PLACEHOLDER: the final weights are not fixed yet.
 
 \subsubsection{Image similarity.}
-% TODO -- currently missing entirely.
 %   - normalised cross correlation, window size, on which modality
-%   - how PET and CT contribute to the similarity term
+%   - only on CT
 
 \subsubsection{Weak label supervision (DSC).}
 We used a standard DSC loss for weak label supervision.
@@ -86,10 +67,6 @@ Since the challenge scores PET organ overlap but provides no PET organ annotatio
 As 90 organs fall below twice the muscle background and are thus indistinguishable in PET, we upweighted only the 10 exceeding 4 times the background (kidneys, gallbladder, spleen, liver, duodenum, bladder, portal vein, prostate, pancreas) by a factor of 2 in the per-class Dice loss.
 This relies on PET and CT being well aligned within a session, so that CT-derived overlap on these organs approximates the PET organ overlap being scored.
 
-% >>> FIGURE (OPTIONAL, small, single column): bar chart of per-organ
-%     mean SUV relative to skeletal muscle, with the 2x and 4x
-%     thresholds marked, making the choice of the 10 upweighted organs
-%     visible at a glance. Cheap and self-contained; cut if over length.
 
 \subsubsection{Preservation of PET quantification.}
 The scored MTV bias only constrains the \emph{net} lesion volume, so we penalize it directly while supplying dense gradients through a Jacobian-based surrogate.

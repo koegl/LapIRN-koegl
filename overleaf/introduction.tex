@@ -26,29 +26,23 @@ A recurring limitation of purely intensity-driven losses is that they permit non
 Anatomy-aware regularisation that penalises non-rigid deformation, e.g. of skeletal structures~\cite{ref_rigidity_1_loeckx,ref_rigidity_2_ruan,ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki}, is therefore particularly relevant for whole-body PET/CT, where the skeleton is a frequent site of PSMA-avid disease.
 
 In this work, we adapt LapIRN to longitudinal whole-body PSMA PET/CT for the PSMAReg task.
-We retain its diffeomorphic, coarse-to-fine formulation to handle the large field-of-view shifts between visits, and augment it with several task-specific regularisation terms targeted at the challenge objectives: a bone-rigidity loss that discourages implausible deformation of the skeleton, a total-lesion-glycolysis (TLG) loss that preserves PET-derived lesion burden under the estimated deformation, and a term based on the Jacobian determinant within the tumour volume that acts as a proxy for preserving the metabolic tumour volume (MTV).
-We describe the method and the training and inference infrastructure, and report validation leaderboard results for each metric.
 
-% --- Contribution list. PLACEHOLDER: wording of (v) depends on the
-% --- final model choice; keep the list to four or five items.
-In summary, our contributions are:
+
+Our contributions are:
 \begin{itemize}
-  \item an adaptation of the diffeomorphic, coarse-to-fine LapIRN
-        architecture to longitudinal whole-body PSMA PET/CT, combining
-        an affine pre-registration with a three-level pyramid and
+  \item an adaptation of the diffeomorphic, coarse-to-fine LapIRN architecture to longitudinal whole-body PSMA PET/CT, combining an affine pre-registration with a three-level pyramid and
         test-time instance optimisation;
-  \item a set of biomarker-preserving losses that constrain the
-        PET-derived MTV and TLG under the estimated deformation, including
-        a Jacobian-based surrogate that supplies dense gradients
-        throughout the lesion interior;
-  \item a per-structure rigid-fit (Kabsch) bone-rigidity penalty that,
-        unlike derivative-based rigidity terms, reads no voxels outside
-        the bone mask and is therefore well posed on thin cortical
-        structures;
-  \item a gradient-level analysis of the objective showing that the
-        apparent accuracy-versus-preservation trade-off is in fact a
-        regulariser-versus-data-term tension;
-  \item a score-driven checkpoint and submission selection procedure
-        that mirrors the challenge ranking. \todo{finalise once the
-        model is fixed}
+  \item a set of biomarker-preserving losses that constrain the PET-derived MTV and TLG under the estimated deformation, including a Jacobian-based surrogate that supplies dense gradients throughout the lesion interior;
+  \item a per-structure rigid-fit bone-rigidity penalty
+  \item a gradient-level analysis of the objectives showing the accuracy-versus-PET-preservation trade-off;
+  \item a score-driven checkpoint and submission selection procedure that mirrors the challenge ranking. \todo{finalise once the model is fixed}
 \end{itemize}
+
+The proposed registration pipeline with affine pre-registration, LapIRN-based registration, losses and instance optimization (IO) is shown in Fig.~\ref{fig:pipeline}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{overview.png}
+\caption{Overview of the proposed registration pipeline. \todo{caption}}
+\label{fig:pipeline}
+\end{figure}

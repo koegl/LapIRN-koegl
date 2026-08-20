@@ -9,7 +9,7 @@ Model/*
 saved/*
 *.nii.gz
 *.npy
-*.png
+# *.png
 *.zip
 totalsegmentator_weights/*
 .claude/._settings.local.json
