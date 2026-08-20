@@ -28,7 +28,7 @@ For our internal validation subjects we kept only baseline-anchored pairs, i.e.\
 The challenge validation split of 20 paired subjects, which is the split scored on the public validation leaderboard, served as our test set; the organisers' own held-out test set ($\sim$200 pairs of private JHU data) is scored only by them.
 
 For the training split we used the labels released by the organisers: CT organ labels generated automatically with TotalSegmentator~\cite{ref_totalsegmentator} and PET lesion labels manually annotated by radiologists.
-Since no labels are released for the challenge validation split, we generated our own for our test set with TotalSegmentator for the CT organs and the winning autoPET~III submission~\todo{cite autoPET III winner} for the PET lesions.
+Since no labels are released for the challenge validation split, we generated our own for our test set with TotalSegmentator for the CT organs and the winning autoPET~III submission~\cite{rokuss2024fdgpsmahitchhikersguide} for the PET lesions.
 
 All images are provided already resampled to an isotropic in-plane spacing of $2.7344\times2.7344\times3.27$~mm and cropped to a fixed size of $192\times192\times288$ voxels, so no further geometric preprocessing was applied.
 We normalised CT by clipping to a fixed window of $[-1000, 1500]$~HU and PET by clipping the SUV to $[0, 20]$, each rescaled to $[0,1]$.
