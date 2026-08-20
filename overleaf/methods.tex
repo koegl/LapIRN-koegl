@@ -48,7 +48,7 @@ the total transformation mapping the moving into the fixed image; $W$ denotes th
 
 \subsubsection{Affine pre-registration.}
 Baseline and follow-up scans of the same subject differ in field of view, table position and patient posture by far more than a locally regularised network can absorb, so we first remove the global component with a separate affine stage.
-For each pair we estimate an affine transform with ANTs~\todo{cite ANTs} on the CT channel alone, at half resolution and with a Mattes mutual-information metric, after masking both volumes to the body and windowing them to $[-1000, 1000]$~HU.
+For each pair we estimate an affine transform with ANTs~\cite{ants} on the CT channel alone, at half resolution and with a Mattes mutual-information metric, after masking both volumes to the body and windowing them to $[-1000, 1000]$~HU.
 The result is converted into a dense voxel displacement field, cached per pair, and applied to the moving scan before the network sees it; augmentations are applied consistently to the cached field.
 Note that an affine transform is in general not volume-preserving, which is why all biomarker terms of Sec.~\ref{sec:losses} are evaluated on the composed transform~(\ref{eq:composed}) rather than on $\varphi_{\theta}$ alone.
 
@@ -64,16 +64,33 @@ The levels are trained in sequence, each initialised from the previous one, whic
 
 \subsection{Loss Functions}
 \label{sec:losses}
-% TODO: one short preamble paragraph giving the TOTAL objective as a
-% single equation,
-%   \mathcal{L} = \lambda_{NCC} L_NCC + \lambda_{DSC} L_DSC
-%               + \lambda_{MTV} L_MTV + ... ,
-% with the weights either inline or in a small table.
-% PLACEHOLDER: the final weights are not fixed yet.
+The full objective combines image similarity, weak label supervision, the PET-biomarker terms, the bone-rigidity penalty and two deformation regularisers:
+%
+\begin{equation}
+  \begin{aligned}
+    \mathcal{L} = \;
+      & \lambda_{\mathrm{NCC}}\,\mathcal{L}_{\mathrm{NCC}}
+      + \lambda_{\mathrm{DSC}}\,\mathcal{L}_{\mathrm{DSC}}
+      + \lambda_{\mathrm{MTV}}\,\mathcal{L}_{\mathrm{MTV}}
+      + \lambda_{\mathrm{MTV\text{-}J}}\,\mathcal{L}_{\mathrm{MTV\text{-}J}} \\
+      & + \lambda_{\mathrm{jac}}\,\mathcal{L}_{\mathrm{jac}}
+      + \lambda_{\mathrm{TLG}}\,\mathcal{L}_{\mathrm{TLG}}
+      + \lambda_{\mathrm{rigid}}\,\mathcal{L}_{\mathrm{rigid}}
+      + \lambda_{\mathrm{smooth}}\,\mathcal{L}_{\mathrm{smooth}}
+      + \lambda_{\mathrm{NDV}}\,\mathcal{L}_{\mathrm{NDV}} .
+  \end{aligned}
+  \label{eq:total}
+\end{equation}
+%
+The weights are given in Table~\ref{tab:weights} \todo{add weight table once the final run is fixed; current values: $\lambda_{\mathrm{NCC}}=5$, $\lambda_{\mathrm{DSC}}=3/4/5$ for levels 1/2/3, $\lambda_{\mathrm{MTV}}=20$, $\lambda_{\mathrm{MTV\text{-}J}}=0.5$, $\lambda_{\mathrm{jac}}=5$, $\lambda_{\mathrm{TLG}}=5$, $\lambda_{\mathrm{rigid}}=0.2$, $\lambda_{\mathrm{smooth}}=5$, $\lambda_{\mathrm{NDV}}=10^{4}$}.
+All terms are evaluated on the composed transformation~(\ref{eq:composed}).
+Only the full-resolution level is trained with the complete objective.
+The two coarser levels use the similarity, label and regularisation terms alone, i.e.\ $\lambda_{\mathrm{MTV}} = \lambda_{\mathrm{MTV\text{-}J}} = \lambda_{\mathrm{jac}} = \lambda_{\mathrm{TLG}} = \lambda_{\mathrm{rigid}} = 0$ at a quarter and half resolution, because the lesion and bone masks they would be evaluated on are only a few voxels wide there: after downsampling, thin ribs and small lesions are largely partial-volume, so both the volume ratios and the per-structure rigid fits measure interpolation rather than anatomy.
 
 \subsubsection{Image similarity.}
-%   - normalised cross correlation, window size, on which modality
-%   - only on CT
+Image similarity is measured by the local normalised cross correlation, evaluated as a multi-resolution sum over as many scales as the level has resolutions, i.e.\ one scale at the coarsest and three at the full-resolution level.
+The window is $5^{3}$ voxels at the quarter-resolution level and $7^{3}$ at the half- and full-resolution levels, so that the coarsest level, where one voxel already covers roughly a centimetre, is not asked to match structure over a neighbourhood far larger than the deformations it estimates.
+It is computed on the CT channel only ($\lambda_{\mathrm{PET}} = 0$): PET intensity is not conserved between the two time points, as lesions appear, resolve or change uptake under therapy, so a PET similarity term would reward matching disease rather than anatomy.
 
 \subsubsection{Weak label supervision (DSC).}
 We used a standard DSC loss for weak label supervision.
@@ -159,12 +176,52 @@ Eroding the mask would remove the effect, but in the present dataset many bone m
 We therefore replaced this loss with a per-structure rigid-fit residual: for each label, we obtain the optimal rotation and translation from the predicted displacement in closed form via Kabsch alignment, and penalise the mean squared residual of that fit.
 No stencil crosses the mask, and each label is fitted independently, so articulation is free.
 The penalty constrains only the shape of the deformation within each structure and is invariant to its placement, leaving alignment to NCC and Dice, unlike derivative based penalties [staring2007, modersitzki2008] and unlike F\"orner and Wendler [foerner2025], who regress the field onto a per bone rigid field precomputed by Dice pre registration, requiring segmentations in both images and inheriting pre registration error as a training target.
-% TODO: write $\mathcal{L}_{\mathrm{rigid}}$ out as an equation --
-% Kabsch fit per label, mean squared residual, averaged over labels.
+Concretely, let $\mathcal{B}$ be the set of skeletal TotalSegmentator structures, i.e.\ the 61 vertebra, rib, sternum, costal-cartilage, skull, pelvic and proximal-limb labels, and let $\Omega_{l}$ be the voxels of structure $l$ in the fixed frame, $p$ a voxel position and $u(p)$ the displacement of the composed field.
+For each structure we obtain the rigid transform that best explains its own displacement,
+%
+\begin{equation}
+  (R_{l}, t_{l})
+  = \argmin_{R \in SO(3),\, t \in \mathbb{R}^{3}}
+    \sum_{p \in \Omega_{l}} \bigl\lVert (p + u(p)) - (R p + t) \bigr\rVert^{2},
+  \label{eq:kabsch}
+\end{equation}
+%
+in closed form by Kabsch alignment, and penalise the residual of that fit,
+%
+\begin{equation}
+  \mathcal{L}_{\mathrm{rigid}}
+  = \frac{1}{\lvert \mathcal{B} \rvert} \sum_{l \in \mathcal{B}}
+    \frac{1}{\lvert \Omega_{l} \rvert} \sum_{p \in \Omega_{l}}
+    \bigl\lVert (p + u(p)) - (R_{l} p + t_{l}) \bigr\rVert^{2} .
+  \label{eq:rigid}
+\end{equation}
+%
+Each structure contributes its own mean, so a rib counts as much as the pelvis, and structures smaller than 50 voxels are skipped because the fit is ill-posed for a handful of points.
+Since $(R_{l}, t_{l})$ minimise~(\ref{eq:kabsch}), the derivative of the loss with respect to them vanishes, and we can detach them and differentiate only through $u$ without approximation, avoiding a backward pass through the SVD.
 
 \subsubsection{Deformation regularisation.}
-To regularise the displacement field, we used a diffusion regulariser and a Jacobian loss that penalises non-diffeomorphic voxels.
-% TODO: write both out as equations and give their weights.
+To regularise the displacement field we used a diffusion regulariser, the mean squared spatial gradient of the displacement,
+%
+\begin{equation}
+  \mathcal{L}_{\mathrm{smooth}}
+  = \frac{1}{3} \sum_{d \in \{x,y,z\}}
+    \frac{1}{\lvert \Omega \rvert} \sum_{p \in \Omega}
+    \bigl\lVert \partial_{d} u(p) \bigr\rVert^{2},
+  \label{eq:smooth}
+\end{equation}
+%
+together with a term penalising non-diffeomorphic voxels.
+Rather than the usual penalty on negative Jacobian determinants of a single finite-difference stencil, we differentiably reproduce the scored metric itself: the challenge computes the non-diffeomorphic volume by decomposing each voxel into six tetrahedra and accumulating the negative part of their determinants over the body mask~\cite{Liu2024}.
+Writing $\det J^{(k)}_{\varphi}$ for the determinant of the $k$-th tetrahedral scheme, the loss
+%
+\begin{equation}
+  \mathcal{L}_{\mathrm{NDV}}
+  = \frac{100}{12 \lvert \Omega \rvert} \sum_{p \in \Omega} \sum_{k=1}^{6}
+    \max\bigl(-\det J^{(k)}_{\varphi}(p),\, 0\bigr)
+  \label{eq:ndv}
+\end{equation}
+%
+equals the scored percentage of non-diffeomorphic volume and places gradients on exactly the folded voxels, so that minimising it minimises the reported \%NDV directly.
 
 \subsubsection{Losses considered and rejected.}
 We deliberately do not add a differentiable surface-distance term (e.g.\ the
