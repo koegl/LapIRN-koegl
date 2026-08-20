@@ -3,7 +3,7 @@
 % ===============================================================
 % OUTLINE
 %   3.1 Evaluation Protocol
-%   3.2 Ablation of the Objective        >>> FIGURE 4 (cosine matrix)
+%   3.2 Ablation of the Objective
 %   3.3 Comparison of LapIRN Variants    >>> TABLE 1
 %   3.4 Comparison against Baselines     >>> TABLE 2
 %   3.5 Validation Leaderboard           >>> TABLE 3 (placeholder)
@@ -24,29 +24,8 @@ Since the leaderboard covers the same cases with the correct labels, we use the 
 \subsection{Ablation of the Objective}
 \label{sec:ablation}
 
-\subsubsection{The terms of the objective conflict, and rigidity is the cause.}
-To test whether accuracy and preservation genuinely conflict, we logged the pairwise cosine similarities of all per-term gradients with respect to the shared parameters, along with their norms and shares (Fig.~\ref{fig:cosine}).
-The groups were persistently opposed (cos = -0.25, negative on 80\% of steps) at comparable magnitude (ratio of norms about 1.0), excluding weight starvation.
-Attribution localised nearly all of it to one term: rigidity contributed -0.20 of the -0.25, whereas TLG and the lesion Jacobian contributed about 0.00 despite holding 45\% and 5\% of their group's norm.
-TLG was orthogonal to every term (|cos| below 0.05), that is, loud, unopposed and still underperforming, indicating a proxy problem rather than a conflict.
-Rigidity instead behaved as a regulariser (cos = +0.53 with smoothness, -0.53 with NCC, 0.00 with TLG), so the apparent accuracy-versus-preservation trade-off was, in fact, a regulariser-versus-data-term tension.
-
-\begin{figure}[t]
-\centering
-\figplaceholder{0.30}{FIGURE 4 -- Pairwise cosine-similarity matrix of
-the per-term gradients with respect to the shared parameters, with the
-per-term gradient-norm shares alongside. Source: pairwise\_cosine\_matrix.png
-/ pairwise\_cosine\_matrix.py in the repository root. This is the most
-distinctive figure in the paper -- no 2025 proceedings paper has an
-equivalent. Do not cut it.}
-\caption{Pairwise cosine similarity between the gradients of the
-individual loss terms. \todo{caption}}
-\label{fig:cosine}
-\end{figure}
-
 \subsubsection{Derivative-based rigidity is ill posed on thin bone.}
-Rigidity opposed bone Dice (-0.45) more than soft tissue Dice (-0.23), which no correct bone penalty should do.
-Its three conditions are evaluated by finite differences at every voxel and only then masked, so the mask selects which voxels are scored but not which are read.
+The three conditions of the classical rigidity penalty are evaluated by finite differences at every voxel and only then masked, so the mask selects which voxels are scored but not which are read.
 The stencil used for the derivative calculation would therefore also use non-bone voxels.
 With thin cortical bone and ribs, this dominates.
 We tested it across five cases: 53.0\% (range 51.6 to 54.7) of the voxels entering the loss were not bone; a field with zero displacement inside every bone scored 56 (range 40 to 69), with 100\% removed by a single mask erosion; and 44.8\% of the gradient magnitude fell outside bone.
