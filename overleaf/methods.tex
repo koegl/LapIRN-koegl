@@ -260,7 +260,7 @@ confirmatory; the official validation leaderboard serves as the held-out check.
 We compare against two references and three competing methods, all evaluated on the same pairs and under the identical protocol of Sec.~\ref{sec:evaluation}.
 The two references bound the range in which a deformable method has to be useful: the unregistered pair, i.e.\ the identity transform, and our affine pre-registration alone, which is also the initialisation every method below starts from.
 
-As a classical iterative baseline we ran NiftyReg~\todo{cite NiftyReg}, using \texttt{reg\_aladin} for the affine stage followed by \texttt{reg\_f3d} initialised with it, so that the resulting control point grid encodes the total transform; all parameters were left at their defaults.
+As a classical iterative baseline we ran NiftyReg~\cite{MODAT2010,modat2014}, using \texttt{reg\_aladin} for the affine stage followed by \texttt{reg\_f3d} initialised with it, so that the resulting control point grid encodes the total transform; all parameters were left at their defaults.
 As a learning-free optimisation baseline we ran ConvexAdam~\cite{ref_convexadam}, in the form provided by the challenge organisers as the official baseline of the task, so that our numbers are directly comparable to the reference entry on the leaderboard.
 Finally, we compare against vanilla LapIRN, i.e.\ the same architecture and training schedule as our model but with the original objective only, without the DSC, NDV loss, PET-biomarker terms and the bone-rigidity penalty, which isolates the contribution of the proposed losses from that of the backbone.
 
@@ -348,9 +348,9 @@ fixed}}
 \label{sec:infrastructure}
 All models were trained and evaluated on a single NVIDIA H100 80\,GB HBM3
 (driver 610.57.04).
-The pipeline is implemented in Python~3.11 with PyTorch~2.6~\cite{ref_pytorch}
+The pipeline is implemented in Python~3.11 with PyTorch~2.6.0~\cite{ref_pytorch}
 and CUDA~12.4; the affine pre-registration uses ANTsPy~0.6.3~\cite{ants}.
-Image and array handling rely on nibabel~5.4, NumPy and SciPy.
+Image and array handling rely on NiBabel~5.4.2, NumPy~2.4.4 and SciPy~1.17.1.
 Training all three levels takes \todo{n}~h, and inference is \todo{n}~s per
 pair, rising to \todo{n}~s with instance optimisation.
 Code and the submission container are available at \todo{repository URL}.
