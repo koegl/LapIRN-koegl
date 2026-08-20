@@ -2,14 +2,17 @@
 \subsection{Data}
 \subsection{Preprocessing}
 \subsection{Registration Pipeline}
+\subsection{Losses}
+\subsubsection{DSC Loss}
+We used a standard DSC loss for weak label supervision.
+Since the challenge scores PET organ overlap but provides no PET organ annotations for training, we measured each of the 117 TotalSegmentator organs' mean SUV relative to skeletal muscle across all sessions.
+As 90 organs fall below twice the muscle background and are thus indistinguishable in PET, we upweighted only the 10 exceeding 4 times the background (kidneys, gallbladder, spleen, liver, duodenum, bladder, portal vein, prostate, pancreas) by a factor of 2 in the per-class Dice loss.
+This relies on PET and CT being well aligned within a session, so that CT-derived overlap on these organs approximates the PET organ overlap being scored.
+
 \subsubsection{Preservation of PET quantification}
-The scored MTV bias only constrains the \emph{net} lesion volume, so we
-penalize it directly while supplying dense gradients through a Jacobian-based
-surrogate. All terms are evaluated on the total transformation
-$\varphi = \varphi_{\mathrm{aff}} \circ \varphi_{\theta}$, i.e.\ the affine
-pre-registration composed with the predicted displacement, against the
-original moving lesion mask $M$, since the affine itself is generally not
-volume-preserving. First, we minimize the squared relative volume error
+The scored MTV bias only constrains the \emph{net} lesion volume, so we penalize it directly while supplying dense gradients through a Jacobian-based surrogate.
+All terms are evaluated on the total transformation $\varphi = \varphi_{\mathrm{aff}} \circ \varphi_{\theta}$, i.e.\ the affine pre-registration composed with the predicted displacement, against the original moving lesion mask $M$, since the affine itself is generally not volume-preserving.
+First, we minimize the squared relative volume error
 %
 \begin{equation}
   \mathcal{L}_{\mathrm{MTV}}
@@ -18,27 +21,19 @@ volume-preserving. First, we minimize the squared relative volume error
   \label{eq:mtv}
 \end{equation}
 %
-where $M \circ \varphi$ denotes the linearly resampled mask. This matches the
-scored metric exactly, but its gradient is confined to the sub-voxel boundary
-shell of the lesion. We therefore add a complementary term exploiting the
-identity $\sum_{x \in W} \det J_{\varphi}(x) = \lvert M \rvert$, where
-$W = \{\, x : M(\varphi(x)) = 1 \,\}$ is the fixed-frame (warped) lesion
-region:
+where $M \circ \varphi$ denotes the linearly resampled mask.
+This matches the scored metric exactly, but its gradient is confined to the lesion's sub-voxel boundary shell.
+We therefore add a complementary term based on the change-of-variables identity: summing $\det J_{\varphi}$ over the warped lesion region recovers the original lesion volume, so the mean determinant over the warped lesion equals the ratio of original to warped volume. Driving this mean to one,
 %
 \begin{equation}
   \mathcal{L}_{\mathrm{MTV\text{-}J}}
   = \left( \frac{1}{\lvert W \rvert} \sum_{x \in W}
-    \det J_{\varphi}(x) - 1 \right)^{2}
+    \det J_{\varphi}(x) - 1 \right)^{2},
   \label{eq:mtvjac}
 \end{equation}
 %
-pins the same net volume ratio while providing gradients throughout the
-lesion interior and, unlike a per-voxel constraint, still permits internal
-redistribution of volume. Note that masking the determinant with the
-moving-frame lesion, as is tempting, samples $\det J_{\varphi}$ at locations
-unrelated to the lesion once the affine is composed in; empirically, this
-decorrelated the surrogate from the scored MTV. Finally, the per-voxel
-penalty
+where $W$ denotes the warped lesion region, therefore pins the same net volume ratio as~(\ref{eq:mtv}) while providing gradients throughout the lesion interior; unlike a per-voxel constraint, it still permits internal redistribution of volume.
+Note that masking the determinant with the moving-frame lesion, as is tempting, samples $\det J_{\varphi}$ at locations unrelated to the lesion once the affine is composed in; empirically, this decorrelated the surrogate from the scored MTV. Finally, the per-voxel penalty
 %
 \begin{equation}
   \mathcal{L}_{\mathrm{jac}}
@@ -47,9 +42,111 @@ penalty
   \label{eq:jactum}
 \end{equation}
 %
-acts as a stricter local regulariser, discouraging compensating compression
-and expansion within the lesion. The same terms
-(\ref{eq:mtv})--(\ref{eq:jactum}) are used during training and descended at
-test time by our instance optimization, so the network is trained on the
-objective it is later refined under.
-\subsection{Implementation Details}
+acts as a stricter local regulariser, discouraging compensating compression and expansion within the lesion.
+
+The challenge additionally scores the total lesion glycolysis (TLG), the PET-activity--weighted counterpart of the MTV, which we penalize analogously as the relative change of intensity mass under the warp:
+%
+\begin{equation}
+  \mathcal{L}_{\mathrm{TLG}}
+  = \frac{\bigl\lvert
+      \sum_{x} (I \circ \varphi)(x)\,(M \circ \varphi)(x)
+      - \sum_{y} I(y)\, M(y)
+    \bigr\rvert}
+    {\sum_{y} I(y)\, M(y)},
+  \label{eq:tlg}
+\end{equation}
+%
+where $I$ denotes the moving PET image.
+Since both the image and the mask are resampled with the same transformation, this term is sensitive not only to volume change but also to intensity blurring at the lesion boundary, and thus complements the purely geometric terms (\ref{eq:mtv})--(\ref{eq:jactum}).
+
+The same terms (\ref{eq:mtv})--(\ref{eq:tlg}) are used during training and descended at test time by our instance optimisation, so the network is trained on the objective it is later refined under.
+
+\subsubsection{Displacement field regularisation}
+To regularise the displacement field, we used a diffusion regulariser and a Jacobian loss that penalises non-diffeomorphic voxels.
+
+In 146 patients with paired baseline and follow-up scans, a median of 46.0\% (IQR 3.1 to 72.3\%) of total lesion volume at baseline lay within skeletal structures, rising to 63.8\% (IQR 12.1 to 77.4\%) at follow-up.
+Since a substantial fraction of lesion volume is therefore intraosseous, we added the local rigidity penalty of Staring et al.[staring2007] [TODO mention all papers and the 3 losses we used for rigidity] on a bone mask as an anatomically grounded surrogate: enforcing rigid bone motion is both physiologically correct and, where lesions sit in bone, directly prevents the volume change MTV measures.
+To test whether accuracy and preservation genuinely conflict, we logged the pairwise cosine similarities of all per-term gradients with respect to the shared parameters, along with their norms and shares.
+The groups were persistently opposed (cos = -0.25, negative on 80\% of steps) at comparable magnitude (ratio of norms about 1.0), excluding weight starvation.
+Attribution localised nearly all of it to one term: rigidity contributed -0.20 of the -0.25, whereas TLG and the lesion Jacobian contributed about 0.00 despite holding 45\% and 5\% of their group's norm.
+TLG was orthogonal to every term (|cos| below 0.05), that is, loud, unopposed and still underperforming, indicating a proxy problem rather than a conflict.
+Rigidity instead behaved as a regulariser (cos = +0.53 with smoothness, -0.53 with NCC, 0.00 with TLG), so the apparent accuracy-versus-preservation trade-off was, in fact, a regulariser-versus-data-term tension.
+
+Rigidity opposed bone Dice (-0.45) more than soft tissue Dice (-0.23), which no correct bone penalty should do.
+Its three conditions are evaluated by finite differences at every voxel and only then masked, so the mask selects which voxels are scored but not which are read.
+The stencil used for the derivative calculation would therefore also use non-bone voxels.
+With thin cortical bone and ribs, this dominates.
+We tested it across five cases: 53.0\% (range 51.6 to 54.7) of the voxels entering the loss were not bone; a field with zero displacement inside every bone scored 56 (range 40 to 69), with 100\% removed by a single mask erosion; and 44.8\% of the gradient magnitude fell outside bone.
+The term measured the bone-to-soft tissue displacement discontinuity, which any correct registration must exhibit.
+Erosion of the mask could therefore fix this problem; however, in the current dataset, many bone masks are only a few voxels wide.
+We therefore replaced this loss with a per-structure rigid-fit residual: for each label, we obtain the optimal rotation and translation from the predicted displacement in closed form via Kabsch alignment, and penalise the mean squared residual of that fit.
+No stencil crosses the mask, and each label is fitted independently, so articulation is free.
+The zero displacement field now scores exactly 0 and a per-bone rigid field 2.4e-6, while anisotropic squeeze is still rejected at 1.16.
+The penalty constrains only the shape of the deformation within each structure and is invariant to its placement, leaving alignment to NCC and Dice, unlike derivative based penalties [staring2007, modersitzki2008] and unlike Förner and Wendler [foerner2025], who regress the field onto a per bone rigid field precomputed by Dice pre registration, requiring segmentations in both images and inheriting pre registration error as a training target.
+
+\subsubsection{No surface distance loss}
+We deliberately do not add a differentiable surface-distance term (e.g.\ the
+distance-transform Hausdorff surrogate of Karimi and Salcudean [TODO CITATION]) to either the
+training objective or the instance optimisation. A per-label analysis of the
+validation predictions shows that the median and the 75th percentile of the
+per-label HD95 both equal $2.73$\,mm, i.e.\ exactly the in-plane voxel spacing:
+at least three quarters of all labels already lie at the discretisation floor
+attainable by a nearest-neighbour--warped label map. The mean HD95 is instead
+driven almost entirely by a small tail, with the worst $10\%$ of
+(case,\,label) pairs contributing $57.6\%$ of the total. This tail is dominated
+by structures for which no boundary refinement is meaningful: partially
+visible field-of-view--edge anatomy (brain, skull), limb structures subject to
+inter-session repositioning (humeri, scapula), and hollow organs with
+variable filling and hence no well-defined point correspondence (bowel,
+colon, urinary bladder). A boundary loss would therefore expend its gradient
+on labels that are already optimal, while leaving the tail --- a capture-range
+and correspondence problem rather than a boundary-precision one --- unaffected.
+
+
+\subsection{Model Selection}
+\label{sec:model_selection}
+
+Model selection enters our pipeline twice: once \emph{within} a run, to decide which
+checkpoint to keep, and once \emph{across} runs, to decide which variant to submit in
+the container.
+Both use the same three-component quality notion, and differ only in how each component
+is scored.
+
+Both stages combine registration accuracy (CT DSC and HD95), PET-biomarker preservation
+(absolute MTV and TLG bias) and deformation regularity (\%NDV after the official
+$0.005\%$ practical-equivalence adjustment) as a weighted geometric mean with exponents
+$0.4$, $0.4$ and $0.2$, mirroring the challenge's final score
+\begin{equation}
+  S = 100 \cdot A^{0.4} \, B^{0.4} \, R^{0.2},
+  \label{eq:score}
+\end{equation}
+where the accuracy term $A$ is the geometric mean of the DSC and HD95 scores, the
+biomarker term $B$ that of the MTV and TLG scores, and $R$ the \%NDV score.
+
+\subsubsection{Checkpoint selection.}
+Registration accuracy and tumour preservation do not peak together: in level-3 training,
+validation Dice improves until it plateaus, whereas the tumour metrics reach their
+optimum roughly halfway through and degrade thereafter.
+Selecting on Dice alone therefore yields a checkpoint well past the tumour optimum, so we
+select on Eq.~\eqref{eq:score} instead.
+The official per-metric scores are ranks within a cohort of competing methods, which does
+not exist during a single training run.
+We therefore replace each rank score with a logistic quality centred on the metric's
+median and scaled by its robust spread (interquartile range divided by $1.349$), both
+measured over the validation rounds of a completed run.
+
+\subsubsection{Submission selection.}
+Choosing between trained variants does provide a cohort, so here we evaluate
+Eq.~\eqref{eq:score} exactly as the challenge does: each of the five metrics is ranked
+separately across the $K$ variants, with ties taking the worst rank they span, and rank
+$r$ is turned into the score $(K - r + 1)/K$.
+The variant with the highest $S$ is the one we submit.
+To check that this choice is not an artefact of a few cases, we additionally compare the
+selected variant against every other variant per metric with a paired Wilcoxon
+signed-rank test over the validation cases, Holm-corrected within each metric.
+As the variant is selected on the same cases, these tests are exploratory rather than
+confirmatory; the official validation leaderboard serves as the held-out check.
+
+
+\subsection{Baselines}
+\label{sec:model_selection}
