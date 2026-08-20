@@ -259,17 +259,7 @@ We therefore replace each rank score with a logistic quality centred on the metr
 median and scaled by its robust spread (interquartile range divided by $1.349$), both
 measured over the validation rounds of a completed run.
 
-\begin{figure}[t]
-\centering
-\figplaceholder{0.26}{FIGURE 3 -- Two panels sharing an x-axis of
-training steps: (a) validation Dice rising to a plateau, (b) MTV and TLG
-bias reaching their optimum roughly halfway through and degrading
-thereafter, with the checkpoint selected by Eq.~(5) marked in both.
-This figure IS the argument of this subsection -- strongly recommended.}
-\caption{Accuracy and biomarker preservation do not peak at the same
-checkpoint. \todo{caption}}
-\label{fig:selection}
-\end{figure}
+\input{figures/dsc_plateau}
 
 \subsubsection{Submission selection.}
 Choosing between trained variants does provide a cohort, so here we evaluate

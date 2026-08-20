@@ -1,0 +1,263 @@
+"""Build the checkpoint-selection figure: DSC plateau vs. tumour-metric optimum.
+
+Reads the three W&B metric exports of a single level-3 run from this directory
+and writes a LaTeX figure with two adjacent pgfplots axes: validation CT Dice on
+the left, MTV and TLG bias on the right. The data are inlined into the .tex, so
+the figure is drawn entirely by LaTeX and needs no image file.
+
+The vertical red dashed line marking the selected checkpoint is set by
+SELECTED_STEP below and is drawn at the same position in both panels.
+
+Requires in the document preamble:
+    \\usepackage{pgfplots}
+    \\pgfplotsset{compat=1.18}
+"""
+
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+HERE = Path(__file__).resolve().parent
+
+# --- the checkpoint we selected -------------------------------------------
+# Global step of the red dashed line, drawn in both panels. Set to None to
+# omit the line entirely.
+SELECTED_STEP = 60000
+
+RUN = "rebellious_stork"
+CSV_DSC = HERE / f"dsc_{RUN}.csv"
+CSV_MTV = HERE / f"mtv_{RUN}.csv"
+CSV_TLG = HERE / f"tlg_{RUN}.csv"
+OUT_TEX = HERE.parents[1] / "overleaf" / "figures" / "dsc_plateau.tex"
+
+# Validation is noisy from round to round. The raw curve is drawn faintly and a
+# centred rolling mean over this many validation rounds on top of it; set to 1
+# to disable the smoothing (only the raw curve is then drawn, at full opacity).
+SMOOTH_WINDOW = 9
+
+# x axis is drawn in thousands of steps to keep the tick labels short.
+STEP_SCALE = 1e-3
+# Fixed x range of both panels, in the units of the drawn axis (thousands of
+# steps). Set to None to let pgfplots pick the range from the data.
+XMIN, XMAX = 0.0, 120.0
+# DSC and the biomarker biases are stored as fractions and reported in %.
+VALUE_SCALE = 100.0
+
+# Panel geometry, in fractions of \linewidth of the enclosing figure.
+AXIS_WIDTH = "0.42\\linewidth"
+AXIS_HEIGHT = "0.30\\linewidth"
+
+COLOR_DSC = "0.12,0.34,0.62"  # blue
+COLOR_MTV = "0.85,0.37,0.01"  # orange
+COLOR_TLG = "0.20,0.55,0.28"  # green
+
+FIG_LABEL = "fig:selection"
+CAPTION = (
+    "Accuracy and biomarker preservation do not peak at the same checkpoint. "
+    "Validation CT Dice (left) rises to a plateau, while the MTV and TLG bias "
+    "(right) reach their optimum roughly halfway through level-3 training and "
+    "degrade thereafter. The dashed line marks the checkpoint selected by "
+    "Eq.~\\eqref{eq:score}. Faint lines are the per-round values, solid lines a "
+    "centred rolling mean."
+)
+
+
+def read_metric(path: Path) -> pd.DataFrame:
+    """Return the (step, value) series of a W&B export.
+
+    The exports carry a ``global_step`` column plus one column per run; the
+    ``__MIN`` / ``__MAX`` companions are identical for a single run and the
+    trailing ``_step`` columns are the wall-clock step, both of which we drop.
+    """
+    frame = pd.read_csv(path)
+    value_columns = [
+        column
+        for column in frame.columns
+        if column != "global_step"
+        and not column.endswith(("__MIN", "__MAX"))
+        and not column.endswith("_step")
+    ]
+    if len(value_columns) != 1:
+        raise ValueError(f"{path.name}: expected one value column, got {value_columns}")
+
+    out = frame[["global_step", value_columns[0]]].copy()
+    out.columns = ["step", "value"]
+    out = out.dropna().sort_values("step").reset_index(drop=True)
+    out["step"] = out["step"].astype(float) * STEP_SCALE
+    out["value"] = out["value"].astype(float) * VALUE_SCALE
+    return out
+
+
+def smooth(values: pd.Series) -> pd.Series:
+    if SMOOTH_WINDOW <= 1:
+        return values
+    return values.rolling(SMOOTH_WINDOW, center=True, min_periods=1).mean()
+
+
+def axis_limits(frames: list[pd.DataFrame], pad: float = 0.06) -> tuple[float, float]:
+    """Common y range over several series, padded so the curves clear the frame."""
+    lo = min(float(frame["value"].min()) for frame in frames)
+    hi = max(float(frame["value"].max()) for frame in frames)
+    margin = (hi - lo) * pad
+    return lo - margin, hi + margin
+
+
+def coordinates(frame: pd.DataFrame, column: str, indent: str = "      ") -> str:
+    rows = [
+        f"{step:.4f} {value:.6f} \\\\"
+        for step, value in zip(frame["step"], frame[column])
+    ]
+    return "\n".join(indent + row for row in rows)
+
+
+def plot_lines(frame: pd.DataFrame, color: str, legend: str | None) -> list[str]:
+    """A faint raw curve plus the smoothed curve on top of it.
+
+    Only the smoothed curve carries the legend entry; the raw one is excluded
+    from the legend so a single label covers the pair.
+    """
+    lines = []
+    if SMOOTH_WINDOW > 1:
+        lines += [
+            f"    \\addplot [draw={color}, line width=0.35pt, opacity=0.30, "
+            "forget plot] table [row sep=\\\\] {%",
+            coordinates(frame, "value"),
+            "    };",
+        ]
+        column = "smoothed"
+    else:
+        column = "value"
+
+    lines += [
+        f"    \\addplot [draw={color}, line width=1.0pt] table [row sep=\\\\] {{%",
+        coordinates(frame, column),
+        "    };",
+    ]
+    if legend is not None:
+        lines.append(f"    \\addlegendentry{{{legend}}}")
+    return lines
+
+
+def selection_line(ymin: float, ymax: float) -> list[str]:
+    if SELECTED_STEP is None:
+        return []
+    x = SELECTED_STEP * STEP_SCALE
+    return [
+        "    \\addplot [selectionline, forget plot] coordinates "
+        f"{{({x:.4f},{ymin:.6f}) ({x:.4f},{ymax:.6f})}};",
+    ]
+
+
+def axis(
+    body: list[str],
+    ylabel: str,
+    ymin: float,
+    ymax: float,
+    legend: bool = False,
+) -> list[str]:
+    options = [
+        f"width={AXIS_WIDTH}",
+        f"height={AXIS_HEIGHT}",
+        "scale only axis",
+        "xlabel={training steps ($\\times 10^{3}$)}",
+        f"ylabel={{{ylabel}}}",
+        f"ymin={ymin:.6f}",
+        f"ymax={ymax:.6f}",
+        *(
+            []
+            if XMIN is None or XMAX is None
+            else [f"xmin={XMIN:g}", f"xmax={XMAX:g}"]
+        ),
+        "tick align=outside",
+        "tick pos=left",
+        "grid=major",
+        "grid style={draw=black!12}",
+        "axis line style={draw=black!45}",
+    ]
+    if legend:
+        options += [
+            "legend pos=north east",
+            "legend cell align=left",
+            "legend style={draw=black!25, fill=white, fill opacity=0.85, "
+            "text opacity=1, font=\\scriptsize, inner sep=2pt}",
+        ]
+    lines = ["  \\begin{axis}["]
+    lines += [f"    {option}," for option in options]
+    lines.append("  ]")
+    lines += body
+    lines.append("  \\end{axis}")
+    return lines
+
+
+def main() -> None:
+    dsc = read_metric(CSV_DSC)
+    mtv = read_metric(CSV_MTV)
+    tlg = read_metric(CSV_TLG)
+    for frame in (dsc, mtv, tlg):
+        frame["smoothed"] = smooth(frame["value"])
+
+    dsc_min, dsc_max = axis_limits([dsc])
+    bio_min, bio_max = axis_limits([mtv, tlg])
+
+    left = plot_lines(dsc, "colordsc", None) + selection_line(dsc_min, dsc_max)
+    right = (
+        plot_lines(mtv, "colormtv", "MTV bias")
+        + plot_lines(tlg, "colortlg", "TLG bias")
+        + selection_line(bio_min, bio_max)
+    )
+
+    lines = [
+        "% Generated by paper_results/dsc_plateau/dsc_plateau.py -- do not edit.",
+        f"% Run: {RUN}. Selected checkpoint: {SELECTED_STEP}.",
+        "\\begin{figure}[t]",
+        "\\centering",
+        f"\\definecolor{{colordsc}}{{rgb}}{{{COLOR_DSC}}}",
+        f"\\definecolor{{colormtv}}{{rgb}}{{{COLOR_MTV}}}",
+        f"\\definecolor{{colortlg}}{{rgb}}{{{COLOR_TLG}}}",
+        "\\tikzset{selectionline/.style={red, dashed, line width=0.8pt}}",
+        "\\pgfplotsset{every axis/.append style={font=\\scriptsize, "
+        "label style={font=\\scriptsize}, tick label style={font=\\tiny}}}",
+        "\\begin{tikzpicture}",
+    ]
+    lines += axis(left, "validation DSC (\\%)", dsc_min, dsc_max)
+    lines.append("\\end{tikzpicture}\\hfill")
+    lines.append("\\begin{tikzpicture}")
+    lines += axis(right, "bias (\\%)", bio_min, bio_max, legend=True)
+    lines += [
+        "\\end{tikzpicture}",
+        f"\\caption{{{CAPTION}}}",
+        f"\\label{{{FIG_LABEL}}}",
+        "\\end{figure}",
+        "",
+    ]
+
+    OUT_TEX.parent.mkdir(parents=True, exist_ok=True)
+    OUT_TEX.write_text("\n".join(lines))
+    print(f"wrote {OUT_TEX}")
+
+    def summarise(name: str, frame: pd.DataFrame, higher_is_better: bool) -> None:
+        series = frame["smoothed"]
+        best = series.idxmax() if higher_is_better else series.idxmin()
+        step = frame["step"].iloc[best] / STEP_SCALE
+        print(
+            f"  {name:<4} best (smoothed) {series.iloc[best]:7.3f}% "
+            f"at step {step:>7.0f}"
+        )
+        if SELECTED_STEP is not None:
+            at = int(np.argmin(np.abs(frame["step"] / STEP_SCALE - SELECTED_STEP)))
+            print(
+                f"       at the selected step {series.iloc[at]:7.3f}% "
+                f"(step {frame['step'].iloc[at] / STEP_SCALE:.0f})"
+            )
+
+    print(f"\n{len(dsc)} validation rounds, "
+          f"steps {dsc['step'].min() / STEP_SCALE:.0f}"
+          f"--{dsc['step'].max() / STEP_SCALE:.0f}")
+    summarise("DSC", dsc, higher_is_better=True)
+    summarise("MTV", mtv, higher_is_better=False)
+    summarise("TLG", tlg, higher_is_better=False)
+
+
+if __name__ == "__main__":
+    main()
