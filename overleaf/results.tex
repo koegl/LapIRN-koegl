@@ -14,7 +14,7 @@
 \label{sec:evaluation}
 
 The challenge does not release labels for the validation cases.
-Unless stated otherwise, the validation numbers we report are therefore computed against surrogate labels we generated ourselves: CT organ labels with TotalSegmentator~\cite{totalsegmentator} and PET tumour labels with the winning autoPET-III submission~\cite{rokuss2024fdgpsmahitchhikersguide}.
+Unless stated otherwise, the validation numbers we report are therefore computed against surrogate labels we generated ourselves: CT organ labels with TotalSegmentator and PET tumour labels with the winning autoPET-III submission.
 These surrogate labels underlie every validation metric in this work, including the checkpoint and submission selection of Sec.~\ref{sec:model_selection}.
 Being predictions rather than the challenge's reference annotations, they carry their own error, so their absolute values are not directly comparable to the official validation leaderboard; we use them to compare methods against each other under an identical protocol.
 Where we report official validation-leaderboard results, these are computed by the organisers against their reference annotations and are marked as such.

@@ -157,24 +157,15 @@ The same terms (\ref{eq:mtv})-(\ref{eq:tlg}) are used during training and descen
 
 \subsubsection{Bone rigidity.}
 In 146 patients with paired baseline and follow-up scans, a median of 46.0\% (IQR 3.1 to 72.3\%) of total lesion volume at baseline lay within skeletal structures, rising to 63.8\% (IQR 12.1 to 77.4\%) at follow-up.
-Since a substantial fraction of lesion volume is therefore intraosseous, a rigidity penalty on a bone mask is an anatomically grounded surrogate for the biomarker terms: enforcing rigid bone motion is both physiologically correct and, where lesions sit in bone, directly prevents the volume change MTV measures.
+Since a substantial fraction of lesion volume is therefore intraosseous, a rigidity penalty on a bone mask is an anatomically grounded surrogate for the biomarker terms: enforcing rigid bone motion is both physiologically correct and, where lesions sit in bone, keeps the deformation locally volume-preserving.
+A rigid motion has $\det J_{\varphi} = 1$ and resamples the PET signal without compressing or expanding it, so it protects both scored biomarkers at once, the lesion volume that MTV measures and the intensity mass that TLG measures.
 
-The established way of promoting local rigidity is a variational penalty on the Jacobian $J_{\varphi}$ of the transformation.
-A deformation is locally rigid where $J_{\varphi}$ is orthogonal, i.e.\ $J_{\varphi}^{T} J_{\varphi} = \mathrm{Id}$, so deviations from orthogonality are penalised inside the rigid regions~\cite{ref_rigidity_1_loeckx,ref_rigidity_2_ruan}.
-Building on this,~\cite{ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki} additionally enforce local affineness, by penalising deviations of the second-order derivatives $\partial^{2} u$ from zero, and orientation preservation, by penalising deviations of $\det J_{\varphi}$ from unity; combining the three conditions preserves rigidity better than any of them alone.
-We adopted this three-condition penalty first.
-All of its terms are evaluated by finite differences at every voxel and only then masked, so that the mask selects which voxels are scored but not which are read.
-The derivative stencil therefore also reads non-bone voxels, and with thin cortical bone and ribs this dominates: the term ends up measuring the bone-to-soft-tissue displacement discontinuity that any correct registration must exhibit.
-We quantify this failure mode in Sec.~\ref{sec:ablation}.
-Eroding the mask would remove the effect, but in the present dataset many bone masks are only a few voxels wide.
+We first used the established local rigidity penalty, which combines deviation of the Jacobian $J_{\varphi}$ from orthogonality~\cite{ref_rigidity_1_loeckx,ref_rigidity_2_ruan} with local affineness and orientation preservation~\cite{ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki}.
+Its terms are evaluated by finite differences at every voxel and only then masked, so the stencil also reads non-bone voxels and, on thin cortical bone and ribs, ends up measuring the bone-to-soft-tissue displacement discontinuity that any correct registration must exhibit (Sec.~\ref{sec:ablation}).
+Eroding the mask would fix this, but at whole-body resolution many bone labels are only a few voxels wide.
 
-We therefore replaced this loss with a per-structure rigid-fit residual: for each label, we obtain the optimal rotation and translation from the predicted displacement in closed form via Kabsch alignment~\cite{ref_kabsch}, and penalise the mean squared residual of that fit.
-No stencil crosses the mask, and each label is fitted independently, so articulation is free.
-The penalty constrains only the shape of the deformation within each structure and is invariant to its placement, leaving alignment to NCC and Dice, unlike derivative based penalties~\cite{ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki} and unlike~\cite{foerner}, who regress the field onto a per bone rigid field precomputed by Dice pre registration, requiring segmentations in both images and inheriting pre registration error as a training target.
-The penalty is applied to the 61 skeletal TotalSegmentator structures.
-For each structure separately, the voxel positions and their displaced counterparts under the composed field form two point sets, and the rigid transform relating them best in the least-squares sense follows from the singular value decomposition of their centred covariance, with a sign correction that forbids a reflection~\cite{ref_umeyama} and so takes over the role of the orientation-preservation condition above.
-The loss is the mean squared distance of the displaced voxels from that fit, averaged first within and then across structures, so a rib counts as much as the pelvis; structures below 50 voxels are skipped, as the fit is ill-posed for a handful of points.
-Because the fitted transform is itself the minimiser of that residual, the derivative of the loss with respect to it vanishes, so it can be detached and the gradient taken through the displacement alone without approximation, avoiding a backward pass through the SVD.
+We therefore replaced it with a per-structure rigid-fit residual over the 61 skeletal TotalSegmentator labels: for each structure we fit the best rigid transform to its own displacement in closed form by Kabsch alignment~\cite{ref_kabsch,ref_umeyama} and penalise the mean squared residual, averaged within and then across structures.
+No stencil crosses the mask and each structure is fitted independently, so articulation is free; unlike the derivative-based penalties~\cite{ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki} it constrains only the shape of the deformation and not its placement, and unlike \cite{foerner} it needs no per-bone rigid field precomputed by a separate pre-registration, whose error would otherwise become a training target.
 
 \subsubsection{Deformation regularisation.}
 To regularise the displacement field we used a diffusion regulariser, the mean squared spatial gradient of the displacement,
