@@ -25,6 +25,23 @@
 \usepackage{xcolor}
 \usepackage{graphicx}
 
+% ---------------------------------------------------------------
+% Drafting helpers -- REMOVE BEFORE SUBMISSION
+% ---------------------------------------------------------------
+% Placeholder box standing in for a figure that does not exist yet.
+% Usage: \figplaceholder{0.28}{what the figure will show}
+\newcommand{\figplaceholder}[2]{%
+  \fbox{\begin{minipage}[c][#1\textheight][c]{0.97\linewidth}%
+    \centering\itshape\small #2%
+  \end{minipage}}%
+}
+% Inline TODO marker.
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+% PLACEHOLDER: name of the finally selected variant. The model is not
+% fixed yet -- change this one macro once it is, and the whole paper
+% follows.
+\newcommand{\selvar}{V5}
+
 \begin{document}
 %
 \title{Contribution Title}
@@ -63,9 +80,7 @@ ABC Institute, Rupert-Karls-University Heidelberg, Heidelberg, Germany\\
 
 \input{methods}
 \input{results}
-
-\section{Discussion}
-
+\input{discussion}
 
 \begin{credits}
 \subsubsection{\ackname} A bold run-in heading in small font size at the end of the paper is

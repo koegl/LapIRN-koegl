@@ -1,5 +1,17 @@
 \section{Introduction}
 
+% ---------------------------------------------------------------
+% OUTLINE
+%   P1  clinical motivation (PSMA PET/CT, longitudinal imaging)
+%   P2  why deformable registration is hard here + challenge task
+%   P3  related work: classical -> learning-based -> LapIRN; rigidity
+%   P4  contributions
+% >>> FIGURE (teaser, OPTIONAL -- cut first if over length):
+%     a baseline/follow-up pair illustrating the FOV, positioning and
+%     bladder-filling differences described in P2. If cut, fold the
+%     example into the qualitative figure in the Results.
+% ---------------------------------------------------------------
+
 Prostate-specific membrane antigen (PSMA) PET/CT has become a central imaging modality for staging, treatment planning, radiopharmaceutical therapy, and post-therapy response assessment in prostate cancer~\cite{ref_psma_clinical}.
 In these settings, patients often undergo multiple scans over time, comprising a baseline scan before therapy and one or more follow-up scans afterwards; accurate baseline-to-follow-up registration can support comparison of disease burden, localisation of uptake changes, assessment of lesion progression or response, dose accumulation, and quantitative longitudinal analysis~\cite{ref_psmareg_challenge}.
 The challenge organisers identify several factors that make establishing this correspondence by deformable image registration difficult in routine whole-body data~\cite{ref_psmareg_challenge}: baseline and follow-up scans differ substantially in field of view, patient positioning, respiratory state, bladder and bowel filling, and body weight; CT and PET encode complementary but appearance-dissimilar information; and the registration must preserve the quantitative PET signal used for response assessment while remaining physically plausible structures such as the skeleton.
@@ -15,7 +27,28 @@ Anatomy-aware regularisation that penalises non-rigid deformation, e.g. of skele
 
 In this work, we adapt LapIRN to longitudinal whole-body PSMA PET/CT for the PSMAReg task.
 We retain its diffeomorphic, coarse-to-fine formulation to handle the large field-of-view shifts between visits, and augment it with several task-specific regularisation terms targeted at the challenge objectives: a bone-rigidity loss that discourages implausible deformation of the skeleton, a total-lesion-glycolysis (TLG) loss that preserves PET-derived lesion burden under the estimated deformation, and a term based on the Jacobian determinant within the tumour volume that acts as a proxy for preserving the metabolic tumour volume (MTV).
-\textbf{[Additional contributions to be added.]}
 We describe the method and the training and inference infrastructure, and report validation leaderboard results for each metric.
 
-ss
+% --- Contribution list. PLACEHOLDER: wording of (v) depends on the
+% --- final model choice; keep the list to four or five items.
+In summary, our contributions are:
+\begin{itemize}
+  \item an adaptation of the diffeomorphic, coarse-to-fine LapIRN
+        architecture to longitudinal whole-body PSMA PET/CT, combining
+        an affine pre-registration with a three-level pyramid and
+        test-time instance optimisation;
+  \item a set of biomarker-preserving losses that constrain the
+        PET-derived MTV and TLG under the estimated deformation, including
+        a Jacobian-based surrogate that supplies dense gradients
+        throughout the lesion interior;
+  \item a per-structure rigid-fit (Kabsch) bone-rigidity penalty that,
+        unlike derivative-based rigidity terms, reads no voxels outside
+        the bone mask and is therefore well posed on thin cortical
+        structures;
+  \item a gradient-level analysis of the objective showing that the
+        apparent accuracy-versus-preservation trade-off is in fact a
+        regulariser-versus-data-term tension;
+  \item a score-driven checkpoint and submission selection procedure
+        that mirrors the challenge ranking. \todo{finalise once the
+        model is fixed}
+\end{itemize}

@@ -1,5 +1,16 @@
 \section{Results}
-\subsection{Evaluation}
+
+% ===============================================================
+% OUTLINE
+%   3.1 Evaluation Protocol
+%   3.2 Ablation of the Objective        >>> FIGURE 4 (cosine matrix)
+%   3.3 Comparison of LapIRN Variants    >>> TABLE 1
+%   3.4 Comparison against Baselines     >>> TABLE 2
+%   3.5 Validation Leaderboard           >>> TABLE 3 (placeholder)
+%   3.6 Qualitative Results              >>> FIGURE 5
+% ===============================================================
+
+\subsection{Evaluation Protocol}
 \label{sec:evaluation}
 
 The challenge does not release labels for the validation cases.
@@ -10,16 +21,98 @@ leaderboard; we use them to compare methods against each other under an identica
 Where we report official validation-leaderboard results, these are computed by the organisers against their reference annotations and are marked as such.
 Since the leaderboard covers the same cases with the correct labels, we use the agreement between the two rankings as a check on the surrogate protocol, and prefer the leaderboard whenever it is available for the models being compared.
 
+\subsection{Ablation of the Objective}
+\label{sec:ablation}
+
+\subsubsection{The terms of the objective conflict, and rigidity is the cause.}
+To test whether accuracy and preservation genuinely conflict, we logged the pairwise cosine similarities of all per-term gradients with respect to the shared parameters, along with their norms and shares (Fig.~\ref{fig:cosine}).
+The groups were persistently opposed (cos = -0.25, negative on 80\% of steps) at comparable magnitude (ratio of norms about 1.0), excluding weight starvation.
+Attribution localised nearly all of it to one term: rigidity contributed -0.20 of the -0.25, whereas TLG and the lesion Jacobian contributed about 0.00 despite holding 45\% and 5\% of their group's norm.
+TLG was orthogonal to every term (|cos| below 0.05), that is, loud, unopposed and still underperforming, indicating a proxy problem rather than a conflict.
+Rigidity instead behaved as a regulariser (cos = +0.53 with smoothness, -0.53 with NCC, 0.00 with TLG), so the apparent accuracy-versus-preservation trade-off was, in fact, a regulariser-versus-data-term tension.
+
+\begin{figure}[t]
+\centering
+\figplaceholder{0.30}{FIGURE 4 -- Pairwise cosine-similarity matrix of
+the per-term gradients with respect to the shared parameters, with the
+per-term gradient-norm shares alongside. Source: pairwise\_cosine\_matrix.png
+/ pairwise\_cosine\_matrix.py in the repository root. This is the most
+distinctive figure in the paper -- no 2025 proceedings paper has an
+equivalent. Do not cut it.}
+\caption{Pairwise cosine similarity between the gradients of the
+individual loss terms. \todo{caption}}
+\label{fig:cosine}
+\end{figure}
+
+\subsubsection{Derivative-based rigidity is ill posed on thin bone.}
+Rigidity opposed bone Dice (-0.45) more than soft tissue Dice (-0.23), which no correct bone penalty should do.
+Its three conditions are evaluated by finite differences at every voxel and only then masked, so the mask selects which voxels are scored but not which are read.
+The stencil used for the derivative calculation would therefore also use non-bone voxels.
+With thin cortical bone and ribs, this dominates.
+We tested it across five cases: 53.0\% (range 51.6 to 54.7) of the voxels entering the loss were not bone; a field with zero displacement inside every bone scored 56 (range 40 to 69), with 100\% removed by a single mask erosion; and 44.8\% of the gradient magnitude fell outside bone.
+The term measured the bone-to-soft tissue displacement discontinuity, which any correct registration must exhibit.
+With the per-structure rigid-fit penalty of Sec.~\ref{sec:losses}, the zero displacement field now scores exactly 0 and a per-bone rigid field 2.4e-6, while anisotropic squeeze is still rejected at 1.16.
+
+% >>> FIGURE (OPTIONAL -- cut first if over length): a rib or vertebra
+%     crop showing (a) the bone mask, (b) the voxels that enter the
+%     stencil-based loss, (c) the voxels that enter the Kabsch loss.
+%     Makes the 53% number visual.
+
+\subsubsection{A surface-distance loss would not help.}
+A per-label analysis of the
+validation predictions shows that the median and the 75th percentile of the
+per-label HD95 both equal $2.73$\,mm, i.e.\ exactly the in-plane voxel spacing:
+at least three quarters of all labels already lie at the discretisation floor
+attainable by a nearest-neighbour--warped label map. The mean HD95 is instead
+driven almost entirely by a small tail, with the worst $10\%$ of
+(case,\,label) pairs contributing $57.6\%$ of the total. This tail is dominated
+by structures for which no boundary refinement is meaningful: partially
+visible field-of-view--edge anatomy (brain, skull), limb structures subject to
+inter-session repositioning (humeri, scapula), and hollow organs with
+variable filling and hence no well-defined point correspondence (bowel,
+colon, urinary bladder). A boundary loss would therefore expend its gradient
+on labels that are already optimal, while leaving the tail --- a capture-range
+and correspondence problem rather than a boundary-precision one --- unaffected.
+% Optional small table of the HD95 percentiles and tail contribution;
+% keep in prose if tight on space.
+
+\subsection{Comparison of LapIRN Variants}
+% PLACEHOLDER: the selected variant is provisional -- all references to
+% it go through \selvar, defined in main.tex.
+
 Table~\ref{tab:lapirn_variants} compares the nine LapIRN variants.
-V5 attains the highest challenge score ($69.0$), with $88.3\%$ DSC, $4.77$\,mm HD95 and
+\selvar{} attains the highest challenge score ($69.0$), with $88.3\%$ DSC, $4.77$\,mm HD95 and
 MTV and TLG errors of $1.83\%$ and $1.80\%$.
 Its registration accuracy is significantly better than that of every other variant except V3, which reaches a marginally higher DSC ($88.9\%$) but degrades the PET biomarkers by an order of magnitude ($15.0\%$ MTV and $16.2\%$ TLG error), illustrating that accuracy and biomarker preservation trade off against each other.
-Six variants produce fewer non-diffeomorphic voxels than V5, but all of them lie below the $50$\,ppm practical-equivalence threshold, so the difference does not affect the ranking.
+Six variants produce fewer non-diffeomorphic voxels than \selvar{}, but all of them lie below the $50$\,ppm practical-equivalence threshold, so the difference does not affect the ranking.
 
-\include{tables/table_results_1}
+\input{tables/table_results_1}   % \input, not \include: \include forces a \clearpage
+
+\subsection{Comparison against Baselines}
 
 Table~\ref{tab:baselines} places the selected variant against the baselines.
 It improves DSC from $73.3\%$ (NiftyReg, the strongest baseline) to $88.3\%$ and halves HD95 from $7.09$ to $4.77$\,mm, while reducing the MTV and TLG errors by more than a factor of two and the non-diffeomorphic volume from $1525$ to $21$\,ppm.
 All differences are significant on every metric (paired Wilcoxon signed-rank, Holm-corrected, $p<0.01$).
 
-\include{tables/table_results_2}
+\input{tables/table_results_2}   % \input, not \include: \include forces a \clearpage
+
+\subsection{Validation Leaderboard}
+% TODO -- PLACEHOLDER until the final submission is made.
+%   - official organiser-computed numbers for the submitted model,
+%     explicitly marked as computed against the reference annotations
+%   - rank agreement between the surrogate protocol of
+%     Sec.~\ref{sec:evaluation} and the official leaderboard, as the
+%     held-out check promised there
+% >>> TABLE 3: leaderboard row(s) per metric.
+
+\subsection{Qualitative Results}
+\begin{figure}[t]
+\centering
+\figplaceholder{0.32}{FIGURE 5 -- Standard qualitative panel: fixed,
+moving, warped and difference image, plus a $\det J_{\varphi}$ heat map
+and a zoom on an intraosseous lesion showing that the lesion volume is
+preserved. Include one failure case (bowel or bladder filling) -- the
+2025 papers that showed a failure case read as more honest.}
+\caption{Qualitative registration results. \todo{caption}}
+\label{fig:qualitative}
+\end{figure}
