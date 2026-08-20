@@ -14,7 +14,7 @@
 \label{sec:evaluation}
 
 The challenge does not release labels for the validation cases.
-Unless stated otherwise, the validation numbers we report are therefore computed against surrogate labels we generated ourselves: CT organ labels with TotalSegmentator~\cite{totalsegmentator} and PET tumour labels with the winning autoPET-III submission~\cite{autopet3}.
+Unless stated otherwise, the validation numbers we report are therefore computed against surrogate labels we generated ourselves: CT organ labels with TotalSegmentator~\cite{totalsegmentator} and PET tumour labels with the winning autoPET-III submission~\cite{rokuss2024fdgpsmahitchhikersguide}.
 These surrogate labels underlie every validation metric in this work, including the checkpoint and submission selection of Sec.~\ref{sec:model_selection}.
 Being predictions rather than the challenge's reference annotations, they carry their own error, so their absolute values are not directly comparable to the official validation
 leaderboard; we use them to compare methods against each other under an identical protocol.
@@ -40,7 +40,7 @@ With the per-structure rigid-fit penalty of Sec.~\ref{sec:losses}, the zero disp
 \subsubsection{A surface-distance loss would not help.}
 Since HD95 is scored, a differentiable surface-distance term such as the
 distance-transform Hausdorff surrogate of Karimi and
-Salcudean~\cite{ref_karimi} is the obvious addition to the objective; we
+Salcudean~\cite{salcudean} is the obvious addition to the objective; we
 deliberately use none, in training or in instance optimisation.
 We analysed the $2296$ scored (case,\,label) entries of the validation
 predictions before instance optimisation, so that the conclusion applies to the
@@ -64,8 +64,8 @@ point correspondence (colon, small bowel, stomach, bladder, gallbladder), and
 anatomy truncated by the field of view (brain, skull), some of it reduced to a
 handful of voxels.
 A boundary loss would therefore expend its gradient on labels that are already
-at the floor, while leaving the tail --- a capture-range and correspondence
-problem rather than a boundary-precision one --- untouched.
+at the floor, while leaving the tail - a capture-range and correspondence
+problem rather than a boundary-precision one - untouched.
 
 \subsection{Comparison of LapIRN Variants}
 % PLACEHOLDER: the selected variant is provisional -- all references to

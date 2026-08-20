@@ -10,7 +10,9 @@
 %   2.6 Instance Optimisation
 %   2.7 Model Selection                >>> FIGURE 3 (selection trade-off)
 %   2.8 Baselines
-%   2.9 Implementation Details
+%   2.9 Augmentation
+%   2.10 Training Setup                >>> TABLE 1 (schedule + weights)
+%   2.11 Computing Infrastructure
 % Quantitative diagnostics (rigidity stencil, HD95
 % floor) live in Sec.~\ref{sec:ablation}; only their motivation is here.
 % ===============================================================
@@ -262,12 +264,93 @@ As a classical iterative baseline we ran NiftyReg~\todo{cite NiftyReg}, using \t
 As a learning-free optimisation baseline we ran ConvexAdam~\cite{ref_convexadam}, in the form provided by the challenge organisers as the official baseline of the task, so that our numbers are directly comparable to the reference entry on the leaderboard.
 Finally, we compare against vanilla LapIRN, i.e.\ the same architecture and training schedule as our model but with the original objective only, without the DSC, NDV loss, PET-biomarker terms and the bone-rigidity penalty, which isolates the contribution of the proposed losses from that of the backbone.
 
-\subsection{Implementation Details}
-\label{sec:implementation}
-% TODO - every 2025 proceedings paper has this subsection.
-%   - framework, GPU model and memory, mixed precision
-%   - patch vs. full-resolution training, batch size
-%   - optimiser, learning rate schedule, epochs/iterations per pyramid level
-%   - training time in total, inference time per pair with and without IO
-%   - submission container and reproducibility notes
-% PLACEHOLDER: fill in once the final configuration is frozen.
+\subsection{Augmentation}
+\label{sec:augmentation}
+With 239 training pairs, augmentation matters, and we chose it to reproduce the
+specific ways in which two sessions of the same patient differ rather than to
+maximise variety.
+Every transformation is applied consistently to both scans of a pair, to their
+labels and to the cached affine field, except where stated otherwise.
+
+We flip left--right with probability $0.5$, the only spatial flip that leaves
+whole-body anatomy plausible.
+On CT we apply an intensity shift of $\pm0.02$ in the normalised window
+(about $\pm50$~HU) and a scaling of $0.9$ to $1.1$, covering scanner and
+reconstruction variation.
+On PET we apply a scaling of $0.85$ to $1.15$ but no shift: SUV depends on the
+injected dose, the uptake time and the patient's weight, all of which differ
+between sessions, so the network must not key on absolute uptake, whereas an
+additive offset has no physical counterpart in an SUV map.
+
+The last augmentation targets the difference the challenge singles out as the
+hardest.
+We crop randomly along the cranio-caudal axis, removing up to 40 slices from
+either end of both scans, which varies the extent of the acquired volume.
+On top of that we crop the moving and the fixed scan independently by up to a
+further 10 slices each, which is the part that actually reproduces a
+baseline/follow-up mismatch: it makes the two fields of view disagree, so the
+network is forced to register anatomy that is present in one scan and truncated
+in the other.
+
+\subsection{Training Setup}
+\label{sec:training_setup}
+Each pyramid level is trained in sequence with Adam on whole volumes rather than
+patches, at a batch size of one with gradients accumulated over four steps.
+The convolutional trunk runs in \texttt{bfloat16} while the transformations and
+all losses are kept in single precision, since scaling and squaring and the
+Jacobian determinants compound rounding error.
+Every level starts with a five-epoch linear learning-rate warmup and keeps the
+preceding level frozen for its first ten epochs.
+The schedule and all loss weights, for training and for instance optimisation,
+are listed in Table~\ref{tab:weights}.
+
+\begin{table}[t]
+\centering
+\caption{Training and instance-optimisation configuration. Slashes separate the
+values of pyramid levels 1/2/3. The biomarker and rigidity terms are inactive at
+levels 1 and 2, where the lesion and bone masks are largely partial-volume
+(Sec.~\ref{sec:losses}). \todo{provisional -- refresh once the final run is
+fixed}}
+\label{tab:weights}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{llcc}
+\toprule
+& Parameter & Training & IO \\
+\midrule
+\multirow{5}{*}{\rotatebox[origin=c]{90}{Schedule}}
+  & optimiser              & Adam & Adam \\
+  & steps / iterations     & 100k / 100k / 140k & 90 \\
+  & learning rate          & $3$ / $2$ / $2.5 \cdot 10^{-4}$ & $10^{-2}$ \\
+  & batch size             & 1 ($\times 4$ accumulation) & 1 \\
+  & warmup / unfreeze      & 5 / 10 epochs & -- \\
+\midrule
+\multirow{9}{*}{\rotatebox[origin=c]{90}{Loss weights}}
+  & $\lambda_{\mathrm{NCC}}$          & 5 & 6 \\
+  & $\lambda_{\mathrm{DSC}}$          & 3 / 4 / 5 & 6 \\
+  & $\lambda_{\mathrm{MTV}}$          & 20 & 200 \\
+  & $\lambda_{\mathrm{MTV\text{-}J}}$ & 0.5 & 0 \\
+  & $\lambda_{\mathrm{jac}}$          & 5 & 20 \\
+  & $\lambda_{\mathrm{TLG}}$          & 5 & 20 \\
+  & $\lambda_{\mathrm{rigid}}$        & 0.2 & 1 \\
+  & $\lambda_{\mathrm{smooth}}$       & 5 & 0 \\
+  & $\lambda_{\mathrm{NDV}}$          & $10^{4}$ & 10 \\
+\midrule
+\multirow{3}{*}{\rotatebox[origin=c]{90}{\shortstack[c]{Per-\\lesion}}}
+  & $\lambda_{\mathrm{MTV,cc}}$       & -- & 80 \\
+  & $\lambda_{\mathrm{MTV\text{-}J,cc}}$ & -- & 150 \\
+  & $\lambda_{\mathrm{TLG,cc}}$       & -- & 20 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Computing Infrastructure}
+\label{sec:infrastructure}
+All models were trained and evaluated on a single NVIDIA H100 80\,GB HBM3
+(driver 610.57.04).
+The pipeline is implemented in Python~3.11 with PyTorch~2.6~\cite{ref_pytorch}
+and CUDA~12.4; the affine pre-registration uses ANTsPy~0.6.3~\cite{ants}.
+Image and array handling rely on nibabel~5.4, NumPy and SciPy.
+Training all three levels takes \todo{n}~h, and inference is \todo{n}~s per
+pair, rising to \todo{n}~s with instance optimisation.
+Code and the submission container are available at \todo{repository URL}.
