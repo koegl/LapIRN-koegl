@@ -13,11 +13,11 @@ import my_data
 import numpy as np
 import torch
 import tqdm
-from scipy import ndimage
 from config import TrainingConfig
 from miccai2020_model_stage import (
     SpatialTransform_unit,
 )
+from scipy import ndimage
 from torch.utils import checkpoint as torch_checkpoint
 from torch.utils import data as torch_data
 
@@ -31,6 +31,23 @@ SEL_W_ACCURACY = 0.4
 SEL_W_BIOMARKER = 0.4
 SEL_W_REGULARITY = 0.2
 SEL_REF_NDV = 0.0
+
+
+def overwrite_run_name(new_name: str) -> None:
+    """Overwrite the run name for the active logger run.
+
+    This is useful when the run name is auto-generated and you want to set a
+    more descriptive name after the run has started. The new name will be
+    applied to both MLflow and WandB if they are active.
+    """
+    global _ACTIVE_RUN_NAME, _WANDB_RUN
+
+    if mlflow.active_run() is not None:
+        mlflow.set_tag("mlflow.runName", new_name)
+    if _WANDB_RUN is not None:
+        _WANDB_RUN.name = new_name
+
+    _ACTIVE_RUN_NAME = new_name
 
 
 def stop_flag_path(save_dir: Path, level: int) -> Path:
@@ -109,6 +126,10 @@ def start_logging_run(config: TrainingConfig) -> Iterator[None]:
                 entity=config.wandb_entity,
                 name=run_name,
                 group=get_slurm_job_id(),
+                config={
+                    "slurm_job_id": get_slurm_job_id(),
+                    "code_snapshot": os.environ.get("CODE_DIR", "unsnapshotted"),
+                },
             )
             _WANDB_RUN.define_metric("global_step")
             _WANDB_RUN.define_metric("*", step_metric="global_step")
@@ -554,6 +575,7 @@ def add_jobid_to_mlflow_run() -> None:
 
     mlflow.set_tag("mlflow.runName", new_name)
     mlflow.set_tag("slurm_job_id", job_id)
+    mlflow.set_tag("code_snapshot", os.environ.get("CODE_DIR", "unsnapshotted"))
 
 
 def get_mlflow_run_name() -> str:
@@ -679,6 +701,34 @@ def downsample_label(label: torch.Tensor, scale_factor: float) -> torch.Tensor:
     return torch.nn.functional.interpolate(
         label.float(), scale_factor=scale_factor, mode="nearest"
     ).long()
+
+
+# TotalSegmentator organ ids run 1..117, so a weight vector indexed by label
+# value needs 118 entries.
+N_CT_LABELS = 118
+
+
+def build_dice_class_weights(
+    config: TrainingConfig, device: torch.device
+) -> Optional[torch.Tensor]:
+    """Per-label CT dice weights indexed by label value, or None if disabled.
+
+    Everything is 1.0 except config.pet_visible_labels, which get
+    config.w_dice_pet_visible -- the organs that are actually visible in PET
+    (see the comment on those fields in config.py). The dice losses renormalize
+    over the classes present in each subject, so the overall loss scale, and
+    hence w_dice_ct_lvl*, is unaffected.
+
+    Build this once per training run and pass it into the loss; it is a
+    constant, so there is no reason to rebuild it per iteration.
+    """
+    if config.w_dice_pet_visible == 1.0 or not config.pet_visible_labels:
+        return None
+
+    weights = torch.ones(N_CT_LABELS, device=device)
+    labels = torch.tensor(config.pet_visible_labels, device=device).long()
+    weights[labels] = config.w_dice_pet_visible
+    return weights
 
 
 def soft_dice_loss_binary(

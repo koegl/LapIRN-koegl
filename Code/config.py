@@ -89,7 +89,7 @@ class TrainingConfig:
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
     warmup_epochs: float = 5
-    start_channel: int = 24
+    start_channel: int = 7
 
     # Per-level res-block trunk capacity, independent of start_channel (so no
     # inter-level tensor shape changes).
@@ -152,13 +152,20 @@ class TrainingConfig:
 
     # loss weights
     w_non_diff: float = 10000.0
-    w_smooth: float = 5.0
+    w_smooth: float = 10.0
     w_ct: float = 5.0
     w_pet: float = 0.0
     w_dice_ct_lvl1: float = 3.0
     w_dice_ct_lvl2: float = 4.0
     w_dice_ct_lvl3: float = 5.0
     w_dice_pet: float = 0.0
+
+    # --- per-label CT dice weighting --------------------------------------
+    pet_visible_labels: List[int] = field(
+        default_factory=lambda: [1, 2, 3, 4, 5, 7, 19, 21, 22, 64]
+    )
+    # 1.0 disables the weighting entirely (all labels equal)
+    w_dice_pet_visible: float = 2.0
     w_tlg: float = 5.0
     w_jacobian_tumor: float = 5.0
     w_mtv: float = 20.0

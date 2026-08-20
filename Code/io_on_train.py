@@ -124,7 +124,7 @@ def main() -> None:
     parser.add_argument(
         "--include-rigidity",
         action=argparse.BooleanOptionalAction,
-        default=True,
+        default=False,
     )
     parser.add_argument(
         "--reverse",
@@ -199,7 +199,7 @@ def main() -> None:
         with open(failures_path, "a") as f:
             f.write(f"{name}\t{reason}\n")
 
-    for batch in tqdm.tqdm(loader, desc="IO on train pairs", ncols=120):
+    for batch in tqdm.tqdm(loader, desc="IO on train pairs", ncols=20):
         case_id = batch["case_id"][0]
         tp_x = batch["tp_x"][0]
         tp_y = batch["tp_y"][0]
@@ -300,9 +300,7 @@ def process_pair(
         dice_base = instance_opt.multilabel_dice(
             warped_base[0, 0].round().long(), target
         )
-        dice_ref = instance_opt.multilabel_dice(
-            warped_ref[0, 0].round().long(), target
-        )
+        dice_ref = instance_opt.multilabel_dice(warped_ref[0, 0].round().long(), target)
 
     # fp16 halves the disk cost; unit-flow values are O(1e-2), where fp16
     # keeps ~3 significant digits — far below the IO refinement itself
@@ -320,9 +318,7 @@ def process_pair(
         [case_id, tp_x, tp_y, f"{dice_base:.4f}", f"{dice_ref:.4f}", out_path.name]
     )
     summary_file.flush()
-    tqdm.tqdm.write(
-        f"{case_id} {tp_x}->{tp_y}: dice {dice_base:.4f} -> {dice_ref:.4f}"
-    )
+    tqdm.tqdm.write(f"{case_id} {tp_x}->{tp_y}: dice {dice_base:.4f} -> {dice_ref:.4f}")
 
 
 if __name__ == "__main__":
