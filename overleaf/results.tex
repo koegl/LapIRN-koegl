@@ -38,22 +38,34 @@ With the per-structure rigid-fit penalty of Sec.~\ref{sec:losses}, the zero disp
 %     Makes the 53% number visual.
 
 \subsubsection{A surface-distance loss would not help.}
-A per-label analysis of the
-validation predictions shows that the median and the 75th percentile of the
-per-label HD95 both equal $2.73$\,mm, i.e.\ exactly the in-plane voxel spacing:
-at least three quarters of all labels already lie at the discretisation floor
-attainable by a nearest-neighbour--warped label map. The mean HD95 is instead
-driven almost entirely by a small tail, with the worst $10\%$ of
-(case,\,label) pairs contributing $57.6\%$ of the total. This tail is dominated
-by structures for which no boundary refinement is meaningful: partially
-visible field-of-view--edge anatomy (brain, skull), limb structures subject to
-inter-session repositioning (humeri, scapula), and hollow organs with
-variable filling and hence no well-defined point correspondence (bowel,
-colon, urinary bladder). A boundary loss would therefore expend its gradient
-on labels that are already optimal, while leaving the tail --- a capture-range
-and correspondence problem rather than a boundary-precision one --- unaffected.
-% Optional small table of the HD95 percentiles and tail contribution;
-% keep in prose if tight on space.
+Since HD95 is scored, a differentiable surface-distance term such as the
+distance-transform Hausdorff surrogate of Karimi and
+Salcudean~\cite{ref_karimi} is the obvious addition to the objective; we
+deliberately use none, in training or in instance optimisation.
+We analysed the $2296$ scored (case,\,label) entries of the validation
+predictions before instance optimisation, so that the conclusion applies to the
+training objective and not only to the refined field.
+The median per-label HD95 is $3.27$\,mm and the 75th percentile $5.47$\,mm,
+i.e.\ exactly one and two voxels: three quarters of all labels already lie
+within two voxels of the discretisation floor attainable by a
+nearest-neighbour--warped label map.
+The mean is instead driven almost entirely by a small tail, with the worst
+$10\%$ of entries carrying $48.1\%$ of the total HD95 mass.
+Splitting that mass against the unregistered pair shows where it comes from:
+$48.1\%$ is \emph{inherent}, already bad before registration and no better
+after (mean $33.8$\,mm over $229$ entries), $51.7\%$ belongs to labels our field
+\emph{improved} to a mean of $4.02$\,mm, and $0.0\%$ was \emph{created} by the
+registration.
+The inherent entries are dominated by structures for which no boundary
+refinement is meaningful: limbs subject to inter-session repositioning (humeri,
+femora, clavicles, together the largest single contribution), hollow organs
+whose filling changes between sessions and which therefore have no well-defined
+point correspondence (colon, small bowel, stomach, bladder, gallbladder), and
+anatomy truncated by the field of view (brain, skull), some of it reduced to a
+handful of voxels.
+A boundary loss would therefore expend its gradient on labels that are already
+at the floor, while leaving the tail --- a capture-range and correspondence
+problem rather than a boundary-precision one --- untouched.
 
 \subsection{Comparison of LapIRN Variants}
 % PLACEHOLDER: the selected variant is provisional -- all references to

@@ -97,6 +97,7 @@ We used a standard DSC loss for weak label supervision.
 Since the challenge scores PET organ overlap but provides no PET organ annotations for training, we measured each of the 117 TotalSegmentator organs' mean SUV relative to skeletal muscle across all sessions.
 As 90 organs fall below twice the muscle background and are thus indistinguishable in PET, we upweighted only the 10 exceeding 4 times the background (kidneys, gallbladder, spleen, liver, duodenum, bladder, portal vein, prostate, pancreas) by a factor of 2 in the per-class Dice loss.
 This relies on PET and CT being well aligned within a session, so that CT-derived overlap on these organs approximates the PET organ overlap being scored.
+Note that the objective contains no surface-distance term, although HD95 is scored; Sec.~\ref{sec:ablation} shows that one would have nothing to improve.
 
 
 \subsubsection{Preservation of PET quantification.}
@@ -123,7 +124,7 @@ We therefore add a complementary term based on the change-of-variables identity:
 \end{equation}
 %
 where $W$ denotes the warped lesion region, therefore pins the same net volume ratio as~(\ref{eq:mtv}) while providing gradients throughout the lesion interior; unlike a per-voxel constraint, it still permits internal redistribution of volume.
-Note that masking the determinant with the moving-frame lesion, as is tempting, samples $\det J_{\varphi}$ at locations unrelated to the lesion once the affine is composed in; empirically, this decorrelated the surrogate from the scored MTV (Fig.~\ref{fig:detj-masking}). Finally, the per-voxel penalty
+Finally, the per-voxel penalty
 %
 \begin{equation}
   \mathcal{L}_{\mathrm{jac}}
@@ -134,20 +135,8 @@ Note that masking the determinant with the moving-frame lesion, as is tempting, 
 %
 acts as a stricter local regulariser, discouraging compensating compression and expansion within the lesion.
 
-\begin{figure}[t]
-\centering
-\figplaceholder{0.22}{FIGURE 2 -- Schematic, two panels. (a) masking
-$\det J_{\varphi}$ with the moving-frame lesion mask: once the affine is
-composed in, the sampled locations are unrelated to the lesion.
-(b) masking with the warped lesion region $W$: the sampled locations
-coincide with the lesion. This is the subtle point of Eq.~(2) and a
-diagram makes it instant. High value per column inch.}
-\caption{Moving-frame versus warped-frame masking of the Jacobian
-determinant. \todo{caption}}
-\label{fig:detj-masking}
-\end{figure}
 
-The challenge additionally scores the total lesion glycolysis (TLG), the PET-activity--weighted counterpart of the MTV, which we penalize analogously as the relative change of intensity mass under the warp:
+The challenge additionally scores the total lesion glycolysis (TLG), the PET-activity-weighted counterpart of the MTV, which we penalize analogously as the relative change of intensity mass under the warp:
 %
 \begin{equation}
   \mathcal{L}_{\mathrm{TLG}}
@@ -160,9 +149,9 @@ The challenge additionally scores the total lesion glycolysis (TLG), the PET-act
 \end{equation}
 %
 where $I$ denotes the moving PET image.
-Since both the image and the mask are resampled with the same transformation, this term is sensitive not only to volume change but also to intensity blurring at the lesion boundary, and thus complements the purely geometric terms (\ref{eq:mtv})--(\ref{eq:jactum}).
+Since both the image and the mask are resampled with the same transformation, this term is sensitive not only to volume change but also to intensity blurring at the lesion boundary, and thus complements the purely geometric terms (\ref{eq:mtv})-(\ref{eq:jactum}).
 
-The same terms (\ref{eq:mtv})--(\ref{eq:tlg}) are used during training and descended at test time by our instance optimisation (Sec.~\ref{sec:io}), so the network is trained on the objective it is later refined under.
+The same terms (\ref{eq:mtv})-(\ref{eq:tlg}) are used during training and descended at test time by our instance optimisation (Sec.~\ref{sec:io}), so the network is trained on the objective it is later refined under.
 
 \subsubsection{Bone rigidity.}
 In 146 patients with paired baseline and follow-up scans, a median of 46.0\% (IQR 3.1 to 72.3\%) of total lesion volume at baseline lay within skeletal structures, rising to 63.8\% (IQR 12.1 to 77.4\%) at follow-up.
@@ -208,15 +197,6 @@ Writing $\det J^{(k)}_{\varphi}$ for the determinant of the $k$-th tetrahedral s
 \end{equation}
 %
 equals the scored percentage of non-diffeomorphic volume and places gradients on exactly the folded voxels, so that minimising it minimises the reported \%NDV directly.
-
-\subsubsection{Losses considered and rejected.}
-We deliberately do not add a differentiable surface-distance term (e.g.\ the
-distance-transform Hausdorff surrogate of Karimi and Salcudean \todo{citation})
-to either the training objective or the instance optimisation: a per-label
-analysis of the validation predictions shows that most labels already lie at
-the discretisation floor, while the mean HD95 is driven by a tail that a
-boundary loss cannot address.
-The supporting analysis is given in Sec.~\ref{sec:ablation}.
 
 \subsection{Instance Optimisation}
 \label{sec:io}
@@ -284,7 +264,7 @@ Finally, we compare against vanilla LapIRN, i.e.\ the same architecture and trai
 
 \subsection{Implementation Details}
 \label{sec:implementation}
-% TODO -- every 2025 proceedings paper has this subsection.
+% TODO - every 2025 proceedings paper has this subsection.
 %   - framework, GPU model and memory, mixed precision
 %   - patch vs. full-resolution training, batch size
 %   - optimiser, learning rate schedule, epochs/iterations per pyramid level
