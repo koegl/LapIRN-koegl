@@ -87,7 +87,7 @@ def main() -> None:
     parser.add_argument(
         "--dvf-dir", type=Path, default=DATA_PATH / "PSMAReg/io_train_dvfs"
     )
-    parser.add_argument("--epochs", type=int, default=20)
+    parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument(
         "--lr",
         type=float,
@@ -188,12 +188,12 @@ def main() -> None:
         )
 
         global_step = 0
-        pbar_outer = tqdm.tqdm(range(args.epochs), desc="iodistill epoch", ncols=20)
+        pbar_outer = tqdm.tqdm(range(args.epochs), desc="iodistill epoch")
         for epoch in pbar_outer:
             model.train()
             epoch_loss = 0.0
             optimizer.zero_grad()
-            pbar = tqdm.tqdm(train_loader, desc=f"iodistill epoch {epoch}", ncols=20)
+            pbar = tqdm.tqdm(train_loader, desc=f"iodistill epoch {epoch}")
             for step, batch in enumerate(pbar):
                 X_prereg, _, _, Y, _, _ = io_on_train.prereg_batch(
                     batch, cfg, device, transform, transform_nearest, grid_full
@@ -217,7 +217,7 @@ def main() -> None:
                 global_step += 1
 
             utils.log_metrics(
-                {"finetune/dvf_epoch": epoch_loss / len(train_loader)}, step=epoch
+                {"finetune/dvf_epoch": epoch_loss / len(train_loader)}, step=global_step
             )
 
             is_last = epoch == args.epochs - 1
@@ -258,7 +258,7 @@ def main() -> None:
                             if not (isinstance(v, float) and np.isnan(v))
                         },
                     },
-                    step=epoch,
+                    step=global_step,
                 )
                 print(f"epoch {epoch} val: {val_metrics}")
                 print(f"epoch {epoch} combined score: {combined_score:.4f}")
