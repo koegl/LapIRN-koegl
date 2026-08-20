@@ -179,30 +179,11 @@ Eroding the mask would remove the effect, but in the present dataset many bone m
 
 We therefore replaced this loss with a per-structure rigid-fit residual: for each label, we obtain the optimal rotation and translation from the predicted displacement in closed form via Kabsch alignment~\cite{ref_kabsch}, and penalise the mean squared residual of that fit.
 No stencil crosses the mask, and each label is fitted independently, so articulation is free.
-The penalty constrains only the shape of the deformation within each structure and is invariant to its placement, leaving alignment to NCC and Dice, unlike derivative based penalties~\cite{ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki} and unlike F\"orner and Wendler~\cite{ref_foerner}, who regress the field onto a per bone rigid field precomputed by Dice pre registration, requiring segmentations in both images and inheriting pre registration error as a training target.
-Concretely, let $\mathcal{B}$ be the set of skeletal TotalSegmentator structures, i.e.\ the 61 vertebra, rib, sternum, costal-cartilage, skull, pelvic and proximal-limb labels, and let $\Omega_{l}$ be the voxels of structure $l$ in the fixed frame, $p$ a voxel position and $u(p)$ the displacement of the composed field.
-For each structure we obtain the rigid transform that best explains its own displacement,
-%
-\begin{equation}
-  (R_{l}, t_{l})
-  = \argmin_{R \in SO(3),\, t \in \mathbb{R}^{3}}
-    \sum_{p \in \Omega_{l}} \bigl\lVert (p + u(p)) - (R p + t) \bigr\rVert^{2},
-  \label{eq:kabsch}
-\end{equation}
-%
-in closed form by Kabsch alignment~\cite{ref_kabsch}, i.e.\ from the singular value decomposition $U \Sigma V^{T}$ of the covariance of the centred point sets, as $R_{l} = V \operatorname{diag}(1, 1, \det(V U^{T})) U^{T}$, where the sign term forbids a reflection~\cite{ref_umeyama} and takes over the role the $\det J_{\varphi} = 1$ condition played above.
-We then penalise the residual of that fit,
-%
-\begin{equation}
-  \mathcal{L}_{\mathrm{rigid}}
-  = \frac{1}{\lvert \mathcal{B} \rvert} \sum_{l \in \mathcal{B}}
-    \frac{1}{\lvert \Omega_{l} \rvert} \sum_{p \in \Omega_{l}}
-    \bigl\lVert (p + u(p)) - (R_{l} p + t_{l}) \bigr\rVert^{2} .
-  \label{eq:rigid}
-\end{equation}
-%
-Each structure contributes its own mean, so a rib counts as much as the pelvis, and structures smaller than 50 voxels are skipped because the fit is ill-posed for a handful of points.
-Since $(R_{l}, t_{l})$ minimise~(\ref{eq:kabsch}), the derivative of the loss with respect to them vanishes, and we can detach them and differentiate only through $u$ without approximation, avoiding a backward pass through the SVD.
+The penalty constrains only the shape of the deformation within each structure and is invariant to its placement, leaving alignment to NCC and Dice, unlike derivative based penalties~\cite{ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki} and unlike~\cite{foerner}, who regress the field onto a per bone rigid field precomputed by Dice pre registration, requiring segmentations in both images and inheriting pre registration error as a training target.
+The penalty is applied to the 61 skeletal TotalSegmentator structures.
+For each structure separately, the voxel positions and their displaced counterparts under the composed field form two point sets, and the rigid transform relating them best in the least-squares sense follows from the singular value decomposition of their centred covariance, with a sign correction that forbids a reflection~\cite{ref_umeyama} and so takes over the role of the orientation-preservation condition above.
+The loss is the mean squared distance of the displaced voxels from that fit, averaged first within and then across structures, so a rib counts as much as the pelvis; structures below 50 voxels are skipped, as the fit is ill-posed for a handful of points.
+Because the fitted transform is itself the minimiser of that residual, the derivative of the loss with respect to it vanishes, so it can be detached and the gradient taken through the displacement alone without approximation, avoiding a backward pass through the SVD.
 
 \subsubsection{Deformation regularisation.}
 To regularise the displacement field we used a diffusion regulariser, the mean squared spatial gradient of the displacement,
