@@ -35,18 +35,15 @@
 %   - the within-session PET/CT alignment assumption that the CT-derived
 %     supervision relies on (referenced again in Sec.~2.5)
 
-\subsection{Affine Pre-registration}
-\label{sec:affine}
-% TODO -- currently the affine only appears implicitly as
+\subsection{Registration Pipeline}
+\label{sec:pipeline}
+  % TODO -- currently the affine only appears implicitly as
 % $\varphi_{\mathrm{aff}}$ in the loss definitions, so it needs to be
 % introduced before them.
 %   - what is optimised, on which modality, with which similarity
 %   - why a separate affine stage (large FOV and positioning shifts)
 %   - note that the affine is in general NOT volume preserving, which
 %     is why all biomarker terms are evaluated on the composed transform
-
-\subsection{Registration Pipeline}
-\label{sec:pipeline}
 % TODO
 %   - LapIRN recap: Laplacian pyramid, three coarse-to-fine sub-networks,
 %     diffeomorphic parameterisation via a stationary velocity field
