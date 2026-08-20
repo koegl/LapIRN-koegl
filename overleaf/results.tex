@@ -24,11 +24,9 @@ Since the leaderboard covers the same cases with the correct labels, we use the 
 \label{sec:ablation}
 
 \subsubsection{Derivative-based rigidity is ill posed on thin bone.}
-The three conditions of the classical rigidity penalty are evaluated by finite differences at every voxel and only then masked, so the mask selects which voxels are scored but not which are read.
-The stencil used for the derivative calculation would therefore also use non-bone voxels.
-With thin cortical bone and ribs, this dominates.
-We tested it across five cases: 53.0\% (range 51.6 to 54.7) of the voxels entering the loss were not bone; a field with zero displacement inside every bone scored 56 (range 40 to 69), with 100\% removed by a single mask erosion; and 44.8\% of the gradient magnitude fell outside bone.
-The term measured the bone-to-soft tissue displacement discontinuity, which any correct registration must exhibit.
+We quantified the stencil leakage of Sec.~\ref{sec:losses} across five cases: 53.0\% (range 51.6 to 54.7) of the voxels entering the loss were not bone, and 44.8\% of the gradient magnitude fell outside bone.
+A field with zero displacement inside every bone, which is perfectly rigid by construction and should therefore cost nothing, scored 56 (range 40 to 69), all of which vanished after a single mask erosion.
+The term was thus measuring the bone-to-soft tissue displacement discontinuity that any correct registration must exhibit.
 With the per-structure rigid-fit penalty of Sec.~\ref{sec:losses}, the zero displacement field now scores exactly 0 and a per-bone rigid field 2.4e-6, while anisotropic squeeze is still rejected at 1.16.
 
 % >>> FIGURE (OPTIONAL -- cut first if over length): a rib or vertebra
