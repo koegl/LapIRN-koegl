@@ -36,20 +36,29 @@ We normalised CT by clipping to a fixed window of $[-1000, 1500]$~HU and PET by 
 
 \subsection{Registration Pipeline}
 \label{sec:pipeline}
-%   - refer to figure 1
-%   - 
-%   - what is optimised, on which modality, with which similarity
-%   - why a separate affine stage (large FOV and positioning shifts)
-%   - note that the affine is in general NOT volume preserving, which
-%     is why all biomarker terms are evaluated on the composed transform
-%   - LapIRN recap: Laplacian pyramid, three coarse-to-fine sub-networks,
-%     diffeomorphic parameterisation via a stationary velocity field
-%   - what we changed: input channels (PET + CT), channel widths,
-%     resolution per level, training schedule across levels
-%   - DEFINE THE NOTATION HERE, not in the loss section:
-%     the total transformation $\varphi = \varphi_{\mathrm{aff}} \circ
-%     \varphi_{\theta}$, the moving PET image $I$, the moving lesion
-%     mask $M$, and the warped lesion region $W$.
+The pipeline consists of an affine pre-registration followed by a deformable LapIRN stage and, at test time, instance optimisation (Fig.~\ref{fig:pipeline}).
+Throughout, $I$ denotes the moving PET image, $M$ its lesion mask, $\varphi_{\mathrm{aff}}$ the affine pre-registration, $\varphi_{\theta}$ the displacement field predicted by the network, and
+%
+\begin{equation}
+  \varphi = \varphi_{\mathrm{aff}} \circ \varphi_{\theta}
+  \label{eq:composed}
+\end{equation}
+%
+the total transformation mapping the moving into the fixed image; $W$ denotes the lesion region in the fixed frame, i.e.\ the image of $M$ under $\varphi$.
+
+\subsubsection{Affine pre-registration.}
+Baseline and follow-up scans of the same subject differ in field of view, table position and patient posture by far more than a locally regularised network can absorb, so we first remove the global component with a separate affine stage.
+For each pair we estimate an affine transform with ANTs~\todo{cite ANTs} on the CT channel alone, at half resolution and with a Mattes mutual-information metric, after masking both volumes to the body and windowing them to $[-1000, 1000]$~HU.
+The result is converted into a dense voxel displacement field, cached per pair, and applied to the moving scan before the network sees it; augmentations are applied consistently to the cached field.
+Note that an affine transform is in general not volume-preserving, which is why all biomarker terms of Sec.~\ref{sec:losses} are evaluated on the composed transform~(\ref{eq:composed}) rather than on $\varphi_{\theta}$ alone.
+
+\subsubsection{Deformable registration.}
+For the deformable stage we use LapIRN~\cite{ref_lapirn}, a Laplacian-pyramid network whose three sub-networks operate at a quarter, a half and the full resolution of the $192\times192\times288$ volumes.
+Each level predicts a stationary velocity field that is added to the upsampled velocity of the coarser level; the sum is exponentiated by scaling and squaring to give a diffeomorphic $\varphi_{\theta}$, so large deformations are recovered coarse-to-fine while the transformation stays smooth and invertible.
+We adapted the architecture to the multi-modal, whole-body setting: each sub-network takes four input channels, the CT and PSMA PET of the affinely aligned moving scan and of the fixed scan, and uses 24 initial feature channels with five residual blocks per level.
+Image similarity is computed on CT only, since PET uptake is not conserved between time points and would otherwise drive the deformation towards matching disease rather than anatomy; the PET channel enters the network as input and the biomarker terms of Sec.~\ref{sec:losses} instead.
+The levels are trained in sequence, each initialised from the previous one, which is kept frozen for the first ten epochs and fine-tuned jointly afterwards.
+%At full resolution the network additionally carries two auxiliary segmentation heads predicting the PET lesion and the bone mask, whose outputs make the test-time objective self-sufficient where no labels are available.
 
 
 
