@@ -2,8 +2,10 @@
 
 Reads the three W&B metric exports of a single level-3 run from this directory
 and writes a LaTeX figure with two adjacent pgfplots axes: validation CT Dice on
-the left, MTV and TLG bias on the right. The data are inlined into the .tex, so
-the figure is drawn entirely by LaTeX and needs no image file.
+the left, MTV and TLG bias on the right. The figure is drawn entirely by LaTeX
+and needs no image file: the plotted series are written to a companion CSV next
+to the .tex and read back by pgfplots at compile time, so both files have to be
+copied into the document together.
 
 The vertical red dashed line marking the selected checkpoint is set by
 SELECTED_STEP below and is drawn at the same position in both panels.
@@ -30,6 +32,12 @@ CSV_DSC = HERE / f"dsc_{RUN}.csv"
 CSV_MTV = HERE / f"mtv_{RUN}.csv"
 CSV_TLG = HERE / f"tlg_{RUN}.csv"
 OUT_TEX = HERE.parents[1] / "overleaf" / "figures" / "dsc_plateau.tex"
+# The plotted series are written next to the .tex and read back by pgfplots at
+# compile time, so the figure source stays short and the numbers stay editable.
+OUT_DATA = OUT_TEX.with_name("dsc_plateau_data.csv")
+# How the data file is addressed from inside the document. \addplot resolves
+# paths relative to the main .tex, not to the file doing the \input.
+DATA_PATH_IN_TEX = f"figures/{OUT_DATA.name}"
 
 # Validation is noisy from round to round. The raw curve is drawn faintly and a
 # centred rolling mean over this many validation rounds on top of it; set to 1
@@ -121,37 +129,50 @@ def axis_limits(frames: list[pd.DataFrame], pad: float = 0.06) -> tuple[float, f
     return lo - margin, hi + margin
 
 
-def coordinates(frame: pd.DataFrame, column: str, indent: str = "      ") -> str:
-    rows = [
-        f"{step:.4f} {value:.6f} \\\\"
-        for step, value in zip(frame["step"], frame[column])
-    ]
-    return "\n".join(indent + row for row in rows)
+def build_data_frame(series: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """One wide table of every plotted series, keyed by step.
+
+    The exports of a single run share their step column, but they are merged
+    rather than concatenated so that a metric logged on a different schedule
+    would show up as missing values instead of silently misaligning.
+    """
+    merged: pd.DataFrame | None = None
+    for name, frame in series.items():
+        columns = frame[["step", "value", "smoothed"]].rename(
+            columns={"value": name, "smoothed": f"{name}_smooth"}
+        )
+        merged = columns if merged is None else merged.merge(columns, on="step", how="outer")
+    assert merged is not None
+    return merged.sort_values("step").reset_index(drop=True)
 
 
-def plot_lines(frame: pd.DataFrame, color: str, legend: str | None) -> list[str]:
+def plot_lines(name: str, color: str, legend: str | None) -> list[str]:
     """A faint raw curve plus the smoothed curve on top of it.
 
-    Only the smoothed curve carries the legend entry; the raw one is excluded
-    from the legend so a single label covers the pair.
+    Both read their column out of the companion CSV. Only the smoothed curve
+    carries the legend entry; the raw one is excluded from the legend so a
+    single label covers the pair.
     """
+
+    def table(column: str, style: str) -> str:
+        return (
+            f"    \\addplot [{style}] table "
+            f"[x=step, y={column}, col sep=comma] {{{DATA_PATH_IN_TEX}}};"
+        )
+
     lines = []
     if SMOOTH_WINDOW > 1:
-        lines += [
-            f"    \\addplot [draw={color}, line width=0.35pt, opacity=0.30, "
-            "forget plot] table [row sep=\\\\] {%",
-            coordinates(frame, "value"),
-            "    };",
-        ]
-        column = "smoothed"
+        lines.append(
+            table(
+                name,
+                f"draw={color}, line width=0.35pt, opacity=0.30, forget plot",
+            )
+        )
+        column = f"{name}_smooth"
     else:
-        column = "value"
+        column = name
 
-    lines += [
-        f"    \\addplot [draw={color}, line width=1.0pt] table [row sep=\\\\] {{%",
-        coordinates(frame, column),
-        "    };",
-    ]
+    lines.append(table(column, f"draw={color}, line width=1.0pt"))
     if legend is not None:
         lines.append(f"    \\addlegendentry{{{legend}}}")
     return lines
@@ -226,16 +247,21 @@ def main() -> None:
     dsc_min, dsc_max = axis_limits([dsc])
     bio_min, bio_max = axis_limits([mtv, tlg])
 
-    left = plot_lines(dsc, "colordsc", None) + selection_line(dsc_min, dsc_max)
+    data = build_data_frame({"dsc": dsc, "mtv": mtv, "tlg": tlg})
+    OUT_DATA.parent.mkdir(parents=True, exist_ok=True)
+    data.to_csv(OUT_DATA, index=False, float_format="%.6f")
+
+    left = plot_lines("dsc", "colordsc", None) + selection_line(dsc_min, dsc_max)
     right = (
-        plot_lines(mtv, "colormtv", "MTV bias")
-        + plot_lines(tlg, "colortlg", "TLG bias")
+        plot_lines("mtv", "colormtv", "MTV bias")
+        + plot_lines("tlg", "colortlg", "TLG bias")
         + selection_line(bio_min, bio_max)
     )
 
     lines = [
         "% Generated by paper_results/dsc_plateau/dsc_plateau.py -- do not edit.",
         f"% Run: {RUN}. Selected checkpoint: {SELECTED_STEP}.",
+        f"% Curves are read from {DATA_PATH_IN_TEX} at compile time.",
         "\\begin{figure}[t]",
         "\\centering",
         f"\\definecolor{{colordsc}}{{rgb}}{{{COLOR_DSC}}}",
@@ -264,9 +290,9 @@ def main() -> None:
         "",
     ]
 
-    OUT_TEX.parent.mkdir(parents=True, exist_ok=True)
     OUT_TEX.write_text("\n".join(lines))
     print(f"wrote {OUT_TEX}")
+    print(f"wrote {OUT_DATA} ({len(data)} rows)")
 
     def summarise(
         name: str, frame: pd.DataFrame, higher_is_better: bool, unit: str = ""
