@@ -17,17 +17,22 @@
 
 \subsection{Data and Preprocessing}
 \label{sec:data_and_preprocessing}
-% TODO: PSMAReg cohort description
-%   - number of training / validation / test pairs, baseline+follow-up
-%   - modalities (CT, PET), voxel spacing, field of view, scanners
-%   - which labels the organisers release and which are withheld
-%   - our surrogate labels are only NAMED here; they are defined in
-%     Sec.~\ref{sec:evaluation}, since they are an evaluation choice
-% A dataset table is possible but the 2025 proceedings papers do this
-% in prose -- recommend prose.
-%   - intensity normalisation: CT HU windowing, PET SUV normalisation
-%   - label generation: CT organ labels (TotalSegmentator), PET lesion
-%     labels (autoPET-III), bone masks
+We used the PSMAReg dataset of the Learn2Reg~2026 challenge~\cite{ref_psmareg_challenge}, a longitudinal whole-body PSMA PET/CT cohort adapted from the manually annotated autoPET data of~\cite{ref_psmaregdata}.
+Each paired subject provides a baseline scan and one or more follow-up scans, each with a CT and a PSMA PET channel; the follow-up is registered to the baseline, i.e.\ the baseline acts as the fixed and the follow-up as the moving image.
+
+The challenge training split contains 146 paired and 212 unpaired subjects; the unpaired single-time-point cases were not used in this work.
+We divided the paired subjects patient-wise into 117 training and 29 internal validation subjects.
+Registration pairs are formed within a subject and always point from the temporally later to the earlier scan.
+For training we used all such ordered time-point combinations, including follow-up-to-follow-up pairs, which yields 239 pairs from the 117 subjects and acts as a mild augmentation of the 146 baseline-anchored pairs.
+For our internal validation subjects we kept only baseline-anchored pairs, i.e.\ every follow-up registered to its baseline, matching the pairing used at evaluation time and giving 39 pairs from the 29 subjects.
+The challenge validation split of 20 paired subjects, which is the split scored on the public validation leaderboard, served as our test set; the organisers' own held-out test set ($\sim$200 pairs of private JHU data) is scored only by them.
+
+For the training split we used the labels released by the organisers: CT organ labels generated automatically with TotalSegmentator~\cite{ref_totalsegmentator} and PET lesion labels manually annotated by radiologists.
+Since no labels are released for the challenge validation split, we generated our own for our test set with TotalSegmentator for the CT organs and the winning autoPET~III submission~\todo{cite autoPET III winner} for the PET lesions.
+
+All images are provided already resampled to an isotropic in-plane spacing of $2.7344\times2.7344\times3.27$~mm and cropped to a fixed size of $192\times192\times288$ voxels, so no further geometric preprocessing was applied.
+We normalised CT by clipping to a fixed window of $[-1000, 1500]$~HU and PET by clipping the SUV to $[0, 20]$, each rescaled to $[0,1]$.
+
 
 \subsection{Registration Pipeline}
 \label{sec:pipeline}
