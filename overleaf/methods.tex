@@ -212,48 +212,29 @@ We descend it for 90 Adam steps with a learning rate of $10^{-2}$ and keep the b
 \subsection{Model Selection}
 \label{sec:model_selection}
 
-Model selection enters our pipeline twice: once \emph{within} a run, to decide which
-checkpoint to keep, and once \emph{across} runs, to decide which variant to submit in
-the container.
-Both use the same three-component quality notion, and differ only in how each component
-is scored.
+Model selection enters our pipeline twice: once \emph{within} a run, to decide which checkpoint to keep, and once \emph{across} runs, to decide which variant to submit inthe container.
+Both use the same three-component quality notion, and differ only in how each component is scored.
 
-Both stages combine registration accuracy (CT DSC and HD95), PET-biomarker preservation
-(absolute MTV and TLG bias) and deformation regularity (\%NDV after the official
-$0.005\%$ practical-equivalence adjustment) as a weighted geometric mean with exponents
-$0.4$, $0.4$ and $0.2$, mirroring the challenge's final score
+Both stages combine registration accuracy (CT DSC and HD95), PET-biomarker preservation (absolute MTV and TLG bias) and deformation regularity (\%NDV after the official $0.005\%$ practical-equivalence adjustment) as a weighted geometric mean with exponents $0.4$, $0.4$ and $0.2$, mirroring the challenge's final score
 \begin{equation}
   S = 100 \cdot A^{0.4} \, B^{0.4} \, R^{0.2},
   \label{eq:score}
 \end{equation}
-where the accuracy term $A$ is the geometric mean of the DSC and HD95 scores, the
-biomarker term $B$ that of the MTV and TLG scores, and $R$ the \%NDV score.
+where the accuracy term $A$ is the geometric mean of the DSC and HD95 scores, the biomarker term $B$ that of the MTV and TLG scores, and $R$ the \%NDV score.
 
 \subsubsection{Checkpoint selection.}
-Registration accuracy and tumour preservation do not peak together: in level-3 training,
-validation Dice improves until it plateaus, whereas the tumour metrics reach their
-optimum roughly halfway through and degrade thereafter (Fig.~\ref{fig:selection}).
-Selecting on Dice alone therefore yields a checkpoint well past the tumour optimum, so we
-select on Eq.~\eqref{eq:score} instead.
-The official per-metric scores are ranks within a cohort of competing methods, which does
-not exist during a single training run.
-We therefore replace each rank score with a logistic quality centred on the metric's
-median and scaled by its robust spread (interquartile range divided by $1.349$), both
-measured over the validation rounds of a completed run.
+Registration accuracy and tumour preservation do not peak together: in level-3 training, validation Dice improves until it plateaus, whereas the tumour metrics reach their optimum roughly halfway through and degrade thereafter (Fig.~\ref{fig:selection}).
+Selecting on Dice alone therefore yields a checkpoint well past the tumour optimum, so we select on Eq.~\eqref{eq:score} instead.
+The official per-metric scores are ranks within a cohort of competing methods, which does not exist during a single training run.
+We therefore replace each rank score with a logistic quality centred on the metric's median and scaled by its robust spread (interquartile range divided by $1.349$), both measured over the validation rounds of a completed run.
 
 \input{figures/dsc_plateau}
 
 \subsubsection{Submission selection.}
-Choosing between trained variants does provide a cohort, so here we evaluate
-Eq.~\eqref{eq:score} exactly as the challenge does: each of the five metrics is ranked
-separately across the $K$ variants, with ties taking the worst rank they span, and rank
-$r$ is turned into the score $(K - r + 1)/K$.
+Choosing between trained variants does provide a cohort, so here we evaluate Eq.~\eqref{eq:score} exactly as the challenge does: each of the five metrics is ranked separately across the $K$ variants, with ties taking the worst rank they span, and rank $r$ is turned into the score $(K - r + 1)/K$.
 The variant with the highest $S$ is the one we submit.
-To check that this choice is not an artefact of a few cases, we additionally compare the
-selected variant against every other variant per metric with a paired Wilcoxon
-signed-rank test over the validation cases, Holm-corrected within each metric.
-As the variant is selected on the same cases, these tests are exploratory rather than
-confirmatory; the official validation leaderboard serves as the held-out check.
+To check that this choice is not an artefact of a few cases, we additionally compare the selected variant against every other variant per metric with a paired Wilcoxon signed-rank test over the validation cases, Holm-corrected within each metric.
+As the variant is selected on the same cases, these tests are exploratory rather than confirmatory; the official validation leaderboard serves as the held-out check.
 
 \subsection{Baselines}
 \label{sec:baselines}
@@ -266,50 +247,29 @@ Finally, we compare against vanilla LapIRN, i.e.\ the same architecture and trai
 
 \subsection{Augmentation}
 \label{sec:augmentation}
-With 239 training pairs, augmentation matters, and we chose it to reproduce the
-specific ways in which two sessions of the same patient differ rather than to
-maximise variety.
-Every transformation is applied consistently to both scans of a pair, to their
-labels and to the cached affine field, except where stated otherwise.
+With 239 training pairs, augmentation matters, and we chose it to reproduce the specific ways in which two sessions of the same patient differ rather than to maximise variety.
+Every transformation is applied consistently to both scans of a pair, to their labels and to the cached affine field, except where stated otherwise.
 
-We flip left--right with probability $0.5$, the only spatial flip that leaves
-whole-body anatomy plausible.
-On CT we apply an intensity shift of $\pm0.02$ in the normalised window
-(about $\pm50$~HU) and a scaling of $0.9$ to $1.1$, covering scanner and
-reconstruction variation.
-On PET we apply a scaling of $0.85$ to $1.15$ but no shift: SUV depends on the
-injected dose, the uptake time and the patient's weight, all of which differ
-between sessions, so the network must not key on absolute uptake, whereas an
-additive offset has no physical counterpart in an SUV map.
+We flip left--right with probability $0.5$, the only spatial flip that leaves whole-body anatomy plausible.
+On CT we apply an intensity shift of $\pm0.02$ in the normalised window (about $\pm50$~HU) and a scaling of $0.9$ to $1.1$, covering scanner and reconstruction variation.
+On PET we apply a scaling of $0.85$ to $1.15$ but no shift: SUV depends on the injected dose, the uptake time and the patient's weight, all of which differ between sessions, so the network must not key on absolute uptake, whereas an additive offset has no physical counterpart in an SUV map.
 
-The last augmentation targets the difference the challenge singles out as the
-hardest.
-We crop randomly along the cranio-caudal axis, removing up to 40 slices from
-either end of both scans, which varies the extent of the acquired volume.
-On top of that we crop the moving and the fixed scan independently by up to a
-further 10 slices each, which is the part that actually reproduces a
-baseline/follow-up mismatch: it makes the two fields of view disagree, so the
-network is forced to register anatomy that is present in one scan and truncated
-in the other.
+The last augmentation targets the difference the challenge singles out as the hardest.
+We crop randomly along the cranio-caudal axis, removing up to 40 slices from either end of both scans, which varies the extent of the acquired volume.
+On top of that we crop the moving and the fixed scan independently by up to a further 10 slices each, which is the part that actually reproduces a baseline/follow-up mismatch: it makes the two fields of view disagree, so the network is forced to register anatomy that is present in one scan and truncated in the other.
 
 \subsection{Training Setup}
 \label{sec:training_setup}
-Each pyramid level is trained in sequence with Adam on whole volumes rather than
-patches, at a batch size of one with gradients accumulated over four steps.
-The convolutional trunk runs in \texttt{bfloat16} while the transformations and
-all losses are kept in single precision, since scaling and squaring and the
-Jacobian determinants compound rounding error.
-Every level starts with a five-epoch linear learning-rate warmup and keeps the
-preceding level frozen for its first ten epochs.
-The schedule and all loss weights, for training and for instance optimisation,
-are listed in Table~\ref{tab:weights}.
+Each pyramid level is trained in sequence with Adam on whole volumes rather than patches, at a batch size of one with gradients accumulated over four steps.
+The convolutional trunk runs in \texttt{bfloat16} while the transformations and all losses are kept in single precision, since scaling and squaring and the Jacobian determinants compound rounding error.
+Every level starts with a five-epoch linear learning-rate warmup and keeps the preceding level frozen for its first ten epochs.
+The schedule and all loss weights, for training and for instance optimisation, are listed in Table~\ref{tab:weights}.
 
 \begin{table}[t]
 \centering
-\caption{Training and instance-optimisation configuration. Slashes separate the
-values of pyramid levels 1/2/3. The biomarker and rigidity terms are inactive at
-levels 1 and 2, where the lesion and bone masks are largely partial-volume
-(Sec.~\ref{sec:losses}). \todo{provisional -- refresh once the final run is
+\caption{Training and instance-optimisation configuration.
+Slashes separate the values of pyramid levels 1/2/3. The biomarker and rigidity terms are inactive at levels 1 and 2, where the lesion and bone masks are largely partial-volume
+(Sec.~\ref{sec:losses}). \todo{provisional - refresh once the final run is
 fixed}}
 \label{tab:weights}
 \small
@@ -346,11 +306,8 @@ fixed}}
 
 \subsection{Computing Infrastructure}
 \label{sec:infrastructure}
-All models were trained and evaluated on a single NVIDIA H100 80\,GB HBM3
-(driver 610.57.04).
-The pipeline is implemented in Python~3.11 with PyTorch~2.6.0~\cite{ref_pytorch}
-and CUDA~12.4; the affine pre-registration uses ANTsPy~0.6.3~\cite{ants}.
+All models were trained and evaluated on a single NVIDIA H100 80\,GB HBM3 (driver 610.57.04).
+The pipeline is implemented in Python~3.11 with PyTorch~2.6.0~\cite{ref_pytorch} and CUDA~12.4; the affine pre-registration uses ANTsPy~0.6.3~\cite{ants}.
 Image and array handling rely on NiBabel~5.4.2, NumPy~2.4.4 and SciPy~1.17.1.
-Training all three levels takes \todo{n}~h, and inference is \todo{n}~s per
-pair, rising to \todo{n}~s with instance optimisation.
+Training all three levels takes \todo{n}~h, and inference is \todo{n}~s per pair, rising to \todo{n}~s with instance optimisation.
 Code and the submission container are available at \todo{repository URL}.
