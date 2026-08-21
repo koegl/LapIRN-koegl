@@ -261,9 +261,7 @@ def io_objective(
             # its best step with them. Skipping this also saves 117 full-volume
             # comparisons per step, which matters inside the container's budget.
             if include_dice:
-                warped_lbl_ct = warp_label(
-                    x_lbl_ct, disp_unit, grid, transform_nearest
-                )
+                warped_lbl_ct = warp_label(x_lbl_ct, disp_unit, grid, transform_nearest)
                 pred = warped_lbl_ct[0, 0].round().long()
                 target = y_lbl_ct[0, 0].round().long()
                 hard_dices = []
@@ -654,8 +652,6 @@ def run_io(
             best=f"{best_loss:.4f}",
             best_i=best_disp_i,
         )
-
-    print(f"Best selection score: {best_loss:.4f} at step {best_disp_i}")
 
     if False and history_csv is not None and history:
         history_csv.parent.mkdir(parents=True, exist_ok=True)

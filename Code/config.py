@@ -174,7 +174,7 @@ class TrainingConfig:
 
     # io params
     io_lr: float = 0.5e-1
-    io_it: int = 10
+    io_it: int = 40
     w_io_ncc: float = 5.0
     w_io_dice: float = 5.0
     w_io_non_diff: float = 10.0  # 2000.0
