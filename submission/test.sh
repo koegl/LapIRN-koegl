@@ -13,6 +13,12 @@ DATA_DIR="${DATA_DIR:-/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imag
 OUTPUT_DIR="${OUTPUT_DIR:-$REPO_ROOT/submission/validation_predictions}"
 DATASET_JSON="${DATASET_JSON:-$REPO_ROOT/submission/PSMAReg_val_dataset.json}"
 LIMIT="${LIMIT:-0}"
+# PET lesion masks are written next to the fields so evaluate_disp.py can score
+# them. SEG=0 turns the segmentation off entirely (registration-only timing).
+EXTRA_ARGS=(--seg-dir /app/output/segmentations)
+if [[ "${SEG:-1}" == "0" ]]; then
+  EXTRA_ARGS=(--no-segment)
+fi
 
 # GPU flags. The organizers use `--gpus "device=0"`; this workstation's snap
 # Docker runs the NVIDIA hook in CDI mode, which rejects --gpus and demands the
@@ -58,7 +64,8 @@ for id in "${SUBJECTS[@]}"; do
       "/app/input/PSMARegPSMA_${id}_0001_00.nii.gz" \
       "/app/input/PSMARegPSMA_${id}_0000_01.nii.gz" \
       "/app/input/PSMARegPSMA_${id}_0001_01.nii.gz" \
-      "/app/output/disp_${id}_00_${id}_01.nii.gz"
+      "/app/output/disp_${id}_00_${id}_01.nii.gz" \
+      "${EXTRA_ARGS[@]}"
   echo "  $id: $((SECONDS - CASE_START))s (wall, incl. container startup)"
 done
 

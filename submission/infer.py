@@ -12,6 +12,7 @@ Pipeline (mirrors Code/inference.py, chase_best_model, use_io=False):
   3. warp X by the affine flow, run LapIRN lvl3 (X_affine, Y) -> deformable flow
   4. compose affine (outer) with the deformable field (inner)
   5. convert the composed unit flow to full-res voxel displacements and save
+  6. (optional) nnU-Net PET lesion segmentation of both timepoints
 
 Output: NIfTI, channel-first (3, X, Y, Z), float32, voxel displacements on the
 fixed-image grid, identity affine -- the convention of
@@ -47,6 +48,8 @@ import torch  # noqa: E402
 from config import TrainingConfig  # noqa: E402
 
 DEFAULT_WEIGHTS = Path(os.environ.get("LAPIRN_WEIGHTS", "/app/weights/model.pth"))
+DEFAULT_SEG_MODEL = Path(os.environ.get("NNUNET_MODEL_DIR", "/app/nnunet_model"))
+AUTOPET_DIR = os.environ.get("AUTOPET_DIR", "/app")
 
 
 def build_config() -> TrainingConfig:
@@ -218,6 +221,50 @@ def save_disp(total_unit_flow: torch.Tensor, out_path: Path) -> None:
     nib.save(nib.Nifti1Image(disp_np, np.eye(4)), str(out_path))
 
 
+def segment_pet(
+    ct_path: Path,
+    pet_path: Path,
+    model_dir: Path,
+    device: torch.device,
+    use_mirroring: bool,
+) -> Tuple[np.ndarray, "object"]:
+    """nnU-Net PET lesion mask for one timepoint, plus the reusable predictor.
+
+    Reuses autopet-3-submission's own helpers rather than re-deriving the
+    preprocessing: `main.py` there stacks [CT, PET] into the two channels the
+    Dataset501 model was trained on and hands them to predict_single_npy_array.
+    """
+    sys.path.insert(0, AUTOPET_DIR)
+    import autopet_main  # noqa: E402  (heavy; imported only when segmenting)
+
+    predictor = build_predictor_cached(model_dir, device, use_mirroring)
+    seg = autopet_main.run_inference_in_memory(predictor, str(ct_path), str(pet_path))
+    return seg.astype(np.uint8), predictor
+
+
+_PREDICTOR = None
+
+
+def build_predictor_cached(model_dir: Path, device: torch.device, use_mirroring: bool):
+    """One predictor per process -- it is built once and used for both timepoints."""
+    global _PREDICTOR
+    if _PREDICTOR is None:
+        sys.path.insert(0, AUTOPET_DIR)
+        import autopet_main
+
+        _PREDICTOR = autopet_main.build_predictor(
+            str(model_dir), folds=(0,), device=device, use_mirroring=use_mirroring
+        )
+    return _PREDICTOR
+
+
+def save_seg(seg: np.ndarray, reference_path: Path, out_path: Path) -> None:
+    """Write a mask on the geometry of the image it was predicted from."""
+    ref = nib.load(str(reference_path))
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    nib.save(nib.Nifti1Image(seg.astype(np.uint8), ref.affine, ref.header), str(out_path))
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="PSMAReg LapIRN inference: one PET+CT set -> displacement field."
@@ -229,6 +276,28 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("output_disp", type=Path, help="where to write the field")
     parser.add_argument("--weights", type=Path, default=DEFAULT_WEIGHTS)
     parser.add_argument("--device", default="cuda:0" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--segment",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="run nnU-Net PET lesion segmentation on both timepoints "
+        "(does not affect the displacement field yet)",
+    )
+    parser.add_argument(
+        "--seg-dir",
+        type=Path,
+        default=None,
+        help="write the PET masks here, named after the PET inputs. Without it "
+        "the masks are computed and discarded -- useful only for timing.",
+    )
+    parser.add_argument("--seg-model", type=Path, default=DEFAULT_SEG_MODEL)
+    parser.add_argument(
+        "--seg-mirroring",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="3D mirror TTA: 8x the tiles for a small accuracy gain (default: off, "
+        "matching autopet-3-submission/inference_all.py)",
+    )
     return parser.parse_args()
 
 
@@ -261,8 +330,28 @@ def main() -> None:
 
     total_unit_flow = compose(flow_affine, F_X_Y.permute(0, 2, 3, 4, 1), grid)
     save_disp(total_unit_flow, args.output_disp)
+    reg_seconds = time.time() - start
+    print(f"wrote {args.output_disp} in {reg_seconds:.1f}s", flush=True)
 
-    print(f"wrote {args.output_disp} in {time.time() - start:.1f}s", flush=True)
+    if args.segment:
+        seg_start = time.time()
+        for ct_path, pet_path in (
+            (args.fixed_ct, args.fixed_pet),
+            (args.moving_ct, args.moving_pet),
+        ):
+            seg, _ = segment_pet(
+                ct_path, pet_path, args.seg_model, device, args.seg_mirroring
+            )
+            if args.seg_dir is not None:
+                out = args.seg_dir / pet_path.name
+                save_seg(seg, pet_path, out)
+                print(f"  {out.name}: {int(seg.sum())} lesion voxels", flush=True)
+        seg_seconds = time.time() - seg_start
+        print(
+            f"segmentation {seg_seconds:.1f}s "
+            f"(registration {reg_seconds:.1f}s, total {time.time() - start:.1f}s)",
+            flush=True,
+        )
 
 
 if __name__ == "__main__":

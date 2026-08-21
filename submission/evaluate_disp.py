@@ -12,6 +12,10 @@ so this scores the container output, an old submission or a baseline alike.
 
 Fields at less than full resolution are upsampled first, mirroring the scorer.
 
+`--seg-dir` additionally scores the container's PET lesion masks against the
+reference labels, so a segmentation regression shows up here rather than only as
+a worse registration much later.
+
 `--compare` prints the corresponding row of an earlier chase_leaderboard run
 next to the new numbers. Those were produced from a half-resolution field, so
 small differences are expected; large ones are not.
@@ -49,6 +53,35 @@ CT_TEMPLATE = "PSMARegPSMA_{case_id}_0000_{tp}"
 PET_TEMPLATE = "PSMARegPSMA_{case_id}_0001_{tp}"
 
 METRICS = ["dice", "dice_before", "hd95", "hd95_before", "ndv", "mtv", "tlg"]
+
+
+def binary_dice(gt: np.ndarray, pred: np.ndarray) -> float:
+    """Lesion dice, matching autopet-3-submission/inference_all.py:dice_score --
+    two empty masks score 1.0 rather than NaN, which is how the 0.5260 / 0.4576
+    numbers those models were compared on were computed."""
+    gt, pred = gt > 0, pred > 0
+    total = gt.sum() + pred.sum()
+    if total == 0:
+        return 1.0
+    return float(2.0 * np.logical_and(gt, pred).sum() / total)
+
+
+def score_segmentations(
+    seg_dir: Path, seg_ref_dir: Path, case_ids: List[str]
+) -> Dict[str, Dict[str, float]]:
+    """PET lesion dice per case and timepoint, predicted vs reference labels."""
+    out: Dict[str, Dict[str, float]] = {}
+    for case_id in case_ids:
+        for tp in ("00", "01"):
+            name = f"{PET_TEMPLATE.format(case_id=case_id, tp=tp)}.nii.gz"
+            pred_path, ref_path = seg_dir / name, seg_ref_dir / name
+            if not pred_path.exists() or not ref_path.exists():
+                continue
+            pred = nib.load(str(pred_path)).get_fdata()
+            ref = nib.load(str(ref_path)).get_fdata()
+            out.setdefault(case_id, {})[tp] = binary_dice(ref, pred)
+            out[case_id][f"{tp}_voxels"] = float((pred > 0).sum())
+    return out
 
 
 class SpatialTransformer(torch.nn.Module):
@@ -263,6 +296,13 @@ def parse_args() -> argparse.Namespace:
         "e.g. auspicious-sloth-39469081_combined",
     )
     p.add_argument("--compare-dir", type=Path, default=DEFAULT_COMPARE_DIR)
+    p.add_argument(
+        "--seg-dir",
+        type=Path,
+        default=None,
+        help="directory of container-written PET masks to score against --seg-dir-ref",
+    )
+    p.add_argument("--seg-ref-dir", type=Path, default=DEFAULT_SEG_DIR)
     p.add_argument("--device", default="cuda:0" if torch.cuda.is_available() else "cpu")
     return p.parse_args()
 
@@ -307,6 +347,24 @@ def main() -> None:
         print(f"{'':>6}  " + "  ".join(f"{m:>12}" for m in common))
         print(f"{'ref':>6}  " + "  ".join(f"{ref_means[m]:>12.4f}" for m in common))
         print(f"{'delta':>6}  " + "  ".join(f"{means[m] - ref_means[m]:>+12.4f}" for m in common))
+
+    if args.seg_dir:
+        seg_scores = score_segmentations(args.seg_dir, args.seg_ref_dir, list(results))
+        if not seg_scores:
+            print(f"\nno PET masks matched in {args.seg_dir}")
+        else:
+            print(f"\nPET lesion segmentation vs {args.seg_ref_dir.name}")
+            print(f"{'case':>6}  {'dice_00':>9}  {'dice_01':>9}  {'vox_00':>9}  {'vox_01':>9}")
+            for case_id, sc in seg_scores.items():
+                print(
+                    f"{case_id:>6}  {sc.get('00', float('nan')):>9.4f}  "
+                    f"{sc.get('01', float('nan')):>9.4f}  "
+                    f"{sc.get('00_voxels', float('nan')):>9.0f}  "
+                    f"{sc.get('01_voxels', float('nan')):>9.0f}"
+                )
+            all_dice = [v for sc in seg_scores.values() for k, v in sc.items() if not k.endswith("_voxels")]
+            print(f"{'mean':>6}  {float(np.mean(all_dice)):>9.4f}   (n={len(all_dice)} timepoints)")
+            print("  reference: nnU-Net 0.5260 / autopet 0.4576 on the held-out split")
 
     if args.out_csv:
         args.out_csv.parent.mkdir(parents=True, exist_ok=True)

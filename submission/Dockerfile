@@ -1,5 +1,14 @@
-# Build from the REPOSITORY ROOT so that Code/ is inside the build context:
-#   docker build -f submission/Dockerfile -t psmareg_lapirn .
+# Build from the REPOSITORY ROOT, with the two out-of-tree dependencies supplied
+# as named build contexts (build.sh does this for you):
+#
+#   docker build -f submission/Dockerfile -t psmareg_lapirn \
+#     --build-context autopet=../autopet-3-submission \
+#     --build-context nnunet_model=<Dataset501 model dir> .
+#
+# Named contexts keep the no-duplication property across repositories: the
+# nnU-Net fork and its weights are pulled straight from where they already live,
+# so there is still nothing to copy or keep in sync. BuildKit only transfers the
+# files a COPY actually references.
 #
 # Base image choice: torch 2.6 / CUDA 12.4, matching the repo's own pyproject.toml
 # so the container runs the same torch the method was developed and trained
@@ -25,6 +34,28 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 RUN python -c "import torch; v=torch.__version__; assert v.startswith('2.6.0'), v; \
     assert torch.version.cuda.startswith('12.'), torch.version.cuda; print('torch', v, 'cuda', torch.version.cuda)"
 
+# --- PET lesion segmentation: the nnU-Net fork from autopet-3-submission -------
+# It must be this fork, not PyPI nnunetv2: the checkpoint was trained with the
+# custom nnUNetTrainer_PGPSplus, which only exists here (and in its patched
+# plans_handler). Installed above the method copy so editing Code/ does not
+# invalidate this expensive layer.
+COPY --from=autopet nnunetv2 /app/autopet/nnunetv2
+COPY --from=autopet pyproject.toml setup.py /app/autopet/
+RUN echo "torch==2.6.0" > /tmp/constraints.txt \
+    && pip install -c /tmp/constraints.txt /app/autopet \
+    && rm -rf /app/autopet
+
+# main.py is the repo's own in-memory inference wrapper; renamed on the way in
+# because a module called `main` on sys.path is too easy to shadow.
+COPY --from=autopet main.py /app/autopet_main.py
+
+# Only checkpoint_final.pth is taken -- fold_0 also holds ~17 intermediate
+# patch-size checkpoints (~4.5 GB) that the submission has no use for.
+# checkpoint_final, not checkpoint_best: the validation split is the held-out set
+# the segmentation methods were compared on.
+COPY --from=nnunet_model plans.json dataset.json /app/nnunet_model/
+COPY --from=nnunet_model fold_0/checkpoint_final.pth /app/nnunet_model/fold_0/
+
 # The method lives in Code/ as flat sibling modules (import Functions, import
 # my_data, ...), so it is not a package -- putting the directory on PYTHONPATH
 # is all that is needed. A bind mount over /app/lapirn/Code shadows this copy
@@ -40,14 +71,17 @@ COPY submission/infer.py /app/infer.py
 ENV MPLCONFIGDIR=/tmp/mpl \
     TORCH_HOME=/tmp/torch \
     XDG_CACHE_HOME=/tmp/cache \
-    HOME=/tmp
+    HOME=/tmp \
+    nnUNet_raw=/tmp/nnunet_raw \
+    nnUNet_preprocessed=/tmp/nnunet_preprocessed \
+    nnUNet_results=/tmp/nnunet_results
 
 # COPY preserves the source file modes, and the checkpoint came out of the data
 # directory as 0640. The container runs as an arbitrary uid that is in no group
 # of the image's files, so anything not world-readable is unreadable -- make the
 # read-only payload explicitly world-readable rather than relying on the modes
 # the files happened to have on the build host.
-RUN chmod -R a+rX /app/weights /app/lapirn/Code /app/infer.py
+RUN chmod -R a+rX /app/weights /app/lapirn/Code /app/infer.py /app/autopet_main.py /app/nnunet_model
 
 RUN mkdir -p /app/input /app/output && chmod -R 777 /app/output /tmp
 
