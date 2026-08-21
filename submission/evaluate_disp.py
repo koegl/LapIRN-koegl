@@ -27,7 +27,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "Code"))
@@ -45,7 +45,9 @@ from config import TrainingConfig  # noqa: E402
 
 DISP_RE = re.compile(r"^disp_(?P<id>\w+?)_00_(?P=id)_01\.nii\.gz$")
 
-DEFAULT_IMAGE_DIR = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTs")
+DEFAULT_IMAGE_DIR = Path(
+    "/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTs"
+)
 DEFAULT_SEG_DIR = Path("/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/labelsTs")
 DEFAULT_COMPARE_DIR = REPO_ROOT / "submission_results" / "csvs" / "chase_leaderboard"
 
@@ -53,6 +55,7 @@ CT_TEMPLATE = "PSMARegPSMA_{case_id}_0000_{tp}"
 PET_TEMPLATE = "PSMARegPSMA_{case_id}_0001_{tp}"
 
 METRICS = ["dice", "dice_before", "hd95", "hd95_before", "ndv", "mtv", "tlg"]
+SEG_METRICS = ["pet_dice", "pet_pred_vox", "pet_ref_vox"]
 
 
 def binary_dice(gt: np.ndarray, pred: np.ndarray) -> float:
@@ -67,25 +70,26 @@ def binary_dice(gt: np.ndarray, pred: np.ndarray) -> float:
 
 
 def score_segmentations(
-    seg_dir: Path, seg_ref_dir: Path, case_ids: List[str]
+    pet_seg_dir: Path, label_dir: Path, case_ids: List[str]
 ) -> Dict[str, Dict[str, float]]:
-    """PET lesion dice per case and timepoint, predicted vs reference labels."""
+    """PET lesion dice per case, predicted vs reference labels.
+
+    Only the moving timepoint (01) is segmented, so this is one row per case and
+    merges straight into the registration metric table.
+    """
     out: Dict[str, Dict[str, float]] = {}
     for case_id in case_ids:
-        # only the moving timepoint is segmented; "00" is looked for anyway so
-        # this keeps working if that ever changes
-        for tp in ("01", "00"):
-            name = f"{PET_TEMPLATE.format(case_id=case_id, tp=tp)}.nii.gz"
-            pred_path, ref_path = seg_dir / name, seg_ref_dir / name
-            if not pred_path.exists() or not ref_path.exists():
-                continue
-            pred = nib.load(str(pred_path)).get_fdata()
-            ref = nib.load(str(ref_path)).get_fdata()
-            out[f"{case_id}_{tp}"] = {
-                "dice": binary_dice(ref, pred),
-                "pred_voxels": float((pred > 0).sum()),
-                "ref_voxels": float((ref > 0).sum()),
-            }
+        name = f"{PET_TEMPLATE.format(case_id=case_id, tp='01')}.nii.gz"
+        pred_path, ref_path = pet_seg_dir / name, label_dir / name
+        if not pred_path.exists() or not ref_path.exists():
+            continue
+        pred = nib.load(str(pred_path)).get_fdata()
+        ref = nib.load(str(ref_path)).get_fdata()
+        out[case_id] = {
+            "pet_dice": binary_dice(ref, pred),
+            "pet_pred_vox": float((pred > 0).sum()),
+            "pet_ref_vox": float((ref > 0).sum()),
+        }
     return out
 
 
@@ -122,7 +126,9 @@ def multilabel_dice(
     for lbl in label_ids:
         p, t = pred == lbl, target == lbl
         volume_sum = p.sum() + t.sum()
-        dices.append(0.0 if volume_sum == 0 else (2.0 * (p & t).sum() / volume_sum).item())
+        dices.append(
+            0.0 if volume_sum == 0 else (2.0 * (p & t).sum() / volume_sum).item()
+        )
     return float(np.mean(dices)) if dices else float("nan")
 
 
@@ -135,7 +141,10 @@ def compute_ndv(disp_voxel: np.ndarray, mask: np.ndarray) -> float:
 
 
 def compute_hd95(
-    fixed: np.ndarray, moving: np.ndarray, warped: np.ndarray, spacing: Tuple[float, ...]
+    fixed: np.ndarray,
+    moving: np.ndarray,
+    warped: np.ndarray,
+    spacing: Tuple[float, ...],
 ) -> float:
     """Delegates to the official implementation, as Code/inference.py does."""
     return float(
@@ -151,7 +160,9 @@ def load_field(path: Path, full_shape: Tuple[int, int, int], device) -> torch.Te
     """
     arr = nib.load(str(path)).get_fdata().astype(np.float32)
     if arr.ndim != 4 or arr.shape[0] != 3:
-        raise ValueError(f"{path.name}: expected channel-first (3,X,Y,Z), got {arr.shape}")
+        raise ValueError(
+            f"{path.name}: expected channel-first (3,X,Y,Z), got {arr.shape}"
+        )
     disp = torch.from_numpy(arr).unsqueeze(0).to(device).float()
     if tuple(disp.shape[2:]) != tuple(full_shape):
         # the organizers upsample a sub-resolution field; magnitudes are already
@@ -163,12 +174,18 @@ def load_field(path: Path, full_shape: Tuple[int, int, int], device) -> torch.Te
     return disp
 
 
-def load_images(image_dir: Path, case_id: str, device) -> Tuple[torch.Tensor, torch.Tensor]:
+def load_images(
+    image_dir: Path, case_id: str, device
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """Moving/fixed 2-channel volumes, normalised as in Code/inference.py:load_val_pair."""
 
     def load(mod: str, tp: str) -> np.ndarray:
-        name = (CT_TEMPLATE if mod == "ct" else PET_TEMPLATE).format(case_id=case_id, tp=tp)
-        return nib.load(str(image_dir / f"{name}.nii.gz")).get_fdata().astype(np.float32)
+        name = (CT_TEMPLATE if mod == "ct" else PET_TEMPLATE).format(
+            case_id=case_id, tp=tp
+        )
+        return (
+            nib.load(str(image_dir / f"{name}.nii.gz")).get_fdata().astype(np.float32)
+        )
 
     x_ct, y_ct = load("ct", "01"), load("ct", "00")
     x_mask, y_mask = my_data.get_body_mask(x_ct), my_data.get_body_mask(y_ct)
@@ -188,7 +205,9 @@ def load_images(image_dir: Path, case_id: str, device) -> Tuple[torch.Tensor, to
     return stack(x_ct, x_pet).to(device).float(), stack(y_ct, y_pet).to(device).float()
 
 
-def load_label(seg_dir: Path, template: str, case_id: str, tp: str, device) -> torch.Tensor:
+def load_label(
+    seg_dir: Path, template: str, case_id: str, tp: str, device
+) -> torch.Tensor:
     stem = template.format(case_id=case_id, tp=tp)
     path = seg_dir / f"{stem}.nii.gz"
     if not path.exists():
@@ -230,7 +249,9 @@ def evaluate_case(
     fixed_np = fixed_i.cpu().numpy().astype(np.int16)
     moving_np = seg_moving[0, 0].round().long().cpu().numpy().astype(np.int16)
     warped_np = seg_warped[0, 0].round().long().cpu().numpy().astype(np.int16)
-    hd95 = compute_hd95(fixed_np, moving_np, warped_np, tuple(float(s) for s in spacing))
+    hd95 = compute_hd95(
+        fixed_np, moving_np, warped_np, tuple(float(s) for s in spacing)
+    )
     hd95_before = compute_hd95(
         fixed_np, moving_np, moving_np, tuple(float(s) for s in spacing)
     )
@@ -240,7 +261,9 @@ def evaluate_case(
         Y[0, 0].cpu().numpy() > 0,
     )
 
-    moving_pet_mask = (load_label(seg_dir, PET_TEMPLATE, case_id, "01", device) > 0).float()
+    moving_pet_mask = (
+        load_label(seg_dir, PET_TEMPLATE, case_id, "01", device) > 0
+    ).float()
     moving_pet_image = X[:, 1:2]
     warped_pet_mask = warp_nearest(moving_pet_mask, disp_their)
     warped_pet_image = warp_linear(moving_pet_image, disp_their)
@@ -288,7 +311,9 @@ def load_reference(compare_dir: Path, model_row: str) -> Dict[str, Dict[str, flo
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     p.add_argument("disp_dir", type=Path, help="directory of disp_*.nii.gz")
     p.add_argument("--image-dir", type=Path, default=DEFAULT_IMAGE_DIR)
     p.add_argument(
@@ -298,7 +323,13 @@ def parse_args() -> argparse.Namespace:
         help="reference labels: the CT segmentations the registration metrics "
         "warp, and the PET masks --pet-seg-dir is scored against",
     )
-    p.add_argument("--out-csv", type=Path, default=None, help="per-case results")
+    p.add_argument(
+        "--out-csv",
+        type=Path,
+        default=None,
+        help="per-case results plus a trailing mean row "
+        "(default: <disp_dir>/metrics.csv)",
+    )
     p.add_argument(
         "--compare",
         metavar="MODEL_ROW",
@@ -333,60 +364,79 @@ def main() -> None:
     reference = load_reference(args.compare_dir, args.compare) if args.compare else {}
 
     print(f"scoring {len(cases)} case(s) from {args.disp_dir}\n")
-    header = f"{'case':>6}  " + "  ".join(f"{m:>12}" for m in METRICS)
+
+    # PET segmentation scores become extra columns of the same table rather than
+    # a separate block, so one CSV holds everything. Scored up front (it is only
+    # mask loading) so the columns are known before the slow loop starts and
+    # rows can stream as they are computed -- HD95 alone is ~20 s per case.
+    columns = list(METRICS)
+    seg_scores: Dict[str, Dict[str, float]] = {}
+    if args.pet_seg_dir:
+        seg_scores = score_segmentations(
+            args.pet_seg_dir, args.label_dir, [c for c, _ in cases]
+        )
+        if seg_scores:
+            columns += SEG_METRICS
+        else:
+            print(f"no PET masks matched in {args.pet_seg_dir}\n")
+
+    def fmt(metric: str, value: float) -> str:
+        return f"{value:>12.0f}" if metric.endswith("_vox") else f"{value:>12.4f}"
+
+    header = f"{'case':>6}  " + "  ".join(f"{m:>12}" for m in columns)
     print(header)
     print("-" * len(header))
 
     results: Dict[str, Dict[str, float]] = {}
     for case_id, path in cases:
         res = evaluate_case(case_id, path, args.image_dir, args.label_dir, cfg, device)
+        res.update(seg_scores.get(case_id, {}))
         results[case_id] = res
-        print(f"{case_id:>6}  " + "  ".join(f"{res[m]:>12.4f}" for m in METRICS))
+        print(
+            f"{case_id:>6}  "
+            + "  ".join(fmt(m, res.get(m, float("nan"))) for m in columns),
+            flush=True,
+        )
 
     print("-" * len(header))
-    means = {m: float(np.nanmean([r[m] for r in results.values()])) for m in METRICS}
-    print(f"{'mean':>6}  " + "  ".join(f"{means[m]:>12.4f}" for m in METRICS))
+    means = {
+        m: float(np.nanmean([r.get(m, float("nan")) for r in results.values()]))
+        for m in columns
+    }
+    print(f"{'mean':>6}  " + "  ".join(fmt(m, means[m]) for m in columns))
+
+    if any(m in columns for m in SEG_METRICS):
+        print(
+            "\nPET dice reference: nnU-Net 0.5260 / autopet 0.4576 on the held-out\n"
+            "split. Cases where both masks are empty score 1.0, so a val set with few\n"
+            "lesions reads higher than those numbers -- read pet_*_vox alongside it."
+        )
 
     if reference:
         common = [m for m in METRICS if m in reference]
         ref_means = {
-            m: float(np.nanmean([reference[m][c] for c in results if c in reference[m]]))
+            m: float(
+                np.nanmean([reference[m][c] for c in results if c in reference[m]])
+            )
             for m in common
         }
         print(f"\nreference: {args.compare}  (chase_leaderboard, half-res field)")
         print(f"{'':>6}  " + "  ".join(f"{m:>12}" for m in common))
         print(f"{'ref':>6}  " + "  ".join(f"{ref_means[m]:>12.4f}" for m in common))
-        print(f"{'delta':>6}  " + "  ".join(f"{means[m] - ref_means[m]:>+12.4f}" for m in common))
+        print(
+            f"{'delta':>6}  "
+            + "  ".join(f"{means[m] - ref_means[m]:>+12.4f}" for m in common)
+        )
 
-    if args.pet_seg_dir:
-        seg_scores = score_segmentations(args.pet_seg_dir, args.label_dir, list(results))
-        if not seg_scores:
-            print(f"\nno PET masks matched in {args.pet_seg_dir}")
-        else:
-            print(f"\nPET lesion segmentation vs {args.label_dir.name}")
-            print(f"{'case_tp':>10}  {'dice':>8}  {'pred_vox':>9}  {'ref_vox':>9}")
-            for key, sc in seg_scores.items():
-                print(
-                    f"{key:>10}  {sc['dice']:>8.4f}  "
-                    f"{sc['pred_voxels']:>9.0f}  {sc['ref_voxels']:>9.0f}"
-                )
-            all_dice = [sc["dice"] for sc in seg_scores.values()]
-            print(f"{'mean':>10}  {float(np.mean(all_dice)):>8.4f}   (n={len(all_dice)})")
-            print(
-                "  reference: nnU-Net 0.5260 / autopet 0.4576 on the held-out split.\n"
-                "  Cases where both masks are empty score 1.0, so a val set with few\n"
-                "  lesions reads higher than those numbers -- compare pred/ref voxels too."
-            )
-
-    if args.out_csv:
-        args.out_csv.parent.mkdir(parents=True, exist_ok=True)
-        with args.out_csv.open("w", newline="") as fh:
-            writer = csv.writer(fh)
-            writer.writerow(["case"] + METRICS)
-            for case_id, res in results.items():
-                writer.writerow([case_id] + [res[m] for m in METRICS])
-            writer.writerow(["mean"] + [means[m] for m in METRICS])
-        print(f"\nwrote {args.out_csv}")
+    out_csv = args.out_csv or args.disp_dir / "metrics.csv"
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
+    with out_csv.open("w", newline="") as fh:
+        writer = csv.writer(fh)
+        writer.writerow(["case"] + columns)
+        for case_id, res in results.items():
+            writer.writerow([case_id] + [res.get(m, "") for m in columns])
+        writer.writerow(["mean"] + [means[m] for m in columns])
+    print(f"\nwrote {out_csv}")
 
 
 if __name__ == "__main__":
