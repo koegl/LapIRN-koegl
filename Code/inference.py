@@ -1,5 +1,4 @@
 import json
-import os
 import shutil
 import sys
 import zipfile
@@ -13,7 +12,6 @@ import instance_opt
 import miccai2020_model_stage
 import my_data
 import ndv_official
-import nibabel as nib
 import numpy as np
 import pandas as pd
 import poly_affine_reg
@@ -23,14 +21,10 @@ import tqdm
 import utils
 from config import TrainingConfig
 
-os.environ["TOTALSEG_WEIGHTS_PATH"] = (
-    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/totalsegmentator_weights/nnunet/results"
-)
 sys.path.insert(0, "/home/iml/fryderyk.koegl/code/autopet-3-submission")
 import datetime
 
 import hd95_official
-import totalsegmentator.python_api as totalseg
 
 import main as autopet
 
@@ -228,23 +222,6 @@ results_csv_my_val_hd95 = Path(
 # before-registration hd95 values as comma-separated values in the terminal
 # instead (paste them into the existing csv by hand).
 print_hd95_before_to_terminal: bool = False
-
-
-def predict_ct_labels(
-    ct_path: Path,
-    device: torch.device,
-) -> torch.Tensor:
-    ct_img = nib.load(str(ct_path))
-    seg_img = totalseg.totalsegmentator(
-        ct_img,
-        task="total",
-        fast=False,
-        device="gpu" if device.type == "cuda" else "cpu",
-        quiet=True,
-    )
-    arr = seg_img.get_fdata().astype("int16")
-    label = torch.from_numpy(arr)[None, None].to(device).float()
-    return label
 
 
 def compress_to_zip(source_dir: Path, output_zip: Path) -> None:
@@ -1230,7 +1207,7 @@ def update_config_from_dict(cfg: TrainingConfig, model_name: str) -> None:
 
 
 models_to_evaluate = [
-    "PSMAReg_LapIRN_polite-snake-38577202_stagelvl3_best.pth",
+    # "PSMAReg_LapIRN_polite-snake-38577202_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_exultant-hawk-38756587_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_rumbling-yak-38789486_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_secretive-dolphin-38622192_stagelvl3_best.pth",
@@ -1244,6 +1221,10 @@ models_to_evaluate = [
     # "PSMAReg_LapIRN_rebellious-stork-38993360_stagelvl3_best.pth",
     # "PSMAReg_LapIRN_nervous-pig-39235734_stagelvl3_best_combined.pth",
     # "PSMAReg_LapIRN_angry-mare-39459564_stagelvl3_best_combined.pth",
+    # "PSMAReg_LapIRN_auspicious-sloth-39469081_stagelvl3_best_accuracy.pth",
+    "PSMAReg_LapIRN_auspicious-sloth-39469081_stagelvl3_best_combined.pth",
+    # "PSMAReg_LapIRN_treasured-deer-39462712_stagelvl3_best_accuracy.pth",
+    # "PSMAReg_LapIRN_treasured-deer-39462712_stagelvl3_best_combined.pth",
 ]
 
 # each inner list is one ensemble: the velocity fields of its models are
@@ -1379,9 +1360,9 @@ def main() -> None:
     # --- what to evaluate ---
     eval_official: bool = True
     eval_my_val: bool = False
-    baselines_done: bool = False
+    baselines_done: bool = True
 
-    use_io: bool = False
+    use_io: bool = True
     io_label_free: bool = False
     include_pet: bool = True
     include_rigidity: bool = False
@@ -1396,8 +1377,8 @@ def main() -> None:
     # --- external-field baseline ----------------------------------------------
     # scores a directory of submission-format fields (ConvexAdam or NiftyReg)
     # through the same metrics and csvs as every model.
-    eval_external: bool = True
-    external_baseline: str = "convexadam"
+    eval_external: bool = False
+    external_baseline: str = "niftyreg"
     external_disp_dirs: Dict[str, Path] = {
         "convexadam": convexadam_disp_dir,
         "niftyreg": niftyreg_disp_dir,

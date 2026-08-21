@@ -152,7 +152,7 @@ class TrainingConfig:
 
     # loss weights
     w_non_diff: float = 10000.0
-    w_smooth: float = 10.0
+    w_smooth: float = 5.0
     w_ct: float = 5.0
     w_pet: float = 0.0
     w_dice_ct_lvl1: float = 3.0
@@ -174,14 +174,14 @@ class TrainingConfig:
 
     # io params
     io_lr: float = 0.1e-1
-    io_it: int = 90
-    w_io_ncc: float = 6.0
-    w_io_dice: float = 6.0
+    io_it: int = 100
+    w_io_ncc: float = 5.0
+    w_io_dice: float = 5.0
     w_io_non_diff: float = 10.0  # 2000.0
     w_io_smooth: float = 0.0  # 2.0
     w_io_mtv: float = 200.0  # 500.0
     w_io_mtv_avg: float = 0.0  # 5000.0
-    w_io_tlg: float = 20.0  # 100.0
+    w_io_tlg: float = 80.0  # 100.0
     w_io_jacobian_tumor: float = 20  # 5.0
     w_io_bone_rigidity: float = 1.0  # 2.0
 
@@ -192,7 +192,7 @@ class TrainingConfig:
     # and sit alongside (not instead of) the global ones. Set the weights to 0
     # to disable and skip the component warp entirely.
     w_io_mtv_cc: float = 80.0
-    w_io_tlg_cc: float = 20.0
+    w_io_tlg_cc: float = 80.0
     w_io_mtv_avg_cc: float = 150.0
     # each kept component costs one full-resolution channel in the warp, so this
     # caps the memory; components beyond it are still covered by the global terms
@@ -326,7 +326,7 @@ class TrainingConfig:
 
     mlflow_tracking_uri: str = "file:///home/iml/fryderyk.koegl/code/mlruns"
     mlflow_experiment: str = "PSMAReg_LapIRN"
-    logger_backend: str = "both"  # one of: "mlflow", "wandb", "both", "none"
+    logger_backend: str = "wandb"  # one of: "mlflow", "wandb", "both", "none"
     wandb_project: str = "PSMAReg_LapIRN"
     wandb_entity: Optional[str] = None
     wandb_mode: Optional[str] = None  # e.g. "offline" on clusters without internet
