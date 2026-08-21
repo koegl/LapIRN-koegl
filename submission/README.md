@@ -57,6 +57,21 @@ per-pair time plus the extrapolation to the 200-pair / 5-hour budget.
 Override with environment variables: `IMAGE`, `DATA_DIR`, `OUTPUT_DIR`,
 `DATASET_JSON`, `LIMIT`, `DEV`.
 
+## PET lesion segmentation
+
+The container runs the nnU-Net trained on this cohort (`Dataset501_PSMALesion`,
+`nnUNetTrainer_PGPSplus`, fold 0, `checkpoint_final.pth`) on the **moving**
+timepoint. It must be the fork in `autopet-3-submission`, not PyPI `nnunetv2` --
+the custom trainer exists only there.
+
+Only the moving timepoint is segmented: the IO tumour terms compare the warped
+moving mask against the moving mask and never read the fixed one, and the
+CT-label terms that would need more are off. Mirror TTA is off by default
+(`--seg-mirroring` enables it) -- 8x the tile forward passes for a small gain.
+
+The mask does not yet influence the displacement field. It is there so instance
+optimisation can be switched on next, and so its quality can be measured now.
+
 ## Checking the output makes sense
 
 `evaluate_disp.py` runs on the host (repo venv, not the container) and scores a

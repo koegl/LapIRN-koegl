@@ -12,7 +12,7 @@ Pipeline (mirrors Code/inference.py, chase_best_model, use_io=False):
   3. warp X by the affine flow, run LapIRN lvl3 (X_affine, Y) -> deformable flow
   4. compose affine (outer) with the deformable field (inner)
   5. convert the composed unit flow to full-res voxel displacements and save
-  6. (optional) nnU-Net PET lesion segmentation of both timepoints
+  6. (optional) nnU-Net PET lesion segmentation of the moving timepoint
 
 Output: NIfTI, channel-first (3, X, Y, Z), float32, voxel displacements on the
 fixed-image grid, identity affine -- the convention of
@@ -227,8 +227,8 @@ def segment_pet(
     model_dir: Path,
     device: torch.device,
     use_mirroring: bool,
-) -> Tuple[np.ndarray, "object"]:
-    """nnU-Net PET lesion mask for one timepoint, plus the reusable predictor.
+) -> np.ndarray:
+    """nnU-Net PET lesion mask for one timepoint.
 
     Reuses autopet-3-submission's own helpers rather than re-deriving the
     preprocessing: `main.py` there stacks [CT, PET] into the two channels the
@@ -237,25 +237,11 @@ def segment_pet(
     sys.path.insert(0, AUTOPET_DIR)
     import autopet_main  # noqa: E402  (heavy; imported only when segmenting)
 
-    predictor = build_predictor_cached(model_dir, device, use_mirroring)
+    predictor = autopet_main.build_predictor(
+        str(model_dir), folds=(0,), device=device, use_mirroring=use_mirroring
+    )
     seg = autopet_main.run_inference_in_memory(predictor, str(ct_path), str(pet_path))
-    return seg.astype(np.uint8), predictor
-
-
-_PREDICTOR = None
-
-
-def build_predictor_cached(model_dir: Path, device: torch.device, use_mirroring: bool):
-    """One predictor per process -- it is built once and used for both timepoints."""
-    global _PREDICTOR
-    if _PREDICTOR is None:
-        sys.path.insert(0, AUTOPET_DIR)
-        import autopet_main
-
-        _PREDICTOR = autopet_main.build_predictor(
-            str(model_dir), folds=(0,), device=device, use_mirroring=use_mirroring
-        )
-    return _PREDICTOR
+    return seg.astype(np.uint8)
 
 
 def save_seg(seg: np.ndarray, reference_path: Path, out_path: Path) -> None:
@@ -280,15 +266,15 @@ def parse_args() -> argparse.Namespace:
         "--segment",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="run nnU-Net PET lesion segmentation on both timepoints "
+        help="run nnU-Net PET lesion segmentation on the moving timepoint "
         "(does not affect the displacement field yet)",
     )
     parser.add_argument(
         "--seg-dir",
         type=Path,
         default=None,
-        help="write the PET masks here, named after the PET inputs. Without it "
-        "the masks are computed and discarded -- useful only for timing.",
+        help="write the PET mask here, named after the moving PET input. Without "
+        "it the mask is computed and discarded -- useful only for timing.",
     )
     parser.add_argument("--seg-model", type=Path, default=DEFAULT_SEG_MODEL)
     parser.add_argument(
@@ -335,17 +321,13 @@ def main() -> None:
 
     if args.segment:
         seg_start = time.time()
-        for ct_path, pet_path in (
-            (args.fixed_ct, args.fixed_pet),
-            (args.moving_ct, args.moving_pet),
-        ):
-            seg, _ = segment_pet(
-                ct_path, pet_path, args.seg_model, device, args.seg_mirroring
-            )
-            if args.seg_dir is not None:
-                out = args.seg_dir / pet_path.name
-                save_seg(seg, pet_path, out)
-                print(f"  {out.name}: {int(seg.sum())} lesion voxels", flush=True)
+        seg = segment_pet(
+            args.moving_ct, args.moving_pet, args.seg_model, device, args.seg_mirroring
+        )
+        if args.seg_dir is not None:
+            out = args.seg_dir / args.moving_pet.name
+            save_seg(seg, args.moving_pet, out)
+            print(f"  {out.name}: {int(seg.sum())} lesion voxels", flush=True)
         seg_seconds = time.time() - seg_start
         print(
             f"segmentation {seg_seconds:.1f}s "

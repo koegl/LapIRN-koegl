@@ -72,15 +72,20 @@ def score_segmentations(
     """PET lesion dice per case and timepoint, predicted vs reference labels."""
     out: Dict[str, Dict[str, float]] = {}
     for case_id in case_ids:
-        for tp in ("00", "01"):
+        # only the moving timepoint is segmented; "00" is looked for anyway so
+        # this keeps working if that ever changes
+        for tp in ("01", "00"):
             name = f"{PET_TEMPLATE.format(case_id=case_id, tp=tp)}.nii.gz"
             pred_path, ref_path = seg_dir / name, seg_ref_dir / name
             if not pred_path.exists() or not ref_path.exists():
                 continue
             pred = nib.load(str(pred_path)).get_fdata()
             ref = nib.load(str(ref_path)).get_fdata()
-            out.setdefault(case_id, {})[tp] = binary_dice(ref, pred)
-            out[case_id][f"{tp}_voxels"] = float((pred > 0).sum())
+            out[f"{case_id}_{tp}"] = {
+                "dice": binary_dice(ref, pred),
+                "pred_voxels": float((pred > 0).sum()),
+                "ref_voxels": float((ref > 0).sum()),
+            }
     return out
 
 
@@ -354,17 +359,19 @@ def main() -> None:
             print(f"\nno PET masks matched in {args.seg_dir}")
         else:
             print(f"\nPET lesion segmentation vs {args.seg_ref_dir.name}")
-            print(f"{'case':>6}  {'dice_00':>9}  {'dice_01':>9}  {'vox_00':>9}  {'vox_01':>9}")
-            for case_id, sc in seg_scores.items():
+            print(f"{'case_tp':>10}  {'dice':>8}  {'pred_vox':>9}  {'ref_vox':>9}")
+            for key, sc in seg_scores.items():
                 print(
-                    f"{case_id:>6}  {sc.get('00', float('nan')):>9.4f}  "
-                    f"{sc.get('01', float('nan')):>9.4f}  "
-                    f"{sc.get('00_voxels', float('nan')):>9.0f}  "
-                    f"{sc.get('01_voxels', float('nan')):>9.0f}"
+                    f"{key:>10}  {sc['dice']:>8.4f}  "
+                    f"{sc['pred_voxels']:>9.0f}  {sc['ref_voxels']:>9.0f}"
                 )
-            all_dice = [v for sc in seg_scores.values() for k, v in sc.items() if not k.endswith("_voxels")]
-            print(f"{'mean':>6}  {float(np.mean(all_dice)):>9.4f}   (n={len(all_dice)} timepoints)")
-            print("  reference: nnU-Net 0.5260 / autopet 0.4576 on the held-out split")
+            all_dice = [sc["dice"] for sc in seg_scores.values()]
+            print(f"{'mean':>10}  {float(np.mean(all_dice)):>8.4f}   (n={len(all_dice)})")
+            print(
+                "  reference: nnU-Net 0.5260 / autopet 0.4576 on the held-out split.\n"
+                "  Cases where both masks are empty score 1.0, so a val set with few\n"
+                "  lesions reads higher than those numbers -- compare pred/ref voxels too."
+            )
 
     if args.out_csv:
         args.out_csv.parent.mkdir(parents=True, exist_ok=True)
