@@ -17,7 +17,13 @@ LIMIT="${LIMIT:-0}"
 # them. SEG=0 turns the segmentation off entirely (registration-only timing).
 EXTRA_ARGS=(--seg-dir /app/output/segmentations)
 if [[ "${SEG:-1}" == "0" ]]; then
-  EXTRA_ARGS=(--no-segment)
+  EXTRA_ARGS=(--no-segment --no-io)
+fi
+# IO step count and learning rate come from Code/config.py (io_it / io_lr),
+# alongside the w_io_* weights -- with DEV=1 that file is bind-mounted, so
+# retuning them needs no rebuild. IO=0 turns the stage off for timing runs.
+if [[ "${IO:-1}" == "0" ]]; then
+  EXTRA_ARGS+=(--no-io)
 fi
 
 # GPU flags. The organizers use `--gpus "device=0"`; this workstation's snap

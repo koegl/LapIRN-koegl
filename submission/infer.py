@@ -13,6 +13,8 @@ Pipeline (mirrors Code/inference.py, chase_best_model, use_io=False):
   4. compose affine (outer) with the deformable field (inner)
   5. convert the composed unit flow to full-res voxel displacements and save
   6. (optional) nnU-Net PET lesion segmentation of the moving timepoint
+  7. (optional) instance optimisation of the total field against the tumour
+     terms, seeded by that mask
 
 Output: NIfTI, channel-first (3, X, Y, Z), float32, voxel displacements on the
 fixed-image grid, identity affine -- the convention of
@@ -251,6 +253,51 @@ def save_seg(seg: np.ndarray, reference_path: Path, out_path: Path) -> None:
     nib.save(nib.Nifti1Image(seg.astype(np.uint8), ref.affine, ref.header), str(out_path))
 
 
+def run_instance_optimisation(
+    total_unit_flow: torch.Tensor,
+    X: torch.Tensor,
+    Y: torch.Tensor,
+    pet_mask: np.ndarray,
+    transform: torch.nn.Module,
+    transform_nearest: torch.nn.Module,
+    grid: torch.Tensor,
+    cfg: TrainingConfig,
+    device: torch.device,
+) -> torch.Tensor:
+    """Refine the TOTAL field with Code/instance_opt.py:run_io.
+
+    include_dice / include_rigidity are off: both read CT segmentations, which
+    the container does not produce. That leaves NCC + smoothness + the Jacobian
+    barrier + the PET tumour terms (MTV / TLG, global and per-lesion) -- the
+    scored quantities. The CT-label arguments are therefore None.
+
+    The moving image and mask are the ORIGINAL ones and the field is the total
+    (affine-composed) transform, so the volume terms see det(A) and match what
+    the scorer measures -- same convention as Code/inference.py.
+    """
+    import instance_opt  # noqa: E402  (pulls utils -> mlflow/wandb; import late)
+
+    x_lbl_pet = torch.from_numpy(pet_mask.astype(np.float32))[None, None].to(device)
+
+    return instance_opt.run_io(
+        Y,
+        total_unit_flow,
+        X,
+        None,  # x_lbl_ct
+        x_lbl_pet,
+        None,  # y_lbl_ct
+        transform,
+        transform_nearest,
+        grid,
+        cfg,
+        device,
+        include_pet=True,
+        include_rigidity=False,
+        include_dice=False,
+        use_class_weights=False,
+    )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="PSMAReg LapIRN inference: one PET+CT set -> displacement field."
@@ -284,6 +331,14 @@ def parse_args() -> argparse.Namespace:
         help="3D mirror TTA: 8x the tiles for a small accuracy gain (default: off, "
         "matching autopet-3-submission/inference_all.py)",
     )
+    parser.add_argument(
+        "--io",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="instance optimisation of the total field (requires --segment). "
+        "Its hyper-parameters -- io_it, io_lr and the w_io_* weights -- all come "
+        "from Code/config.py; there is no override here.",
+    )
     return parser.parse_args()
 
 
@@ -315,25 +370,43 @@ def main() -> None:
         F_X_Y, _, _, _, _, _, _ = model(X_affine, Y)
 
     total_unit_flow = compose(flow_affine, F_X_Y.permute(0, 2, 3, 4, 1), grid)
-    save_disp(total_unit_flow, args.output_disp)
     reg_seconds = time.time() - start
-    print(f"wrote {args.output_disp} in {reg_seconds:.1f}s", flush=True)
+    print(f"registration {reg_seconds:.1f}s", flush=True)
 
+    seg_seconds = io_seconds = 0.0
+    seg = None
     if args.segment:
         seg_start = time.time()
         seg = segment_pet(
             args.moving_ct, args.moving_pet, args.seg_model, device, args.seg_mirroring
         )
-        if args.seg_dir is not None:
-            out = args.seg_dir / args.moving_pet.name
-            save_seg(seg, args.moving_pet, out)
-            print(f"  {out.name}: {int(seg.sum())} lesion voxels", flush=True)
         seg_seconds = time.time() - seg_start
+        print(f"segmentation {seg_seconds:.1f}s, {int(seg.sum())} lesion voxels", flush=True)
+        if args.seg_dir is not None:
+            save_seg(seg, args.moving_pet, args.seg_dir / args.moving_pet.name)
+
+    if args.io:
+        if seg is None:
+            raise SystemExit("--io needs the PET mask; do not pass --no-segment with it")
+        io_start = time.time()
+        transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
+        total_unit_flow = run_instance_optimisation(
+            total_unit_flow, X, Y, seg, transform, transform_nearest, grid, cfg, device
+        )
+        io_seconds = time.time() - io_start
         print(
-            f"segmentation {seg_seconds:.1f}s "
-            f"(registration {reg_seconds:.1f}s, total {time.time() - start:.1f}s)",
+            f"instance optimisation {io_seconds:.1f}s "
+            f"({cfg.io_it} steps @ lr {cfg.io_lr}, {io_seconds / max(cfg.io_it, 1):.2f}s/step)",
             flush=True,
         )
+
+    save_disp(total_unit_flow, args.output_disp)
+    print(
+        f"wrote {args.output_disp}\n"
+        f"  registration {reg_seconds:.1f}s | segmentation {seg_seconds:.1f}s | "
+        f"IO {io_seconds:.1f}s | total {time.time() - start:.1f}s",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":

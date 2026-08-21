@@ -72,6 +72,34 @@ CT-label terms that would need more are off. Mirror TTA is off by default
 The mask does not yet influence the displacement field. It is there so instance
 optimisation can be switched on next, and so its quality can be measured now.
 
+## Instance optimisation
+
+`--io` (on by default) refines the total field with `Code/instance_opt.py:run_io`
+— the same function `Code/inference.py` calls, not a copy. Two of its term
+groups are switched off:
+
+* `include_dice=False` — the CT-label dice term. The container produces no CT
+  segmentations, and `include_dice` is the *only* gate on the CT labels, so this
+  is exactly the "no dice, keep everything else" behaviour. The `x_lbl_ct` /
+  `y_lbl_ct` arguments are passed as `None`.
+* `include_rigidity=False` — also CT-label driven.
+
+What remains is NCC + smoothness + the Jacobian barrier + the PET tumour terms
+(MTV / TLG, global and per-lesion) — the quantities the challenge scores.
+
+One upstream change was needed in `Code/instance_opt.py`: the hard-dice
+*logging* also reads the CT labels but sat outside `include_dice`. It now
+follows it. `hard_mtv` / `hard_tlg` deliberately do not — `run_io` selects its
+best step with those. Skipping the hard-dice block also drops 117 full-volume
+label comparisons per step, which is real time inside a 90 s budget.
+
+All IO hyper-parameters -- `io_it`, `io_lr` and the `w_io_*` weights -- come
+from `Code/config.py`. There is no CLI override: two of fourteen knobs living
+somewhere else would be a second source of truth. Under `DEV=1` that file is
+bind-mounted, so retuning the step count costs no rebuild.
+
+`IO=0` and `SEG=0` in `test.sh` switch the stages off for timing runs.
+
 ## Checking the output makes sense
 
 `evaluate_disp.py` runs on the host (repo venv, not the container) and scores a

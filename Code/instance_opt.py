@@ -88,8 +88,8 @@ def io_objective(
     disp_unit: torch.Tensor,
     x_moving: torch.Tensor,
     y_ct: torch.Tensor,
-    x_lbl_ct: torch.Tensor,
-    y_lbl_ct: torch.Tensor,
+    x_lbl_ct: torch.Tensor | None,
+    y_lbl_ct: torch.Tensor | None,
     transform: torch.nn.Module,
     grid: torch.Tensor,
     cfg: config.TrainingConfig,
@@ -256,21 +256,28 @@ def io_objective(
                     torch.abs(tlg_warped_hard - tlg_moving_hard)
                     / tlg_moving_hard.clamp_min(1e-5)
                 ).item()
-            warped_lbl_ct = warp_label(x_lbl_ct, disp_unit, grid, transform_nearest)
-            pred = warped_lbl_ct[0, 0].round().long()
-            target = y_lbl_ct[0, 0].round().long()
-            hard_dices = []
-            for lbl in range(1, n_hard_dice_labels):
-                p = pred == lbl
-                t = target == lbl
-                volume_sum = p.sum() + t.sum()
-                dice = (
-                    0.0
-                    if volume_sum == 0
-                    else (2.0 * (p & t).sum() / volume_sum).item()
+            # hard-dice logging reads the CT segmentations, so it follows
+            # include_dice. hard_mtv / hard_tlg above must NOT: run_io selects
+            # its best step with them. Skipping this also saves 117 full-volume
+            # comparisons per step, which matters inside the container's budget.
+            if include_dice:
+                warped_lbl_ct = warp_label(
+                    x_lbl_ct, disp_unit, grid, transform_nearest
                 )
-                hard_dices.append(dice)
-            hard_dice = float(np.mean(hard_dices))
+                pred = warped_lbl_ct[0, 0].round().long()
+                target = y_lbl_ct[0, 0].round().long()
+                hard_dices = []
+                for lbl in range(1, n_hard_dice_labels):
+                    p = pred == lbl
+                    t = target == lbl
+                    volume_sum = p.sum() + t.sum()
+                    dice = (
+                        0.0
+                        if volume_sum == 0
+                        else (2.0 * (p & t).sum() / volume_sum).item()
+                    )
+                    hard_dices.append(dice)
+                hard_dice = float(np.mean(hard_dices))
 
     logs = {
         "ncc_ct": loss_ncc_ct.item(),
@@ -296,14 +303,14 @@ def compute_io_loss(
     disp_unit: torch.Tensor,
     y: torch.Tensor,
     x_moving: torch.Tensor,
-    x_lbl_ct: torch.Tensor,
+    x_lbl_ct: torch.Tensor | None,
     x_lbl_pet: torch.Tensor,
-    y_lbl_ct: torch.Tensor,
+    y_lbl_ct: torch.Tensor | None,
     transform: torch.nn.Module,
     transform_nearest: torch.nn.Module,
     grid: torch.Tensor,
     cfg: config.TrainingConfig,
-    bone_values: torch.Tensor,
+    bone_values: torch.Tensor | None,
     loss_ncc: NCC,
     ncc_weight: float,
     include_pet: bool,
@@ -503,9 +510,9 @@ def run_io(
     y: torch.Tensor,
     f_x_y: torch.Tensor,
     x_moving: torch.Tensor,
-    x_lbl_ct: torch.Tensor,
+    x_lbl_ct: torch.Tensor | None,
     x_lbl_pet: torch.Tensor,
-    y_lbl_ct: torch.Tensor,
+    y_lbl_ct: torch.Tensor | None,
     transform: torch.nn.Module,
     transform_nearest: torch.nn.Module,
     grid: torch.Tensor,

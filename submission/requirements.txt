@@ -12,3 +12,8 @@ scipy>=1.10
 antspyx>=0.4.2
 monai>=1.3
 tqdm>=4.66
+# Code/instance_opt.py imports utils, which imports mlflow and wandb at module
+# level. Neither is called at inference time -- only the import has to succeed --
+# so the skinny mlflow build is enough and avoids ~300 MB of server dependencies.
+mlflow-skinny>=2.10
+wandb>=0.16

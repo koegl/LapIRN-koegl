@@ -12,7 +12,7 @@ so this scores the container output, an old submission or a baseline alike.
 
 Fields at less than full resolution are upsampled first, mirroring the scorer.
 
-`--seg-dir` additionally scores the container's PET lesion masks against the
+`--pet-seg-dir` additionally scores the container's PET lesion masks against the
 reference labels, so a segmentation regression shows up here rather than only as
 a worse registration much later.
 
@@ -291,7 +291,13 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("disp_dir", type=Path, help="directory of disp_*.nii.gz")
     p.add_argument("--image-dir", type=Path, default=DEFAULT_IMAGE_DIR)
-    p.add_argument("--seg-dir", type=Path, default=DEFAULT_SEG_DIR)
+    p.add_argument(
+        "--label-dir",
+        type=Path,
+        default=DEFAULT_SEG_DIR,
+        help="reference labels: the CT segmentations the registration metrics "
+        "warp, and the PET masks --pet-seg-dir is scored against",
+    )
     p.add_argument("--out-csv", type=Path, default=None, help="per-case results")
     p.add_argument(
         "--compare",
@@ -302,12 +308,11 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--compare-dir", type=Path, default=DEFAULT_COMPARE_DIR)
     p.add_argument(
-        "--seg-dir",
+        "--pet-seg-dir",
         type=Path,
         default=None,
-        help="directory of container-written PET masks to score against --seg-dir-ref",
+        help="container-written PET lesion masks, scored against --label-dir",
     )
-    p.add_argument("--seg-ref-dir", type=Path, default=DEFAULT_SEG_DIR)
     p.add_argument("--device", default="cuda:0" if torch.cuda.is_available() else "cpu")
     return p.parse_args()
 
@@ -334,7 +339,7 @@ def main() -> None:
 
     results: Dict[str, Dict[str, float]] = {}
     for case_id, path in cases:
-        res = evaluate_case(case_id, path, args.image_dir, args.seg_dir, cfg, device)
+        res = evaluate_case(case_id, path, args.image_dir, args.label_dir, cfg, device)
         results[case_id] = res
         print(f"{case_id:>6}  " + "  ".join(f"{res[m]:>12.4f}" for m in METRICS))
 
@@ -353,12 +358,12 @@ def main() -> None:
         print(f"{'ref':>6}  " + "  ".join(f"{ref_means[m]:>12.4f}" for m in common))
         print(f"{'delta':>6}  " + "  ".join(f"{means[m] - ref_means[m]:>+12.4f}" for m in common))
 
-    if args.seg_dir:
-        seg_scores = score_segmentations(args.seg_dir, args.seg_ref_dir, list(results))
+    if args.pet_seg_dir:
+        seg_scores = score_segmentations(args.pet_seg_dir, args.label_dir, list(results))
         if not seg_scores:
-            print(f"\nno PET masks matched in {args.seg_dir}")
+            print(f"\nno PET masks matched in {args.pet_seg_dir}")
         else:
-            print(f"\nPET lesion segmentation vs {args.seg_ref_dir.name}")
+            print(f"\nPET lesion segmentation vs {args.label_dir.name}")
             print(f"{'case_tp':>10}  {'dice':>8}  {'pred_vox':>9}  {'ref_vox':>9}")
             for key, sc in seg_scores.items():
                 print(
