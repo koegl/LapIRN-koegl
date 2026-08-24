@@ -105,6 +105,7 @@ def io_objective(
     include_rigidity: bool = True,
     include_dice: bool = True,
     compute_hard_dice: bool = False,
+    log_hard_dice: bool = True,
     n_hard_dice_labels: int = 118,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
     """The single IO objective shared by deploy-time IO (compute_io_loss /
@@ -256,11 +257,13 @@ def io_objective(
                     torch.abs(tlg_warped_hard - tlg_moving_hard)
                     / tlg_moving_hard.clamp_min(1e-5)
                 ).item()
-            # hard-dice logging reads the CT segmentations, so it follows
+            # hard-dice logging reads the CT segmentations, so it needs
             # include_dice. hard_mtv / hard_tlg above must NOT: run_io selects
-            # its best step with them. Skipping this also saves 117 full-volume
-            # comparisons per step, which matters inside the container's budget.
-            if include_dice:
+            # its best step with them. log_hard_dice switches this off even when
+            # the dice LOSS is on -- it is 117 full-volume comparisons per step,
+            # bought purely for a progress-bar number, which the container's
+            # runtime budget cannot spare.
+            if include_dice and log_hard_dice:
                 warped_lbl_ct = warp_label(x_lbl_ct, disp_unit, grid, transform_nearest)
                 pred = warped_lbl_ct[0, 0].round().long()
                 target = y_lbl_ct[0, 0].round().long()
@@ -316,6 +319,7 @@ def compute_io_loss(
     class_weights: torch.Tensor | None,
     pet_cc_masks: torch.Tensor | None = None,
     include_dice: bool = True,
+    log_hard_dice: bool = True,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
     """Deploy-time IO objective (used by run_io). Thin wrapper over io_objective
     with every term on and hard-dice logging enabled.
@@ -344,6 +348,7 @@ def compute_io_loss(
         include_rigidity=include_rigidity,
         include_dice=include_dice,
         compute_hard_dice=True,
+        log_hard_dice=log_hard_dice,
     )
 
 
@@ -519,6 +524,7 @@ def run_io(
     include_pet: bool,
     include_rigidity: bool,
     include_dice: bool = True,
+    log_hard_dice: bool = True,
     use_class_weights: bool = False,
     n_integration: int = 7,
     ncc_weight: Optional[float] = None,
@@ -614,6 +620,7 @@ def run_io(
             include_pet=include_pet,
             include_rigidity=include_rigidity,
             include_dice=include_dice,
+            log_hard_dice=log_hard_dice,
             class_weights=class_weights,
             pet_cc_masks=pet_cc_masks,
         )

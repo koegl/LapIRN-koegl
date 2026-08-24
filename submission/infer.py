@@ -26,7 +26,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Tuple
+from typing import Optional, Tuple
 
 # Everything the container writes must land in a writable place: /app and the
 # repo copy are read-only for the evaluation user, and $HOME may not exist.
@@ -264,15 +264,20 @@ def save_seg(seg: np.ndarray, reference_path: Path, out_path: Path) -> None:
 
 
 def segment_ct(
-    fixed_ct: Path, moving_ct: Path, out_dir: Path, crop: int
-) -> None:
+    fixed_ct: Path, moving_ct: Path, out_dir: Path, crop: int, device: torch.device
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """TotalSegmentator CT labels for both timepoints, via the isolated venv.
 
     A subprocess rather than an import: TotalSegmentator and the autopet nnunetv2
     fork cannot live in one environment (see totalseg_runner.py).
+
+    Returns (moving, fixed) label tensors of shape (1, 1, H, W, D) on the full
+    grid -- zero outside the z crop -- in the ORIGINAL frame of each image, which
+    is the frame run_io expects for x_lbl_ct / y_lbl_ct.
     """
     import subprocess
 
+    out_dir.mkdir(parents=True, exist_ok=True)
     subprocess.run(
         [
             TOTALSEG_PYTHON,
@@ -285,12 +290,19 @@ def segment_ct(
         check=True,
     )
 
+    def load(path: Path) -> torch.Tensor:
+        arr = nib.load(str(path)).get_fdata().astype(np.int16)
+        return torch.from_numpy(arr)[None, None].to(device).float()
+
+    return load(out_dir / moving_ct.name), load(out_dir / fixed_ct.name)
+
 
 def run_instance_optimisation(
     total_unit_flow: torch.Tensor,
     X: torch.Tensor,
     Y: torch.Tensor,
     pet_mask: np.ndarray,
+    ct_labels: Optional[Tuple[torch.Tensor, torch.Tensor]],
     transform: torch.nn.Module,
     transform_nearest: torch.nn.Module,
     grid: torch.Tensor,
@@ -299,26 +311,33 @@ def run_instance_optimisation(
 ) -> torch.Tensor:
     """Refine the TOTAL field with Code/instance_opt.py:run_io.
 
-    include_dice / include_rigidity are off: both read CT segmentations, which
-    the container does not produce. That leaves NCC + smoothness + the Jacobian
-    barrier + the PET tumour terms (MTV / TLG, global and per-lesion) -- the
-    scored quantities. The CT-label arguments are therefore None.
+    The dice term is on when TotalSegmentator ran, off otherwise -- include_dice
+    is the only gate on the CT labels, so with none available the objective falls
+    back to NCC + smoothness + the Jacobian barrier + the PET tumour terms.
 
-    The moving image and mask are the ORIGINAL ones and the field is the total
+    include_rigidity stays off regardless: it needs per-label bone values, and the
+    best leaderboard configuration ran with w_io_bone_rigidity = 0.
+
+    log_hard_dice=False drops the 117-label progress-bar metric. It is pure
+    logging and costs a full-volume comparison per label per step, which the
+    container's runtime budget cannot spare.
+
+    The moving image and labels are the ORIGINAL ones and the field is the total
     (affine-composed) transform, so the volume terms see det(A) and match what
     the scorer measures -- same convention as Code/inference.py.
     """
     import instance_opt  # noqa: E402  (pulls utils -> mlflow/wandb; import late)
 
     x_lbl_pet = torch.from_numpy(pet_mask.astype(np.float32))[None, None].to(device)
+    x_lbl_ct, y_lbl_ct = ct_labels if ct_labels is not None else (None, None)
 
     return instance_opt.run_io(
         Y,
         total_unit_flow,
         X,
-        None,  # x_lbl_ct
+        x_lbl_ct,
         x_lbl_pet,
-        None,  # y_lbl_ct
+        y_lbl_ct,
         transform,
         transform_nearest,
         grid,
@@ -326,7 +345,8 @@ def run_instance_optimisation(
         device,
         include_pet=True,
         include_rigidity=False,
-        include_dice=False,
+        include_dice=ct_labels is not None,
+        log_hard_dice=False,
         use_class_weights=False,
     )
 
@@ -431,13 +451,27 @@ def main() -> None:
         if args.seg_dir is not None:
             save_seg(seg, args.moving_pet, args.seg_dir / args.moving_pet.name)
 
+    totalseg_seconds = 0.0
+    ct_labels = None
+    if args.totalseg:
+        ts_start = time.time()
+        ct_labels = segment_ct(
+            args.fixed_ct,
+            args.moving_ct,
+            args.ct_seg_dir or Path("/tmp/ct_labels"),
+            TOTALSEG_CROP,
+            device,
+        )
+        totalseg_seconds = time.time() - ts_start
+
     if args.io:
         if seg is None:
             raise SystemExit("--io needs the PET mask; do not pass --no-segment with it")
         io_start = time.time()
         transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
         total_unit_flow = run_instance_optimisation(
-            total_unit_flow, X, Y, seg, transform, transform_nearest, grid, cfg, device
+            total_unit_flow, X, Y, seg, ct_labels,
+            transform, transform_nearest, grid, cfg, device,
         )
         io_seconds = time.time() - io_start
         print(
@@ -445,17 +479,6 @@ def main() -> None:
             f"({cfg.io_it} steps @ lr {cfg.io_lr}, {io_seconds / max(cfg.io_it, 1):.2f}s/step)",
             flush=True,
         )
-
-    totalseg_seconds = 0.0
-    if args.totalseg:
-        ts_start = time.time()
-        segment_ct(
-            args.fixed_ct,
-            args.moving_ct,
-            args.ct_seg_dir or Path("/tmp/ct_labels"),
-            TOTALSEG_CROP,
-        )
-        totalseg_seconds = time.time() - ts_start
 
     save_disp(total_unit_flow, args.output_disp)
     print(
