@@ -23,6 +23,7 @@ Code/inference.py:save_disp.
 
 import argparse
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -263,22 +264,22 @@ def save_seg(seg: np.ndarray, reference_path: Path, out_path: Path) -> None:
     nib.save(nib.Nifti1Image(seg.astype(np.uint8), ref.affine, ref.header), str(out_path))
 
 
-def segment_ct(
-    fixed_ct: Path, moving_ct: Path, out_dir: Path, crop: int, device: torch.device
-) -> Tuple[torch.Tensor, torch.Tensor]:
-    """TotalSegmentator CT labels for both timepoints, via the isolated venv.
+def start_ct_segmentation(
+    fixed_ct: Path, moving_ct: Path, out_dir: Path, crop: int
+) -> "subprocess.Popen":
+    """Launch TotalSegmentator WITHOUT blocking, to overlap with the GPU work.
 
     A subprocess rather than an import: TotalSegmentator and the autopet nnunetv2
-    fork cannot live in one environment (see totalseg_runner.py).
+    fork cannot live in one environment (see totalseg_runner.py). Its startup is
+    a second `import torch` in a fresh interpreter plus two model loads -- ~6 s
+    and ~23 s respectively, largely CPU-bound, so it overlaps well with
+    registration and PET segmentation. Nothing needs the CT labels until IO.
 
-    Returns (moving, fixed) label tensors of shape (1, 1, H, W, D) on the full
-    grid -- zero outside the z crop -- in the ORIGINAL frame of each image, which
-    is the frame run_io expects for x_lbl_ct / y_lbl_ct.
+    stdout/stderr are inherited so the runner's own timing line and any failure
+    land in the container log.
     """
-    import subprocess
-
     out_dir.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
+    return subprocess.Popen(
         [
             TOTALSEG_PYTHON,
             TOTALSEG_RUNNER,
@@ -286,15 +287,60 @@ def segment_ct(
             str(moving_ct),
             str(out_dir),
             str(crop),
-        ],
-        check=True,
+        ]
     )
 
-    def load(path: Path) -> torch.Tensor:
-        arr = nib.load(str(path)).get_fdata().astype(np.int16)
-        return torch.from_numpy(arr)[None, None].to(device).float()
 
-    return load(out_dir / moving_ct.name), load(out_dir / fixed_ct.name)
+def collect_ct_segmentation(
+    proc: "subprocess.Popen",
+    out_dir: Path,
+    fixed_ct: Path,
+    moving_ct: Path,
+    device: torch.device,
+) -> Optional[Tuple[torch.Tensor, torch.Tensor]]:
+    """Join the subprocess and load its labels, or None if anything went wrong.
+
+    Deliberately non-fatal. On the hidden test set a crash here would leave the
+    pair with no displacement field at all, which scores worse than a field
+    refined without the dice term. The failure is printed loudly instead, so it
+    cannot pass unnoticed in a validation sweep.
+
+    Returns (moving, fixed) label tensors of shape (1, 1, H, W, D) on the full
+    grid -- zero outside the z crop -- in the ORIGINAL frame of each image, which
+    is the frame run_io expects for x_lbl_ct / y_lbl_ct.
+    """
+    returncode = proc.wait()
+    if returncode != 0:
+        print(
+            f"WARNING: TotalSegmentator exited with code {returncode}; "
+            "continuing with IO but WITHOUT the CT dice term",
+            flush=True,
+        )
+        return None
+
+    paths = (out_dir / moving_ct.name, out_dir / fixed_ct.name)
+    missing = [p for p in paths if not p.exists()]
+    if missing:
+        print(
+            f"WARNING: TotalSegmentator produced no {[p.name for p in missing]}; "
+            "continuing with IO but WITHOUT the CT dice term",
+            flush=True,
+        )
+        return None
+
+    try:
+        def load(path: Path) -> torch.Tensor:
+            arr = nib.load(str(path)).get_fdata().astype(np.int16)
+            return torch.from_numpy(arr)[None, None].to(device).float()
+
+        return load(paths[0]), load(paths[1])
+    except Exception as exc:  # a truncated or unreadable label file
+        print(
+            f"WARNING: could not read the CT labels ({exc}); "
+            "continuing with IO but WITHOUT the CT dice term",
+            flush=True,
+        )
+        return None
 
 
 def run_instance_optimisation(
@@ -420,6 +466,16 @@ def main() -> None:
     device = torch.device(args.device)
     cfg = build_config()
 
+    # Launched before anything else so its interpreter startup and model loading
+    # overlap with the GPU work below; joined just before IO, the first consumer.
+    ts_proc = None
+    ts_dir = args.ct_seg_dir or Path("/tmp/ct_labels")
+    ts_launched = time.time()
+    if args.totalseg:
+        ts_proc = start_ct_segmentation(
+            args.fixed_ct, args.moving_ct, ts_dir, TOTALSEG_CROP
+        )
+
     grid = Functions.generate_grid_unit(cfg.img_shape)
     grid = torch.from_numpy(np.reshape(grid, (1,) + grid.shape)).to(device).float()
     transform = miccai2020_model_stage.SpatialTransform_unit().to(device)
@@ -451,18 +507,15 @@ def main() -> None:
         if args.seg_dir is not None:
             save_seg(seg, args.moving_pet, args.seg_dir / args.moving_pet.name)
 
-    totalseg_seconds = 0.0
+    totalseg_seconds = totalseg_blocking = 0.0
     ct_labels = None
-    if args.totalseg:
-        ts_start = time.time()
-        ct_labels = segment_ct(
-            args.fixed_ct,
-            args.moving_ct,
-            args.ct_seg_dir or Path("/tmp/ct_labels"),
-            TOTALSEG_CROP,
-            device,
+    if ts_proc is not None:
+        join_start = time.time()
+        ct_labels = collect_ct_segmentation(
+            ts_proc, ts_dir, args.fixed_ct, args.moving_ct, device
         )
-        totalseg_seconds = time.time() - ts_start
+        totalseg_blocking = time.time() - join_start
+        totalseg_seconds = time.time() - ts_launched
 
     if args.io:
         if seg is None:
@@ -484,9 +537,11 @@ def main() -> None:
     print(
         f"wrote {args.output_disp}\n"
         f"  registration {reg_seconds:.1f}s | PET seg {seg_seconds:.1f}s | "
-        f"IO {io_seconds:.1f}s | CT seg {totalseg_seconds:.1f}s "
-        f"(crop {TOTALSEG_CROP}, z={288 - 2 * TOTALSEG_CROP}) | "
-        f"total {time.time() - start:.1f}s",
+        f"IO {io_seconds:.1f}s | CT seg {totalseg_seconds:.1f}s elapsed, "
+        f"{totalseg_blocking:.1f}s blocking (crop {TOTALSEG_CROP}, "
+        f"z={288 - 2 * TOTALSEG_CROP}) | total {time.time() - start:.1f}s\n"
+        f"  (CT seg runs concurrently, so the stages do not sum to the total; "
+        f"only its blocking part adds to the runtime)",
         flush=True,
     )
 
