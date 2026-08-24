@@ -45,7 +45,7 @@ def segment_one(img_path: str, tag: str, n_crop: int, out_dir: str) -> None:
     nib.save(cropped_img, crop_path)
 
     python_api.totalsegmentator(
-        crop_path, seg_path, ml=True, task="total", fast=True, body_seg=True
+        crop_path, seg_path, ml=True, task="total", fastest=True, body_seg=True
     )
 
     seg_img = nib.load(seg_path)
@@ -58,7 +58,7 @@ def segment_one(img_path: str, tag: str, n_crop: int, out_dir: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--crop", type=int, required=True)
+    parser.add_argument("--crop", type=int, default=100)
     parser.add_argument(
         "--fixed",
         type=str,
