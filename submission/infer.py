@@ -254,9 +254,15 @@ def segment_pet(
     import autopet_main  # noqa: E402  (heavy; imported only when segmenting)
 
     load_start = time.time()
-    predictor = autopet_main.build_predictor(
-        str(model_dir), folds=(0,), device=device, use_mirroring=use_mirroring
-    )
+    # build_predictor prints device and configuration banners, and hardcodes
+    # allow_tqdm=True, whose per-tile bar is unreadable in a piped log. Silenced
+    # here rather than by editing autopet-3-submission, using that repo's own
+    # suppressor. run_inference_in_memory already wraps itself.
+    with autopet_main.suppress_output():
+        predictor = autopet_main.build_predictor(
+            str(model_dir), folds=(0,), device=device, use_mirroring=use_mirroring
+        )
+    predictor.allow_tqdm = False
     load_seconds = time.time() - load_start
 
     infer_start = time.time()

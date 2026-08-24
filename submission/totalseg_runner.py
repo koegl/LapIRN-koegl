@@ -22,6 +22,7 @@ crops -- ~23 s of the measured 32.3 s at z=108 -- so caching it is worth more
 than cropping further.
 """
 
+import contextlib
 import json
 import os
 import sys
@@ -58,6 +59,20 @@ import numpy as np  # noqa: E402
 # measured.
 from time_totalsegmentator import crop_axial, restore_full  # noqa: E402
 from totalsegmentator import python_api  # noqa: E402
+
+
+@contextlib.contextmanager
+def suppress_output():
+    """Silence stdout/stderr from TotalSegmentator and the nnU-Net underneath.
+
+    Only this runner's own timing line should reach the container log -- the
+    prediction chatter makes a 20-case sweep unreadable. Errors still surface:
+    a non-zero exit code is what infer.py checks, and the traceback is printed
+    after the context exits.
+    """
+    with open(os.devnull, "w") as devnull:
+        with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+            yield
 
 
 def cache_model_loading() -> None:
@@ -110,9 +125,18 @@ def segment_one(img_path: Path, out_path: Path, crop: int, work_dir: Path) -> fl
     nib.save(cropped, str(crop_path))
 
     start = time.time()
-    python_api.totalsegmentator(
-        str(crop_path), str(seg_path), ml=True, task="total", fast=True, body_seg=True
-    )
+    # quiet=True drops TotalSegmentator's banners and per-stage chatter; the
+    # nnU-Net tile progress bars underneath it are silenced by the redirect.
+    with suppress_output():
+        python_api.totalsegmentator(
+            str(crop_path),
+            str(seg_path),
+            ml=True,
+            task="total",
+            fast=True,
+            body_seg=True,
+            quiet=True,
+        )
     elapsed = time.time() - start
 
     seg_img = nib.load(str(seg_path))

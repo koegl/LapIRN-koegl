@@ -66,6 +66,10 @@ fi
 
 echo "${#SUBJECTS[@]} pairs -> $OUTPUT_DIR"
 SWEEP_START=$SECONDS
+# pre-declared: the summary below must still print if anything odd happens to
+# the loop, since it is the only place the per-pair mean is reported
+TOTAL=0
+N_PAIRS=${#SUBJECTS[@]}
 
 for id in "${SUBJECTS[@]}"; do
   CASE_START=$SECONDS
@@ -89,5 +93,7 @@ for id in "${SUBJECTS[@]}"; do
 done
 
 TOTAL=$((SECONDS - SWEEP_START))
-echo "total ${TOTAL}s for ${#SUBJECTS[@]} pairs -> $((TOTAL / ${#SUBJECTS[@]}))s/pair"
-echo "extrapolated to 200 test pairs: $((TOTAL * 200 / ${#SUBJECTS[@]} / 60)) min (budget: 300 min)"
+if (( N_PAIRS > 0 )); then
+  echo "total ${TOTAL}s for ${N_PAIRS} pairs -> $((TOTAL / N_PAIRS))s/pair"
+  echo "extrapolated to 200 test pairs: $((TOTAL * 200 / N_PAIRS / 60)) min (budget: 300 min)"
+fi

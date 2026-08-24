@@ -54,7 +54,8 @@ DEFAULT_COMPARE_DIR = REPO_ROOT / "submission_results" / "csvs" / "chase_leaderb
 CT_TEMPLATE = "PSMARegPSMA_{case_id}_0000_{tp}"
 PET_TEMPLATE = "PSMARegPSMA_{case_id}_0001_{tp}"
 
-METRICS = ["dice", "dice_before", "hd95", "hd95_before", "ndv", "mtv", "tlg"]
+METRICS = ["dice", "dice_in_crop", "dice_out_crop", "dice_before", "hd95",
+           "hd95_before", "ndv", "mtv", "tlg"]
 SEG_METRICS = ["pet_dice", "pet_pred_vox", "pet_ref_vox"]
 
 
@@ -240,8 +241,21 @@ def evaluate_case(
     seg_warped = warp_nearest(seg_moving, disp_their)
 
     fixed_i = seg_fixed[0, 0].round().long()
-    dice = multilabel_dice(seg_warped[0, 0].round().long(), fixed_i)
+    warped_i = seg_warped[0, 0].round().long()
+    dice = multilabel_dice(warped_i, fixed_i)
     dice_before = multilabel_dice(seg_moving[0, 0].round().long(), fixed_i)
+
+    # Inside vs outside the axial band the IO dice term could see. The CT labels
+    # the container produces are cropped to cfg.io_seg_crop, so the term
+    # supervises only that band while this score covers the whole volume. If the
+    # in-band dice improves and the out-of-band dice does not, the crop is what
+    # limits the term -- not its weight or the label quality.
+    lo, hi = cfg.io_seg_crop, full_shape[2] - cfg.io_seg_crop
+    dice_in = multilabel_dice(warped_i[:, :, lo:hi], fixed_i[:, :, lo:hi])
+    dice_out = multilabel_dice(
+        torch.cat([warped_i[:, :, :lo], warped_i[:, :, hi:]], dim=2),
+        torch.cat([fixed_i[:, :, :lo], fixed_i[:, :, hi:]], dim=2),
+    )
 
     spacing = nib.load(
         str(seg_dir / f"{CT_TEMPLATE.format(case_id=case_id, tp='00')}.nii.gz")
@@ -274,6 +288,8 @@ def evaluate_case(
 
     return {
         "dice": dice,
+        "dice_in_crop": dice_in,
+        "dice_out_crop": dice_out,
         "dice_before": dice_before,
         "hd95": hd95,
         "hd95_before": hd95_before,
