@@ -89,16 +89,14 @@ All terms are evaluated on the composed transformation~(\ref{eq:composed}).
 Only the full-resolution level is trained with the complete objective.
 The two coarser levels use the similarity, label and regularisation terms alone, i.e.\ $\lambda_{\mathrm{MTV}} = \lambda_{\mathrm{MTV\text{-}J}} = \lambda_{\mathrm{jac}} = \lambda_{\mathrm{TLG}} = \lambda_{\mathrm{rigid}} = 0$ at a quarter and half resolution, because the lesion and bone masks they would be evaluated on are only a few voxels wide there: after downsampling, thin ribs and small lesions are largely partial-volume, so both the volume ratios and the per-structure rigid fits measure interpolation rather than anatomy.
 
-\subsubsection{Image similarity.}
+\subsubsection{Registration Accuracy.}
 Image similarity is measured by the local normalised cross correlation, evaluated as a multi-resolution sum over as many scales as the level has resolutions, i.e.\ one scale at the coarsest and three at the full-resolution level.
 The window is $5^{3}$ voxels at the quarter-resolution level and $7^{3}$ at the half- and full-resolution levels, so that the coarsest level, where one voxel already covers roughly a centimetre, is not asked to match structure over a neighbourhood far larger than the deformations it estimates.
 It is computed on the CT channel only ($\lambda_{\mathrm{PET}} = 0$): PET intensity is not conserved between the two time points, as lesions appear, resolve or change uptake under therapy, so a PET similarity term would reward matching disease rather than anatomy.
-
-\subsubsection{Weak label supervision (DSC).}
-We used a standard DSC loss for weak label supervision.
-Since the challenge scores PET organ overlap but provides no PET organ annotations for training, we measured each of the 117 TotalSegmentator organs' mean SUV relative to skeletal muscle across all sessions.
-As 90 organs fall below twice the muscle background and are thus indistinguishable in PET, we upweighted only the 10 exceeding 4 times the background (kidneys, gallbladder, spleen, liver, duodenum, bladder, portal vein, prostate, pancreas) by a factor of 2 in the per-class Dice loss.
-This relies on PET and CT being well aligned within a session, so that CT-derived overlap on these organs approximates the PET organ overlap being scored.
+Furthermore, we used a standard DSC loss for weak CT label supervision.
+%Since the challenge scores PET organ overlap but provides no PET organ annotations for training, we measured each of the 117 TotalSegmentator organs' mean SUV relative to skeletal muscle across all sessions.
+%As 90 organs fall below twice the muscle background and are thus indistinguishable in PET, we upweighted only the 10 exceeding 4 times the background (kidneys, gallbladder, spleen, liver, duodenum, bladder, portal vein, prostate, pancreas) by a factor of 2 in the per-class Dice loss.
+%This relies on PET and CT being well aligned within a session, so that CT-derived overlap on these organs approximates the PET organ overlap being scored.
 Note that the objective contains no surface-distance term, although HD95 is scored; Sec.~\ref{sec:ablation} shows that one would have nothing to improve.
 
 
