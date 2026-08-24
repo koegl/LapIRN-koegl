@@ -60,9 +60,9 @@ NO_IO_MODEL = normalise_model_id("auspicious-sloth-39469081_combined")
 # either ("leaderboard", model id) for the per-metric challenge CSVs or
 # ("local", path) for a wide one-row-per-case CSV.
 OUR_ROWS = [
+    ("no_io", "Ours (no IO)", ("leaderboard", NO_IO_MODEL)),
     ("container", "Ours (container)", ("local", CONTAINER_CSV)),
     ("validation", "Ours (validation)", ("leaderboard", VALIDATION_MODEL)),
-    ("no_io", "Ours (no IO)", ("leaderboard", NO_IO_MODEL)),
 ]
 
 # The row the baselines are tested against and whose name is bolded: the
@@ -271,7 +271,7 @@ def main():
         r"\midrule",
     ]
 
-    def emit(key, bold=False):
+    def emit(key):
         name = display_names[key]
         cells = []
         for metric in METRICS:
@@ -282,15 +282,13 @@ def main():
                 cell += r"$^{*}$"
             cells.append(cell)
         cells.append(format_runtime(RUNTIME_S.get(key)))
-        if bold:
-            name = r"\textbf{" + name + "}"
         lines.append(f"{name} & " + " & ".join(cells) + r" \\")
 
     for model in baselines:
         emit(model)
     lines.append(r"\midrule")
     for key in our_keys:
-        emit(key, bold=(key == PRIMARY_KEY))
+        emit(key)
 
     lines += [
         r"\bottomrule",

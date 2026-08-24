@@ -47,7 +47,7 @@ DISPLAY_NOTATION = {
 # Degrees to rotate the metric column headers (needs \usepackage{graphicx}).
 # 0 keeps them upright, 45 is a good compromise, 90 makes the columns as narrow
 # as their numbers.
-HEADER_ROTATION = 45
+HEADER_ROTATION = 60
 
 HEADERS = {
     "dice": r"DSC (\%) $\uparrow$",
