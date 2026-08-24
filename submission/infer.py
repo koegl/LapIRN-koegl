@@ -56,9 +56,9 @@ DEFAULT_SEG_MODEL = Path(os.environ.get("NNUNET_MODEL_DIR", "/app/nnunet_model")
 AUTOPET_DIR = os.environ.get("AUTOPET_DIR", "/app")
 
 # TotalSegmentator runs in its own interpreter (see totalseg_runner.py) and only
-# on a z-cropped volume. The crop itself is cfg.io_seg_crop, alongside the other
-# IO settings in Code/config.py -- it is a property of the IO dice term, not of
-# the container.
+# on an axial band. The band itself is cfg.io_seg_z_range, alongside the other IO
+# settings in Code/config.py -- it is a property of the IO dice term, not of the
+# container.
 TOTALSEG_PYTHON = os.environ.get("TOTALSEG_PYTHON", "/opt/tsvenv/bin/python")
 TOTALSEG_RUNNER = os.environ.get("TOTALSEG_RUNNER", "/app/totalseg_runner.py")
 
@@ -330,7 +330,7 @@ class BackgroundPetSegmentation:
 
 
 def start_ct_segmentation(
-    fixed_ct: Path, moving_ct: Path, out_dir: Path, crop: int
+    fixed_ct: Path, moving_ct: Path, out_dir: Path, z_range: Tuple[int, int]
 ) -> "subprocess.Popen":
     """Launch TotalSegmentator WITHOUT blocking, to overlap with the GPU work.
 
@@ -351,7 +351,8 @@ def start_ct_segmentation(
             str(fixed_ct),
             str(moving_ct),
             str(out_dir),
-            str(crop),
+            str(z_range[0]),
+            str(z_range[1]),
         ]
     )
 
@@ -538,7 +539,7 @@ def main() -> None:
     ts_launched = time.time()
     if args.totalseg:
         ts_proc = start_ct_segmentation(
-            args.fixed_ct, args.moving_ct, ts_dir, cfg.io_seg_crop
+            args.fixed_ct, args.moving_ct, ts_dir, cfg.io_seg_z_range
         )
 
     grid = Functions.generate_grid_unit(cfg.img_shape)
@@ -635,9 +636,9 @@ def main() -> None:
         f"  registration {reg_seconds:.1f}s | "
         f"PET seg {seg_seconds:.1f}s elapsed, {seg_blocking:.1f}s blocking | "
         f"IO {io_seconds:.1f}s | CT seg {totalseg_seconds:.1f}s elapsed, "
-        f"{totalseg_blocking:.1f}s blocking (crop {cfg.io_seg_crop}, "
-        f"z={cfg.img_shape[2] - 2 * cfg.io_seg_crop}) | "
-        f"total {time.time() - start:.1f}s\n"
+        f"{totalseg_blocking:.1f}s blocking (z {cfg.io_seg_z_range[0]}.."
+        f"{cfg.io_seg_z_range[1]}, {cfg.io_seg_z_range[1] - cfg.io_seg_z_range[0]} "
+        f"slices) | total {time.time() - start:.1f}s\n"
         f"  (PET and CT segmentation run concurrently with registration, so the "
         f"stages do not sum to the total; only their blocking parts add to it)",
         flush=True,

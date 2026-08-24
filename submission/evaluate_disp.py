@@ -34,6 +34,23 @@ sys.path.insert(0, str(REPO_ROOT / "Code"))
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/mpl")
 
+# Code/utils.py imports mlflow and wandb at module level, but nothing on the
+# scoring path calls either. A broken experiment-tracking install (mlflow pulling
+# in fastapi/anyio, say) would otherwise take down metric computation that has no
+# business depending on it. The real package is used when it imports cleanly.
+def _stub_unimportable(*names: str) -> None:
+    import importlib
+    import types
+
+    for name in names:
+        try:
+            importlib.import_module(name)
+        except Exception:
+            sys.modules[name] = types.ModuleType(name)
+
+
+_stub_unimportable("mlflow", "wandb")
+
 import hd95_official  # noqa: E402
 import my_data  # noqa: E402
 import ndv_official  # noqa: E402
@@ -257,11 +274,11 @@ def evaluate_case(
     dice_before = multilabel_dice(seg_moving[0, 0].round().long(), fixed_i)
 
     # Inside vs outside the axial band the IO dice term could see. The CT labels
-    # the container produces are cropped to cfg.io_seg_crop, so the term
+    # the container produces cover only cfg.io_seg_z_range, so the term
     # supervises only that band while this score covers the whole volume. If the
     # in-band dice improves and the out-of-band dice does not, the crop is what
     # limits the term -- not its weight or the label quality.
-    lo, hi = cfg.io_seg_crop, full_shape[2] - cfg.io_seg_crop
+    lo, hi = cfg.io_seg_z_range
     dice_in = multilabel_dice(
         warped_i[:, :, lo:hi], fixed_i[:, :, lo:hi], present_only=True
     )

@@ -175,9 +175,14 @@ class TrainingConfig:
     # io params
     io_lr: float = 1e-1
     io_it: int = 18
-    # Axial crop for the CT labels the IO dice term consumes: this many slices
-    # are dropped from EACH end of z
-    io_seg_crop: int = 100
+    # Axial band the CT labels for the IO dice term are computed on, as a
+    # half-open slice range [start, stop) -- so (141, 241) is the 100 slices
+    # 141..240 inclusive. An explicit range rather than a symmetric margin:
+    # TotalSegmentator's runtime scales with axial extent, so the slices it is
+    # spent on should be the ones whose pre-IO alignment is worst, and those are
+    # not centred in the volume. Labels are zero outside the band, so the dice
+    # term simply does not see that anatomy.
+    io_seg_z_range: Tuple[int, int] = (141, 241)
     w_io_ncc: float = 5.0
     w_io_dice: float = 5.0
     w_io_non_diff: float = 10.0  # 2000.0

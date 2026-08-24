@@ -19,7 +19,7 @@ EXTRA_ARGS=(--seg-dir /app/output/segmentations --ct-seg-dir /app/output/ct_labe
 if [[ "${SEG:-1}" == "0" ]]; then
   EXTRA_ARGS=(--no-segment --no-io)
 fi
-# The axial crop is cfg.io_seg_crop in Code/config.py, with io_it and io_lr --
+# The axial band is cfg.io_seg_z_range in Code/config.py, with io_it and io_lr --
 # bind-mounted under DEV=1, so sweeping it needs no rebuild. TOTALSEG=0 skips
 # the CT labels entirely.
 if [[ "${TOTALSEG:-1}" == "0" ]]; then

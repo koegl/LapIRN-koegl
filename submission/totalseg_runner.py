@@ -8,12 +8,11 @@ nnUNetTrainer_PGPSplus exists, so the PET lesion model needs it. The two are
 therefore installed into separate environments and this half is invoked as a
 subprocess.
 
-    /opt/tsvenv/bin/python totalseg_runner.py <fixed_ct> <moving_ct> <out_dir> <crop>
+    /opt/tsvenv/bin/python totalseg_runner.py <fixed_ct> <moving_ct> <out_dir> <z_start> <z_end>
 
-`crop` is the number of slices removed from EACH end of the z axis, so the
-segmented volume is (288 - 2*crop) deep. Labels are written back into the full
-grid, zero outside the crop, so the caller always gets a full-resolution volume
-on the fixed image's geometry.
+The z range is half-open and comes from cfg.io_seg_z_range. Labels are written
+back into the full grid, zero outside the band, so the caller always gets a
+full-resolution volume on the fixed image's geometry.
 
 Weight loading is memoised across calls (see cache_model_loading): TotalSegmentator
 builds a fresh nnUNetPredictor per volume, and with body_seg that is four model
@@ -115,11 +114,13 @@ def cache_model_loading() -> None:
     predictor_cls.initialize_from_trained_model_folder = cached
 
 
-def segment_one(img_path: Path, out_path: Path, crop: int, work_dir: Path) -> float:
+def segment_one(
+    img_path: Path, out_path: Path, z_start_in: int, z_end_in: int, work_dir: Path
+) -> float:
     img = nib.load(str(img_path))
     full_shape = img.shape
 
-    cropped, z_start, z_end = crop_axial(img, crop)
+    cropped, z_start, z_end = crop_axial(img, z_start_in, z_end_in)
     crop_path = work_dir / f"{out_path.stem}_crop.nii.gz"
     seg_path = work_dir / f"{out_path.stem}_seg.nii.gz"
     nib.save(cropped, str(crop_path))
@@ -147,11 +148,12 @@ def segment_one(img_path: Path, out_path: Path, crop: int, work_dir: Path) -> fl
 
 
 def main() -> None:
-    fixed_ct, moving_ct, out_dir, crop = (
+    fixed_ct, moving_ct, out_dir, z_start, z_end = (
         Path(sys.argv[1]),
         Path(sys.argv[2]),
         Path(sys.argv[3]),
         int(sys.argv[4]),
+        int(sys.argv[5]),
     )
     work_dir = Path(os.environ.get("TOTALSEG_WORK_DIR", "/tmp/totalseg_work"))
     work_dir.mkdir(parents=True, exist_ok=True)
@@ -161,9 +163,12 @@ def main() -> None:
 
     total = 0.0
     for src in (fixed_ct, moving_ct):
-        total += segment_one(src, out_dir / src.name, crop, work_dir)
-    z = 288 - 2 * crop
-    print(f"totalsegmentator: {total:.1f}s for 2 volumes at z={z} (crop={crop})", flush=True)
+        total += segment_one(src, out_dir / src.name, z_start, z_end, work_dir)
+    print(
+        f"totalsegmentator: {total:.1f}s for 2 volumes at "
+        f"z={z_start}..{z_end} ({z_end - z_start} slices)",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":

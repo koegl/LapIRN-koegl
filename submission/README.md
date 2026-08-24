@@ -93,7 +93,7 @@ follows it. `hard_mtv` / `hard_tlg` deliberately do not — `run_io` selects its
 best step with those. Skipping the hard-dice block also drops 117 full-volume
 label comparisons per step, which is real time inside a 90 s budget.
 
-All IO hyper-parameters -- `io_it`, `io_lr`, `io_seg_crop` and the `w_io_*`
+All IO hyper-parameters -- `io_it`, `io_lr`, `io_seg_z_range` and the `w_io_*`
 weights -- come from `Code/config.py`. There is no CLI override: two of fourteen knobs living
 somewhere else would be a second source of truth. Under `DEV=1` that file is
 bind-mounted, so retuning the step count costs no rebuild.

@@ -8,10 +8,18 @@ import numpy as np
 from totalsegmentator import python_api
 
 
-def crop_axial(img: nib.Nifti1Image, n_crop: int) -> Tuple[nib.Nifti1Image, int, int]:
+def crop_axial(
+    img: nib.Nifti1Image, z_start: int, z_end: int
+) -> Tuple[nib.Nifti1Image, int, int]:
+    """Crop to an explicit half-open axial range [z_start, z_end).
+
+    An explicit range rather than a symmetric margin: the slices worth spending
+    segmentation time on are the ones whose pre-IO alignment is worst, and those
+    are not centred in the volume.
+    """
     data = img.get_fdata()
-    z_start = n_crop
-    z_end = data.shape[2] - n_crop
+    z_start = max(0, z_start)
+    z_end = min(data.shape[2], z_end)
 
     cropped = data[:, :, z_start:z_end]
 
@@ -31,21 +39,24 @@ def restore_full(
     return restored
 
 
-def segment_one(img_path: str, tag: str, n_crop: int, out_dir: str) -> None:
+def segment_one(
+    img_path: str, tag: str, z_start_in: int, z_end_in: int, out_dir: str
+) -> None:
     img = nib.load(img_path)
     full_shape = img.shape
 
-    cropped_img, z_start, z_end = crop_axial(img, n_crop)
+    cropped_img, z_start, z_end = crop_axial(img, z_start_in, z_end_in)
     z_size = z_end - z_start
 
-    crop_path = os.path.join(out_dir, f"{tag}_img_crop{n_crop:03d}.nii.gz")
-    seg_path = os.path.join(out_dir, f"{tag}_seg_crop{n_crop:03d}.nii.gz")
-    full_path = os.path.join(out_dir, f"{tag}_seg_full_crop{n_crop:03d}.nii.gz")
+    tag_z = f"z{z_start:03d}-{z_end:03d}"
+    crop_path = os.path.join(out_dir, f"{tag}_img_{tag_z}.nii.gz")
+    seg_path = os.path.join(out_dir, f"{tag}_seg_{tag_z}.nii.gz")
+    full_path = os.path.join(out_dir, f"{tag}_seg_full_{tag_z}.nii.gz")
 
     nib.save(cropped_img, crop_path)
 
     python_api.totalsegmentator(
-        crop_path, seg_path, ml=True, task="total", fastest=True, body_seg=True
+        crop_path, seg_path, ml=True, task="total", fast=True, body_seg=True
     )
 
     seg_img = nib.load(seg_path)
@@ -58,7 +69,9 @@ def segment_one(img_path: str, tag: str, n_crop: int, out_dir: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--crop", type=int, default=100)
+    # half-open, so the default is the 100 slices 141..240 inclusive
+    parser.add_argument("--z-start", dest="z_start", type=int, default=141)
+    parser.add_argument("--z-end", dest="z_end", type=int, default=241)
     parser.add_argument(
         "--fixed",
         type=str,
@@ -77,21 +90,26 @@ def main() -> None:
     os.makedirs(args.out_dir, exist_ok=True)
 
     t1 = time.perf_counter()
-    segment_one(args.fixed, "fixed", args.crop, args.out_dir)
+    segment_one(args.fixed, "fixed", args.z_start, args.z_end, args.out_dir)
     t2 = time.perf_counter()
-    segment_one(args.moving, "moving", args.crop, args.out_dir)
+    segment_one(args.moving, "moving", args.z_start, args.z_end, args.out_dir)
 
     print(f"first inferecne: {t2 - t1:.2f}s", flush=True)
     print(f"second inference: {time.perf_counter() - t2:.2f}s", flush=True)
 
     elapsed = time.perf_counter() - t_start
-    z_size = 288 - 2 * args.crop
+    z_size = args.z_end - args.z_start
 
-    time_path = os.path.join(args.out_dir, f"time_crop{args.crop:03d}.txt")
+    time_path = os.path.join(
+        args.out_dir, f"time_z{args.z_start:03d}-{args.z_end:03d}.txt"
+    )
     with open(time_path, "w") as f:
-        f.write(f"{args.crop}\t{z_size}\t{elapsed:.2f}\n")
+        f.write(f"{args.z_start}\t{args.z_end}\t{z_size}\t{elapsed:.2f}\n")
 
-    print(f"crop={args.crop} z={z_size} total={elapsed:.2f}s", flush=True)
+    print(
+        f"z={args.z_start}..{args.z_end} ({z_size} slices) total={elapsed:.2f}s",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":

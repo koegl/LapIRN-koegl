@@ -40,6 +40,23 @@ os.environ.setdefault("MPLCONFIGDIR", "/tmp/mpl")
 sys.path.insert(0, str(REPO_ROOT / "Code"))
 sys.path.insert(0, str(REPO_ROOT / "submission"))
 
+# Code/utils.py imports mlflow and wandb at module level, but nothing on the
+# scoring path calls either. A broken experiment-tracking install (mlflow pulling
+# in fastapi/anyio, say) would otherwise take down metric computation that has no
+# business depending on it. The real package is used when it imports cleanly.
+def _stub_unimportable(*names: str) -> None:
+    import importlib
+    import types
+
+    for name in names:
+        try:
+            importlib.import_module(name)
+        except Exception:
+            sys.modules[name] = types.ModuleType(name)
+
+
+_stub_unimportable("mlflow", "wandb")
+
 import infer  # noqa: E402  (the container's own pipeline, reused verbatim)
 import miccai2020_model_stage  # noqa: E402
 import nibabel as nib  # noqa: E402
