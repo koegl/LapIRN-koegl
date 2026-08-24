@@ -2,20 +2,22 @@
 \begin{table}[t]
 \centering
 \setlength{\belowcaptionskip}{5pt}
-\caption{The selected variant against the baselines on the official challenge validation set ($n=20$ cases), evaluated against the surrogate labels of Sec.~\ref{sec:evaluation}. Each cell reports the mean over cases. DSC and the MTV/TLG errors are given in \%, NDV in ppm. Bold marks the best value in each column. $^{*}$ marks metrics on which our method is significantly better than the baseline in the given row (paired Wilcoxon signed-rank, Holm-corrected within each metric, $p<0.05$). Dashes mark metrics that are undefined for a baseline: the unregistered and affine cases have no deformation field, and the PET biomarkers are only meaningful after resampling.}
+\caption{Our method against the baselines on the official challenge validation set ($n=20$ cases), evaluated against the surrogate labels of Sec.~\ref{sec:evaluation}. \emph{Ours (container)} is the submitted method of Sec.~\ref{sec:container} and the configuration the baselines are tested against; \emph{Ours (validation)} is the unconstrained configuration, reported as the upper bound the container's 90\,s per-pair budget gives up; \emph{Ours (no IO)} is the backbone without instance optimisation. Each cell reports the mean over cases. DSC and the MTV/TLG errors are given in \%, NDV in ppm. Time is the measured wall-clock runtime for one image pair on the hardware of Sec.~\ref{sec:infrastructure}; it is a single measurement, not a per-case distribution, and is not tested or marked. Bold marks the best value in each column. $^{*}$ marks metrics on which \emph{Ours (container)} is significantly better than the baseline in the given row (paired Wilcoxon signed-rank, Holm-corrected within each metric, $p<0.05$); the other two rows of ours are reported for reference and carry no significance marks. Dashes mark metrics that are undefined for a baseline: the unregistered and affine cases have no deformation field, and the PET biomarkers are only meaningful after resampling.}
 \label{tab:baselines}
 \small
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{lccccc}
+\begin{tabular}{lcccccc}
 \toprule
-Method & \rotatebox[origin=l]{45}{DSC (\%) $\uparrow$} & \rotatebox[origin=l]{45}{HD95 (mm) $\downarrow$} & \rotatebox[origin=l]{45}{MTV \%err $\downarrow$} & \rotatebox[origin=l]{45}{TLG \%err $\downarrow$} & \rotatebox[origin=l]{45}{NDV (ppm) $\downarrow$} \\
+Method & \rotatebox[origin=l]{60}{DSC (\%) $\uparrow$} & \rotatebox[origin=l]{60}{HD95 (mm) $\downarrow$} & \rotatebox[origin=l]{60}{MTV \%err $\downarrow$} & \rotatebox[origin=l]{60}{TLG \%err $\downarrow$} & \rotatebox[origin=l]{60}{NDV (ppm) $\downarrow$} & \rotatebox[origin=l]{60}{Time (s) $\downarrow$} \\
 \midrule
-Initial & 14.8$^{*}$ & 30.9$^{*}$ & -- & -- & -- \\
-Affine & 52.9$^{*}$ & 11.7$^{*}$ & 5.47$^{*}$ & 4.70$^{*}$ & -- \\
-NiftyReg & 73.3$^{*}$ & 7.09$^{*}$ & 4.46$^{*}$ & 8.68$^{*}$ & 1525$^{*}$ \\
-ConvexAdam & 63.0$^{*}$ & 8.41$^{*}$ & 5.10$^{*}$ & 4.15$^{*}$ & 100$^{*}$ \\
+Initial & 14.8$^{*}$ & 30.9$^{*}$ & -- & -- & -- & -- \\
+Affine & 52.9$^{*}$ & 11.7$^{*}$ & 5.47 & 4.70 & -- & -- \\
+NiftyReg & 73.3$^{*}$ & 7.09$^{*}$ & 4.46 & 8.68$^{*}$ & 1525 & -- \\
+ConvexAdam & 63.0$^{*}$ & 8.41$^{*}$ & 5.10 & 4.15 & 100 & -- \\
 \midrule
-\textbf{Ours} & \textbf{88.3} & \textbf{4.77} & \textbf{1.83} & \textbf{1.80} & \textbf{20.7} \\
+Ours (no IO) & 76.5 & 6.65 & 3.22 & 5.08 & \textbf{0.00} & -- \\
+Ours (container) & 79.4 & 6.21 & 3.63 & 2.86 & 6633 & -- \\
+Ours (validation) & \textbf{88.3} & \textbf{4.77} & \textbf{1.83} & \textbf{1.80} & 20.7 & -- \\
 \bottomrule
 \end{tabular}
 \end{table}
