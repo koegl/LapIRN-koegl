@@ -25,6 +25,7 @@ import argparse
 import os
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Optional, Tuple
@@ -240,21 +241,30 @@ def segment_pet(
     model_dir: Path,
     device: torch.device,
     use_mirroring: bool,
-) -> np.ndarray:
+) -> Tuple[np.ndarray, float, float]:
     """nnU-Net PET lesion mask for one timepoint.
 
     Reuses autopet-3-submission's own helpers rather than re-deriving the
     preprocessing: `main.py` there stacks [CT, PET] into the two channels the
     Dataset501 model was trained on and hands them to predict_single_npy_array.
+
+    Returns (mask, load_seconds, inference_seconds). The split matters for
+    scheduling: building the predictor is CPU and disk (a 245 MB checkpoint plus
+    the network build) and could overlap with GPU work, whereas the tiled
+    inference is GPU and would only contend with it.
     """
     sys.path.insert(0, AUTOPET_DIR)
     import autopet_main  # noqa: E402  (heavy; imported only when segmenting)
 
+    load_start = time.time()
     predictor = autopet_main.build_predictor(
         str(model_dir), folds=(0,), device=device, use_mirroring=use_mirroring
     )
+    load_seconds = time.time() - load_start
+
+    infer_start = time.time()
     seg = autopet_main.run_inference_in_memory(predictor, str(ct_path), str(pet_path))
-    return seg.astype(np.uint8)
+    return seg.astype(np.uint8), load_seconds, time.time() - infer_start
 
 
 def save_seg(seg: np.ndarray, reference_path: Path, out_path: Path) -> None:
@@ -262,6 +272,58 @@ def save_seg(seg: np.ndarray, reference_path: Path, out_path: Path) -> None:
     ref = nib.load(str(reference_path))
     out_path.parent.mkdir(parents=True, exist_ok=True)
     nib.save(nib.Nifti1Image(seg.astype(np.uint8), ref.affine, ref.header), str(out_path))
+
+
+class BackgroundPetSegmentation:
+    """Run the PET nnU-Net on a thread, concurrently with registration.
+
+    Registration is ~20 s of CPU (reading and body-masking the volumes, then the
+    single-threaded ANTs affine) against ~0.4 s of GPU, so the device is idle for
+    almost all of it. PET inference is ~14 s of GPU and nothing else needs it
+    until IO, so it fits inside that window almost entirely.
+
+    A thread rather than a process: this model needs the same environment, and
+    both antspyx (C++) and torch's CUDA calls release the GIL, so the two really
+    do proceed at once. A subprocess would add a fresh `import torch` -- more
+    than the overlap saves.
+    """
+
+    def __init__(self, ct_path, pet_path, model_dir, device, use_mirroring):
+        self.result = None
+        self.error = None
+        self.load_seconds = self.infer_seconds = 0.0
+        self._start = time.time()
+        self._thread = threading.Thread(
+            target=self._run,
+            args=(ct_path, pet_path, model_dir, device, use_mirroring),
+            daemon=True,
+        )
+        self._thread.start()
+
+    def _run(self, ct_path, pet_path, model_dir, device, use_mirroring):
+        try:
+            self.result, self.load_seconds, self.infer_seconds = segment_pet(
+                ct_path, pet_path, model_dir, device, use_mirroring
+            )
+        except Exception as exc:  # surfaced by join(), never silently swallowed
+            self.error = exc
+
+    def join(self):
+        """Block for the mask. Returns None on failure rather than raising -- a
+        pair with a slightly worse field still scores; a crashed container does
+        not."""
+        block_start = time.time()
+        self._thread.join()
+        self.blocking_seconds = time.time() - block_start
+        self.elapsed_seconds = time.time() - self._start
+        if self.error is not None:
+            print(
+                f"WARNING: PET segmentation failed ({self.error}); "
+                "IO will be skipped and the un-refined field written",
+                flush=True,
+            )
+            return None
+        return self.result
 
 
 def start_ct_segmentation(
@@ -480,32 +542,59 @@ def main() -> None:
     grid = torch.from_numpy(np.reshape(grid, (1,) + grid.shape)).to(device).float()
     transform = miccai2020_model_stage.SpatialTransform_unit().to(device)
 
+    build_start = time.time()
     model = create_model(device, cfg, args.weights)
+    build_seconds = time.time() - build_start
 
-    X, Y = load_pair(args.fixed_ct, args.fixed_pet, args.moving_ct, args.moving_pet)
-    X, Y = X.to(device), Y.to(device)
-
-    flow_affine = affine_flow(args.fixed_ct, args.moving_ct, cfg, device)
-    X_affine = transform(X, flow_affine, grid)
-
-    with torch.no_grad():
-        F_X_Y, _, _, _, _, _, _ = model(X_affine, Y)
-
-    total_unit_flow = compose(flow_affine, F_X_Y.permute(0, 2, 3, 4, 1), grid)
-    reg_seconds = time.time() - start
-    print(f"registration {reg_seconds:.1f}s", flush=True)
-
-    seg_seconds = io_seconds = 0.0
-    seg = None
+    # Launched before registration so its GPU inference fills the window ANTs
+    # spends on the CPU; joined below, before IO needs the mask.
+    pet_job = None
     if args.segment:
-        seg_start = time.time()
-        seg = segment_pet(
+        pet_job = BackgroundPetSegmentation(
             args.moving_ct, args.moving_pet, args.seg_model, device, args.seg_mirroring
         )
-        seg_seconds = time.time() - seg_start
-        print(f"segmentation {seg_seconds:.1f}s, {int(seg.sum())} lesion voxels", flush=True)
-        if args.seg_dir is not None:
-            save_seg(seg, args.moving_pet, args.seg_dir / args.moving_pet.name)
+
+    load_start = time.time()
+    X, Y = load_pair(args.fixed_ct, args.fixed_pet, args.moving_ct, args.moving_pet)
+    X, Y = X.to(device), Y.to(device)
+    load_seconds = time.time() - load_start
+
+    # ANTs is CPU-bound and single-threaded; the LapIRN forward is GPU. Reported
+    # apart because only the CPU part can usefully overlap with other GPU work.
+    affine_start = time.time()
+    flow_affine = affine_flow(args.fixed_ct, args.moving_ct, cfg, device)
+    affine_seconds = time.time() - affine_start
+
+    net_start = time.time()
+    X_affine = transform(X, flow_affine, grid)
+    with torch.no_grad():
+        F_X_Y, _, _, _, _, _, _ = model(X_affine, Y)
+    total_unit_flow = compose(flow_affine, F_X_Y.permute(0, 2, 3, 4, 1), grid)
+    net_seconds = time.time() - net_start
+
+    reg_seconds = time.time() - start
+    print(
+        f"registration {reg_seconds:.1f}s "
+        f"(read {load_seconds:.1f}s + model build {build_seconds:.1f}s + "
+        f"ANTs affine {affine_seconds:.1f}s [CPU] + network {net_seconds:.1f}s [GPU])",
+        flush=True,
+    )
+
+    seg_seconds = seg_blocking = io_seconds = 0.0
+    seg = None
+    if pet_job is not None:
+        seg = pet_job.join()
+        seg_seconds, seg_blocking = pet_job.elapsed_seconds, pet_job.blocking_seconds
+        if seg is not None:
+            print(
+                f"PET segmentation {seg_seconds:.1f}s elapsed, {seg_blocking:.1f}s blocking "
+                f"(model load {pet_job.load_seconds:.1f}s [CPU/disk] + "
+                f"inference {pet_job.infer_seconds:.1f}s [GPU]), "
+                f"{int(seg.sum())} lesion voxels",
+                flush=True,
+            )
+            if args.seg_dir is not None:
+                save_seg(seg, args.moving_pet, args.seg_dir / args.moving_pet.name)
 
     totalseg_seconds = totalseg_blocking = 0.0
     ct_labels = None
@@ -517,9 +606,13 @@ def main() -> None:
         totalseg_blocking = time.time() - join_start
         totalseg_seconds = time.time() - ts_launched
 
-    if args.io:
-        if seg is None:
-            raise SystemExit("--io needs the PET mask; do not pass --no-segment with it")
+    if args.io and seg is None:
+        print(
+            "WARNING: no PET mask, so IO cannot run its tumour terms; "
+            "writing the un-refined field",
+            flush=True,
+        )
+    if args.io and seg is not None:
         io_start = time.time()
         transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
         total_unit_flow = run_instance_optimisation(
@@ -536,12 +629,13 @@ def main() -> None:
     save_disp(total_unit_flow, args.output_disp)
     print(
         f"wrote {args.output_disp}\n"
-        f"  registration {reg_seconds:.1f}s | PET seg {seg_seconds:.1f}s | "
+        f"  registration {reg_seconds:.1f}s | "
+        f"PET seg {seg_seconds:.1f}s elapsed, {seg_blocking:.1f}s blocking | "
         f"IO {io_seconds:.1f}s | CT seg {totalseg_seconds:.1f}s elapsed, "
         f"{totalseg_blocking:.1f}s blocking (crop {TOTALSEG_CROP}, "
         f"z={288 - 2 * TOTALSEG_CROP}) | total {time.time() - start:.1f}s\n"
-        f"  (CT seg runs concurrently, so the stages do not sum to the total; "
-        f"only its blocking part adds to the runtime)",
+        f"  (PET and CT segmentation run concurrently with registration, so the "
+        f"stages do not sum to the total; only their blocking parts add to it)",
         flush=True,
     )
 
