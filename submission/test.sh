@@ -15,9 +15,15 @@ DATASET_JSON="${DATASET_JSON:-$REPO_ROOT/submission/PSMAReg_val_dataset.json}"
 LIMIT="${LIMIT:-0}"
 # PET lesion masks are written next to the fields so evaluate_disp.py can score
 # them. SEG=0 turns the segmentation off entirely (registration-only timing).
-EXTRA_ARGS=(--seg-dir /app/output/segmentations)
+EXTRA_ARGS=(--seg-dir /app/output/segmentations --ct-seg-dir /app/output/ct_labels)
 if [[ "${SEG:-1}" == "0" ]]; then
   EXTRA_ARGS=(--no-segment --no-io)
+fi
+# TOTALSEG_CROP slices are dropped from each end of z (z = 288 - 2*crop);
+# TOTALSEG=0 skips the CT labels entirely.
+TS_ENV=(-e "TOTALSEG_CROP=${TOTALSEG_CROP:-100}")
+if [[ "${TOTALSEG:-1}" == "0" ]]; then
+  EXTRA_ARGS+=(--no-totalseg)
 fi
 # IO step count and learning rate come from Code/config.py (io_it / io_lr),
 # alongside the w_io_* weights -- with DEV=1 that file is bind-mounted, so
@@ -47,8 +53,15 @@ fi
 
 DEV_MOUNT=()
 if [[ "${DEV:-0}" == "1" ]]; then
-  DEV_MOUNT=(--mount "type=bind,source=$REPO_ROOT/Code,target=/app/lapirn/Code,readonly")
-  echo "dev mode: /app/lapirn/Code bind-mounted from the working tree"
+  # infer.py is mounted too: the crop and the stage toggles live there, so a
+  # sweep would otherwise need a rebuild per value.
+  DEV_MOUNT=(
+    --mount "type=bind,source=$REPO_ROOT/Code,target=/app/lapirn/Code,readonly"
+    --mount "type=bind,source=$REPO_ROOT/submission/infer.py,target=/app/infer.py,readonly"
+    --mount "type=bind,source=$REPO_ROOT/submission/totalseg_runner.py,target=/app/totalseg_runner.py,readonly"
+    --mount "type=bind,source=$REPO_ROOT/time_totalsegmentator.py,target=/app/lapirn/time_totalsegmentator.py,readonly"
+  )
+  echo "dev mode: Code/, infer.py and the TotalSegmentator runner bind-mounted"
 fi
 
 echo "${#SUBJECTS[@]} pairs -> $OUTPUT_DIR"
@@ -60,6 +73,7 @@ for id in "${SUBJECTS[@]}"; do
     --ipc=host \
     --memory 60g \
     "${GPU_ARGS[@]}" \
+    "${TS_ENV[@]}" \
     --user "$(id -u):$(id -g)" \
     --network=none \
     --mount "type=bind,source=$DATA_DIR,target=/app/input,readonly" \

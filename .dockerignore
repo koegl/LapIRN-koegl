@@ -3,8 +3,10 @@
 # of data, logs and checkpoints to the daemon on every build.
 *
 !Code
+!time_totalsegmentator.py
 !submission/requirements.txt
 !submission/infer.py
 !submission/weights
+!submission/totalseg_runner.py
 Code/__pycache__
 Code/._*

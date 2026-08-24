@@ -53,6 +53,16 @@ DEFAULT_WEIGHTS = Path(os.environ.get("LAPIRN_WEIGHTS", "/app/weights/model.pth"
 DEFAULT_SEG_MODEL = Path(os.environ.get("NNUNET_MODEL_DIR", "/app/nnunet_model"))
 AUTOPET_DIR = os.environ.get("AUTOPET_DIR", "/app")
 
+# TotalSegmentator runs in its own interpreter (see totalseg_runner.py) and only
+# on a z-cropped volume: runtime falls roughly linearly with axial extent, but
+# from a large fixed floor -- 47.5 s for both volumes at z=288 against 32.3 s at
+# z=108, i.e. ~23 s of it is model loading. TOTALSEG_CROP slices are removed from
+# EACH end, so z = 288 - 2*crop. Overridable by env var so the crop can be swept
+# without a rebuild.
+TOTALSEG_PYTHON = os.environ.get("TOTALSEG_PYTHON", "/opt/tsvenv/bin/python")
+TOTALSEG_RUNNER = os.environ.get("TOTALSEG_RUNNER", "/app/totalseg_runner.py")
+TOTALSEG_CROP = int(os.environ.get("TOTALSEG_CROP", "100"))
+
 
 def build_config() -> TrainingConfig:
     """The model hyper-parameters of the submitted checkpoint.
@@ -253,6 +263,29 @@ def save_seg(seg: np.ndarray, reference_path: Path, out_path: Path) -> None:
     nib.save(nib.Nifti1Image(seg.astype(np.uint8), ref.affine, ref.header), str(out_path))
 
 
+def segment_ct(
+    fixed_ct: Path, moving_ct: Path, out_dir: Path, crop: int
+) -> None:
+    """TotalSegmentator CT labels for both timepoints, via the isolated venv.
+
+    A subprocess rather than an import: TotalSegmentator and the autopet nnunetv2
+    fork cannot live in one environment (see totalseg_runner.py).
+    """
+    import subprocess
+
+    subprocess.run(
+        [
+            TOTALSEG_PYTHON,
+            TOTALSEG_RUNNER,
+            str(fixed_ct),
+            str(moving_ct),
+            str(out_dir),
+            str(crop),
+        ],
+        check=True,
+    )
+
+
 def run_instance_optimisation(
     total_unit_flow: torch.Tensor,
     X: torch.Tensor,
@@ -332,6 +365,19 @@ def parse_args() -> argparse.Namespace:
         "matching autopet-3-submission/inference_all.py)",
     )
     parser.add_argument(
+        "--totalseg",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="TotalSegmentator CT labels for both timepoints. Not consumed by "
+        "IO yet -- present so the crop can be dialled in against the budget.",
+    )
+    parser.add_argument(
+        "--ct-seg-dir",
+        type=Path,
+        default=None,
+        help="write the CT labels here, named after the CT inputs",
+    )
+    parser.add_argument(
         "--io",
         action=argparse.BooleanOptionalAction,
         default=True,
@@ -400,11 +446,24 @@ def main() -> None:
             flush=True,
         )
 
+    totalseg_seconds = 0.0
+    if args.totalseg:
+        ts_start = time.time()
+        segment_ct(
+            args.fixed_ct,
+            args.moving_ct,
+            args.ct_seg_dir or Path("/tmp/ct_labels"),
+            TOTALSEG_CROP,
+        )
+        totalseg_seconds = time.time() - ts_start
+
     save_disp(total_unit_flow, args.output_disp)
     print(
         f"wrote {args.output_disp}\n"
-        f"  registration {reg_seconds:.1f}s | segmentation {seg_seconds:.1f}s | "
-        f"IO {io_seconds:.1f}s | total {time.time() - start:.1f}s",
+        f"  registration {reg_seconds:.1f}s | PET seg {seg_seconds:.1f}s | "
+        f"IO {io_seconds:.1f}s | CT seg {totalseg_seconds:.1f}s "
+        f"(crop {TOTALSEG_CROP}, z={288 - 2 * TOTALSEG_CROP}) | "
+        f"total {time.time() - start:.1f}s",
         flush=True,
     )
 

@@ -3,7 +3,8 @@
 #
 #   docker build -f submission/Dockerfile -t psmareg_lapirn \
 #     --build-context autopet=../autopet-3-submission \
-#     --build-context nnunet_model=<Dataset501 model dir> .
+#     --build-context nnunet_model=<Dataset501 model dir> \
+#     --build-context totalseg_weights=~/.totalsegmentator/nnunet/results .
 #
 # Named contexts keep the no-duplication property across repositories: the
 # nnU-Net fork and its weights are pulled straight from where they already live,
@@ -56,12 +57,36 @@ COPY --from=autopet main.py /app/autopet_main.py
 COPY --from=nnunet_model plans.json dataset.json /app/nnunet_model/
 COPY --from=nnunet_model fold_0/checkpoint_final.pth /app/nnunet_model/fold_0/
 
+# --- TotalSegmentator: CT organ labels, in its OWN environment -----------------
+# It cannot share this one. TotalSegmentator 2.17 imports custom_trainers at
+# module level, which needs nnunetv2's `infer_dataset_class` -- absent from the
+# autopet fork (2.5.1) installed above, which in turn is the only source of
+# nnUNetTrainer_PGPSplus for the PET model. --system-site-packages lets the venv
+# reuse torch and friends, so the isolation costs only nnunetv2 + TotalSegmentator.
+RUN python -m venv --system-site-packages /opt/tsvenv \
+    && /opt/tsvenv/bin/pip install --no-cache-dir \
+        nnunetv2==2.8.1 TotalSegmentator==2.17.0
+
+# Only the two datasets `task="total", fast=True, body_seg=True` actually loads:
+# the 3 mm total model and the 6 mm body model (~290 MB). The full weights tree
+# is 2.8 GB of full-resolution and MRI models this never touches.
+COPY --from=totalseg_weights Dataset297_TotalSegmentator_total_3mm_1559subj \
+     /app/totalseg_weights/Dataset297_TotalSegmentator_total_3mm_1559subj
+COPY --from=totalseg_weights Dataset300_body_6mm_1559subj \
+     /app/totalseg_weights/Dataset300_body_6mm_1559subj
+ENV TOTALSEG_WEIGHTS_PATH=/app/totalseg_weights \
+    TOTALSEG_HOME_DIR=/tmp/totalseg
+
+COPY submission/totalseg_runner.py /app/totalseg_runner.py
+
 # The method lives in Code/ as flat sibling modules (import Functions, import
 # my_data, ...), so it is not a package -- putting the directory on PYTHONPATH
 # is all that is needed. A bind mount over /app/lapirn/Code shadows this copy
 # during development; the baked copy is what the submitted image ships.
 COPY Code /app/lapirn/Code
-ENV PYTHONPATH=/app/lapirn/Code
+# the crop/restore geometry the TotalSegmentator timing sweep measured
+COPY time_totalsegmentator.py /app/lapirn/time_totalsegmentator.py
+ENV PYTHONPATH=/app/lapirn/Code:/app/lapirn
 
 COPY submission/weights /app/weights
 COPY submission/infer.py /app/infer.py
@@ -81,7 +106,8 @@ ENV MPLCONFIGDIR=/tmp/mpl \
 # of the image's files, so anything not world-readable is unreadable -- make the
 # read-only payload explicitly world-readable rather than relying on the modes
 # the files happened to have on the build host.
-RUN chmod -R a+rX /app/weights /app/lapirn/Code /app/infer.py /app/autopet_main.py /app/nnunet_model
+RUN chmod -R a+rX /app/weights /app/lapirn /app/infer.py /app/autopet_main.py \
+    /app/nnunet_model /app/totalseg_runner.py /app/totalseg_weights
 
 RUN mkdir -p /app/input /app/output && chmod -R 777 /app/output /tmp
 
