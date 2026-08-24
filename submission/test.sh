@@ -19,9 +19,9 @@ EXTRA_ARGS=(--seg-dir /app/output/segmentations --ct-seg-dir /app/output/ct_labe
 if [[ "${SEG:-1}" == "0" ]]; then
   EXTRA_ARGS=(--no-segment --no-io)
 fi
-# TOTALSEG_CROP slices are dropped from each end of z (z = 288 - 2*crop);
-# TOTALSEG=0 skips the CT labels entirely.
-TS_ENV=(-e "TOTALSEG_CROP=${TOTALSEG_CROP:-100}")
+# The axial crop is cfg.io_seg_crop in Code/config.py, with io_it and io_lr --
+# bind-mounted under DEV=1, so sweeping it needs no rebuild. TOTALSEG=0 skips
+# the CT labels entirely.
 if [[ "${TOTALSEG:-1}" == "0" ]]; then
   EXTRA_ARGS+=(--no-totalseg)
 fi
@@ -73,7 +73,6 @@ for id in "${SUBJECTS[@]}"; do
     --ipc=host \
     --memory 60g \
     "${GPU_ARGS[@]}" \
-    "${TS_ENV[@]}" \
     --user "$(id -u):$(id -g)" \
     --network=none \
     --mount "type=bind,source=$DATA_DIR,target=/app/input,readonly" \
