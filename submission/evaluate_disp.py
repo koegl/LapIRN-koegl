@@ -117,19 +117,30 @@ class SpatialTransformer(torch.nn.Module):
 
 
 def multilabel_dice(
-    pred: torch.Tensor, target: torch.Tensor, label_ids: range = range(1, 118)
+    pred: torch.Tensor,
+    target: torch.Tensor,
+    label_ids: range = range(1, 118),
+    present_only: bool = False,
 ) -> float:
     """Mean dice over the FIXED label set, matching the official scorer and
     Code/inference.py:multilabel_dice. Labels absent from both volumes score 0,
     not "skip" -- averaging only over present labels would inflate the result.
+
+    present_only=True skips absent labels instead, and is ONLY for comparing
+    sub-volumes. A z-band holds a fraction of the 117 structures, so scoring the
+    missing ones as 0 makes the result a measure of how many labels the band
+    happens to contain rather than of registration quality. Never use it for a
+    whole-volume score -- it is not what the scorer computes.
     """
     dices = []
     for lbl in label_ids:
         p, t = pred == lbl, target == lbl
         volume_sum = p.sum() + t.sum()
-        dices.append(
-            0.0 if volume_sum == 0 else (2.0 * (p & t).sum() / volume_sum).item()
-        )
+        if volume_sum == 0:
+            if not present_only:
+                dices.append(0.0)
+            continue
+        dices.append((2.0 * (p & t).sum() / volume_sum).item())
     return float(np.mean(dices)) if dices else float("nan")
 
 
@@ -251,10 +262,13 @@ def evaluate_case(
     # in-band dice improves and the out-of-band dice does not, the crop is what
     # limits the term -- not its weight or the label quality.
     lo, hi = cfg.io_seg_crop, full_shape[2] - cfg.io_seg_crop
-    dice_in = multilabel_dice(warped_i[:, :, lo:hi], fixed_i[:, :, lo:hi])
+    dice_in = multilabel_dice(
+        warped_i[:, :, lo:hi], fixed_i[:, :, lo:hi], present_only=True
+    )
     dice_out = multilabel_dice(
         torch.cat([warped_i[:, :, :lo], warped_i[:, :, hi:]], dim=2),
         torch.cat([fixed_i[:, :, :lo], fixed_i[:, :, hi:]], dim=2),
+        present_only=True,
     )
 
     spacing = nib.load(
