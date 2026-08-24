@@ -198,6 +198,15 @@ We descend it for 90 Adam steps with a learning rate of $10^{-2}$ and keep the b
 %Because the global biomarker terms constrain only net sums, in which per-lesion errors cancel, we additionally pin the largest lesions individually by evaluating the MTV and TLG terms per connected component \todo{keep or drop depending on the final configuration}.
 %Instance optimisation requires organ and lesion segmentations of both scans, which on our test set are the automatic labels described in Sec.~\ref{sec:data_and_preprocessing}, and adds \todo{n}~s per pair.
 
+\subsubsection{Submission container.}
+\label{sec:container}
+Instance optimisation needs organ segmentations of both scans and lesion segmentations of the moving scan, and the submitted container has to produce them and register the pair within a budget of 90~s per image pair, which the configuration above exceeds.
+The deployed method therefore differs from the one evaluated in validation in three points, all of them inside instance optimisation or in the labels it consumes; everything up to and including the predicted field is identical.
+First, PET lesion masks come from an nnU-Net trained on this dataset with progressive patch-size growing~\cite{ref_progressive_patch}, which is faster at inference than the ensemble used in validation.
+Second, CT organ labels are produced with TotalSegmentator in its fast mode together with its body segmentation, and only within a 100-slice axial band, selected as the region in which pre-optimisation Dice is worst and refinement therefore has the most to gain; segmenting the full volume does not fit the budget.
+Third, instance optimisation runs for 18 steps at a learning rate of $0.1$ instead of 90 steps at $10^{-2}$.
+We report both configurations separately in Sec.~\ref{sec:evaluation}, since only the validation one is free of the time constraint.
+
 \subsection{Model Selection}
 \label{sec:model_selection}
 

@@ -19,6 +19,8 @@ These surrogate labels underlie every validation metric in this work, including 
 Being predictions rather than the challenge's reference annotations, they carry their own error, so their absolute values are not directly comparable to the official validation leaderboard; we use them to compare methods against each other under an identical protocol.
 Where we report official validation-leaderboard results, these are computed by the organisers against their reference annotations and are marked as such.
 Since the leaderboard covers the same cases with the correct labels, we use the agreement between the two rankings as a check on the surrogate protocol, and prefer the leaderboard whenever it is available for the models being compared.
+We report our method in two configurations, distinguished throughout as \emph{ours (validation)} and \emph{ours (container)}: the former is the method as described in Sec.~\ref{sec:pipeline}, the latter the variant of Sec.~\ref{sec:container} that fits the 90\,s per pair the submission container allows.
+The difference is confined to instance optimisation and to how the segmentations it consumes are produced, so the gap between the two rows is the price of that time budget.
 
 \subsection{Ablation of the Objective}
 \label{sec:ablation}
