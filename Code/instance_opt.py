@@ -531,8 +531,6 @@ def run_io(
     opt_shape: Optional[Tuple[int, int, int]] = None,
     history_csv: Optional[Path] = None,
     deadline: Optional[float] = None,
-    min_step_seconds: float = 4.0,
-    max_steps: Optional[int] = None,
 ) -> torch.Tensor:
     # `deadline` is an absolute time.time() value by which this function must
     # have returned, or None for "run all cfg.io_it steps regardless" (training,
@@ -540,18 +538,13 @@ def run_io(
     # challenge budget is wall time per pair, not a step count: the same io_it
     # that fits on the evaluation machine may overrun here, and vice versa.
     #
+    # It is the only budget argument, because it is the only one that is a
+    # runtime value; everything shaping the loop -- the step ceiling, the first
+    # step's assumed cost, the safety margin -- is a tuned parameter and lives in
+    # cfg alongside io_it and io_lr.
+    #
     # Stopping is safe at ANY step: `best_disp` starts as the un-refined field,
     # so zero steps returns exactly what IO was handed.
-    #
-    # `min_step_seconds` is the up-front guess for the first step, which is the
-    # one step whose cost cannot be measured before committing to it (and the
-    # slowest, since it pays cuDNN autotuning and allocator warm-up). Every
-    # later step is predicted from the one before it.
-    #
-    # `max_steps` overrides cfg.io_it as the ceiling. Under a deadline the two
-    # play different roles: io_it was TUNED to fit a budget on one machine, so
-    # reusing it as the cap would throw away exactly the headroom the deadline
-    # exists to exploit. None keeps cfg.io_it, for every caller without a budget.
     # NCC is not scored by the challenge; keep it as a modest dense proxy that
     # fills gradient where label-dice is flat. Try a small value (e.g. 1-3);
     # defaults to cfg.w_ct if not set.
@@ -617,15 +610,14 @@ def run_io(
     best_disp = base.clone()
     best_disp_i = 0
     history: list[Dict[str, float]] = []
-    # A step's cost is predicted from the previous step's, inflated by this much
-    # before it is compared against the remaining time. The margin absorbs the
-    # spread between steps; without it a step started at deadline-epsilon still
-    # runs to completion and overruns by its full duration.
-    step_safety = 1.3
-    next_step_estimate = min_step_seconds
+    # Under a deadline the step ceiling is cfg.io_max_steps -- effectively no
+    # ceiling, so time is the only thing that stops the loop. Without one it is
+    # cfg.io_it, unchanged for every offline caller.
+    step_ceiling = cfg.io_it if deadline is None else cfg.io_max_steps
+    step_safety = cfg.io_step_safety
+    next_step_estimate = cfg.io_min_step_seconds
     stop_reason = "step budget"
 
-    step_ceiling = cfg.io_it if max_steps is None else max_steps
     pbar = tqdm.tqdm(range(step_ceiling), desc="IO optimization")
     for i in pbar:
         if deadline is not None:

@@ -516,8 +516,6 @@ def run_instance_optimisation(
     cfg: TrainingConfig,
     device: torch.device,
     deadline: Optional[float],
-    min_step_seconds: float,
-    max_steps: Optional[int],
 ) -> Tuple[torch.Tensor, int]:
     """Refine the TOTAL field with Code/instance_opt.py:run_io.
 
@@ -562,8 +560,6 @@ def run_instance_optimisation(
         log_hard_dice=False,
         use_class_weights=False,
         deadline=deadline,
-        min_step_seconds=min_step_seconds,
-        max_steps=max_steps,
     )
     return refined, instance_opt.run_io.steps_taken
 
@@ -622,82 +618,12 @@ def parse_args() -> argparse.Namespace:
         "Its hyper-parameters -- io_it, io_lr and the w_io_* weights -- all come "
         "from Code/config.py; there is no override here.",
     )
-    # --- time budget ---------------------------------------------------------
-    # cfg.io_it becomes an UPPER bound once a budget is set: IO takes as many
-    # steps as fit and stops, so the number is decided by the machine the
-    # container happens to run on rather than by a value tuned here. Set
-    # --time-budget 0 to restore the old fixed-step behaviour (for timing runs
-    # and for offline evaluation, where wall time does not matter).
-    parser.add_argument(
-        "--time-budget",
-        type=float,
-        default=float(os.environ.get("PSMAREG_TIME_BUDGET", 90.0)),
-        help="wall-clock seconds allowed per pair, measured from CONTAINER "
-        "start (default: 90, the challenge limit). 0 disables the deadline and "
-        "runs the full cfg.io_it steps.",
-    )
-    parser.add_argument(
-        "--startup-reserve",
-        type=float,
-        default=float(os.environ.get("PSMAREG_STARTUP_RESERVE", 2.0)),
-        help="seconds the container runtime spends between `docker run` and "
-        "exec'ing this interpreter. Invisible from inside the container, so it "
-        "is subtracted from the budget as a constant; measure it with test.sh, "
-        "which prints the gap between its own clock and the exec timestamp. "
-        "Docker on the build host takes 0.44s; the default keeps headroom for a "
-        "slower runtime, since the organizers' is unknown and an apptainer SIF "
-        "starts more slowly than a warm Docker image.",
-    )
-    parser.add_argument(
-        "--finish-reserve",
-        type=float,
-        default=float(os.environ.get("PSMAREG_FINISH_RESERVE", 9.0)),
-        help="seconds held back for everything after IO -- converting and "
-        "writing the displacement field, plus interpreter teardown -- and for "
-        "safety margin. Measured over the 20 validation pairs: write 4.88-5.20s "
-        "plus teardown 1.73-1.96s, worst case 7.15s; the default rounds that up "
-        "to 9. Overrunning costs the whole pair, so keep this generous.",
-    )
-    parser.add_argument(
-        "--io-min-step",
-        type=float,
-        default=float(os.environ.get("PSMAREG_IO_MIN_STEP", 4.0)),
-        help="assumed cost of the FIRST IO step, the only one that cannot be "
-        "predicted from its predecessor (and the slowest, paying cuDNN and "
-        "allocator warm-up). IO is skipped entirely if less than this remains.",
-    )
-    parser.add_argument(
-        "--io-max-steps",
-        type=int,
-        default=int(os.environ.get("PSMAREG_IO_MAX_STEPS", 60)),
-        help="ceiling on IO steps, replacing cfg.io_it while a deadline is "
-        "active. cfg.io_it was tuned to fit the budget on one machine, so "
-        "reusing it would cap the container to that machine's speed on a faster "
-        "one. Only reached if the budget has not run out first. Ignored when "
-        "--time-budget is 0, which restores cfg.io_it exactly.",
-    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
     start = mark("main() entered")
-
-    # The 90 s window opens when the CONTAINER starts, which is --startup-reserve
-    # before this process was exec'd; IO has to be finished --finish-reserve
-    # earlier than that so the field still gets written. None disables the whole
-    # mechanism and restores fixed cfg.io_it steps.
-    io_deadline: Optional[float] = None
-    if args.time_budget > 0:
-        container_start = PROCESS_START - args.startup_reserve
-        io_deadline = container_start + args.time_budget - args.finish_reserve
-        print(
-            f"time budget {args.time_budget:.0f}s from container start "
-            f"(exec +{args.startup_reserve:.1f}s), reserving "
-            f"{args.finish_reserve:.1f}s to write the field -> IO must end "
-            f"{io_deadline - PROCESS_START:.1f}s after exec",
-            flush=True,
-        )
 
     torch.manual_seed(0)
     np.random.seed(0)
@@ -706,6 +632,22 @@ def main() -> None:
 
     device = torch.device(args.device)
     cfg = build_config()
+
+    # The 90 s window opens when the CONTAINER starts, which is --startup-reserve
+    # before this process was exec'd; IO has to be finished --finish-reserve
+    # earlier than that so the field still gets written. None disables the whole
+    # mechanism and restores fixed cfg.io_it steps.
+    io_deadline: Optional[float] = None
+    if cfg.io_time_budget > 0:
+        container_start = PROCESS_START - cfg.io_startup_reserve
+        io_deadline = container_start + cfg.io_time_budget - cfg.io_finish_reserve
+        print(
+            f"time budget {cfg.io_time_budget:.0f}s from container start "
+            f"(exec +{cfg.io_startup_reserve:.1f}s), reserving "
+            f"{cfg.io_finish_reserve:.1f}s to write the field -> IO must end "
+            f"{io_deadline - PROCESS_START:.1f}s after exec",
+            flush=True,
+        )
 
     # Launched before anything else so its interpreter startup and model loading
     # overlap with the GPU work below; joined just before IO, the first consumer.
@@ -800,11 +742,11 @@ def main() -> None:
     io_steps = 0
     if args.io and seg is not None:
         remaining = None if io_deadline is None else io_deadline - time.time()
-        if remaining is not None and remaining < args.io_min_step:
+        if remaining is not None and remaining < cfg.io_min_step_seconds:
             print(
                 f"skipping IO: {remaining:.1f}s left before the deadline, "
-                f"below the {args.io_min_step:.1f}s a first step is assumed to "
-                f"cost; writing the un-refined field",
+                f"below the {cfg.io_min_step_seconds:.1f}s a first step is "
+                f"assumed to cost; writing the un-refined field",
                 flush=True,
             )
         else:
@@ -816,11 +758,9 @@ def main() -> None:
                 total_unit_flow, X, Y, seg, ct_labels,
                 transform, transform_nearest, grid, cfg, device,
                 deadline=io_deadline,
-                min_step_seconds=args.io_min_step,
-                max_steps=None if io_deadline is None else args.io_max_steps,
             )
             io_seconds = mark("IO done") - io_start
-            step_ceiling = cfg.io_it if io_deadline is None else args.io_max_steps
+            step_ceiling = cfg.io_it if io_deadline is None else cfg.io_max_steps
             print(
                 f"instance optimisation {io_seconds:.1f}s "
                 f"({io_steps} of at most {step_ceiling} steps @ lr {cfg.io_lr}, "

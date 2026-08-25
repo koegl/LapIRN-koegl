@@ -57,20 +57,6 @@ fi
 echo "runtime=$RUNTIME image=$IMAGE"
 echo "${#SUBJECTS[@]} pairs: $DATA_DIR -> $OUTPUT_DIR"
 
-# infer.py's time-budget knobs, forwarded explicitly: docker passes nothing by
-# default and apptainer runs with --cleanenv, so in both cases the host
-# environment does NOT reach the container. Only variables that are actually set
-# are forwarded; the two runtimes spell the flag differently.
-BUDGET_DOCKER=()
-BUDGET_APPTAINER=()
-for _v in PSMAREG_TIME_BUDGET PSMAREG_STARTUP_RESERVE PSMAREG_FINISH_RESERVE \
-          PSMAREG_IO_MIN_STEP PSMAREG_IO_MAX_STEPS; do
-  if [[ -n "${!_v:-}" ]]; then
-    BUDGET_DOCKER+=(-e "$_v=${!_v}")
-    BUDGET_APPTAINER+=(--env "$_v=${!_v}")
-  fi
-done
-
 run_one() {
   local id="$1"
   local args=(
@@ -88,7 +74,6 @@ run_one() {
       --user "$(id -u):$(id -g)" --network=none \
       --mount "type=bind,source=$DATA_DIR,target=/app/input,readonly" \
       --mount "type=bind,source=$OUTPUT_DIR,target=/app/output" \
-      "${BUDGET_DOCKER[@]}" \
       "$IMAGE" "${args[@]}"
   else
     # --cleanenv: without it the host environment leaks in and overrides the
@@ -97,7 +82,6 @@ run_one() {
     "$RUNTIME" run --nv --cleanenv \
       --bind "$DATA_DIR:/app/input:ro" \
       --bind "$OUTPUT_DIR:/app/output" \
-      "${BUDGET_APPTAINER[@]}" \
       "$IMAGE" "${args[@]}"
   fi
 }

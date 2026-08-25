@@ -26,8 +26,11 @@ if [[ "${TOTALSEG:-1}" == "0" ]]; then
   EXTRA_ARGS+=(--no-totalseg)
 fi
 # IO step count and learning rate come from Code/config.py (io_it / io_lr),
-# alongside the w_io_* weights -- with DEV=1 that file is bind-mounted, so
-# retuning them needs no rebuild. IO=0 turns the stage off for timing runs.
+# alongside the w_io_* weights and the wall-clock budget (io_time_budget and the
+# io_*_reserve fields) -- with DEV=1 that file is bind-mounted, so retuning them
+# needs no rebuild. IO=0 turns the stage off for timing runs; set
+# io_time_budget = 0 there to disable the deadline and time the un-truncated
+# pipeline instead.
 if [[ "${IO:-1}" == "0" ]]; then
   EXTRA_ARGS+=(--no-io)
 fi
@@ -38,19 +41,6 @@ fi
 # affects local testing, never the submitted image.
 #   GPU_ARGS='--gpus device=0' bash test.sh   to use the organizers' exact form
 read -r -a GPU_ARGS <<< "${GPU_ARGS:---runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=0 -e NVIDIA_DRIVER_CAPABILITIES=compute,utility}"
-
-# The time-budget knobs are read from the environment by infer.py, and docker
-# forwards nothing by default. Only the ones actually set are passed, so an
-# unset variable keeps infer.py's own default rather than becoming an empty
-# string that float() would reject.
-BUDGET_ENV=()
-for _v in PSMAREG_TIME_BUDGET PSMAREG_STARTUP_RESERVE PSMAREG_FINISH_RESERVE \
-          PSMAREG_IO_MIN_STEP PSMAREG_IO_MAX_STEPS; do
-  [[ -n "${!_v:-}" ]] && BUDGET_ENV+=(-e "$_v=${!_v}")
-done
-if (( ${#BUDGET_ENV[@]} )); then
-  echo "time-budget overrides: ${BUDGET_ENV[*]//-e /}"
-fi
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -102,7 +92,6 @@ for id in "${SUBJECTS[@]}"; do
     --network=none \
     --mount "type=bind,source=$DATA_DIR,target=/app/input,readonly" \
     --mount "type=bind,source=$OUTPUT_DIR,target=/app/output" \
-    "${BUDGET_ENV[@]}" \
     "${DEV_MOUNT[@]}" \
     "$IMAGE" \
       "/app/input/PSMARegPSMA_${id}_0000_00.nii.gz" \

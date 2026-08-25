@@ -175,6 +175,30 @@ class TrainingConfig:
     # io params
     io_lr: float = 0.5e-1
     io_it: int = 9
+
+    # --- per-pair wall-clock budget (submission container only) -------------
+    # io_time_budget = 0 disables the deadline entirely and restores fixed io_it
+    io_time_budget: float = 90.0
+    # Seconds the container runtime spends between `docker run` and exec'ing the
+    # interpreter.
+    io_startup_reserve: float = 2.0
+    # Held back for everything after IO: converting and writing the displacement
+    # field, plus interpreter teardown.
+    io_finish_reserve: float = 9.0
+    # Assumed cost of the FIRST IO step -- the only one that cannot be predicted
+    # from its predecessor, and the slowest, since it pays cuDNN autotuning and
+    # allocator warm-up. IO is skipped outright if less than this remains.
+    io_min_step_seconds: float = 4.0
+    # Each step's cost is predicted from the previous step's, inflated by this
+    # before being compared against the time left. Without the margin a step
+    # started just under the deadline still runs to completion and overruns by
+    # its full duration.
+    io_step_safety: float = 1.3
+    # Ceiling on IO steps under a deadline. Deliberately far above anything
+    # reachable: time is meant to be the only thing that stops the loop, and a
+    # step count tuned on one machine would cap a faster one. It exists purely so
+    # a broken clock cannot spin forever.
+    io_max_steps: int = 1_000_000
     # Axial band the CT labels for the IO dice term are computed on, as a
     # half-open slice range [start, stop) -- so (141, 241) is the 100 slices
     # 141..240 inclusive. An explicit range rather than a symmetric margin:
