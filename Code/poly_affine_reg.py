@@ -76,10 +76,13 @@ def get_polyaffine_dvf(
     icp_tol: float = 1e-3,
     min_voxels: int = 200,
     max_points: int = 3000,
+    use_cache: bool = True,
 ) -> np.ndarray:
     """Canonical polyaffine residual DVF (H, W, D, 3), voxel units, (i, j, k)
     order. Cached in memory and on disk. `get_affine_dvf_fn` returns the
-    canonical affine DVF and is only called on a cache miss."""
+    canonical affine DVF and is only called on a cache miss. With
+    `use_cache=False` nothing is read from or written to either cache and the
+    polyaffine is always recomputed (for runtime measurements)."""
 
     if case_id_x == case_id_y:
         case_id = case_id_x
@@ -87,14 +90,14 @@ def get_polyaffine_dvf(
         case_id = f"{case_id_x}_{case_id_y}"
 
     mem_key = f"{case_id}_{tp_x}_{tp_y}"
-    if mem_key in _POLY_DVF_CACHE:
+    if use_cache and mem_key in _POLY_DVF_CACHE:
         return _POLY_DVF_CACHE[mem_key].astype(np.float32)
 
     cfg = config.TrainingConfig()
     cfg.cache_dir_poly.mkdir(parents=True, exist_ok=True)
 
     cache_path = _poly_cache_path(case_id, cfg.cache_dir_poly, tp_x, tp_y)
-    if cache_path.exists():
+    if use_cache and cache_path.exists():
         dvf = np.load(str(cache_path))
         _POLY_DVF_CACHE[mem_key] = dvf.astype(np.float16)
         return dvf.astype(np.float32)
@@ -134,8 +137,9 @@ def get_polyaffine_dvf(
     disp = integrate_svf(velocity, ss_steps, device)
     poly_dvf = disp[0].permute(1, 2, 3, 0).contiguous().cpu().numpy().astype(np.float32)
 
-    np.save(str(cache_path), poly_dvf)
-    _POLY_DVF_CACHE[mem_key] = poly_dvf.astype(np.float16)
+    if use_cache:
+        np.save(str(cache_path), poly_dvf)
+        _POLY_DVF_CACHE[mem_key] = poly_dvf.astype(np.float16)
     return poly_dvf
 
 

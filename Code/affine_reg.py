@@ -205,6 +205,7 @@ def get_affine_dvf(
     preprocess_ct_fn,
     ants_affine_to_fullres_voxel_disp_fn,
     ct_window: Tuple[float, float] = (-1000.0, 1000.0),
+    use_cache: bool = True,
 ) -> np.ndarray:
     """Load cached affine DVF or compute and cache it if not yet available.
 
@@ -218,6 +219,10 @@ def get_affine_dvf(
         preprocess_ct_fn: Passed to compute_affine_dvf.
         ants_affine_to_fullres_voxel_disp_fn: Passed to compute_affine_dvf.
         ct_window: HU window for preprocessing.
+        use_cache: When False, neither the in-memory nor the on-disk cache is
+            read or written — the affine is always recomputed from scratch.
+            Needed for runtime measurements, where a cache hit would hide the
+            cost of the affine preregistration.
 
     Returns:
         DVF of shape (H, W, D, 3), float32, voxel displacements.
@@ -229,14 +234,15 @@ def get_affine_dvf(
         case_id = f"{case_id_x}_{case_id_y}"
 
     mem_key = f"{case_id}_{tp_x}_{tp_y}"
-    if mem_key in _DVF_CACHE:
-        return _DVF_CACHE[mem_key].astype(np.float32)
+    if use_cache:
+        if mem_key in _DVF_CACHE:
+            return _DVF_CACHE[mem_key].astype(np.float32)
 
-    cache_path = _cache_path(case_id, tp_x, tp_y)
-    if cache_path.exists():
-        dvf = np.load(str(cache_path))
-        _DVF_CACHE[mem_key] = dvf.astype(np.float16)
-        return dvf.astype(np.float32)
+        cache_path = _cache_path(case_id, tp_x, tp_y)
+        if cache_path.exists():
+            dvf = np.load(str(cache_path))
+            _DVF_CACHE[mem_key] = dvf.astype(np.float16)
+            return dvf.astype(np.float32)
 
     cfg = config.TrainingConfig()
     cfg.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -248,8 +254,9 @@ def get_affine_dvf(
         ants_affine_to_fullres_voxel_disp_fn=ants_affine_to_fullres_voxel_disp_fn,
         ct_window=ct_window,
     )
-    np.save(str(cache_path), dvf)
-    _DVF_CACHE[mem_key] = dvf
+    if use_cache:
+        np.save(str(_cache_path(case_id, tp_x, tp_y)), dvf)
+        _DVF_CACHE[mem_key] = dvf
     return dvf
     """
     cache_path = _cache_path(case_id, tp_x, tp_y)

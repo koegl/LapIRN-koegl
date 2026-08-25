@@ -173,7 +173,7 @@ class TrainingConfig:
     w_bone_rigidity: float = 0.2
 
     # io params
-    io_lr: float = 0.5e-1
+    io_lr: float = 0.25e-1
     io_it: int = 9
 
     # --- per-pair wall-clock budget (submission container only) -------------
@@ -358,7 +358,7 @@ class TrainingConfig:
 
     mlflow_tracking_uri: str = "file:///home/iml/fryderyk.koegl/code/mlruns"
     mlflow_experiment: str = "PSMAReg_LapIRN"
-    logger_backend: str = "wandb"  # one of: "mlflow", "wandb", "both", "none"
+    logger_backend: str = "both"  # one of: "mlflow", "wandb", "both", "none"
     wandb_project: str = "PSMAReg_LapIRN"
     wandb_entity: Optional[str] = None
     wandb_mode: Optional[str] = None  # e.g. "offline" on clusters without internet

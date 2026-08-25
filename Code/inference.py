@@ -1,6 +1,7 @@
 import json
 import shutil
 import sys
+import time
 import zipfile
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
@@ -222,6 +223,13 @@ results_csv_my_val_hd95 = Path(
 # before-registration hd95 values as comma-separated values in the terminal
 # instead (paste them into the existing csv by hand).
 print_hd95_before_to_terminal: bool = False
+
+# the affine (and polyaffine) preregistration is cached in memory and on disk,
+# so a second run over the same cases loads it instead of computing it. that
+# hides the affine cost in the per-case runtimes, so set this to False when
+# measuring how long a method actually takes — nothing is then read from or
+# written to either cache.
+use_affine_cache: bool = False
 
 
 def compress_to_zip(source_dir: Path, output_zip: Path) -> None:
@@ -605,6 +613,21 @@ def append_metric_to_csv(
     tqdm.tqdm.write(f"results saved → {csv_path}")
 
 
+def print_runtimes(runtimes: Dict[str, float], desc: str) -> None:
+    """Per-case registration time plus mean +- std (population std, matching np default)."""
+    if not runtimes:
+        return
+    values = np.array(list(runtimes.values()), dtype=np.float64)
+    tqdm.tqdm.write(f"\n[{desc}] registration time per case (s):")
+    for case_id, value in runtimes.items():
+        tqdm.tqdm.write(f"  {case_id}: {value:.2f}")
+    tqdm.tqdm.write(
+        f"[{desc}] runtime over {values.size} cases: "
+        f"{values.mean():.2f} +- {values.std():.2f} s "
+        f"(min {values.min():.2f}, max {values.max():.2f})\n"
+    )
+
+
 def evaluate_split(
     subjects: List[str],
     image_dir: Path,
@@ -646,6 +669,7 @@ def evaluate_split(
     hd95s: Dict[str, float] = {}
     hd95s_before: Dict[str, float] = {}
     per_case: Dict[str, Dict[int, float]] = {}
+    runtimes: Dict[str, float] = {}
     for case_id in tqdm.tqdm(subjects, desc=desc, ncols=150):
         (
             dice_after,
@@ -656,6 +680,7 @@ def evaluate_split(
             hd95,
             hd95_before,
             per_label,
+            runtime_s,
         ) = process_subject(
             case_id,
             image_dir,
@@ -690,6 +715,9 @@ def evaluate_split(
         hd95s[case_id] = hd95
         hd95s_before[case_id] = hd95_before
         per_case[case_id] = per_label
+        runtimes[case_id] = runtime_s
+
+    print_runtimes(runtimes, desc)
 
     df = build_per_label_df(per_case)
     df.to_csv(per_label_csv)
@@ -722,6 +750,12 @@ def is_old_model(model_path: Path) -> bool:
     return mtime < ref
 
 
+def sync_device(device: torch.device) -> None:
+    """CUDA is async — without this the timer would stop before the GPU work does."""
+    if device.type == "cuda":
+        torch.cuda.synchronize(device)
+
+
 def process_subject(
     case_id: str,
     val_image_dir: Path,
@@ -747,10 +781,17 @@ def process_subject(
     pet_label_template: str = "PSMARegPSMA_{case_id}_0001_{tp}",
     chase_flag: str = "chase_best_model",
     external_disp_dir: Optional[Path] = None,
-) -> Tuple[float, float, float, float, float, float, float, Dict[int, float]]:
+) -> Tuple[float, float, float, float, float, float, float, Dict[int, float], float]:
     # an external displacement field replaces the affine prereg AND the network:
     # it already is the total transform. IO still runs on top if use_io is set.
     use_external = external_disp_dir is not None
+
+    # --- timing: only the registration itself (image IO, affine prereg, network
+    # forward / external field, composition, instance optimisation). Everything
+    # after the stop is evaluation (dice / hd95 / ndv / mtv / tlg, label IO) and
+    # submission writing, which is identical across methods and must not count.
+    sync_device(device)
+    t_start = time.perf_counter()
 
     if case_id in image_pair_memory_cache:
         pair = image_pair_memory_cache[case_id]
@@ -778,6 +819,7 @@ def process_subject(
             make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
             preprocess_ct_fn=affine_reg.preprocess_ct,
             ants_affine_to_fullres_voxel_disp_fn=affine_reg.ants_affine_to_fullres_voxel_disp,
+            use_cache=use_affine_cache,
         )
 
     # chase_leaderboard: the submitted field is a half-resolution field that the
@@ -834,6 +876,7 @@ def process_subject(
                 get_affine_dvf_fn=get_affine_dvf_canon,
                 cfg=cfg,
                 device=device,
+                use_cache=use_affine_cache,
             )
             flow_poly = poly_affine_reg.create_polyaffine_flow(
                 poly_dvf=poly_dvf,
@@ -941,6 +984,9 @@ def process_subject(
             opt_shape=io_opt_shape,
             history_csv=out_dir / "io_history" / f"{case_id}.csv",
         )
+
+    sync_device(device)
+    runtime_s = time.perf_counter() - t_start
 
     if False:
         # --- DIAGNOSTIC: replicate IO hard_dice path (transform_nearest, unit flow) ---
@@ -1126,9 +1172,20 @@ def process_subject(
 
     tqdm.tqdm.write(
         f"FINAL:\t{case_id}: dice={dice_their:.4f},\t hd95={hd95:.4f}\t mtv={mtv:.4f}\t tlg={tlg:.4f}\t"
+        f" time={runtime_s:.2f}s"
     )
 
-    return dice_their, dice_before, mtv, tlg, ndv, hd95, hd95_before, per_label
+    return (
+        dice_their,
+        dice_before,
+        mtv,
+        tlg,
+        ndv,
+        hd95,
+        hd95_before,
+        per_label,
+        runtime_s,
+    )
 
 
 CONFIGS_REPLACEMENTS: Dict[str, Dict[str, float | bool]] = {
@@ -1360,7 +1417,7 @@ def main() -> None:
     # --- what to evaluate ---
     eval_official: bool = True
     eval_my_val: bool = False
-    baselines_done: bool = True
+    baselines_done: bool = False
 
     use_io: bool = True
     io_label_free: bool = False
@@ -1403,7 +1460,7 @@ def main() -> None:
                 results_csv_official_val_dice_per_label.stem + baseline_name
             )
         )
-        if baseline_per_label_csv.exists():
+        if False and baseline_per_label_csv.exists():
             print(
                 f"skipping baseline '{baseline_name}': {baseline_per_label_csv} exists"
             )
@@ -1530,7 +1587,7 @@ def main() -> None:
                     results_csv_official_val_dice_per_label.stem + baseline_name
                 )
                 per_label_csv = to_per_label(per_label_csv)
-                if per_label_csv.exists():
+                if False and per_label_csv.exists():
                     print(f"skipping baseline '{baseline_name}' (official val): exists")
                 else:
                     print(f"running baseline '{baseline_name}' on official val")
@@ -1571,7 +1628,7 @@ def main() -> None:
                     results_csv_my_val_dice_per_label.stem + baseline_name
                 )
                 per_label_csv = to_per_label(per_label_csv)
-                if per_label_csv.exists():
+                if False and per_label_csv.exists():
                     print(f"skipping baseline '{baseline_name}' (my val): exists")
                 else:
                     print(f"running baseline '{baseline_name}' on my val")
@@ -1609,9 +1666,10 @@ def main() -> None:
                     )
 
         if baselines_done is False:
-            # run_baseline("affine", baseline_polyaffine=False)
+            run_baseline("affine", baseline_polyaffine=False)
             # run_baseline("polyaffine", baseline_polyaffine=True)
             baselines_done = True
+        return
 
         if eval_official:
             # print("warning: reducing number of my val subjects")
