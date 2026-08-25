@@ -28,19 +28,24 @@ from create_results_table_1 import (
 from scipy.stats import wilcoxon
 
 HERE = Path(__file__).resolve().parent
-OUT_TEX = HERE / "results_table_2.tex"
+OUT_TEX = HERE.parents[0] / "overleaf" / "tables" / "table_results_2.tex"
 OUT_PVALS = HERE / "results_table_2_pvalues.csv"
 
 # Metrics for the container run come from a single wide CSV written by the
 # container's own evaluation, one row per case plus a trailing "mean" row.
 CONTAINER_CSV = (
-    HERE.parent / "submission" / "validation_predictions" / "metrics_io_it18_lr_10_dice.csv"
+    HERE.parent
+    / "submission"
+    / "validation_predictions"
+    / "metrics_io_it18_lr_10_dice.csv"
 )
 # Same evaluator, backbone only. Not used for a table row -- the no-IO row comes
 # from the leaderboard CSVs like every other row -- but it evaluates the same
 # model as NO_IO_MODEL below, so the two together measure how far the container's
 # evaluator sits from the challenge one. Printed as a diagnostic on every run.
-NO_IO_LOCAL_CSV = HERE.parent / "submission" / "validation_predictions" / "metrics_no_io.csv"
+NO_IO_LOCAL_CSV = (
+    HERE.parent / "submission" / "validation_predictions" / "metrics_no_io.csv"
+)
 
 # Baselines in the order they should appear, above our rows.
 BASELINE_LABELS = {
@@ -121,7 +126,9 @@ def report_evaluator_agreement(leaderboard, cases):
         challenge = leaderboard[metric].loc[NO_IO_MODEL].to_numpy(dtype=float).mean()
         mine = local[metric].mean()
         delta = (mine - challenge) / abs(challenge) * 100 if challenge else 0.0
-        print(f"  {metric:5s} challenge={challenge:.6g}  local={mine:.6g}  ({delta:+.1f}%)")
+        print(
+            f"  {metric:5s} challenge={challenge:.6g}  local={mine:.6g}  ({delta:+.1f}%)"
+        )
     print(
         "  the container row is read from the local CSV and the other rows from the\n"
         "  challenge CSVs, so a gap of this size is baked into every container cell."
@@ -232,7 +239,8 @@ def main():
         r"\caption{Our method against the baselines on the official challenge "
         r"validation set ($n=" + str(n_cases) + r"$ cases), evaluated against the "
         r"surrogate labels of Sec.~\ref{sec:evaluation}. "
-        r"\emph{Ours (container)} is the submitted method of Sec.~\ref{sec:container} and "
+        r"\emph{Ours (container)} is the submitted method of Sec.~\ref{sec:container} run on a single "
+        r"NVIDIA H100 and within the 90\,s per image pair the challenge allows and "
         r"the configuration the baselines are tested against; "
         r"\emph{Ours (validation)} is the unconstrained configuration, reported as the "
         r"upper bound the container's 90\,s per-pair budget gives up; "
@@ -297,6 +305,7 @@ def main():
         "",
     ]
 
+    OUT_TEX.parent.mkdir(parents=True, exist_ok=True)
     OUT_TEX.write_text("\n".join(lines))
     print(f"wrote {OUT_TEX}")
     print(f"wrote {OUT_PVALS}")
@@ -308,10 +317,14 @@ def main():
     print("\nmeans:")
     for key in rows:
         summary = "  ".join(
-            f"{metric}={means[metric][key]:.5g}" if key in means[metric] else f"{metric}=--"
+            f"{metric}={means[metric][key]:.5g}"
+            if key in means[metric]
+            else f"{metric}=--"
             for metric in METRICS
         )
-        print(f"  {display_names[key]:<18s} {summary}  time={format_runtime(RUNTIME_S.get(key))}")
+        print(
+            f"  {display_names[key]:<18s} {summary}  time={format_runtime(RUNTIME_S.get(key))}"
+        )
 
     report_evaluator_agreement(leaderboard, cases)
 
