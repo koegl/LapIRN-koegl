@@ -530,7 +530,28 @@ def run_io(
     ncc_weight: Optional[float] = None,
     opt_shape: Optional[Tuple[int, int, int]] = None,
     history_csv: Optional[Path] = None,
+    deadline: Optional[float] = None,
+    min_step_seconds: float = 4.0,
+    max_steps: Optional[int] = None,
 ) -> torch.Tensor:
+    # `deadline` is an absolute time.time() value by which this function must
+    # have returned, or None for "run all cfg.io_it steps regardless" (training,
+    # offline evaluation). The submission container passes one because the
+    # challenge budget is wall time per pair, not a step count: the same io_it
+    # that fits on the evaluation machine may overrun here, and vice versa.
+    #
+    # Stopping is safe at ANY step: `best_disp` starts as the un-refined field,
+    # so zero steps returns exactly what IO was handed.
+    #
+    # `min_step_seconds` is the up-front guess for the first step, which is the
+    # one step whose cost cannot be measured before committing to it (and the
+    # slowest, since it pays cuDNN autotuning and allocator warm-up). Every
+    # later step is predicted from the one before it.
+    #
+    # `max_steps` overrides cfg.io_it as the ceiling. Under a deadline the two
+    # play different roles: io_it was TUNED to fit a budget on one machine, so
+    # reusing it as the cap would throw away exactly the headroom the deadline
+    # exists to exploit. None keeps cfg.io_it, for every caller without a budget.
     # NCC is not scored by the challenge; keep it as a modest dense proxy that
     # fills gradient where label-dice is flat. Try a small value (e.g. 1-3);
     # defaults to cfg.w_ct if not set.
@@ -596,8 +617,28 @@ def run_io(
     best_disp = base.clone()
     best_disp_i = 0
     history: list[Dict[str, float]] = []
-    pbar = tqdm.tqdm(range(cfg.io_it), desc="IO optimization")
+    # A step's cost is predicted from the previous step's, inflated by this much
+    # before it is compared against the remaining time. The margin absorbs the
+    # spread between steps; without it a step started at deadline-epsilon still
+    # runs to completion and overruns by its full duration.
+    step_safety = 1.3
+    next_step_estimate = min_step_seconds
+    stop_reason = "step budget"
+
+    step_ceiling = cfg.io_it if max_steps is None else max_steps
+    pbar = tqdm.tqdm(range(step_ceiling), desc="IO optimization")
     for i in pbar:
+        if deadline is not None:
+            remaining = deadline - time.time()
+            if remaining < next_step_estimate * step_safety:
+                stop_reason = (
+                    f"time budget after {i} step(s): {remaining:.1f}s left, "
+                    f"next step ~{next_step_estimate:.2f}s"
+                )
+                pbar.close()
+                print(f"IO: stopping on {stop_reason}", flush=True)
+                break
+
         start_time = time.time()
         optimizer.zero_grad()
         disp_unit = svf_to_disp(
@@ -626,6 +667,16 @@ def run_io(
         )
         loss.backward()
         optimizer.step()
+
+        # CUDA launches are asynchronous: without a sync, `start_time` would
+        # measure how long it took to QUEUE the step, not to run it, and the
+        # deadline check above would happily start dozens more before the work
+        # landed. `loss.item()` below happens to force the same sync today, but
+        # relying on that would make the budget silently wrong the day someone
+        # drops the logging.
+        if velocity.is_cuda:
+            torch.cuda.synchronize()
+        next_step_estimate = time.time() - start_time
 
         # step selection: swap the soft squared-MTV contribution for the hard
         # (nearest-counted) one, so best_disp is chosen on the MTV the scorer
@@ -667,5 +718,13 @@ def run_io(
             writer.writeheader()
             writer.writerows(history)
 
+    # How many steps actually ran, for callers that report timing. An attribute
+    # rather than a second return value: run_io has four call sites and only the
+    # submission container cares, so widening the signature would churn the rest.
+    run_io.steps_taken = len(history)
+
     refined = best_disp
     return refined
+
+
+run_io.steps_taken = 0

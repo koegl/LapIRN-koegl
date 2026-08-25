@@ -22,13 +22,90 @@ Code/inference.py:save_disp.
 """
 
 import argparse
+import atexit
 import os
 import subprocess
 import sys
 import threading
 import time
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
+
+# --- wall-clock anchor --------------------------------------------------------
+# The challenge budget is 90 s of WALL time per pair and this container is
+# launched once per pair, so the container start, the interpreter, and every
+# import below are all inside it. Tuning a fixed IO step count against that is
+# fragile -- it would be tuned on this workstation and run on the organizers'
+# machine -- so the pipeline instead spends whatever time is left when it gets
+# to IO. That needs an anchor as early as possible, and earlier than this file:
+# by the time the first statement here runs, the interpreter has already booted
+# and `import torch` is still ahead.
+#
+# /proc/self/stat field 22 is the process start time in clock ticks since boot;
+# read against /proc/uptime it gives this process's true age. The ENTRYPOINT is
+# `python3 -u /app/infer.py`, so this process IS PID 1 and its exec time is the
+# earliest instant observable from inside the container. What remains invisible
+# is the runtime's own create/start work before exec -- see --startup-reserve.
+_IMPORT_TIME = time.time()
+
+
+def _process_start_time() -> float:
+    """Wall-clock epoch at which this process was exec'd.
+
+    Falls back to module-import time where /proc is unavailable (macOS during
+    development), which merely omits the interpreter+import span rather than
+    failing -- the container always has /proc.
+    """
+    try:
+        with open("/proc/self/stat", "rb") as fh:
+            # the comm field can contain spaces and parentheses, so split only
+            # what follows the LAST ')': starttime is then index 19.
+            fields = fh.read().rpartition(b")")[2].split()
+        starttime_ticks = float(fields[19])
+        with open("/proc/uptime") as fh:
+            uptime = float(fh.read().split()[0])
+        now = time.time()
+        return now - (uptime - starttime_ticks / os.sysconf("SC_CLK_TCK"))
+    except Exception:
+        return _IMPORT_TIME
+
+
+PROCESS_START = _process_start_time()
+
+# (label, epoch) in the order they were reached. Printed as one block at exit so
+# the per-stage spans and the parts that are NOT any stage -- interpreter boot,
+# imports, the final write, teardown -- are visible in the same units.
+_MARKS: List[Tuple[str, float]] = [("process exec", PROCESS_START)]
+
+
+def mark(label: str) -> float:
+    """Record a timeline point and return its timestamp."""
+    now = time.time()
+    _MARKS.append((label, now))
+    return now
+
+
+def print_timeline() -> None:
+    """Dump the timeline. Registered with atexit so the last mark is as close to
+    process death as Python can observe -- the span after the field is written is
+    exactly the part the IO deadline has to reserve for."""
+    mark("process exit")
+    end = _MARKS[-1][1]
+    print("timeline (s since process exec):", flush=True)
+    previous = PROCESS_START
+    for label, stamp in _MARKS[1:]:
+        print(
+            f"  {stamp - PROCESS_START:7.2f}  +{stamp - previous:6.2f}  {label}",
+            flush=True,
+        )
+        previous = stamp
+    print(
+        f"  in-container total {end - PROCESS_START:.2f}s "
+        f"(exec at epoch {PROCESS_START:.3f}; the container runtime's start-up "
+        f"before exec is NOT in this number)",
+        flush=True,
+    )
+
 
 # Everything the container writes must land in a writable place: /app and the
 # repo copy are read-only for the evaluation user, and $HOME may not exist.
@@ -50,6 +127,9 @@ import nibabel as nib  # noqa: E402
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
 from config import TrainingConfig  # noqa: E402
+
+# torch alone is several seconds, and all of it is inside the 90 s budget.
+mark("imports done")
 
 DEFAULT_WEIGHTS = Path(os.environ.get("LAPIRN_WEIGHTS", "/app/weights/model.pth"))
 DEFAULT_SEG_MODEL = Path(os.environ.get("NNUNET_MODEL_DIR", "/app/nnunet_model"))
@@ -435,8 +515,14 @@ def run_instance_optimisation(
     grid: torch.Tensor,
     cfg: TrainingConfig,
     device: torch.device,
-) -> torch.Tensor:
+    deadline: Optional[float],
+    min_step_seconds: float,
+    max_steps: Optional[int],
+) -> Tuple[torch.Tensor, int]:
     """Refine the TOTAL field with Code/instance_opt.py:run_io.
+
+    Returns (field, steps_actually_taken) -- with a deadline the step count is
+    whatever fitted, so it cannot be read off cfg.io_it any more.
 
     The dice term is on when TotalSegmentator ran, off otherwise -- include_dice
     is the only gate on the CT labels, so with none available the objective falls
@@ -458,7 +544,7 @@ def run_instance_optimisation(
     x_lbl_pet = torch.from_numpy(pet_mask.astype(np.float32))[None, None].to(device)
     x_lbl_ct, y_lbl_ct = ct_labels if ct_labels is not None else (None, None)
 
-    return instance_opt.run_io(
+    refined = instance_opt.run_io(
         Y,
         total_unit_flow,
         X,
@@ -475,7 +561,11 @@ def run_instance_optimisation(
         include_dice=ct_labels is not None,
         log_hard_dice=False,
         use_class_weights=False,
+        deadline=deadline,
+        min_step_seconds=min_step_seconds,
+        max_steps=max_steps,
     )
+    return refined, instance_opt.run_io.steps_taken
 
 
 def parse_args() -> argparse.Namespace:
@@ -532,12 +622,82 @@ def parse_args() -> argparse.Namespace:
         "Its hyper-parameters -- io_it, io_lr and the w_io_* weights -- all come "
         "from Code/config.py; there is no override here.",
     )
+    # --- time budget ---------------------------------------------------------
+    # cfg.io_it becomes an UPPER bound once a budget is set: IO takes as many
+    # steps as fit and stops, so the number is decided by the machine the
+    # container happens to run on rather than by a value tuned here. Set
+    # --time-budget 0 to restore the old fixed-step behaviour (for timing runs
+    # and for offline evaluation, where wall time does not matter).
+    parser.add_argument(
+        "--time-budget",
+        type=float,
+        default=float(os.environ.get("PSMAREG_TIME_BUDGET", 90.0)),
+        help="wall-clock seconds allowed per pair, measured from CONTAINER "
+        "start (default: 90, the challenge limit). 0 disables the deadline and "
+        "runs the full cfg.io_it steps.",
+    )
+    parser.add_argument(
+        "--startup-reserve",
+        type=float,
+        default=float(os.environ.get("PSMAREG_STARTUP_RESERVE", 2.0)),
+        help="seconds the container runtime spends between `docker run` and "
+        "exec'ing this interpreter. Invisible from inside the container, so it "
+        "is subtracted from the budget as a constant; measure it with test.sh, "
+        "which prints the gap between its own clock and the exec timestamp. "
+        "Docker on the build host takes 0.44s; the default keeps headroom for a "
+        "slower runtime, since the organizers' is unknown and an apptainer SIF "
+        "starts more slowly than a warm Docker image.",
+    )
+    parser.add_argument(
+        "--finish-reserve",
+        type=float,
+        default=float(os.environ.get("PSMAREG_FINISH_RESERVE", 9.0)),
+        help="seconds held back for everything after IO -- converting and "
+        "writing the displacement field, plus interpreter teardown -- and for "
+        "safety margin. Measured over the 20 validation pairs: write 4.88-5.20s "
+        "plus teardown 1.73-1.96s, worst case 7.15s; the default rounds that up "
+        "to 9. Overrunning costs the whole pair, so keep this generous.",
+    )
+    parser.add_argument(
+        "--io-min-step",
+        type=float,
+        default=float(os.environ.get("PSMAREG_IO_MIN_STEP", 4.0)),
+        help="assumed cost of the FIRST IO step, the only one that cannot be "
+        "predicted from its predecessor (and the slowest, paying cuDNN and "
+        "allocator warm-up). IO is skipped entirely if less than this remains.",
+    )
+    parser.add_argument(
+        "--io-max-steps",
+        type=int,
+        default=int(os.environ.get("PSMAREG_IO_MAX_STEPS", 60)),
+        help="ceiling on IO steps, replacing cfg.io_it while a deadline is "
+        "active. cfg.io_it was tuned to fit the budget on one machine, so "
+        "reusing it would cap the container to that machine's speed on a faster "
+        "one. Only reached if the budget has not run out first. Ignored when "
+        "--time-budget is 0, which restores cfg.io_it exactly.",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    start = time.time()
+    start = mark("main() entered")
+
+    # The 90 s window opens when the CONTAINER starts, which is --startup-reserve
+    # before this process was exec'd; IO has to be finished --finish-reserve
+    # earlier than that so the field still gets written. None disables the whole
+    # mechanism and restores fixed cfg.io_it steps.
+    io_deadline: Optional[float] = None
+    if args.time_budget > 0:
+        container_start = PROCESS_START - args.startup_reserve
+        io_deadline = container_start + args.time_budget - args.finish_reserve
+        print(
+            f"time budget {args.time_budget:.0f}s from container start "
+            f"(exec +{args.startup_reserve:.1f}s), reserving "
+            f"{args.finish_reserve:.1f}s to write the field -> IO must end "
+            f"{io_deadline - PROCESS_START:.1f}s after exec",
+            flush=True,
+        )
 
     torch.manual_seed(0)
     np.random.seed(0)
@@ -592,7 +752,7 @@ def main() -> None:
     total_unit_flow = compose(flow_affine, F_X_Y.permute(0, 2, 3, 4, 1), grid)
     net_seconds = time.time() - net_start
 
-    reg_seconds = time.time() - start
+    reg_seconds = mark("registration done") - start
     print(
         f"registration {reg_seconds:.1f}s "
         f"(read {load_seconds:.1f}s + model build {build_seconds:.1f}s + "
@@ -604,6 +764,7 @@ def main() -> None:
     seg = None
     if pet_job is not None:
         seg = pet_job.join()
+        mark("PET mask joined")
         seg_seconds, seg_blocking = pet_job.elapsed_seconds, pet_job.blocking_seconds
         if seg is not None:
             print(
@@ -623,7 +784,7 @@ def main() -> None:
         ct_labels = collect_ct_segmentation(
             ts_proc, ts_dir, args.fixed_ct, args.moving_ct, device
         )
-        totalseg_blocking = time.time() - join_start
+        totalseg_blocking = mark("CT labels joined") - join_start
         totalseg_seconds = time.time() - ts_launched
 
     if args.io and seg is None:
@@ -632,26 +793,48 @@ def main() -> None:
             "writing the un-refined field",
             flush=True,
         )
+    # Everything IO needs is in hand, so the whole remaining budget is its own:
+    # nothing after this point competes for the GPU. Skipping it entirely is a
+    # legitimate outcome -- the un-refined field still scores, an overrun pair
+    # scores nothing.
+    io_steps = 0
     if args.io and seg is not None:
-        io_start = time.time()
-        transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
-        total_unit_flow = run_instance_optimisation(
-            total_unit_flow, X, Y, seg, ct_labels,
-            transform, transform_nearest, grid, cfg, device,
-        )
-        io_seconds = time.time() - io_start
-        print(
-            f"instance optimisation {io_seconds:.1f}s "
-            f"({cfg.io_it} steps @ lr {cfg.io_lr}, {io_seconds / max(cfg.io_it, 1):.2f}s/step)",
-            flush=True,
-        )
+        remaining = None if io_deadline is None else io_deadline - time.time()
+        if remaining is not None and remaining < args.io_min_step:
+            print(
+                f"skipping IO: {remaining:.1f}s left before the deadline, "
+                f"below the {args.io_min_step:.1f}s a first step is assumed to "
+                f"cost; writing the un-refined field",
+                flush=True,
+            )
+        else:
+            if remaining is not None:
+                print(f"IO has {remaining:.1f}s of budget left", flush=True)
+            io_start = mark("IO start")
+            transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
+            total_unit_flow, io_steps = run_instance_optimisation(
+                total_unit_flow, X, Y, seg, ct_labels,
+                transform, transform_nearest, grid, cfg, device,
+                deadline=io_deadline,
+                min_step_seconds=args.io_min_step,
+                max_steps=None if io_deadline is None else args.io_max_steps,
+            )
+            io_seconds = mark("IO done") - io_start
+            step_ceiling = cfg.io_it if io_deadline is None else args.io_max_steps
+            print(
+                f"instance optimisation {io_seconds:.1f}s "
+                f"({io_steps} of at most {step_ceiling} steps @ lr {cfg.io_lr}, "
+                f"{io_seconds / max(io_steps, 1):.2f}s/step)",
+                flush=True,
+            )
 
     save_disp(total_unit_flow, args.output_disp)
+    mark("field written")
     print(
         f"wrote {args.output_disp}\n"
         f"  registration {reg_seconds:.1f}s | "
         f"PET seg {seg_seconds:.1f}s elapsed, {seg_blocking:.1f}s blocking | "
-        f"IO {io_seconds:.1f}s | CT seg {totalseg_seconds:.1f}s elapsed, "
+        f"IO {io_seconds:.1f}s ({io_steps} steps) | CT seg {totalseg_seconds:.1f}s elapsed, "
         f"{totalseg_blocking:.1f}s blocking (z {ts_z_range[0]}..{ts_z_range[1]}, "
         f"{ts_z_range[1] - ts_z_range[0]} slices) | "
         f"total {time.time() - start:.1f}s\n"
@@ -662,4 +845,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # Registered before main() so the timeline is printed even when a stage
+    # raises -- a run that overran is exactly the one whose timing is wanted.
+    atexit.register(print_timeline)
     main()

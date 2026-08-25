@@ -39,6 +39,19 @@ fi
 #   GPU_ARGS='--gpus device=0' bash test.sh   to use the organizers' exact form
 read -r -a GPU_ARGS <<< "${GPU_ARGS:---runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=0 -e NVIDIA_DRIVER_CAPABILITIES=compute,utility}"
 
+# The time-budget knobs are read from the environment by infer.py, and docker
+# forwards nothing by default. Only the ones actually set are passed, so an
+# unset variable keeps infer.py's own default rather than becoming an empty
+# string that float() would reject.
+BUDGET_ENV=()
+for _v in PSMAREG_TIME_BUDGET PSMAREG_STARTUP_RESERVE PSMAREG_FINISH_RESERVE \
+          PSMAREG_IO_MIN_STEP PSMAREG_IO_MAX_STEPS; do
+  [[ -n "${!_v:-}" ]] && BUDGET_ENV+=(-e "$_v=${!_v}")
+done
+if (( ${#BUDGET_ENV[@]} )); then
+  echo "time-budget overrides: ${BUDGET_ENV[*]//-e /}"
+fi
+
 mkdir -p "$OUTPUT_DIR"
 
 mapfile -t SUBJECTS < <(python3 -c "
@@ -71,8 +84,16 @@ SWEEP_START=$SECONDS
 TOTAL=0
 N_PAIRS=${#SUBJECTS[@]}
 
+LOG="$(mktemp)"
+trap 'rm -f "$LOG"' EXIT
+
 for id in "${SUBJECTS[@]}"; do
   CASE_START=$SECONDS
+  # Sub-second epochs on both sides of `docker run`, to size the two spans the
+  # container's own deadline logic cannot see: the runtime's create/start work
+  # before it exec's the interpreter (--startup-reserve) and whatever happens
+  # after the process exits. infer.py prints its exec epoch on the same clock.
+  RUN_START=$(date +%s.%N)
   docker run --rm \
     --ipc=host \
     --memory 60g \
@@ -81,6 +102,7 @@ for id in "${SUBJECTS[@]}"; do
     --network=none \
     --mount "type=bind,source=$DATA_DIR,target=/app/input,readonly" \
     --mount "type=bind,source=$OUTPUT_DIR,target=/app/output" \
+    "${BUDGET_ENV[@]}" \
     "${DEV_MOUNT[@]}" \
     "$IMAGE" \
       "/app/input/PSMARegPSMA_${id}_0000_00.nii.gz" \
@@ -88,8 +110,19 @@ for id in "${SUBJECTS[@]}"; do
       "/app/input/PSMARegPSMA_${id}_0000_01.nii.gz" \
       "/app/input/PSMARegPSMA_${id}_0001_01.nii.gz" \
       "/app/output/disp_${id}_00_${id}_01.nii.gz" \
-      "${EXTRA_ARGS[@]}"
+      "${EXTRA_ARGS[@]}" 2>&1 | tee "$LOG"
+  RUN_END=$(date +%s.%N)
   echo "  $id: $((SECONDS - CASE_START))s (wall, incl. container startup)"
+
+  # Split that wall time into runtime start-up / in-container / teardown, which
+  # is what --startup-reserve and --finish-reserve have to be set from.
+  EXEC_EPOCH=$(sed -n 's/.*exec at epoch \([0-9.]*\).*/\1/p' "$LOG" | tail -1)
+  IN_CONTAINER=$(sed -n 's/.*in-container total \([0-9.]*\)s.*/\1/p' "$LOG" | tail -1)
+  if [[ -n "$EXEC_EPOCH" && -n "$IN_CONTAINER" ]]; then
+    awk -v s="$RUN_START" -v e="$RUN_END" -v x="$EXEC_EPOCH" -v c="$IN_CONTAINER" \
+      'BEGIN { printf "    wall %.2fs = runtime start-up %.2fs + in-container %.2fs + teardown %.2fs\n", \
+               e - s, x - s, c, (e - s) - (x - s) - c }'
+  fi
 done
 
 TOTAL=$((SECONDS - SWEEP_START))

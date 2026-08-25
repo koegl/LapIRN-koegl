@@ -57,6 +57,20 @@ fi
 echo "runtime=$RUNTIME image=$IMAGE"
 echo "${#SUBJECTS[@]} pairs: $DATA_DIR -> $OUTPUT_DIR"
 
+# infer.py's time-budget knobs, forwarded explicitly: docker passes nothing by
+# default and apptainer runs with --cleanenv, so in both cases the host
+# environment does NOT reach the container. Only variables that are actually set
+# are forwarded; the two runtimes spell the flag differently.
+BUDGET_DOCKER=()
+BUDGET_APPTAINER=()
+for _v in PSMAREG_TIME_BUDGET PSMAREG_STARTUP_RESERVE PSMAREG_FINISH_RESERVE \
+          PSMAREG_IO_MIN_STEP PSMAREG_IO_MAX_STEPS; do
+  if [[ -n "${!_v:-}" ]]; then
+    BUDGET_DOCKER+=(-e "$_v=${!_v}")
+    BUDGET_APPTAINER+=(--env "$_v=${!_v}")
+  fi
+done
+
 run_one() {
   local id="$1"
   local args=(
@@ -74,6 +88,7 @@ run_one() {
       --user "$(id -u):$(id -g)" --network=none \
       --mount "type=bind,source=$DATA_DIR,target=/app/input,readonly" \
       --mount "type=bind,source=$OUTPUT_DIR,target=/app/output" \
+      "${BUDGET_DOCKER[@]}" \
       "$IMAGE" "${args[@]}"
   else
     # --cleanenv: without it the host environment leaks in and overrides the
@@ -82,6 +97,7 @@ run_one() {
     "$RUNTIME" run --nv --cleanenv \
       --bind "$DATA_DIR:/app/input:ro" \
       --bind "$OUTPUT_DIR:/app/output" \
+      "${BUDGET_APPTAINER[@]}" \
       "$IMAGE" "${args[@]}"
   fi
 }
@@ -89,10 +105,25 @@ run_one() {
 SWEEP_START=$SECONDS
 TOTAL=0
 N_PAIRS=${#SUBJECTS[@]}
+LOG="$(mktemp)"
+trap 'rm -f "$LOG"' EXIT
 for id in "${SUBJECTS[@]}"; do
   CASE_START=$SECONDS
-  run_one "$id"
+  # Same accounting as test.sh: the runtime's start-up before exec and the
+  # teardown after the process exits are invisible from inside the container,
+  # but both are inside the challenge's per-pair budget. Apptainer's start-up
+  # is not Docker's, so this has to be measured on whichever runtime is used.
+  RUN_START=$(date +%s.%N)
+  run_one "$id" 2>&1 | tee "$LOG"
+  RUN_END=$(date +%s.%N)
   echo "  $id: $((SECONDS - CASE_START))s (wall, incl. container startup)"
+  EXEC_EPOCH=$(sed -n 's/.*exec at epoch \([0-9.]*\).*/\1/p' "$LOG" | tail -1)
+  IN_CONTAINER=$(sed -n 's/.*in-container total \([0-9.]*\)s.*/\1/p' "$LOG" | tail -1)
+  if [[ -n "$EXEC_EPOCH" && -n "$IN_CONTAINER" ]]; then
+    awk -v s="$RUN_START" -v e="$RUN_END" -v x="$EXEC_EPOCH" -v c="$IN_CONTAINER" \
+      'BEGIN { printf "    wall %.2fs = runtime start-up %.2fs + in-container %.2fs + teardown %.2fs\n", \
+               e - s, x - s, c, (e - s) - (x - s) - c }'
+  fi
 done
 
 TOTAL=$((SECONDS - SWEEP_START))
