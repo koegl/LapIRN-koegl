@@ -10,7 +10,10 @@
 #SBATCH -t 04:00:00
 #SBATCH -p gpu_p
 #SBATCH --qos=gpu_normal
-#SBATCH --gres=gpu:1
+# H100 only: supergpu[14-32] expose GRES type `h100` (feature `h100_80gb`).
+# Without the type SLURM may hand out a V100 or A100 and the timings would not
+# describe the hardware the challenge is evaluated on.
+#SBATCH --gres=gpu:h100:1
 # 60G and 12 CPUs mirror the challenge evaluation environment (Xeon Silver
 # 4410Y, 60 GB) rather than what this cluster could give us. The point of this
 # run is to find out whether the container fits THEIR box, so asking for more
@@ -18,21 +21,18 @@
 #SBATCH --mem=60G
 #SBATCH --cpus-per-task=12
 #
-# H100 only. Which of these works depends on the cluster's SLURM config -- check
-# with `sinfo -o "%20N %10G %f"`:
-#   --gres=gpu:h100:1        if GRES types are configured (most common)
-#   --constraint=h100        if the GPU is exposed as a node feature instead
-# Uncomment ONE. Without it SLURM may hand you an A100 or smaller and the
-# timings will not mean what you think they mean.
-##SBATCH --gres=gpu:h100:1
-##SBATCH --constraint=h100
+# If the H100 nodes are contended, `--gres=gpu:a100_80gb:1` is the next best
+# portability test -- the speed numbers change but driver and CUDA behaviour
+# still transfer.
 
 set -euo pipefail
 
 REPO_DIR="${REPO_DIR:-/home/iml/fryderyk.koegl/code/LapIRN-koegl}"
-SIF="${SIF:-/lustre/groups/iml/fryderyk.koegl/psmareg_lapirn.sif}"
+SIF="${SIF:-$HOME/containers/psmareg_lapirn.sif}"
 DATA_DIR="${DATA_DIR:-/lustre/groups/iml/data/PSMAReg/PSMAReg_dataset/imagesVal}"
-OUTPUT_DIR="${OUTPUT_DIR:-/lustre/groups/iml/fryderyk.koegl/pred_cluster}"
+# ~2.5 GB of displacement fields plus segmentations for 20 pairs -- override with
+# OUTPUT_DIR if $HOME is quota-limited on this cluster.
+OUTPUT_DIR="${OUTPUT_DIR:-$HOME/psmareg_pred_cluster}"
 LIMIT="${LIMIT:-0}"
 
 echo "=================== job ==================="
