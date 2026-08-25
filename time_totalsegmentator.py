@@ -18,8 +18,10 @@ def crop_axial(
     are not centred in the volume.
     """
     data = img.get_fdata()
-    z_start = max(0, z_start)
-    z_end = min(data.shape[2], z_end)
+    # a negative bound means "no crop on that side": -1 must not fall through to
+    # a Python slice, where it would silently mean "all but the last"
+    z_start = 0 if z_start < 0 else min(max(0, z_start), data.shape[2])
+    z_end = data.shape[2] if z_end < 0 else min(max(0, z_end), data.shape[2])
 
     cropped = data[:, :, z_start:z_end]
 
@@ -70,8 +72,8 @@ def segment_one(
 def main() -> None:
     parser = argparse.ArgumentParser()
     # half-open, so the default is the 100 slices 141..240 inclusive
-    parser.add_argument("--z-start", dest="z_start", type=int, default=141)
-    parser.add_argument("--z-end", dest="z_end", type=int, default=241)
+    parser.add_argument("--z-start", dest="z_start", type=int, default=0)
+    parser.add_argument("--z-end", dest="z_end", type=int, default=288)
     parser.add_argument(
         "--fixed",
         type=str,

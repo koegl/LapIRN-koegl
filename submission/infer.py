@@ -329,6 +329,21 @@ class BackgroundPetSegmentation:
         return self.result
 
 
+def resolve_z_range(z_range: Tuple[int, int], depth: int) -> Tuple[int, int]:
+    """Turn cfg.io_seg_z_range into a concrete half-open range.
+
+    A negative bound means "no crop on that side", so (-1, -1) is the whole
+    volume. Resolved here rather than downstream so every print and every
+    argument passed to the runner is the range actually segmented -- a bare -1
+    reaching a Python slice silently means "all but the last", not "all".
+    """
+    start = 0 if z_range[0] < 0 else min(max(0, z_range[0]), depth)
+    stop = depth if z_range[1] < 0 else min(max(0, z_range[1]), depth)
+    if stop <= start:
+        raise SystemExit(f"empty io_seg_z_range {z_range} for depth {depth}")
+    return start, stop
+
+
 def start_ct_segmentation(
     fixed_ct: Path, moving_ct: Path, out_dir: Path, z_range: Tuple[int, int]
 ) -> "subprocess.Popen":
@@ -535,11 +550,12 @@ def main() -> None:
     # Launched before anything else so its interpreter startup and model loading
     # overlap with the GPU work below; joined just before IO, the first consumer.
     ts_proc = None
+    ts_z_range = resolve_z_range(cfg.io_seg_z_range, cfg.img_shape[2])
     ts_dir = args.ct_seg_dir or Path("/tmp/ct_labels")
     ts_launched = time.time()
     if args.totalseg:
         ts_proc = start_ct_segmentation(
-            args.fixed_ct, args.moving_ct, ts_dir, cfg.io_seg_z_range
+            args.fixed_ct, args.moving_ct, ts_dir, ts_z_range
         )
 
     grid = Functions.generate_grid_unit(cfg.img_shape)
@@ -636,9 +652,9 @@ def main() -> None:
         f"  registration {reg_seconds:.1f}s | "
         f"PET seg {seg_seconds:.1f}s elapsed, {seg_blocking:.1f}s blocking | "
         f"IO {io_seconds:.1f}s | CT seg {totalseg_seconds:.1f}s elapsed, "
-        f"{totalseg_blocking:.1f}s blocking (z {cfg.io_seg_z_range[0]}.."
-        f"{cfg.io_seg_z_range[1]}, {cfg.io_seg_z_range[1] - cfg.io_seg_z_range[0]} "
-        f"slices) | total {time.time() - start:.1f}s\n"
+        f"{totalseg_blocking:.1f}s blocking (z {ts_z_range[0]}..{ts_z_range[1]}, "
+        f"{ts_z_range[1] - ts_z_range[0]} slices) | "
+        f"total {time.time() - start:.1f}s\n"
         f"  (PET and CT segmentation run concurrently with registration, so the "
         f"stages do not sum to the total; only their blocking parts add to it)",
         flush=True,

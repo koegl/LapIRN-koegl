@@ -27,6 +27,7 @@ import os
 import sys
 import time
 from pathlib import Path
+from typing import Tuple
 
 # Written rather than baked: TotalSegmentator increments a prediction counter in
 # this file, so the directory has to be writable, and the container's /app is
@@ -116,7 +117,7 @@ def cache_model_loading() -> None:
 
 def segment_one(
     img_path: Path, out_path: Path, z_start_in: int, z_end_in: int, work_dir: Path
-) -> float:
+) -> Tuple[float, int, int]:
     img = nib.load(str(img_path))
     full_shape = img.shape
 
@@ -144,7 +145,7 @@ def segment_one(
     restored = restore_full(np.asarray(seg_img.dataobj), full_shape, z_start, z_end)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     nib.save(nib.Nifti1Image(restored, img.affine, seg_img.header), str(out_path))
-    return elapsed
+    return elapsed, z_start, z_end
 
 
 def main() -> None:
@@ -162,11 +163,14 @@ def main() -> None:
         cache_model_loading()
 
     total = 0.0
+    lo = hi = 0
     for src in (fixed_ct, moving_ct):
-        total += segment_one(src, out_dir / src.name, z_start, z_end, work_dir)
+        elapsed, lo, hi = segment_one(src, out_dir / src.name, z_start, z_end, work_dir)
+        total += elapsed
+    # the CLAMPED range, so the log reports what was segmented, not what was asked
     print(
         f"totalsegmentator: {total:.1f}s for 2 volumes at "
-        f"z={z_start}..{z_end} ({z_end - z_start} slices)",
+        f"z={lo}..{hi} ({hi - lo} slices)",
         flush=True,
     )
 
