@@ -52,7 +52,12 @@ echo "==========================================="
 
 mkdir -p "$OUTPUT_DIR"
 
+# DEV=1 binds $REPO_DIR's working tree over the SIF's baked copy, so a change to
+# infer.py / Code/ can be tested without rebuilding the image on the build host
+# and shipping several GB back here. Pass it through with
+# `sbatch --export=ALL,DEV=1 submission/submit_cluster.sbatch`.
 IMAGE="$SIF" DATA_DIR="$DATA_DIR" OUTPUT_DIR="$OUTPUT_DIR" LIMIT="$LIMIT" \
+    DEV="${DEV:-0}" \
     bash "$REPO_DIR/submission/run_cluster.sh"
 
 echo "job finished at $(date)"

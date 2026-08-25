@@ -57,6 +57,29 @@ fi
 echo "runtime=$RUNTIME image=$IMAGE"
 echo "${#SUBJECTS[@]} pairs: $DATA_DIR -> $OUTPUT_DIR"
 
+# DEV=1 mounts the working tree over the image's baked copy, the same trick
+# test.sh uses. On the cluster it matters much more: the alternative to changing
+# three Python files is rebuilding the image on the build host, `docker save`ing
+# several GB, transferring it, and converting it to a SIF. Nothing here changes
+# the environment, only the method code -- so it is valid for timing and scoring
+# runs, but the SUBMITTED image must be a real rebuild, never a bound tree.
+REPO_ROOT="$(cd "$HERE/.." && pwd)"
+DEV_DOCKER=()
+DEV_APPTAINER=()
+if [[ "${DEV:-0}" == "1" ]]; then
+  for pair in \
+    "$REPO_ROOT/Code:/app/lapirn/Code" \
+    "$REPO_ROOT/submission/infer.py:/app/infer.py" \
+    "$REPO_ROOT/submission/totalseg_runner.py:/app/totalseg_runner.py" \
+    "$REPO_ROOT/time_totalsegmentator.py:/app/lapirn/time_totalsegmentator.py"; do
+    src="${pair%%:*}"; dst="${pair##*:}"
+    [[ -e "$src" ]] || { echo "DEV=1 but missing $src" >&2; exit 1; }
+    DEV_DOCKER+=(--mount "type=bind,source=$src,target=$dst,readonly")
+    DEV_APPTAINER+=(--bind "$src:$dst:ro")
+  done
+  echo "dev mode: Code/, infer.py and the TotalSegmentator runner bind-mounted"
+fi
+
 run_one() {
   local id="$1"
   local args=(
@@ -74,6 +97,7 @@ run_one() {
       --user "$(id -u):$(id -g)" --network=none \
       --mount "type=bind,source=$DATA_DIR,target=/app/input,readonly" \
       --mount "type=bind,source=$OUTPUT_DIR,target=/app/output" \
+      "${DEV_DOCKER[@]}" \
       "$IMAGE" "${args[@]}"
   else
     # --cleanenv: without it the host environment leaks in and overrides the
@@ -82,6 +106,7 @@ run_one() {
     "$RUNTIME" run --nv --cleanenv \
       --bind "$DATA_DIR:/app/input:ro" \
       --bind "$OUTPUT_DIR:/app/output" \
+      "${DEV_APPTAINER[@]}" \
       "$IMAGE" "${args[@]}"
   fi
 }
