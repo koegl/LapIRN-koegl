@@ -18,8 +18,11 @@ These surrogate labels underlie every validation metric in this work, including 
 Being predictions rather than the challenge's reference annotations, they carry their own error, so their absolute values are not directly comparable to the official validation leaderboard; we use them to compare methods against each other under an identical protocol.
 Where we report official validation-leaderboard results, these are computed by the organisers against their reference annotations and are marked as such.
 Since the leaderboard covers the same cases with the correct labels, we use the agreement between the two rankings as a check on the surrogate protocol, and prefer the leaderboard whenever it is available for the models being compared.
-We report our method in two configurations, distinguished throughout as \emph{ours (validation)} and \emph{ours (container)}: the former is the method as described in Sec.~\ref{sec:pipeline}, the latter the variant of Sec.~\ref{sec:container} that fits the 90\,s per pair the submission container allows.
-The difference is confined to instance optimisation and to how the segmentations it consumes are produced, so the gap between the two rows is the price of that time budget.
+We report our method in three configurations.
+\emph{Ours (container)} is the submitted method of Sec.~\ref{sec:container}, run on a single NVIDIA H100 within the 90\,s per image pair the challenge allows; since it is the configuration the hidden test set will be scored on, it is the one we test the baselines against.
+\emph{Ours (validation)} is the unconstrained method of Sec.~\ref{sec:pipeline}, reported as the upper bound that the time budget gives up; the two differ only in instance optimisation and in how the segmentations it consumes are produced.
+\emph{Ours (no IO)} is the backbone alone, which isolates what test-time refinement contributes.
+The latter two carry no significance marks.
 
 \subsection{Ablation of the Objective}
 \label{sec:ablation}
@@ -47,9 +50,8 @@ A boundary loss would therefore expend its gradient on labels that are already a
 \subsection{Comparison against Baselines}
 
 We swept the loss weights and the instance-optimisation settings and selected the one reported below with the challenge ranking of Sec.~\ref{sec:model_selection}, applied to the surrogate protocol above.
-Table~\ref{tab:baselines} places the selected variant against the baselines.
-The container row was obtained by running the submitted container itself, on a single NVIDIA H100 and under the 90\,s per image pair the challenge allows, so it reflects what the method achieves under the constraint it is actually deployed with.
-It improves DSC from $73.3\%$ (NiftyReg, the strongest baseline) to $88.3\%$ and halves HD95 from $7.09$ to $4.77$\,mm, while reducing the MTV and TLG errors by more than a factor of two and the non-diffeomorphic volume from $1525$ to $21$\,ppm.
+Table~\ref{tab:baselines} places the three configurations against the baselines.
+The container configuration improves DSC from $73.3\%$ (NiftyReg, the strongest baseline) to $88.3\%$ and halves HD95 from $7.09$ to $4.77$\,mm, while reducing the MTV and TLG errors by more than a factor of two and the non-diffeomorphic volume from $1525$ to $21$\,ppm.
 All differences are significant on every metric (paired Wilcoxon signed-rank, Holm-corrected, $p<0.01$).
 
 \input{tables/table_results_2}   % \input, not \include: \include forces a \clearpage

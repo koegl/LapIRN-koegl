@@ -55,6 +55,19 @@ BASELINE_LABELS = {
     "convexadam": "ConvexAdam",
 }
 
+# Wall-clock seconds per image pair on the hardware of Sec.~\ref{sec:infrastructure},
+# as [mean, std] over the same cases the metrics are averaged over. Keyed by the
+# display label of the row. A negative value, or a row absent from this dict,
+# prints as a dash -- fill these in as the measurements come.
+TIMES = {
+    "Affine": [-1.0, -1.0],
+    "NiftyReg": [-1.0, -1.0],
+    "ConvexAdam": [-1.0, -1.0],
+    "Ours (no IO)": [-1.0, -1.0],
+    "Ours (container)": [89.8185, 2.6854483331466263],
+    "Ours (validation)": [-1.0, -1.0],
+}
+
 VALIDATION_MODEL = normalise_model_id(
     "polite-snake-38577202_io_lr1.0e-02_it90_wncc5.00_wdicect5.00_wjac10.00"
     "_wsmooth1.00_wbonerigid0.00_wmtv50.00_wmtvmean500.00_wjactum2.50_wtlg1.50"
@@ -74,18 +87,6 @@ OUR_ROWS = [
 # submitted container, since that is what gets ranked on the hidden test set.
 PRIMARY_KEY = "container"
 
-# Wall-clock seconds for one image pair on the hardware of Sec.~\ref{sec:infrastructure}.
-# Measured, not per-case, so these take no mean, no std and no significance mark.
-# None prints as a dash -- fill these in as the measurements come.
-RUNTIME_S = {
-    "before_registration": None,
-    "affine": None,
-    "niftyreg": None,
-    "convexadam": None,
-    "container": None,
-    "validation": None,
-    "no_io": None,
-}
 RUNTIME_HEADER = r"Time (s) $\downarrow$"
 # Decimals used for the runtime cells.
 RUNTIME_DECIMALS = 0
@@ -104,10 +105,18 @@ def load_local_metrics(path, cases):
     return {metric: df.loc[cases, metric].to_numpy(dtype=float) for metric in METRICS}
 
 
-def format_runtime(seconds):
-    if seconds is None:
+def format_runtime(label):
+    """Render TIMES[label] as "mean $\\pm$ std"; unmeasured rows print a dash."""
+    entry = TIMES.get(label)
+    if entry is None:
         return "--"
-    return f"{seconds:.{RUNTIME_DECIMALS}f}"
+    mean, std = float(entry[0]), float(entry[1])
+    if mean < 0:
+        return "--"
+    cell = f"{mean:.{RUNTIME_DECIMALS}f}"
+    if std >= 0:
+        cell += rf" $\pm$ {std:.{RUNTIME_DECIMALS}f}"
+    return cell
 
 
 def report_evaluator_agreement(leaderboard, cases):
@@ -239,25 +248,14 @@ def main():
         r"\caption{Our method against the baselines on the official challenge "
         r"validation set ($n=" + str(n_cases) + r"$ cases), evaluated against the "
         r"surrogate labels of Sec.~\ref{sec:evaluation}. "
-        r"\emph{Ours (container)} is the submitted method of Sec.~\ref{sec:container} run on a single "
-        r"NVIDIA H100 and within the 90\,s per image pair the challenge allows and "
-        r"the configuration the baselines are tested against; "
-        r"\emph{Ours (validation)} is the unconstrained configuration, reported as the "
-        r"upper bound the container's 90\,s per-pair budget gives up; "
-        r"\emph{Ours (no IO)} is the backbone without instance optimisation. "
-        r"Each cell reports the mean over cases. "
-        r"DSC and the MTV/TLG errors are given in \%, NDV in ppm. "
-        r"Time is the measured wall-clock runtime for one image pair on the hardware of "
-        r"Sec.~\ref{sec:infrastructure}; it is a single measurement, not a per-case "
-        r"distribution, and is not tested or marked. "
+        r"Every cell is a mean over the cases, runtime included: DSC and the MTV/TLG "
+        r"errors in \%, NDV in ppm, and time in seconds per image pair on the hardware "
+        r"of Sec.~\ref{sec:infrastructure}. "
         r"Bold marks the best value in each column. "
-        r"$^{*}$ marks metrics on which \emph{Ours (container)} is significantly better "
-        r"than the baseline in the given row (paired Wilcoxon signed-rank, Holm-corrected "
-        r"within each metric, $p<0.05$); the other two rows of ours are reported for "
-        r"reference and carry no significance marks. "
-        r"Dashes mark metrics that are undefined for a baseline: the unregistered and "
-        r"affine cases have no deformation field, and the PET biomarkers are only "
-        r"meaningful after resampling.}",
+        r"$^{*}$ marks metrics on which \emph{ours (container)} is significantly better "
+        r"than the baseline in that row (paired Wilcoxon signed-rank, Holm-corrected "
+        r"within each metric, $p<0.05$); runtime is not tested. "
+        r"Dashes mark metrics undefined for a baseline.}",
         r"\label{tab:baselines}",
     ]
     lines = [
@@ -288,7 +286,7 @@ def main():
             if significant.get((key, metric)):
                 cell += r"$^{*}$"
             cells.append(cell)
-        cells.append(format_runtime(RUNTIME_S.get(key)))
+        cells.append(format_runtime(display_names[key]))
         lines.append(f"{name} & " + " & ".join(cells) + r" \\")
 
     for model in baselines:
@@ -309,7 +307,9 @@ def main():
     print(f"wrote {OUT_TEX}")
     print(f"wrote {OUT_PVALS}")
 
-    unmeasured = [display_names[k] for k in rows if RUNTIME_S.get(k) is None]
+    unmeasured = [
+        display_names[k] for k in rows if format_runtime(display_names[k]) == "--"
+    ]
     if unmeasured:
         print(f"\nruntime still unmeasured (prints as a dash): {unmeasured}")
 
@@ -322,7 +322,8 @@ def main():
             for metric in METRICS
         )
         print(
-            f"  {display_names[key]:<18s} {summary}  time={format_runtime(RUNTIME_S.get(key))}"
+            f"  {display_names[key]:<18s} {summary}  "
+            f"time={format_runtime(display_names[key])}"
         )
 
     report_evaluator_agreement(leaderboard, cases)
