@@ -4,10 +4,9 @@
 % OUTLINE
 %   3.1 Evaluation Protocol
 %   3.2 Ablation of the Objective
-%   3.3 Comparison of LapIRN Variants    >>> TABLE 1
-%   3.4 Comparison against Baselines     >>> TABLE 2
-%   3.5 Validation Leaderboard           >>> TABLE 3 (placeholder)
-%   3.6 Qualitative Results              >>> FIGURE 5
+%   3.3 Comparison against Baselines     >>> TABLE 2
+%   3.4 Validation Leaderboard           >>> TABLE 3 (placeholder)
+%   3.5 Qualitative Results              >>> FIGURE 5
 % ===============================================================
 
 \subsection{Evaluation Protocol}
@@ -45,19 +44,9 @@ Splitting that mass against the unregistered pair shows where it comes from: $48
 The inherent entries are dominated by structures for which no boundary refinement is meaningful: limbs subject to inter-session repositioning (humeri, femora, clavicles, together the largest single contribution), hollow organs whose filling changes between sessions and which therefore have no well-defined point correspondence (colon, small bowel, stomach, bladder, gallbladder), and anatomy truncated by the field of view (brain, skull), some of it reduced to a handful of voxels.
 A boundary loss would therefore expend its gradient on labels that are already at the floor, while leaving the tail - a capture-range and correspondence problem rather than a boundary-precision one - untouched.
 
-\subsection{Comparison of LapIRN Variants}
-% PLACEHOLDER: the selected variant is provisional -- all references to
-% it go through \selvar, defined in main.tex.
-
-Table~\ref{tab:lapirn_variants} compares the nine LapIRN variants.
-\selvar{} attains the highest challenge score ($69.0$), with $88.3\%$ DSC, $4.77$\,mm HD95 and MTV and TLG errors of $1.83\%$ and $1.80\%$.
-Its registration accuracy is significantly better than that of every other variant except V3, which reaches a marginally higher DSC ($88.9\%$) but degrades the PET biomarkers by an order of magnitude ($15.0\%$ MTV and $16.2\%$ TLG error), illustrating that accuracy and biomarker preservation trade off against each other.
-Six variants produce fewer non-diffeomorphic voxels than \selvar{}, but all of them lie below the $50$\,ppm practical-equivalence threshold, so the difference does not affect the ranking.
-
-\input{tables/table_results_1}   % \input, not \include: \include forces a \clearpage
-
 \subsection{Comparison against Baselines}
 
+We swept the loss weights and the instance-optimisation settings and selected the one reported below with the challenge ranking of Sec.~\ref{sec:model_selection}, applied to the surrogate protocol above.
 Table~\ref{tab:baselines} places the selected variant against the baselines.
 It improves DSC from $73.3\%$ (NiftyReg, the strongest baseline) to $88.3\%$ and halves HD95 from $7.09$ to $4.77$\,mm, while reducing the MTV and TLG errors by more than a factor of two and the non-diffeomorphic volume from $1525$ to $21$\,ppm.
 All differences are significant on every metric (paired Wilcoxon signed-rank, Holm-corrected, $p<0.01$).
