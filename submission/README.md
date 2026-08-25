@@ -1,0 +1,130 @@
+# PSMAReg test-phase container
+
+Learn2Reg 2026 / PSMAReg submission for the LapIRN method in this repository.
+
+## Design: no code duplication
+
+The container does **not** hold a copy of the method. The build context is the
+**repository root**, so `Code/` is copied straight out of the working tree at
+build time and put on `PYTHONPATH`:
+
+```
+COPY Code /app/lapirn/Code
+ENV PYTHONPATH=/app/lapirn/Code
+```
+
+`Code/` is a flat set of sibling modules (`import Functions`, `import my_data`,
+…), not a package, so nothing needs restructuring and there is no
+`pip install -e .` step. Consequences:
+
+* Every build reflects the current commit — there is nothing to keep in sync.
+* During development, bind-mounting `Code/` over the baked copy (`DEV=1`, see
+  below) applies edits with no rebuild at all.
+* A given commit fully determines the image, which is what the challenge's
+  reproducibility requirement asks for.
+
+Only `submission/infer.py` is container-specific: a thin adapter from the
+organizers' five-argument interface to the method.
+
+## Method in the container
+
+Mirrors `Code/inference.py` with `chase_flag = "chase_best_model"` and
+`use_io = False`:
+
+1. body mask + CT/PET normalisation (`my_data.get_body_mask`, `norm_ct`, `norm_pet`)
+2. ANTs affine prereg on half-resolution windowed CT (`affine_reg.compute_affine_dvf`)
+3. LapIRN level-3 deformable registration on the affine-warped moving image
+4. affine composed **outside** the network field into one total transform
+5. saved as full-resolution voxel displacements, channel-first `(3, 192, 192, 288)`
+
+Instance optimisation and PET/AutoPET segmentation are intentionally **not**
+included yet — they are the next step, once the baseline per-pair runtime is
+measured.
+
+## Usage
+
+```bash
+bash submission/build.sh                 # docker build from the repo root
+DEV=1 LIMIT=1 bash submission/test.sh    # one pair, live code, timing
+bash submission/test.sh                  # all 20 validation pairs
+bash submission/export.sh                # psmareg_lapirn.tar.gz
+```
+
+`test.sh` invokes the container exactly as the organizers do (§4 of the
+instructions: `--network=none`, `--user`, read-only input mount) and prints the
+per-pair time plus the extrapolation to the 200-pair / 5-hour budget.
+
+Override with environment variables: `IMAGE`, `DATA_DIR`, `OUTPUT_DIR`,
+`DATASET_JSON`, `LIMIT`, `DEV`.
+
+## PET lesion segmentation
+
+The container runs the nnU-Net trained on this cohort (`Dataset501_PSMALesion`,
+`nnUNetTrainer_PGPSplus`, fold 0, `checkpoint_final.pth`) on the **moving**
+timepoint. It must be the fork in `autopet-3-submission`, not PyPI `nnunetv2` --
+the custom trainer exists only there.
+
+Only the moving timepoint is segmented: the IO tumour terms compare the warped
+moving mask against the moving mask and never read the fixed one, and the
+CT-label terms that would need more are off. Mirror TTA is off by default
+(`--seg-mirroring` enables it) -- 8x the tile forward passes for a small gain.
+
+The mask does not yet influence the displacement field. It is there so instance
+optimisation can be switched on next, and so its quality can be measured now.
+
+## Instance optimisation
+
+`--io` (on by default) refines the total field with `Code/instance_opt.py:run_io`
+— the same function `Code/inference.py` calls, not a copy. Two of its term
+groups are switched off:
+
+* `include_dice=False` — the CT-label dice term. The container produces no CT
+  segmentations, and `include_dice` is the *only* gate on the CT labels, so this
+  is exactly the "no dice, keep everything else" behaviour. The `x_lbl_ct` /
+  `y_lbl_ct` arguments are passed as `None`.
+* `include_rigidity=False` — also CT-label driven.
+
+What remains is NCC + smoothness + the Jacobian barrier + the PET tumour terms
+(MTV / TLG, global and per-lesion) — the quantities the challenge scores.
+
+One upstream change was needed in `Code/instance_opt.py`: the hard-dice
+*logging* also reads the CT labels but sat outside `include_dice`. It now
+follows it. `hard_mtv` / `hard_tlg` deliberately do not — `run_io` selects its
+best step with those. Skipping the hard-dice block also drops 117 full-volume
+label comparisons per step, which is real time inside a 90 s budget.
+
+All IO hyper-parameters -- `io_it`, `io_lr`, `io_seg_z_range` and the `w_io_*`
+weights -- come from `Code/config.py`. There is no CLI override: two of fourteen knobs living
+somewhere else would be a second source of truth. Under `DEV=1` that file is
+bind-mounted, so retuning the step count costs no rebuild.
+
+`IO=0` and `SEG=0` in `test.sh` switch the stages off for timing runs.
+
+## Checking the output makes sense
+
+`evaluate_disp.py` runs on the host (repo venv, not the container) and scores a
+directory of container-produced fields with the same metric code as
+`Code/inference.py` -- dice and HD95 delegate to `hd95_official` /
+`multilabel_dice`, MTV and TLG to `utils.*_bias_loss`, NDV to `ndv_official`:
+
+```bash
+python submission/evaluate_disp.py submission/validation_predictions \
+    --compare auspicious-sloth-39469081_combined
+```
+
+`--compare` prints the corresponding row from
+`submission_results/csvs/chase_leaderboard/` next to the new numbers with a
+delta. That reference was produced from a half-resolution field, so exact
+agreement is not expected; a small positive dice delta is the plausible outcome,
+and a large gap in either direction means the field convention is wrong.
+
+Sub-resolution fields are upsampled first, exactly as the organizers' scorer
+does, so old submissions and baselines can be scored through the same path.
+
+## Weights
+
+`weights/model.pth` is
+`PSMAReg_LapIRN_auspicious-sloth-39469081_stagelvl3_best_combined.pth` (3.6 MB).
+It is baked into the image because evaluation runs offline. Replace the file and
+rebuild to submit a different checkpoint; the hyper-parameters in
+`infer.py:build_config` must match it.

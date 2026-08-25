@@ -25,3 +25,8 @@ Code/.fuse_hidden000000b700000002
 ._*.bib
 ._*.sh
 submission_results/niftyreg/logs/*
+
+# container build outputs
+submission/validation_predictions/segmentations/*.nii.gz
+submission/validation_predictions/*.nii.gz
+submission/*.tar.gz

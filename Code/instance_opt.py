@@ -88,8 +88,8 @@ def io_objective(
     disp_unit: torch.Tensor,
     x_moving: torch.Tensor,
     y_ct: torch.Tensor,
-    x_lbl_ct: torch.Tensor,
-    y_lbl_ct: torch.Tensor,
+    x_lbl_ct: torch.Tensor | None,
+    y_lbl_ct: torch.Tensor | None,
     transform: torch.nn.Module,
     grid: torch.Tensor,
     cfg: config.TrainingConfig,
@@ -105,6 +105,7 @@ def io_objective(
     include_rigidity: bool = True,
     include_dice: bool = True,
     compute_hard_dice: bool = False,
+    log_hard_dice: bool = True,
     n_hard_dice_labels: int = 118,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
     """The single IO objective shared by deploy-time IO (compute_io_loss /
@@ -256,21 +257,28 @@ def io_objective(
                     torch.abs(tlg_warped_hard - tlg_moving_hard)
                     / tlg_moving_hard.clamp_min(1e-5)
                 ).item()
-            warped_lbl_ct = warp_label(x_lbl_ct, disp_unit, grid, transform_nearest)
-            pred = warped_lbl_ct[0, 0].round().long()
-            target = y_lbl_ct[0, 0].round().long()
-            hard_dices = []
-            for lbl in range(1, n_hard_dice_labels):
-                p = pred == lbl
-                t = target == lbl
-                volume_sum = p.sum() + t.sum()
-                dice = (
-                    0.0
-                    if volume_sum == 0
-                    else (2.0 * (p & t).sum() / volume_sum).item()
-                )
-                hard_dices.append(dice)
-            hard_dice = float(np.mean(hard_dices))
+            # hard-dice logging reads the CT segmentations, so it needs
+            # include_dice. hard_mtv / hard_tlg above must NOT: run_io selects
+            # its best step with them. log_hard_dice switches this off even when
+            # the dice LOSS is on -- it is 117 full-volume comparisons per step,
+            # bought purely for a progress-bar number, which the container's
+            # runtime budget cannot spare.
+            if include_dice and log_hard_dice:
+                warped_lbl_ct = warp_label(x_lbl_ct, disp_unit, grid, transform_nearest)
+                pred = warped_lbl_ct[0, 0].round().long()
+                target = y_lbl_ct[0, 0].round().long()
+                hard_dices = []
+                for lbl in range(1, n_hard_dice_labels):
+                    p = pred == lbl
+                    t = target == lbl
+                    volume_sum = p.sum() + t.sum()
+                    dice = (
+                        0.0
+                        if volume_sum == 0
+                        else (2.0 * (p & t).sum() / volume_sum).item()
+                    )
+                    hard_dices.append(dice)
+                hard_dice = float(np.mean(hard_dices))
 
     logs = {
         "ncc_ct": loss_ncc_ct.item(),
@@ -296,14 +304,14 @@ def compute_io_loss(
     disp_unit: torch.Tensor,
     y: torch.Tensor,
     x_moving: torch.Tensor,
-    x_lbl_ct: torch.Tensor,
+    x_lbl_ct: torch.Tensor | None,
     x_lbl_pet: torch.Tensor,
-    y_lbl_ct: torch.Tensor,
+    y_lbl_ct: torch.Tensor | None,
     transform: torch.nn.Module,
     transform_nearest: torch.nn.Module,
     grid: torch.Tensor,
     cfg: config.TrainingConfig,
-    bone_values: torch.Tensor,
+    bone_values: torch.Tensor | None,
     loss_ncc: NCC,
     ncc_weight: float,
     include_pet: bool,
@@ -311,6 +319,7 @@ def compute_io_loss(
     class_weights: torch.Tensor | None,
     pet_cc_masks: torch.Tensor | None = None,
     include_dice: bool = True,
+    log_hard_dice: bool = True,
 ) -> Tuple[torch.Tensor, Dict[str, float]]:
     """Deploy-time IO objective (used by run_io). Thin wrapper over io_objective
     with every term on and hard-dice logging enabled.
@@ -339,6 +348,7 @@ def compute_io_loss(
         include_rigidity=include_rigidity,
         include_dice=include_dice,
         compute_hard_dice=True,
+        log_hard_dice=log_hard_dice,
     )
 
 
@@ -503,9 +513,9 @@ def run_io(
     y: torch.Tensor,
     f_x_y: torch.Tensor,
     x_moving: torch.Tensor,
-    x_lbl_ct: torch.Tensor,
+    x_lbl_ct: torch.Tensor | None,
     x_lbl_pet: torch.Tensor,
-    y_lbl_ct: torch.Tensor,
+    y_lbl_ct: torch.Tensor | None,
     transform: torch.nn.Module,
     transform_nearest: torch.nn.Module,
     grid: torch.Tensor,
@@ -514,12 +524,27 @@ def run_io(
     include_pet: bool,
     include_rigidity: bool,
     include_dice: bool = True,
+    log_hard_dice: bool = True,
     use_class_weights: bool = False,
     n_integration: int = 7,
     ncc_weight: Optional[float] = None,
     opt_shape: Optional[Tuple[int, int, int]] = None,
     history_csv: Optional[Path] = None,
+    deadline: Optional[float] = None,
 ) -> torch.Tensor:
+    # `deadline` is an absolute time.time() value by which this function must
+    # have returned, or None for "run all cfg.io_it steps regardless" (training,
+    # offline evaluation). The submission container passes one because the
+    # challenge budget is wall time per pair, not a step count: the same io_it
+    # that fits on the evaluation machine may overrun here, and vice versa.
+    #
+    # It is the only budget argument, because it is the only one that is a
+    # runtime value; everything shaping the loop -- the step ceiling, the first
+    # step's assumed cost, the safety margin -- is a tuned parameter and lives in
+    # cfg alongside io_it and io_lr.
+    #
+    # Stopping is safe at ANY step: `best_disp` starts as the un-refined field,
+    # so zero steps returns exactly what IO was handed.
     # NCC is not scored by the challenge; keep it as a modest dense proxy that
     # fills gradient where label-dice is flat. Try a small value (e.g. 1-3);
     # defaults to cfg.w_ct if not set.
@@ -585,8 +610,27 @@ def run_io(
     best_disp = base.clone()
     best_disp_i = 0
     history: list[Dict[str, float]] = []
-    pbar = tqdm.tqdm(range(cfg.io_it), desc="IO optimization")
+    # Under a deadline the step ceiling is cfg.io_max_steps -- effectively no
+    # ceiling, so time is the only thing that stops the loop. Without one it is
+    # cfg.io_it, unchanged for every offline caller.
+    step_ceiling = cfg.io_it if deadline is None else cfg.io_max_steps
+    step_safety = cfg.io_step_safety
+    next_step_estimate = cfg.io_min_step_seconds
+    stop_reason = "step budget"
+
+    pbar = tqdm.tqdm(range(step_ceiling), desc="IO optimization")
     for i in pbar:
+        if deadline is not None:
+            remaining = deadline - time.time()
+            if remaining < next_step_estimate * step_safety:
+                stop_reason = (
+                    f"time budget after {i} step(s): {remaining:.1f}s left, "
+                    f"next step ~{next_step_estimate:.2f}s"
+                )
+                pbar.close()
+                print(f"IO: stopping on {stop_reason}", flush=True)
+                break
+
         start_time = time.time()
         optimizer.zero_grad()
         disp_unit = svf_to_disp(
@@ -609,11 +653,22 @@ def run_io(
             include_pet=include_pet,
             include_rigidity=include_rigidity,
             include_dice=include_dice,
+            log_hard_dice=log_hard_dice,
             class_weights=class_weights,
             pet_cc_masks=pet_cc_masks,
         )
         loss.backward()
         optimizer.step()
+
+        # CUDA launches are asynchronous: without a sync, `start_time` would
+        # measure how long it took to QUEUE the step, not to run it, and the
+        # deadline check above would happily start dozens more before the work
+        # landed. `loss.item()` below happens to force the same sync today, but
+        # relying on that would make the budget silently wrong the day someone
+        # drops the logging.
+        if velocity.is_cuda:
+            torch.cuda.synchronize()
+        next_step_estimate = time.time() - start_time
 
         # step selection: swap the soft squared-MTV contribution for the hard
         # (nearest-counted) one, so best_disp is chosen on the MTV the scorer
@@ -648,8 +703,6 @@ def run_io(
             best_i=best_disp_i,
         )
 
-    print(f"Best selection score: {best_loss:.4f} at step {best_disp_i}")
-
     if False and history_csv is not None and history:
         history_csv.parent.mkdir(parents=True, exist_ok=True)
         with open(history_csv, "w", newline="") as f:
@@ -657,5 +710,13 @@ def run_io(
             writer.writeheader()
             writer.writerows(history)
 
+    # How many steps actually ran, for callers that report timing. An attribute
+    # rather than a second return value: run_io has four call sites and only the
+    # submission container cares, so widening the signature would churn the rest.
+    run_io.steps_taken = len(history)
+
     refined = best_disp
     return refined
+
+
+run_io.steps_taken = 0

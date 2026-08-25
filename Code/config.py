@@ -165,7 +165,7 @@ class TrainingConfig:
         default_factory=lambda: [1, 2, 3, 4, 5, 7, 19, 21, 22, 64]
     )
     # 1.0 disables the weighting entirely (all labels equal)
-    w_dice_pet_visible: float = 2.0
+    w_dice_pet_visible: float = 1.0
     w_tlg: float = 5.0
     w_jacobian_tumor: float = 5.0
     w_mtv: float = 20.0
@@ -173,15 +173,47 @@ class TrainingConfig:
     w_bone_rigidity: float = 0.2
 
     # io params
-    io_lr: float = 0.1e-1
-    io_it: int = 90
-    w_io_ncc: float = 6.0
-    w_io_dice: float = 6.0
+    io_lr: float = 0.5e-1
+    io_it: int = 9
+
+    # --- per-pair wall-clock budget (submission container only) -------------
+    # io_time_budget = 0 disables the deadline entirely and restores fixed io_it
+    io_time_budget: float = 90.0
+    # Seconds the container runtime spends between `docker run` and exec'ing the
+    # interpreter.
+    io_startup_reserve: float = 2.0
+    # Held back for everything after IO: converting and writing the displacement
+    # field, plus interpreter teardown.
+    io_finish_reserve: float = 9.0
+    # Assumed cost of the FIRST IO step -- the only one that cannot be predicted
+    # from its predecessor, and the slowest, since it pays cuDNN autotuning and
+    # allocator warm-up. IO is skipped outright if less than this remains.
+    io_min_step_seconds: float = 4.0
+    # Each step's cost is predicted from the previous step's, inflated by this
+    # before being compared against the time left. Without the margin a step
+    # started just under the deadline still runs to completion and overruns by
+    # its full duration.
+    io_step_safety: float = 1.3
+    # Ceiling on IO steps under a deadline. Deliberately far above anything
+    # reachable: time is meant to be the only thing that stops the loop, and a
+    # step count tuned on one machine would cap a faster one. It exists purely so
+    # a broken clock cannot spin forever.
+    io_max_steps: int = 1_000_000
+    # Axial band the CT labels for the IO dice term are computed on, as a
+    # half-open slice range [start, stop) -- so (141, 241) is the 100 slices
+    # 141..240 inclusive. An explicit range rather than a symmetric margin:
+    # TotalSegmentator's runtime scales with axial extent, so the slices it is
+    # spent on should be the ones whose pre-IO alignment is worst, and those are
+    # not centred in the volume. Labels are zero outside the band, so the dice
+    # term simply does not see that anatomy.
+    io_seg_z_range: Tuple[int, int] = (-1, -1)  # (141, 241)
+    w_io_ncc: float = 5.0
+    w_io_dice: float = 5.0
     w_io_non_diff: float = 10.0  # 2000.0
     w_io_smooth: float = 0.0  # 2.0
     w_io_mtv: float = 200.0  # 500.0
     w_io_mtv_avg: float = 0.0  # 5000.0
-    w_io_tlg: float = 20.0  # 100.0
+    w_io_tlg: float = 80.0  # 100.0
     w_io_jacobian_tumor: float = 20  # 5.0
     w_io_bone_rigidity: float = 1.0  # 2.0
 
@@ -192,7 +224,7 @@ class TrainingConfig:
     # and sit alongside (not instead of) the global ones. Set the weights to 0
     # to disable and skip the component warp entirely.
     w_io_mtv_cc: float = 80.0
-    w_io_tlg_cc: float = 20.0
+    w_io_tlg_cc: float = 80.0
     w_io_mtv_avg_cc: float = 150.0
     # each kept component costs one full-resolution channel in the warp, so this
     # caps the memory; components beyond it are still covered by the global terms
@@ -231,7 +263,7 @@ class TrainingConfig:
     # Single-session patients can be used here through the synthetic branch,
     # which is the point: they carry no registration signal but full lesion
     # supervision.
-    use_seg_pet_head: bool = True
+    use_seg_pet_head: bool = False
     # width of the head's hidden conv. It runs at full resolution, so this is
     # the memory knob: each channel costs a 192x192x288 activation.
     seg_pet_head_channels: int = 32
@@ -251,7 +283,7 @@ class TrainingConfig:
     # NB: not wired into IO. Rigidity is the most forgiving consumer of a
     # predicted mask (a regional regulariser tolerates an eroded/dilated mask),
     # but validate bone_dice_moving before feeding it anything.
-    use_seg_bone_head: bool = True
+    use_seg_bone_head: bool = False
     seg_bone_head_channels: int = 32
     w_seg_bone: float = 0.1
     seg_bone_warmup_epochs: float = 5.0
@@ -326,7 +358,7 @@ class TrainingConfig:
 
     mlflow_tracking_uri: str = "file:///home/iml/fryderyk.koegl/code/mlruns"
     mlflow_experiment: str = "PSMAReg_LapIRN"
-    logger_backend: str = "both"  # one of: "mlflow", "wandb", "both", "none"
+    logger_backend: str = "wandb"  # one of: "mlflow", "wandb", "both", "none"
     wandb_project: str = "PSMAReg_LapIRN"
     wandb_entity: Optional[str] = None
     wandb_mode: Optional[str] = None  # e.g. "offline" on clusters without internet

@@ -1,0 +1,19 @@
+# Inference-only dependency set. Deliberately much smaller than the repo's
+# pyproject.toml: no totalsegmentator, mlflow, wandb, nnunet or plotting stack.
+#
+# torch is PINNED to the version already in the base image. Without the pin,
+# monai/antspyx pull the newest torch from PyPI -- a cu13 build that cannot
+# initialise CUDA on the evaluation machine's 12.x driver. The Dockerfile
+# asserts the pin held.
+torch==2.6.0
+numpy>=1.24,<2
+nibabel>=5.2
+scipy>=1.10
+antspyx>=0.4.2
+monai>=1.3
+tqdm>=4.66
+# Code/instance_opt.py imports utils, which imports mlflow and wandb at module
+# level. Neither is called at inference time -- only the import has to succeed --
+# so the skinny mlflow build is enough and avoids ~300 MB of server dependencies.
+mlflow-skinny>=2.10
+wandb>=0.16
