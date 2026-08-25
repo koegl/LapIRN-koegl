@@ -11,7 +11,7 @@
 %   2.7 Model Selection                >>> FIGURE 3 (selection trade-off)
 %   2.8 Baselines
 %   2.9 Augmentation
-%   2.10 Training Setup                >>> TABLE 1 (schedule + weights)
+%   2.10 Training Setup
 %   2.11 Computing Infrastructure
 % Quantitative diagnostics (rigidity stencil, HD95
 % floor) live in Sec.~\ref{sec:ablation}; only their motivation is here.
@@ -84,7 +84,6 @@ The full objective combines image similarity, weak label supervision, the PET-bi
   \label{eq:total}
 \end{equation}
 %
-The weights are given in Table~\ref{tab:weights}.
 All terms are evaluated on the composed transformation~(\ref{eq:composed}).
 Only the full-resolution level is trained with the complete objective.
 The two coarser levels use the similarity, label and regularisation terms alone, i.e.\ $\lambda_{\mathrm{MTV}} = \lambda_{\mathrm{MTV\text{-}J}} = \lambda_{\mathrm{jac}} = \lambda_{\mathrm{TLG}} = \lambda_{\mathrm{rigid}} = 0$ at a quarter and half resolution, because the lesion and bone masks they would be evaluated on are only a few voxels wide there: after downsampling, thin ribs and small lesions are largely partial-volume, so both the volume ratios and the per-structure rigid fits measure interpolation rather than anatomy.
@@ -193,7 +192,7 @@ equals the scored percentage of non-diffeomorphic volume and places gradients on
 \label{sec:io}
 At test time we refine each pair individually.
 Keeping the predicted field fixed, we optimise a residual stationary velocity field, initialised to zero and exponentiated by scaling and squaring, on top of it, so the refined transformation stays diffeomorphic by construction and the network is only ever corrected, never overwritten.
-The objective is the same one the network was trained under, only reweighted (Table~\ref{tab:weights}).
+The objective is the same one the network was trained under, only reweighted so that the biomarker terms dominate.
 We descend it for 90 Adam steps with a learning rate of $10^{-2}$ and keep the best rather than the last iterate, scoring each step with the hard, nearest-neighbour-counted DSC, HD05, MTV and TLG instead of the bilinear proxies the optimiser differentiates, so the selected step is the one the scorer would prefer.
 %Because the global biomarker terms constrain only net sums, in which per-lesion errors cancel, we additionally pin the largest lesions individually by evaluating the MTV and TLG terms per connected component \todo{keep or drop depending on the final configuration}.
 %Instance optimisation requires organ and lesion segmentations of both scans, which on our test set are the automatic labels described in Sec.~\ref{sec:data_and_preprocessing}, and adds \todo{n}~s per pair.
@@ -261,46 +260,8 @@ On top of that we crop the moving and the fixed scan independently by up to a fu
 Each pyramid level is trained in sequence with Adam on whole volumes rather than patches, at a batch size of one with gradients accumulated over four steps.
 The convolutional trunk runs in \texttt{bfloat16} while the transformations and all losses are kept in single precision, since scaling and squaring and the Jacobian determinants compound rounding error.
 Every level starts with a five-epoch linear learning-rate warmup and keeps the preceding level frozen for its first ten epochs.
-The schedule and all loss weights, for training and for instance optimisation, are listed in Table~\ref{tab:weights}.
-
-\begin{table}[t]
-\centering
-\caption{Training and instance-optimisation configuration.
-Slashes separate the values of pyramid levels 1/2/3. The biomarker and rigidity terms are inactive at levels 1 and 2, where the lesion and bone masks are largely partial-volume
-(Sec.~\ref{sec:losses}). \todo{provisional - refresh once the final run is
-fixed}}
-\label{tab:weights}
-\small
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{llcc}
-\toprule
-& Parameter & Training & IO \\
-\midrule
-\multirow{5}{*}{\rotatebox[origin=c]{90}{Schedule}}
-  & optimiser              & Adam & Adam \\
-  & steps / iterations     & 100k / 100k / 140k & 90 \\
-  & learning rate          & $3$ / $2$ / $2.5 \cdot 10^{-4}$ & $10^{-2}$ \\
-  & batch size             & 1 ($\times 4$ accumulation) & 1 \\
-  & warmup / unfreeze      & 5 / 10 epochs & -- \\
-\midrule
-\multirow{9}{*}{\rotatebox[origin=c]{90}{Loss weights}}
-  & $\lambda_{\mathrm{NCC}}$          & 5 & 6 \\
-  & $\lambda_{\mathrm{DSC}}$          & 3 / 4 / 5 & 6 \\
-  & $\lambda_{\mathrm{MTV}}$          & 20 & 200 \\
-  & $\lambda_{\mathrm{MTV\text{-}J}}$ & 0.5 & 0 \\
-  & $\lambda_{\mathrm{jac}}$          & 5 & 20 \\
-  & $\lambda_{\mathrm{TLG}}$          & 5 & 20 \\
-  & $\lambda_{\mathrm{rigid}}$        & 0.2 & 1 \\
-  & $\lambda_{\mathrm{smooth}}$       & 5 & 0 \\
-  & $\lambda_{\mathrm{NDV}}$          & $10^{4}$ & 10 \\
-\midrule
-\multirow{3}{*}{\rotatebox[origin=c]{90}{\shortstack[c]{Per-\\lesion}}}
-  & $\lambda_{\mathrm{MTV,cc}}$       & -- & 80 \\
-  & $\lambda_{\mathrm{MTV\text{-}J,cc}}$ & -- & 150 \\
-  & $\lambda_{\mathrm{TLG,cc}}$       & -- & 20 \\
-\bottomrule
-\end{tabular}
-\end{table}
+The three levels are trained for $100$k, $100$k and $140$k steps at learning rates of $3\cdot10^{-4}$, $2\cdot10^{-4}$ and $2.5\cdot10^{-4}$.
+The loss weights were chosen by the sweep of Sec.~\ref{sec:evaluation} and are given in the released code.
 
 \subsection{Computing Infrastructure}
 \label{sec:infrastructure}
