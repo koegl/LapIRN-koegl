@@ -48,6 +48,7 @@ A boundary loss would therefore expend its gradient on labels that are already a
 
 We swept the loss weights and the instance-optimisation settings and selected the one reported below with the challenge ranking of Sec.~\ref{sec:model_selection}, applied to the surrogate protocol above.
 Table~\ref{tab:baselines} places the selected variant against the baselines.
+The container row was obtained by running the submitted container itself, on a single NVIDIA H100 and under the 90\,s per image pair the challenge allows, so it reflects what the method achieves under the constraint it is actually deployed with.
 It improves DSC from $73.3\%$ (NiftyReg, the strongest baseline) to $88.3\%$ and halves HD95 from $7.09$ to $4.77$\,mm, while reducing the MTV and TLG errors by more than a factor of two and the non-diffeomorphic volume from $1525$ to $21$\,ppm.
 All differences are significant on every metric (paired Wilcoxon signed-rank, Holm-corrected, $p<0.01$).
 

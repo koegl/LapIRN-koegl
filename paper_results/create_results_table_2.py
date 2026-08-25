@@ -26,7 +26,9 @@ from create_results_table_1 import (
 from scipy.stats import wilcoxon
 
 HERE = Path(__file__).resolve().parent
-OUT_TEX = HERE / "results_table_2.tex"
+# The table goes straight into the paper; the p-values stay next to the script,
+# since they are working data rather than something the document reads.
+OUT_TEX = HERE.parents[0] / "overleaf" / "tables" / "table_results_2.tex"
 OUT_PVALS = HERE / "results_table_2_pvalues.csv"
 
 # The variant selected in table 1 and shipped in the container.
@@ -117,7 +119,9 @@ def main():
         r"each metric, $p<0.05$). "
         r"Dashes mark metrics that are undefined for a baseline: the unregistered and "
         r"affine cases have no deformation field, and the PET biomarkers are only "
-        r"meaningful after resampling.}",
+        r"meaningful after resampling. "
+        r"The container row was produced by the submitted container itself, on a single "
+        r"NVIDIA H100 and within the 90\,s per image pair the challenge allows.}",
         r"\label{tab:baselines}",
     ]
 
@@ -165,6 +169,7 @@ def main():
         "",
     ]
 
+    OUT_TEX.parent.mkdir(parents=True, exist_ok=True)
     OUT_TEX.write_text("\n".join(lines))
     print(f"wrote {OUT_TEX}")
     print(f"wrote {OUT_PVALS}")
