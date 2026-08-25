@@ -160,21 +160,6 @@ def main() -> None:
                 # path_model_level_2 = Path(
                 #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_gentle-rat-39450513_stagelvl2_best.pth"
                 # )
-                path_model_level3 = level3.train_lvl3(
-                    config,
-                    path_model_level_2,
-                    train_generator,
-                    valid_generator,
-                    valid_tubingen_generator,
-                    valid_nlst_generator,
-                    valid_abdomen_generator,
-                )
-                # resume_model_path_lvl3 = Path(
-                #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_angry-mare-39459564_stagelvl3_best_combined.pth"
-                # )
-                # resume_optimizer_path_lvl3 = Path(
-                #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_angry-mare-39459564_stagelvl3_best_combined_optimizer.pth"
-                # )
                 # path_model_level3 = level3.train_lvl3(
                 #     config,
                 #     path_model_level_2,
@@ -183,9 +168,24 @@ def main() -> None:
                 #     valid_tubingen_generator,
                 #     valid_nlst_generator,
                 #     valid_abdomen_generator,
-                #     resume_model_path=resume_model_path_lvl3,
-                #     resume_optimizer_path=resume_optimizer_path_lvl3,
                 # )
+                resume_model_path_lvl3 = Path(
+                    "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_angry-mare-39459564_stagelvl3_best_combined.pth"
+                )
+                resume_optimizer_path_lvl3 = Path(
+                    "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_angry-mare-39459564_stagelvl3_best_combined_optimizer.pth"
+                )
+                path_model_level3 = level3.train_lvl3(
+                    config,
+                    path_model_level_2,
+                    train_generator,
+                    valid_generator,
+                    valid_tubingen_generator,
+                    valid_nlst_generator,
+                    valid_abdomen_generator,
+                    resume_model_path=resume_model_path_lvl3,
+                    resume_optimizer_path=resume_optimizer_path_lvl3,
+                )
 
         # print(f"Final model path: {path_model_level3}")
 
