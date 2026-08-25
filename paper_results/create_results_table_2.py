@@ -19,6 +19,7 @@ from create_results_table_1 import (
     HEADERS,
     HIGHER_IS_BETTER,
     METRICS,
+    decimals_for,
     format_cell,
     holm_correct,
     load_metric,
@@ -60,13 +61,14 @@ BASELINE_LABELS = {
 # display label of the row. A negative value, or a row absent from this dict,
 # prints as a dash -- fill these in as the measurements come.
 TIMES = {
-    "Affine": [-1.0, -1.0],
-    "NiftyReg": [-1.0, -1.0],
+    "Affine": [19.05, 0.92],
+    "NiftyReg": [9.90, 0.48],
     "ConvexAdam": [-1.0, -1.0],
     "Ours (no IO)": [-1.0, -1.0],
     "Ours (container)": [89.8185, 2.6854483331466263],
     "Ours (validation)": [-1.0, -1.0],
 }
+
 
 VALIDATION_MODEL = normalise_model_id(
     "polite-snake-38577202_io_lr1.0e-02_it90_wncc5.00_wdicect5.00_wjac10.00"
@@ -88,8 +90,6 @@ OUR_ROWS = [
 PRIMARY_KEY = "container"
 
 RUNTIME_HEADER = r"Time (s) $\downarrow$"
-# Decimals used for the runtime cells.
-RUNTIME_DECIMALS = 0
 
 
 def load_local_metrics(path, cases):
@@ -106,16 +106,21 @@ def load_local_metrics(path, cases):
 
 
 def format_runtime(label):
-    """Render TIMES[label] as "mean $\\pm$ std"; unmeasured rows print a dash."""
+    """Render TIMES[label] as "mean $\\pm$ std"; unmeasured rows print a dash.
+
+    Both halves are shown to three significant figures of the mean, and the std
+    reuses the mean's decimals so the two align, matching the metric cells.
+    """
     entry = TIMES.get(label)
     if entry is None:
         return "--"
     mean, std = float(entry[0]), float(entry[1])
     if mean < 0:
         return "--"
-    cell = f"{mean:.{RUNTIME_DECIMALS}f}"
+    decimals = decimals_for(mean)
+    cell = f"{mean:.{decimals}f}"
     if std >= 0:
-        cell += rf" $\pm$ {std:.{RUNTIME_DECIMALS}f}"
+        cell += rf" $\pm$ {std:.{decimals}f}"
     return cell
 
 
