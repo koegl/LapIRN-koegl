@@ -211,10 +211,10 @@ class TrainingConfig:
     w_io_dice: float = 5.0
     w_io_non_diff: float = 10.0  # 2000.0
     w_io_smooth: float = 0.0  # 2.0
-    w_io_mtv: float = 200.0  # 500.0
+    w_io_mtv: float = 400.0  # 500.0
     w_io_mtv_avg: float = 0.0  # 5000.0
-    w_io_tlg: float = 80.0  # 100.0
-    w_io_jacobian_tumor: float = 20  # 5.0
+    w_io_tlg: float = 160.0  # 100.0
+    w_io_jacobian_tumor: float = 40  # 5.0
     w_io_bone_rigidity: float = 1.0  # 2.0
 
     # --- per-lesion (connected component) tumour bias terms in IO -----------
