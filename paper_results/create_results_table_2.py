@@ -63,7 +63,7 @@ TIMES = {
     "Affine": [19.05, 0.92],
     "NiftyReg": [49.7, 0.48],
     "ConvexAdam": [22.8, 1.06],
-    "Ours (no IO)": [-1.0, -1.0],
+    "Ours (no IO)": [19.46, 1.02],
     "Ours (container)": [89.8185, 2.6854483331466263],
     "Ours (validation)": [-1.0, -1.0],
 }
