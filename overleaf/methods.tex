@@ -48,16 +48,17 @@ Throughout, $I$ denotes the moving PET image, $M$ its lesion mask, $\varphi_{\ma
 %
 the total transformation mapping the moving into the fixed image; $W$ denotes the lesion region in the fixed frame, i.e.\ the image of $M$ under $\varphi$.
 
-\subsubsection{Affine pre-registration.}
+\subsubsection{Affine pre-registration and preprocessing.}
 Baseline and follow-up scans of the same subject differ in field of view, table position and patient posture by far more than a locally regularised network can absorb, so we first remove the global component with a separate affine stage.
+We follow the baseline provided the challenger organisers, by removing the bed and normalizing the CTs.
 For each pair we estimate an affine transform with ANTs~\cite{ants} on the CT channel alone, at half resolution and with a Mattes mutual-information metric, after masking both volumes to the body and windowing them to $[-1000, 1000]$~HU.
-The result is converted into a dense voxel displacement field, cached per pair, and applied to the moving scan before the network sees it; augmentations are applied consistently to the cached field.
+The result is converted into a dense voxel displacement field, cached per pair, and applied to the moving scan before the network sees it.
 Note that an affine transform is in general not volume-preserving, which is why all biomarker terms of Sec.~\ref{sec:losses} are evaluated on the composed transform~(\ref{eq:composed}) rather than on $\varphi_{\theta}$ alone.
 
 \subsubsection{Deformable registration.}
 For the deformable stage we use LapIRN~\cite{ref_lapirn}, a Laplacian-pyramid network whose three sub-networks operate at a quarter, a half and the full resolution of the $192\times192\times288$ volumes.
 Each level predicts a stationary velocity field that is added to the upsampled velocity of the coarser level; the sum is exponentiated by scaling and squaring to give a diffeomorphic $\varphi_{\theta}$, so large deformations are recovered coarse-to-fine while the transformation stays smooth and invertible.
-We adapted the architecture to the multi-modal, whole-body setting: each sub-network takes four input channels, the CT and PSMA PET of the affinely aligned moving scan and of the fixed scan, and uses 24 initial feature channels with five residual blocks per level.
+We adapted the architecture to the multi-modal, whole-body setting: each sub-network takes four input channels, the CT and PSMA PET of the affinely aligned moving scan and of the fixed scan, and uses 7 initial feature channels with five residual blocks per level.
 Image similarity is computed on CT only, since PET uptake is not conserved between time points and would otherwise drive the deformation towards matching disease rather than anatomy; the PET channel enters the network as input and the biomarker terms of Sec.~\ref{sec:losses} instead.
 The levels are trained in sequence, each initialised from the previous one, which is kept frozen for the first ten epochs and fine-tuned jointly afterwards.
 %At full resolution the network additionally carries two auxiliary segmentation heads predicting the PET lesion and the bone mask, whose outputs make the test-time objective self-sufficient where no labels are available.
@@ -90,7 +91,6 @@ The two coarser levels use the similarity, label and regularisation terms alone,
 
 \subsubsection{Registration Accuracy.}
 Image similarity is measured by the local normalised cross correlation, evaluated as a multi-resolution sum over as many scales as the level has resolutions, i.e.\ one scale at the coarsest and three at the full-resolution level.
-The window is $5^{3}$ voxels at the quarter-resolution level and $7^{3}$ at the half- and full-resolution levels, so that the coarsest level, where one voxel already covers roughly a centimetre, is not asked to match structure over a neighbourhood far larger than the deformations it estimates.
 It is computed on the CT channel only ($\lambda_{\mathrm{PET}} = 0$): PET intensity is not conserved between the two time points, as lesions appear, resolve or change uptake under therapy, so a PET similarity term would reward matching disease rather than anatomy.
 Furthermore, we used a standard DSC loss for weak CT label supervision.
 %Since the challenge scores PET organ overlap but provides no PET organ annotations for training, we measured each of the 117 TotalSegmentator organs' mean SUV relative to skeletal muscle across all sessions.
@@ -192,7 +192,6 @@ equals the scored percentage of non-diffeomorphic volume and places gradients on
 \label{sec:io}
 At test time we refine each pair individually.
 Keeping the predicted field fixed, we optimise a residual stationary velocity field, initialised to zero and exponentiated by scaling and squaring, on top of it, so the refined transformation stays diffeomorphic by construction and the network is only ever corrected, never overwritten.
-The objective is the same one the network was trained under, only reweighted so that the biomarker terms dominate.
 We descend it for 90 Adam steps with a learning rate of $10^{-2}$ and keep the best rather than the last iterate, scoring each step with the hard, nearest-neighbour-counted DSC, HD05, MTV and TLG instead of the bilinear proxies the optimiser differentiates, so the selected step is the one the scorer would prefer.
 %Because the global biomarker terms constrain only net sums, in which per-lesion errors cancel, we additionally pin the largest lesions individually by evaluating the MTV and TLG terms per connected component \todo{keep or drop depending on the final configuration}.
 %Instance optimisation requires organ and lesion segmentations of both scans, which on our test set are the automatic labels described in Sec.~\ref{sec:data_and_preprocessing}, and adds \todo{n}~s per pair.
@@ -202,8 +201,8 @@ We descend it for 90 Adam steps with a learning rate of $10^{-2}$ and keep the b
 Instance optimisation needs organ segmentations of both scans and lesion segmentations of the moving scan, and the submitted container has to produce them and register the pair within a budget of 90~s per image pair, which the configuration above exceeds.
 The deployed method therefore differs from the one evaluated in validation in three points, all of them inside instance optimisation or in the labels it consumes; everything up to and including the predicted field is identical.
 First, PET lesion masks come from an nnU-Net trained on this dataset with progressive patch-size growing~\cite{ref_progressive_patch}, which is faster at inference than the ensemble used in validation.
-Second, CT organ labels are produced with TotalSegmentator in its fast mode together with its body segmentation, and only within a 100-slice axial band, selected as the region in which pre-optimisation Dice is worst and refinement therefore has the most to gain; segmenting the full volume does not fit the budget.
-Third, instance optimisation runs for 18 steps at a learning rate of $0.1$ instead of 90 steps at $10^{-2}$.
+Second, CT organ labels are produced with TotalSegmentator in its fast mode together with its body segmentation.
+Third, instance optimisation runs until the 90s per-pair time limit is exhausted.
 We report both configurations separately in Sec.~\ref{sec:evaluation}, since only the validation one is free of the time constraint.
 
 \subsection{Model Selection}
@@ -222,30 +221,28 @@ where the accuracy term $A$ is the geometric mean of the DSC and HD95 scores, th
 \subsubsection{Checkpoint selection.}
 Registration accuracy and tumour preservation do not peak together: in level-3 training, validation Dice improves until it plateaus, whereas the tumour metrics reach their optimum roughly halfway through and degrade thereafter (Fig.~\ref{fig:selection}).
 Selecting on Dice alone therefore yields a checkpoint well past the tumour optimum, so we select on Eq.~\eqref{eq:score} instead.
-The official per-metric scores are ranks within a cohort of competing methods, which does not exist during a single training run.
-We therefore replace each rank score with a logistic quality centred on the metric's median and scaled by its robust spread (interquartile range divided by $1.349$), both measured over the validation rounds of a completed run.
+%The official per-metric scores are ranks within a cohort of competing methods, which does not exist during a single training run.
+%We therefore replace each rank score with a logistic quality centred on the metric's median and scaled by its robust spread (interquartile range divided by $1.349$), both measured over the validation rounds of a completed run.
 
 \input{figures/dsc_plateau}
 
 \subsubsection{Submission selection.}
 Choosing between trained variants does provide a cohort, so here we evaluate Eq.~\eqref{eq:score} exactly as the challenge does: each of the five metrics is ranked separately across the $K$ variants, with ties taking the worst rank they span, and rank $r$ is turned into the score $(K - r + 1)/K$.
 The variant with the highest $S$ is the one we submit.
-To check that this choice is not an artefact of a few cases, we additionally compare the selected variant against every other variant per metric with a paired Wilcoxon signed-rank test over the validation cases, Holm-corrected within each metric.
-As the variant is selected on the same cases, these tests are exploratory rather than confirmatory; the official validation leaderboard serves as the held-out check.
+%To check that this choice is not an artefact of a few cases, we additionally compare the selected variant against every other variant per metric with a paired Wilcoxon signed-rank test over the validation cases, Holm-corrected within each metric.
+%As the variant is selected on the same cases, these tests are exploratory rather than confirmatory; the official validation leaderboard serves as the held-out check.
 
 \subsection{Baselines}
 \label{sec:baselines}
-We compare against two references and three competing methods, all evaluated on the same pairs and under the identical protocol of Sec.~\ref{sec:evaluation}.
-The two references bound the range in which a deformable method has to be useful: the unregistered pair, i.e.\ the identity transform, and our affine pre-registration alone, which is also the initialisation every method below starts from.
+We compare against two references and two competing methods, all evaluated on the same pairs and under the identical protocol of Sec.~\ref{sec:evaluation}.
 
-As a classical iterative baseline we ran NiftyReg~\cite{MODAT2010,modat2014}, using \texttt{reg\_aladin} for the affine stage followed by \texttt{reg\_f3d} initialised with it, so that the resulting control point grid encodes the total transform; all parameters were left at their defaults.
-As a learning-free optimisation baseline we ran ConvexAdam~\cite{ref_convexadam}, in the form provided by the challenge organisers as the official baseline of the task, so that our numbers are directly comparable to the reference entry on the leaderboard.
-Finally, we compare against vanilla LapIRN, i.e.\ the same architecture and training schedule as our model but with the original objective only, without the DSC, NDV loss, PET-biomarker terms and the bone-rigidity penalty, which isolates the contribution of the proposed losses from that of the backbone.
+As a classical iterative baseline we ran NiftyReg~\cite{MODAT2010,modat2014}, using \texttt{reg\_aladin} for the affine stage followed by \texttt{reg\_f3d} initialised with it, both with default parameters.
+As a learning-free optimisation baseline we ran ConvexAdam~\cite{ref_convexadam}, in the form provided by the challenge organisers as the official baseline of the task.
 
 \subsection{Augmentation}
 \label{sec:augmentation}
 With 239 training pairs, augmentation matters, and we chose it to reproduce the specific ways in which two sessions of the same patient differ rather than to maximise variety.
-Every transformation is applied consistently to both scans of a pair, to their labels and to the cached affine field, except where stated otherwise.
+%Every transformation is applied consistently to both scans of a pair, to their labels and to the cached affine field, except where stated otherwise.
 
 We flip left--right with probability $0.5$, the only spatial flip that leaves whole-body anatomy plausible.
 On CT we apply an intensity shift of $\pm0.02$ in the normalised window (about $\pm50$~HU) and a scaling of $0.9$ to $1.1$, covering scanner and reconstruction variation.
@@ -257,10 +254,10 @@ On top of that we crop the moving and the fixed scan independently by up to a fu
 
 \subsection{Training Setup}
 \label{sec:training_setup}
-Each pyramid level is trained in sequence with Adam on whole volumes rather than patches, at a batch size of one with gradients accumulated over four steps.
+Each pyramid level is trained in sequence with Adam, at a batch size of one with gradients accumulated over four steps.
 The convolutional trunk runs in \texttt{bfloat16} while the transformations and all losses are kept in single precision, since scaling and squaring and the Jacobian determinants compound rounding error.
 Every level starts with a five-epoch linear learning-rate warmup and keeps the preceding level frozen for its first ten epochs.
-The three levels are trained for $100$k, $100$k and $140$k steps at learning rates of $3\cdot10^{-4}$, $2\cdot10^{-4}$ and $2.5\cdot10^{-4}$.
+The three levels are trained for $60$k, $60$k and $120$k steps at learning rates of $3\cdot10^{-4}$, $2\cdot10^{-4}$ and $2.5\cdot10^{-4}$.
 The loss weights were chosen by the sweep of Sec.~\ref{sec:evaluation} and are given in the released code.
 
 \subsection{Computing Infrastructure}
@@ -268,5 +265,5 @@ The loss weights were chosen by the sweep of Sec.~\ref{sec:evaluation} and are g
 All models were trained and evaluated on a single NVIDIA H100 80\,GB HBM3 (driver 610.57.04).
 The pipeline is implemented in Python~3.11 with PyTorch~2.6.0~\cite{ref_pytorch} and CUDA~12.4; the affine pre-registration uses ANTsPy~0.6.3~\cite{ants}.
 Image and array handling rely on NiBabel~5.4.2, NumPy~2.4.4 and SciPy~1.17.1.
-Training all three levels takes \todo{n}~h, and inference is \todo{n}~s per pair, rising to \todo{n}~s with instance optimisation.
+Training all three levels takes 2d 6h 7m 6s.
 Code and the submission container are available at \todo{repository URL}.

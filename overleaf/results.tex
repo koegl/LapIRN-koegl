@@ -15,9 +15,6 @@
 The challenge does not release labels for the validation cases.
 Unless stated otherwise, the validation numbers we report are therefore computed against surrogate labels we generated ourselves: CT organ labels with TotalSegmentator and PET tumour labels with the winning autoPET-III submission.
 These surrogate labels underlie every validation metric in this work, including the checkpoint and submission selection of Sec.~\ref{sec:model_selection}.
-Being predictions rather than the challenge's reference annotations, they carry their own error, so their absolute values are not directly comparable to the official validation leaderboard; we use them to compare methods against each other under an identical protocol.
-Where we report official validation-leaderboard results, these are computed by the organisers against their reference annotations and are marked as such.
-Since the leaderboard covers the same cases with the correct labels, we use the agreement between the two rankings as a check on the surrogate protocol, and prefer the leaderboard whenever it is available for the models being compared.
 We report our method in three configurations.
 \emph{Ours (container)} is the submitted method of Sec.~\ref{sec:container}, run on a single NVIDIA H100 within the 90\,s per image pair the challenge allows; since it is the configuration the hidden test set will be scored on, it is the one we test the baselines against.
 \emph{Ours (validation)} is the unconstrained method of Sec.~\ref{sec:pipeline}, reported as the upper bound that the time budget gives up; the two differ only in instance optimisation and in how the segmentations it consumes are produced.

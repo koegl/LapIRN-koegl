@@ -21,7 +21,7 @@ Deformable registration has traditionally been posed as an iterative optimisatio
 While accurate, these methods are slow at whole-body resolution.
 Learning-based methods instead amortise the optimisation over a training set into the network weights, replacing per-pair iterative optimisation with a single forward pass at inference.
 VoxelMorph established the unsupervised paradigm~\cite{ref_voxelmorph_cvpr}, and subsequent work introduced diffeomorphic parameterisations through stationary velocity fields~\cite{ref_svf_voxelmorph}, transformer backbones such as TransMorph~\cite{ref_transmorph}, and multi-resolution architectures such as LapIRN~\cite{ref_lapirn}.
-Among the latter, LapIRN uses a Laplacian pyramid of coarse-to-fine sub-networks to recover large deformations while keeping the transformation smooth and invertible, and has been a strong performer across previous Learn2Reg editions~\cite{ref_learn2reg_alessa,ref_learn2reg_hansen}.
+Among the latter, LapIRN uses a Laplacian pyramid of coarse-to-fine sub-networks to recover large deformations while keeping the transformation smooth and invertible.
 A recurring limitation of purely intensity-driven losses is that they permit non-physical folding.
 Anatomy-aware regularisation that penalises non-rigid deformation, e.g. of skeletal structures~\cite{ref_rigidity_1_loeckx,ref_rigidity_2_ruan,ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki}, is therefore particularly relevant for whole-body PET/CT, where the skeleton is a frequent site of PSMA-avid disease.
 
@@ -34,7 +34,7 @@ Our contributions are:
         test-time instance optimisation;
   \item a set of biomarker-preserving losses that constrain the PET-derived MTV and TLG under the estimated deformation, including a Jacobian-based surrogate that supplies dense gradients throughout the lesion interior;
   \item a per-structure rigid-fit bone-rigidity penalty
-  \item a score-driven checkpoint and submission selection procedure that mirrors the challenge ranking. \todo{finalise once the model is fixed}
+  \item a score-driven checkpoint and submission selection procedure that mirrors the challenge ranking.
 \end{itemize}
 
 The proposed registration pipeline with affine pre-registration, LapIRN-based registration, losses and instance optimization (IO) is shown in Fig.~\ref{fig:pipeline}.
