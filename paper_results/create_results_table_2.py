@@ -62,7 +62,7 @@ BASELINE_LABELS = {
 # prints as a dash -- fill these in as the measurements come.
 TIMES = {
     "Affine": [19.05, 0.92],
-    "NiftyReg": [9.90, 0.48],
+    "NiftyReg": [49.7, 0.48],
     "ConvexAdam": [-1.0, -1.0],
     "Ours (no IO)": [-1.0, -1.0],
     "Ours (container)": [89.8185, 2.6854483331466263],
