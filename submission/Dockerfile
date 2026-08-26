@@ -1,7 +1,7 @@
 # Build from the REPOSITORY ROOT, with the two out-of-tree dependencies supplied
 # as named build contexts (build.sh does this for you):
 #
-#   docker build -f submission/Dockerfile -t psmareg_lapirn \
+#   docker build -f submission/Dockerfile -t psmareg_koegl \
 #     --build-context autopet=../autopet-3-submission \
 #     --build-context nnunet_model=<Dataset501 model dir> \
 #     --build-context totalseg_weights=~/.totalsegmentator/nnunet/results .

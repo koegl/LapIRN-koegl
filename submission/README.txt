@@ -1,6 +1,6 @@
 PSMAReg (Learn2Reg 2026) -- test-phase submission
 Method: LapIRN (Laplacian pyramid, diffeomorphic) with ANTs affine prereg
-Image:  psmareg_lapirn
+Image:  psmareg_koegl
 
 ARGUMENT ORDER (five positional paths, as specified by the organizers)
   <image>  fixed_ct  fixed_pet  moving_ct  moving_pet  output_disp

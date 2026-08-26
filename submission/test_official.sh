@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 bash ./build.sh
-#docker load --input psmareg_convexadam.tar.gz
+#docker load --input psmareg_koegl.tar.gz
 
 # The container registers ONE moving/fixed PET+CT set per run (five paths: fixed CT,
 # fixed PET, moving CT, moving PET, output). This script iterates the VALIDATION set
@@ -28,7 +28,7 @@ while read -r FCT FPT MCT MPT OUT; do
         --network=none \
         --mount type=bind,source=${IMAGES_DIR},target=/app/input,readonly \
         --mount type=bind,source=${OUTPUT_DIR},target=/app/output \
-        psmareg_convexadam \
+        psmareg_koegl \
             /app/input/${FCT} \
             /app/input/${FPT} \
             /app/input/${MCT} \

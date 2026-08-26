@@ -47,7 +47,7 @@ measured.
 bash submission/build.sh                 # docker build from the repo root
 DEV=1 LIMIT=1 bash submission/test.sh    # one pair, live code, timing
 bash submission/test.sh                  # all 20 validation pairs
-bash submission/export.sh                # psmareg_lapirn.tar.gz
+bash submission/export.sh                # psmareg_koegl.tar.gz
 ```
 
 `test.sh` invokes the container exactly as the organizers do (§4 of the

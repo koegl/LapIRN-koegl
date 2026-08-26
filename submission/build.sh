@@ -7,7 +7,7 @@
 # AUTOPET_DIR / NNUNET_MODEL_DIR.
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-IMAGE="${IMAGE:-psmareg_lapirn}"
+IMAGE="${IMAGE:-psmareg_koegl}"
 
 AUTOPET_DIR="${AUTOPET_DIR:-/home/iml/fryderyk.koegl/code/autopet-3-submission}"
 NNUNET_MODEL_DIR="${NNUNET_MODEL_DIR:-/home/iml/fryderyk.koegl/data/PSMAReg-nnunet/nnUNet_results/Dataset501_PSMALesion/nnUNetTrainer_PGPSplus__nnUNetPlans__3d_fullres}"
