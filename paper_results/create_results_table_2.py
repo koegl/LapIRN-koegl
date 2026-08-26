@@ -51,8 +51,8 @@ NO_IO_LOCAL_CSV = (
 BASELINE_LABELS = {
     "before_registration": "Initial",
     "affine": "Affine",
-    "niftyreg": "NiftyReg",
     "convexadam": "ConvexAdam",
+    "niftyreg": "NiftyReg",
 }
 
 # Wall-clock seconds per image pair on the hardware of Sec.~\ref{sec:infrastructure},
