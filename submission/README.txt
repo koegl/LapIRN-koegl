@@ -18,9 +18,9 @@ ARGUMENT ORDER
   No other arguments are needed; all defaults are baked into the image.
 
 REQUIREMENTS
-  GPU:   1x CUDA GPU, TODO GB VRAM peak
-  CPU:   TODO cores
-  RAM:   TODO GB peak
+  GPU:   1x CUDA GPU, 24 GB VRAM peak
+  CPU:   scales to ~29 cores at peak (measured on a 64-core host); it runs on fewer, but the CT/PET segmentation stages slow down proportionally
+  RAM:   8 GB peak
   Time:  ~90 s/pair  ->  ~5 h for 200 pairs
 
   The runtime is set, not measured: the container holds an internal 90s per-pair wall-clock budget, and the instance optimisation stage takes as many steps as fit inside it, stopping early enough that the field is always written. A faster machine therefore spends the same ~90 s and takes more steps; it does not finish sooner.
