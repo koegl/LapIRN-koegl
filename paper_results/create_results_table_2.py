@@ -63,9 +63,9 @@ TIMES = {
     "Affine": [19.05, 0.92],
     "NiftyReg": [49.7, 0.48],
     "ConvexAdam": [22.8, 1.06],
-    "Ours (no IO)": [19.46, 1.02],
+    "Ours (no IO)": [19.5, 1.02],
     "Ours (container)": [89.8185, 2.6854483331466263],
-    "Ours (validation)": [-1.0, -1.0],
+    "Ours (validation)": [382.79, 7.774098],
 }
 
 
@@ -106,8 +106,9 @@ def load_local_metrics(path, cases):
 def format_runtime(label):
     """Render TIMES[label] as "mean $\\pm$ std"; unmeasured rows print a dash.
 
-    Both halves are shown to three significant figures of the mean, and the std
-    reuses the mean's decimals so the two align, matching the metric cells.
+    Each half gets its own three significant figures. Sharing the mean's
+    decimals, as the metric cells do, would round a std of 8.42 s next to a mean
+    of 383 s down to a bare 8.
     """
     entry = TIMES.get(label)
     if entry is None:
@@ -115,10 +116,9 @@ def format_runtime(label):
     mean, std = float(entry[0]), float(entry[1])
     if mean < 0:
         return "--"
-    decimals = decimals_for(mean)
-    cell = f"{mean:.{decimals}f}"
+    cell = f"{mean:.{decimals_for(mean)}f}"
     if std >= 0:
-        cell += rf" $\pm$ {std:.{decimals}f}"
+        cell += rf" $\pm$ {std:.{decimals_for(std)}f}"
     return cell
 
 
