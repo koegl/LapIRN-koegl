@@ -6,6 +6,8 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "antspyx>=0.6.3",
+    "anyio>=4.14.2",
+    "click>=8.4.2",
     "einops==0.8.1",
     "matplotlib>=3.11.0",
     "ml-collections==0.1.1",

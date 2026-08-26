@@ -173,7 +173,7 @@ class TrainingConfig:
     w_bone_rigidity: float = 0.2
 
     # io params
-    io_lr: float = 0.5e-1
+    io_lr: float = 0.25e-1
     io_it: int = 9
 
     # --- per-pair wall-clock budget (submission container only) -------------
@@ -211,10 +211,10 @@ class TrainingConfig:
     w_io_dice: float = 5.0
     w_io_non_diff: float = 10.0  # 2000.0
     w_io_smooth: float = 0.0  # 2.0
-    w_io_mtv: float = 200.0  # 500.0
+    w_io_mtv: float = 400.0  # 500.0
     w_io_mtv_avg: float = 0.0  # 5000.0
-    w_io_tlg: float = 80.0  # 100.0
-    w_io_jacobian_tumor: float = 20  # 5.0
+    w_io_tlg: float = 160.0  # 100.0
+    w_io_jacobian_tumor: float = 40  # 5.0
     w_io_bone_rigidity: float = 1.0  # 2.0
 
     # --- per-lesion (connected component) tumour bias terms in IO -----------
@@ -358,7 +358,7 @@ class TrainingConfig:
 
     mlflow_tracking_uri: str = "file:///home/iml/fryderyk.koegl/code/mlruns"
     mlflow_experiment: str = "PSMAReg_LapIRN"
-    logger_backend: str = "wandb"  # one of: "mlflow", "wandb", "both", "none"
+    logger_backend: str = "both"  # one of: "mlflow", "wandb", "both", "none"
     wandb_project: str = "PSMAReg_LapIRN"
     wandb_entity: Optional[str] = None
     wandb_mode: Optional[str] = None  # e.g. "offline" on clusters without internet
