@@ -36,31 +36,20 @@ With the per-structure rigid-fit penalty of Sec.~\ref{sec:losses}, the zero disp
 %     Makes the 53% number visual.
 
 \subsubsection{A surface-distance loss would not help.}
-Since HD95 is scored, a differentiable surface-distance term such as the distance-transform Hausdorff surrogate of Karimi and Salcudean~\cite{salcudean} is the obvious addition to the objective; we deliberately use none, in training or in instance optimisation.
-We analysed the $2296$ scored (case,\,label) entries of the validation predictions before instance optimisation, so that the conclusion applies to the training objective and not only to the refined field.
-The median per-label HD95 is $3.27$\,mm and the 75th percentile $5.47$\,mm, i.e.\ exactly one and two voxels: three quarters of all labels already lie within two voxels of the discretisation floor attainable by a nearest-neighbour--warped label map.
-The mean is instead driven almost entirely by a small tail, with the worst $10\%$ of entries carrying $48.1\%$ of the total HD95 mass.
-Splitting that mass against the unregistered pair shows where it comes from: $48.1\%$ is \emph{inherent}, already bad before registration and no better after (mean $33.8$\,mm over $229$ entries), $51.7\%$ belongs to labels our field \emph{improved} to a mean of $4.02$\,mm, and $0.0\%$ was \emph{created} by the registration.
-The inherent entries are dominated by structures for which no boundary refinement is meaningful: limbs subject to inter-session repositioning (humeri, femora, clavicles, together the largest single contribution), hollow organs whose filling changes between sessions and which therefore have no well-defined point correspondence (colon, small bowel, stomach, bladder, gallbladder), and anatomy truncated by the field of view (brain, skull), some of it reduced to a handful of voxels.
-A boundary loss would therefore expend its gradient on labels that are already at the floor, while leaving the tail - a capture-range and correspondence problem rather than a boundary-precision one - untouched.
+Since HD95 is scored, a surface-distance term~\cite{salcudean} is the obvious addition to the objective, but the $2296$ scored (case,\,label) entries leave it nothing to do.
+Half the HD95 mass sits in the worst $10\%$ of entries, and splitting it against the unregistered pair shows that $48.1\%$ is inherent, already bad before registration and no better after, while none of it was created by our field.
+Those entries are limbs repositioned between sessions, hollow organs with changing filling and anatomy truncated by the field of view, none of which have a boundary to refine.
+The rest is already at the discretisation floor: the median per-label HD95 is one voxel and the third quartile two.
+We measured this before instance optimisation, so it holds for the training objective as well.
 
 \subsection{Comparison against Baselines}
 
 We swept the loss weights and the instance-optimisation settings and selected the one reported below with the challenge ranking of Sec.~\ref{sec:model_selection}, applied to the surrogate protocol above.
 Table~\ref{tab:baselines} places the three configurations against the baselines.
-The container configuration improves DSC from $73.3\%$ (NiftyReg, the strongest baseline) to $88.3\%$ and halves HD95 from $7.09$ to $4.77$\,mm, while reducing the MTV and TLG errors by more than a factor of two and the non-diffeomorphic volume from $1525$ to $21$\,ppm.
-All differences are significant on every metric (paired Wilcoxon signed-rank, Holm-corrected, $p<0.01$).
+The container configuration improves DSC from $73.3\%$ (NiftyReg, the strongest baseline) to $81.0\%$ and reduces HD95 from $7.09$ to $6.17$\,mm, while also reducing the MTV and TLG errors and the non-diffeomorphic volume from $1525$ to $864$\,ppm.
 
 \input{tables/table_results_2}   % \input, not \include: \include forces a \clearpage
 
-\subsection{Validation Leaderboard}
-% TODO -- PLACEHOLDER until the final submission is made.
-%   - official organiser-computed numbers for the submitted model,
-%     explicitly marked as computed against the reference annotations
-%   - rank agreement between the surrogate protocol of
-%     Sec.~\ref{sec:evaluation} and the official leaderboard, as the
-%     held-out check promised there
-% >>> TABLE 3: leaderboard row(s) per metric.
 
 \subsection{Qualitative Results}
 \begin{figure}[t]
