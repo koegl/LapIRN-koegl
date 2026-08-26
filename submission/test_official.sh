@@ -8,11 +8,11 @@ bash ./build.sh
 #   fixed  = Baseline    (CT 0000, PET 0001, timepoint 00)
 #   moving = Follow-up 01 (CT 0000, PET 0001, timepoint 01)
 #   output = disp_<id>_00_<id>_01.nii.gz
-DATA_DIR=/scratch2/jchen/DATA/PSMA_autoPET/PSMAReg_PSMA_preprocessed_27344_327_192x192x288
-IMAGES_DIR=${DATA_DIR}/imagesVal
-DOCKER_DIR=/scratch/jchen/python_projects/custom_packages/MIR/tutorials/PSMAReg/Docker_Example
+DATA_DIR=/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset
+IMAGES_DIR=${DATA_DIR}/imagesTs
+DOCKER_DIR=/home/iml/fryderyk.koegl/code/LapIRN-koegl/submission
 DATASET_JSON=${DOCKER_DIR}/PSMAReg_val_dataset.json
-OUTPUT_DIR=${DOCKER_DIR}/PSMAReg_convexadam_TestPhase
+OUTPUT_DIR=${DOCKER_DIR}/validation_predictions_official_test
 mkdir -p "${OUTPUT_DIR}"
 
 # Extract one line per validation pair (basenames):
@@ -20,10 +20,14 @@ mkdir -p "${OUTPUT_DIR}"
 while read -r FCT FPT MCT MPT OUT; do
     [ -z "${FCT}" ] && continue
     echo "=== Registering ${OUT} ==="
+    # This workstation's nvidia-container-toolkit runs in CDI mode, which refuses the
+    # legacy --gpus hook; --runtime=nvidia requests the same single GPU. The
+    # organizers' machine is not in CDI mode -- restore --gpus "device=0" before
+    # this script ships.
     docker run --rm \
         --ipc=host \
-        --memory 256g \
-        --gpus "device=0" \
+        --memory 60g \
+        --runtime=nvidia -e NVIDIA_VISIBLE_DEVICES=0 -e NVIDIA_DRIVER_CAPABILITIES=compute,utility \
         --user $(id -u):$(id -g) \
         --network=none \
         --mount type=bind,source=${IMAGES_DIR},target=/app/input,readonly \
