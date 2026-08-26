@@ -62,7 +62,7 @@ BASELINE_LABELS = {
 TIMES = {
     "Affine": [19.05, 0.92],
     "NiftyReg": [49.7, 0.48],
-    "ConvexAdam": [-1.0, -1.0],
+    "ConvexAdam": [22.8, 1.06],
     "Ours (no IO)": [-1.0, -1.0],
     "Ours (container)": [89.8185, 2.6854483331466263],
     "Ours (validation)": [-1.0, -1.0],
@@ -70,8 +70,7 @@ TIMES = {
 
 
 VALIDATION_MODEL = normalise_model_id(
-    "polite-snake-38577202_io_lr1.0e-02_it90_wncc5.00_wdicect5.00_wjac10.00"
-    "_wsmooth1.00_wbonerigid0.00_wmtv50.00_wmtvmean500.00_wjactum2.50_wtlg1.50"
+    "auspicious-sloth-39469081_combined_IO_lr1.0e-02_it100_wNCC5.00_wDiceCT5.00_wJac10.00_wSmooth0.00_wBoneRigid0.00_wMTV200.00_wMTVmean0.00_wJactum20.00_wTLG80.00_wMTVcc80.00_wMTVavgcc150.00_wTLGcc80.00"
 )
 NO_IO_MODEL = normalise_model_id("auspicious-sloth-39469081_combined")
 
