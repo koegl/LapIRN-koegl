@@ -209,6 +209,18 @@ def main():
             else min(present, key=present.get)
         )
 
+    # Fastest measured row, so the runtime column is marked like the metrics.
+    # "Initial" is excluded: the identity transform is not a method, and timing
+    # it at ~0 s would win a column it does not compete in.
+    timed = {
+        key: TIMES[display_names[key]][0]
+        for key in rows
+        if key != "before_registration"
+        and display_names[key] in TIMES
+        and TIMES[display_names[key]][0] >= 0
+    }
+    best_runtime_key = min(timed, key=timed.get) if timed else None
+
     # Paired Wilcoxon of the primary (container) row against each baseline,
     # Holm-corrected within each metric over the baselines that have that metric.
     # Our own rows are never tested against each other -- that is not what the
@@ -289,7 +301,10 @@ def main():
             if significant.get((key, metric)):
                 cell += r"$^{*}$"
             cells.append(cell)
-        cells.append(format_runtime(display_names[key]))
+        runtime = format_runtime(display_names[key])
+        if key == best_runtime_key:
+            runtime = r"\textbf{" + runtime + "}"
+        cells.append(runtime)
         lines.append(f"{name} & " + " & ".join(cells) + r" \\")
 
     for model in baselines:
