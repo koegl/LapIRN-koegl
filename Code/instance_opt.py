@@ -142,6 +142,7 @@ def io_objective(
         loss_dice_ct = dice_loss_with_grad(
             x_lbl_ct, y_lbl_ct, disp_unit, grid, transform, class_weights=class_weights
         )
+        tqdm.tqdm.write("calculated dice")
 
     loss = (
         ncc_weight * loss_ncc_ct
@@ -151,6 +152,7 @@ def io_objective(
 
     if loss_dice_ct is not None:
         loss = loss + cfg.w_io_dice * loss_dice_ct
+        tqdm.tqdm.write("added dice to loss")
 
     # jac_det / jac are only needed by the PET-tumor and rigidity terms
     jac_det = jac = None
