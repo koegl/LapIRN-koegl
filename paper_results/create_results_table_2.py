@@ -37,8 +37,7 @@ OUT_PVALS = HERE / "results_table_2_pvalues.csv"
 CONTAINER_CSV = (
     HERE.parent
     / "submission"
-    / "validation_predictions"
-    / "metrics_io_it18_lr_10_dice.csv"
+    / "psmareg_pred_cluster_deadline_lr_0_025_high_tumor.csv"
 )
 # Same evaluator, backbone only. Not used for a table row -- the no-IO row comes
 # from the leaderboard CSVs like every other row -- but it evaluates the same
