@@ -1,31 +1,36 @@
 PSMAReg (Learn2Reg 2026) -- test-phase submission
-Method: LapIRN (Laplacian pyramid, diffeomorphic) with ANTs affine prereg
-Image:  psmareg_koegl
+Image: psmareg_koegl   (docker load --input psmareg_koegl.tar.gz  ->  psmareg_koegl:latest)
 
-ARGUMENT ORDER (five positional paths, as specified by the organizers)
-  <image>  fixed_ct  fixed_pet  moving_ct  moving_pet  output_disp
-  i.e.     ..._0000_00  ..._0001_00  ..._0000_01  ..._0001_01  <output path>
+ARGUMENT ORDER
+  Five positional paths, in this order:
 
-OUTPUT
-  NIfTI, channel-first (3, 192, 192, 288), float32.
-  Voxel displacements on the fixed-image grid, full input resolution.
-  Warping the moving image by this field aligns it to the fixed image.
+  docker run --rm --ipc=host --memory 60g --gpus "device=0" \
+      --user $(id -u):$(id -g) --network=none \
+      --mount type=bind,source=<test image dir>,target=/app/input,readonly \
+      --mount type=bind,source=<predictions dir>,target=/app/output \
+      psmareg_koegl \
+          /app/input/PSMARegPSMA_XXXX_0000_00.nii.gz   fixed CT   (baseline)
+          /app/input/PSMARegPSMA_XXXX_0001_00.nii.gz   fixed PET  (baseline)
+          /app/input/PSMARegPSMA_XXXX_0000_01.nii.gz   moving CT  (follow-up 01)
+          /app/input/PSMARegPSMA_XXXX_0001_01.nii.gz   moving PET (follow-up 01)
+          /app/output/disp_XXXX_00_XXXX_01.nii.gz      output displacement field
+
+  No other arguments are needed; all defaults are baked into the image.
 
 REQUIREMENTS
-  GPU:   1x CUDA GPU, TODO GB VRAM peak (measured on an RTX A6000)
-  CPU:   TODO cores (the ANTs affine stage is CPU-bound and single-threaded)
-  RAM:   TODO GB
-  Time:  TODO s/pair  ->  TODO min for 200 pairs (budget: 300 min)
+  GPU:   1x CUDA GPU, TODO GB VRAM peak
+  CPU:   TODO cores
+  RAM:   TODO GB peak
+  Time:  ~90 s/pair  ->  ~5 h for 200 pairs
 
-  Run as provided in the instructions; no network access is required.
+  The runtime is set, not measured: the container holds an internal 90s per-pair wall-clock budget, and the instance optimisation stage takes as many steps as fit inside it, stopping early enough that the field is always written. A faster machine therefore spends the same ~90 s and takes more steps; it does not finish sooner.
 
 DETERMINISM
   torch.manual_seed(0), np.random.seed(0), cudnn.deterministic = True,
-  cudnn.benchmark = False. The network inference is deterministic.
-  The ANTs affine registration (mattes metric, 32 sampling points) uses ITK's
-  own RNG and is not seeded from Python; small run-to-run differences in the
-  affine stage are therefore possible, and propagate to the field at the
-  sub-voxel level.
+  cudnn.benchmark = False. Network inference and instance optimisation are
+  deterministic.
 
-NOTES
-  TODO
+  Two documented sources of nondeterminism:
+  - The ANTs affine pre-registration (mattes metric, 32 sampling points) uses ITK's own RNG, not seeded from Python.
+    Small run-to-run differences in the affine stage propagate to the field at the sub-voxel level.
+  - The step count of the instance optimisation follows the wall-clock budget described under Time, so it varies with machine speed and load.
