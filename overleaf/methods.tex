@@ -27,7 +27,6 @@ Baseline and follow-up scans of the same subject differ in field of view, table 
 We follow the baseline provided the challenger organisers, by removing the bed and normalizing the CTs.
 For each pair we estimate an affine transform with ANTs~\cite{ants} on the CT channel alone, at half resolution and with a Mattes mutual-information metric, after masking both volumes to the body and windowing them to $[-1000, 1000]$~HU.
 The result is converted into a dense voxel displacement field, cached per pair, and applied to the moving scan before the network sees it.
-Note that an affine transform is in general not volume-preserving, which is why all biomarker terms of Sec.~\ref{sec:losses} are evaluated on the composed transform $\varphi$ rather than on $\varphi_{\theta}$ alone.
 
 \subsubsection{Deformable registration.}
 For the deformable stage we use LapIRN~\cite{ref_lapirn}, a Laplacian-pyramid network whose three sub-networks operate at a quarter, a half and the full resolution of the $192\times192\times288$ volumes.
@@ -71,7 +70,7 @@ Furthermore, we used a standard DSC loss for weak CT label supervision.
 %Since the challenge scores PET organ overlap but provides no PET organ annotations for training, we measured each of the 117 TotalSegmentator organs' mean SUV relative to skeletal muscle across all sessions.
 %As 90 organs fall below twice the muscle background and are thus indistinguishable in PET, we upweighted only the 10 exceeding 4 times the background (kidneys, gallbladder, spleen, liver, duodenum, bladder, portal vein, prostate, pancreas) by a factor of 2 in the per-class Dice loss.
 %This relies on PET and CT being well aligned within a session, so that CT-derived overlap on these organs approximates the PET organ overlap being scored.
-The objective contains no surface-distance term, although HD95 is scored; Sec.~\ref{sec:ablation} shows that one would have nothing to improve.
+The objective contains no surface-distance term, although HD95 is scored - the ablation study in Sec.~\ref{sec:ablation} shows no benefit from including one.
 
 
 \subsubsection{Preservation of PET quantification.}
@@ -83,9 +82,9 @@ We therefore add a complementary term based on the change-of-variables identity:
 Driving that mean to one, $\mathcal{L}_{\mathrm{MTV\text{-}J}}$ pins the same net volume ratio while providing gradients throughout the lesion interior, and unlike a per-voxel constraint it still permits internal redistribution of volume.
 Squaring the deviation per voxel instead of after the mean gives a third, stricter term, $\mathcal{L}_{\mathrm{jac}}$, which additionally discourages compensating compression and expansion inside the lesion.
 
-The challenge additionally scores the TLG, the PET-activity-weighted counterpart of the MTV, which we penalize analogously as the relative change of intensity mass under the warp, i.e.\ the absolute difference between the sums of $I$ over $M$ before and after resampling, divided by the former.
+The challenge additionally scores the TLG, the PET-activity-weighted counterpart of the MTV, which we penalize analogously as the relative change of intensity mass after warping, i.e.\ the absolute difference between the sums of $I$ over $M$ before and after resampling, divided by the former.
 Since both the image and the mask are resampled with the same transformation, this term is sensitive not only to volume change but also to intensity blurring at the lesion boundary, and thus complements the purely geometric terms.
-All four are used during training and descended at test time by our instance optimisation (Sec.~\ref{sec:io}), so the network is trained on the objective it is later refined under.
+All four PET preservation terms are used during training and descended at test time by our instance optimisation (Sec.~\ref{sec:io}), so the network is trained on the objective it is later refined under.
 
 \subsubsection{Bone rigidity.}
 A median of 46.0\% of total lesion volume at baseline lay within skeletal structures, rising to 63.8\% at follow-up.
