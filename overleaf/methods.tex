@@ -93,56 +93,16 @@ The objective contains no surface-distance term, although HD95 is scored; Sec.~\
 
 \subsubsection{Preservation of PET quantification.}
 The scored MTV bias only constrains the \emph{net} lesion volume, so we penalize it directly while supplying dense gradients through a Jacobian-based surrogate.
-All terms are evaluated on the total transformation $\varphi = \varphi_{\mathrm{aff}} \circ \varphi_{\theta}$, i.e.\ the affine pre-registration composed with the predicted displacement, against the original moving lesion mask $M$, since the affine itself is generally not volume-preserving.
-First, we minimize the squared relative volume error
-%
-\begin{equation}
-  \mathcal{L}_{\mathrm{MTV}}
-  = \left( \frac{\lvert M \circ \varphi \rvert - \lvert M \rvert}
-                {\lvert M \rvert} \right)^{2},
-  \label{eq:mtv}
-\end{equation}
-%
-where $M \circ \varphi$ denotes the linearly resampled mask.
-This matches the scored metric exactly, but its gradient is confined to the lesion's sub-voxel boundary shell.
-We therefore add a complementary term based on the change-of-variables identity: summing $\det J_{\varphi}$ over the warped lesion region recovers the original lesion volume, so the mean determinant over the warped lesion equals the ratio of original to warped volume. Driving this mean to one,
-%
-\begin{equation}
-  \mathcal{L}_{\mathrm{MTV\text{-}J}}
-  = \left( \frac{1}{\lvert W \rvert} \sum_{x \in W}
-    \det J_{\varphi}(x) - 1 \right)^{2},
-  \label{eq:mtvjac}
-\end{equation}
-%
-where $W$ denotes the warped lesion region, therefore pins the same net volume ratio as~(\ref{eq:mtv}) while providing gradients throughout the lesion interior; unlike a per-voxel constraint, it still permits internal redistribution of volume.
-Finally, the per-voxel penalty
-%
-\begin{equation}
-  \mathcal{L}_{\mathrm{jac}}
-  = \frac{1}{\lvert W \rvert} \sum_{x \in W}
-    \left( \det J_{\varphi}(x) - 1 \right)^{2}
-  \label{eq:jactum}
-\end{equation}
-%
-acts as a stricter local regulariser, discouraging compensating compression and expansion within the lesion.
+All terms are evaluated on the composed transformation $\varphi$ against the original moving lesion mask $M$, since the affine itself is generally not volume-preserving.
+The first term, $\mathcal{L}_{\mathrm{MTV}}$, is the squared relative error between the volume of the resampled mask and that of $M$.
+It matches the scored metric exactly, but its gradient is confined to the lesion's sub-voxel boundary shell.
+We therefore add a complementary term based on the change-of-variables identity: summing $\det J_{\varphi}$ over the warped lesion region $W$ recovers the original lesion volume, so the mean determinant over $W$ equals the ratio of original to warped volume.
+Driving that mean to one, $\mathcal{L}_{\mathrm{MTV\text{-}J}}$ pins the same net volume ratio while providing gradients throughout the lesion interior, and unlike a per-voxel constraint it still permits internal redistribution of volume.
+Squaring the deviation per voxel instead of after the mean gives a third, stricter term, $\mathcal{L}_{\mathrm{jac}}$, which additionally discourages compensating compression and expansion inside the lesion.
 
-
-The challenge additionally scores the total lesion glycolysis (TLG), the PET-activity-weighted counterpart of the MTV, which we penalize analogously as the relative change of intensity mass under the warp:
-%
-\begin{equation}
-  \mathcal{L}_{\mathrm{TLG}}
-  = \frac{\bigl\lvert
-      \sum_{x} (I \circ \varphi)(x)\,(M \circ \varphi)(x)
-      - \sum_{y} I(y)\, M(y)
-    \bigr\rvert}
-    {\sum_{y} I(y)\, M(y)},
-  \label{eq:tlg}
-\end{equation}
-%
-where $I$ denotes the moving PET image.
-Since both the image and the mask are resampled with the same transformation, this term is sensitive not only to volume change but also to intensity blurring at the lesion boundary, and thus complements the purely geometric terms (\ref{eq:mtv})-(\ref{eq:jactum}).
-
-The same terms (\ref{eq:mtv})-(\ref{eq:tlg}) are used during training and descended at test time by our instance optimisation (Sec.~\ref{sec:io}), so the network is trained on the objective it is later refined under.
+The challenge additionally scores the total lesion glycolysis (TLG), the PET-activity-weighted counterpart of the MTV, which we penalize analogously as the relative change of intensity mass under the warp, i.e.\ the absolute difference between the sums of $I$ over $M$ before and after resampling, divided by the former.
+Since both the image and the mask are resampled with the same transformation, this term is sensitive not only to volume change but also to intensity blurring at the lesion boundary, and thus complements the purely geometric terms.
+All four are used during training and descended at test time by our instance optimisation (Sec.~\ref{sec:io}), so the network is trained on the objective it is later refined under.
 
 \subsubsection{Bone rigidity.}
 In 146 patients with paired baseline and follow-up scans, a median of 46.0\% (IQR 3.1 to 72.3\%) of total lesion volume at baseline lay within skeletal structures, rising to 63.8\% (IQR 12.1 to 77.4\%) at follow-up.
