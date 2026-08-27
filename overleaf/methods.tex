@@ -22,12 +22,10 @@
 We used the PSMAReg dataset of the Learn2Reg~2026 challenge~\cite{ref_psmareg_challenge}, a longitudinal whole-body PSMA PET/CT cohort adapted from the manually annotated autoPET data of~\cite{ref_psmaregdata}.
 Each paired subject provides a baseline scan and one or more follow-up scans, each with a CT and a PSMA PET channel; the follow-up is registered to the baseline, i.e.\ the baseline acts as the fixed and the follow-up as the moving image.
 
-The challenge training split contains 146 paired and 212 unpaired subjects; the unpaired single-time-point cases were not used in this work.
-We divided the paired subjects patient-wise into 117 training and 29 internal validation subjects.
-Registration pairs are formed within a subject and always point from the temporally later to the earlier scan.
-For training we used all such ordered time-point combinations, including follow-up-to-follow-up pairs, which yields 239 pairs from the 117 subjects.
+Of the 146 paired and 212 unpaired subjects in the challenge training split, we used the paired ones, divided patient-wise into 117 for training and 29 for internal validation.
+Registration pairs always point from the temporally later scan to the earlier one: for training we took all such ordered time-point combinations, including follow-up-to-follow-up pairs (239 pairs).
 For our internal validation subjects we used every follow-up registered to its baseline giving 39 pairs from the 29 subjects.
-The challenge validation split of 20 paired subjects, which is the split scored on the public validation leaderboard, served as our test set; the organisers' own held-out test set ($\sim$200 pairs of private JHU data) is scored only by them.
+The challenge validation split of 20 paired subjects served as our test set; the organisers' held-out test set ($\sim$200 pairs of private JHU data) is scored only by them.
 
 For the training split we used the labels released by the organisers: CT organ labels generated automatically with TotalSegmentator~\cite{ref_totalsegmentator} and PET lesion labels manually annotated by radiologists.
 Since no labels are released for the challenge validation split, we generated our own for our test set with TotalSegmentator for the CT organs and the winning autoPET~III submission~\cite{rokuss2024fdgpsmahitchhikersguide} for the PET lesions.
