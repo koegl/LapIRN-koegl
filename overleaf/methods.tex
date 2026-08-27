@@ -157,29 +157,10 @@ We report both configurations separately in Sec.~\ref{sec:evaluation}, since onl
 \subsection{Model Selection}
 \label{sec:model_selection}
 
-Model selection enters our pipeline twice: once \emph{within} a run, to decide which checkpoint to keep, and once \emph{across} runs, to decide which variant to submit in the container.
-Both use the same three-component quality notion, and differ only in how each component is scored.
-
-Both stages combine registration accuracy (CT DSC and HD95), PET-biomarker preservation (absolute MTV and TLG bias) and deformation regularity (\%NDV after the official $0.005\%$ practical-equivalence adjustment) as a weighted geometric mean with exponents $0.4$, $0.4$ and $0.2$, mirroring the challenge's final score
-\begin{equation}
-  S = 100 \cdot A^{0.4} \, B^{0.4} \, R^{0.2},
-  \label{eq:score}
-\end{equation}
-where the accuracy term $A$ is the geometric mean of the DSC and HD95 scores, the biomarker term $B$ that of the MTV and TLG scores, and $R$ the \%NDV score.
-
-\subsubsection{Checkpoint selection.}
-Registration accuracy and tumour preservation do not peak together: in level-3 training, validation Dice improves until it plateaus, whereas the tumour metrics reach their optimum roughly halfway through and degrade thereafter (Fig.~\ref{fig:selection}).
-Selecting on Dice alone therefore yields a checkpoint well past the tumour optimum, so we select on Eq.~\eqref{eq:score} instead.
-%The official per-metric scores are ranks within a cohort of competing methods, which does not exist during a single training run.
-%We therefore replace each rank score with a logistic quality centred on the metric's median and scaled by its robust spread (interquartile range divided by $1.349$), both measured over the validation rounds of a completed run.
+Selection enters our pipeline twice, to keep a checkpoint within a run and to choose a variant across runs, and both use the challenge's own ranking score, the weighted geometric mean of registration accuracy, biomarker preservation and deformation regularity with exponents $0.4$, $0.4$ and $0.2$.
+Selecting on accuracy alone would be wrong in either place, because the two do not peak together: validation Dice improves until it plateaus, whereas the tumour metrics reach their optimum roughly halfway through level-3 training and degrade thereafter (Fig.~\ref{fig:selection}).
 
 \input{figures/dsc_plateau}
-
-\subsubsection{Submission selection.}
-Choosing between trained variants does provide a cohort, so here we evaluate Eq.~\eqref{eq:score} exactly as the challenge does: each of the five metrics is ranked separately across the $K$ variants, with ties taking the worst rank they span, and rank $r$ is turned into the score $(K - r + 1)/K$.
-The variant with the highest $S$ is the one we submit.
-%To check that this choice is not an artefact of a few cases, we additionally compare the selected variant against every other variant per metric with a paired Wilcoxon signed-rank test over the validation cases, Holm-corrected within each metric.
-%As the variant is selected on the same cases, these tests are exploratory rather than confirmatory; the official validation leaderboard serves as the held-out check.
 
 \subsection{Baselines}
 \label{sec:baselines}
