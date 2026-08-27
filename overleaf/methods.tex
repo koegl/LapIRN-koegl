@@ -1,22 +1,5 @@
 \section{Methods}
 
-% ===============================================================
-% OUTLINE
-%   2.1 Data
-%   2.2 Preprocessing
-%   2.3 Affine Pre-registration
-%   2.4 Registration Pipeline          >>> FIGURE 1 (pipeline overview)
-%   2.5 Loss Functions                 >>> FIGURE 2 (det J masking)
-%   2.6 Instance Optimisation
-%   2.7 Model Selection                >>> FIGURE 3 (selection trade-off)
-%   2.8 Baselines
-%   2.9 Augmentation
-%   2.10 Training Setup
-%   2.11 Computing Infrastructure
-% Quantitative diagnostics (rigidity stencil, HD95
-% floor) live in Sec.~\ref{sec:ablation}; only their motivation is here.
-% ===============================================================
-
 \subsection{Data and Preprocessing}
 \label{sec:data_and_preprocessing}
 We used the PSMAReg dataset of the Learn2Reg~2026 challenge~\cite{ref_psmareg_challenge}, a longitudinal whole-body PSMA PET/CT cohort adapted from the manually annotated autoPET data of~\cite{ref_psmaregdata}.
@@ -114,17 +97,7 @@ We therefore replaced it with a per-structure rigid-fit residual over the 61 ske
 No stencil crosses the mask and each structure is fitted independently, so articulation is free, and unlike the derivative-based penalties~\cite{ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki} it constrains only the shape of the deformation and not its placement.
 
 \subsubsection{Deformation regularisation.}
-To regularise the displacement field we used a diffusion regulariser, the mean squared spatial gradient of the displacement,
-%
-\begin{equation}
-  \mathcal{L}_{\mathrm{smooth}}
-  = \frac{1}{3} \sum_{d \in \{x,y,z\}}
-    \frac{1}{\lvert \Omega \rvert} \sum_{p \in \Omega}
-    \bigl\lVert \partial_{d} u(p) \bigr\rVert^{2},
-  \label{eq:smooth}
-\end{equation}
-%
-together with a term penalising non-diffeomorphic voxels.
+To regularise the displacement field we used a diffusion regulariser, $\mathcal{L}_{\mathrm{smooth}}$, the mean squared spatial gradient of the displacement, together with a term penalising non-diffeomorphic voxels.
 Rather than the usual penalty on negative Jacobian determinants of a single finite-difference stencil, we differentiably reproduce the scored metric itself: the challenge computes the non-diffeomorphic volume by decomposing each voxel into six tetrahedra and accumulating the negative part of their determinants over the body mask~\cite{Liu2024}.
 Writing $\det J^{(k)}_{\varphi}$ for the determinant of the $k$-th tetrahedral scheme, the loss
 %
