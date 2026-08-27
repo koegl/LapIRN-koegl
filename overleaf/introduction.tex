@@ -1,21 +1,10 @@
 \section{Introduction}
 
-% ---------------------------------------------------------------
-% OUTLINE
-%   P1  clinical motivation (PSMA PET/CT, longitudinal imaging)
-%   P2  why deformable registration is hard here + challenge task
-%   P3  related work: classical -> learning-based -> LapIRN; rigidity
-%   P4  contributions
-% >>> FIGURE (teaser, OPTIONAL -- cut first if over length):
-%     a baseline/follow-up pair illustrating the FOV, positioning and
-%     bladder-filling differences described in P2. If cut, fold the
-%     example into the qualitative figure in the Results.
-% ---------------------------------------------------------------
-
 Prostate-specific membrane antigen (PSMA) PET/CT has become a central imaging modality for staging, treatment planning, radiopharmaceutical therapy, and post-therapy response assessment in prostate cancer~\cite{ref_psma_clinical}.
-In these settings, patients often undergo multiple scans over time, comprising a baseline scan before therapy and one or more follow-up scans afterwards; accurate baseline-to-follow-up registration can support comparison of disease burden, localisation of uptake changes, assessment of lesion progression or response, dose accumulation, and quantitative longitudinal analysis~\cite{ref_psmareg_challenge}.
-The challenge organisers identify several factors that make establishing this correspondence by deformable image registration difficult in routine whole-body data~\cite{ref_psmareg_challenge}: baseline and follow-up scans differ substantially in field of view, patient positioning, respiratory state, disease burden, bladder and bowel filling, and body weight; CT and PET encode complementary but appearance-dissimilar information; and the registration must preserve the quantitative PET signal used for response assessment while remaining physically plausible in structures such as the skeleton.
-The Learn2Reg~2026 PSMAReg challenge~\cite{ref_learn2reg_alessa,ref_learn2reg_hansen,ref_psmaregdata} formalises this problem as the estimation of a dense displacement field that warps each follow-up (moving) scan to its baseline (fixed) scan, evaluated jointly on organ overlap, boundary distance, deformation regularity, and preservation of PET-derived tumour biomarkers.
+In these settings, patients often undergo multiple scans over time, comprising a baseline scan before therapy and one or more follow-up scans.
+Accurate baseline-to-follow-up registration can support comparison of disease burden, localisation of uptake changes, assessment of lesion progression or response, dose accumulation, and quantitative longitudinal analysis~\cite{ref_psmareg_challenge}.
+The challenge organisers identify several factors that make establishing this correspondence by deformable image registration difficult in routine whole-body data~\cite{ref_psmareg_challenge}: baseline and follow-up scans differ substantially in field of view, patient positioning, respiratory state, disease burden, bladder and bowel filling, and body weight; CT and PET encode complementary but appearance-dissimilar information; and the registration must preserve the quantitative PET signal used for response assessment while remaining physically plausible in anatomical structures.
+The Learn2Reg~2026 PSMAReg challenge~\cite{ref_learn2reg_alessa,ref_learn2reg_hansen,ref_psmaregdata} formalises this problem as the estimation of a dense displacement field that warps each follow-up (moving) scan to its baseline (fixed) scan, evaluated jointly on organ overlap, boundary distance, deformation regularity, and preservation of the PET-derived tumour biomarkers: the metabolic tumour volume (MTV), the volume of PSMA-avid tissue, and the total lesion glycolysis (TLG), that volume weighted by its uptake.
 
 Deformable registration has traditionally been posed as an iterative optimisation over a regularised similarity objective, with widely used instances including the diffeomorphic Demons~\cite{ref_demons}, SyN~\cite{ref_syn}, and B-spline~\cite{bspline} schemes.
 While accurate, these methods are slow at whole-body resolution.
@@ -32,7 +21,7 @@ Our contributions are:
 \begin{itemize}
   \item an adaptation of the diffeomorphic, coarse-to-fine LapIRN architecture to longitudinal whole-body PSMA PET/CT, combining an affine pre-registration with a three-level pyramid and
         test-time instance optimisation;
-  \item a set of biomarker-preserving losses that constrain the PET-derived MTV and TLG under the estimated deformation, including a Jacobian-based surrogate that supplies dense gradients throughout the lesion interior;
+  \item a set of biomarker-preserving losses that constrain the PET-derived MTV and TLG given the estimated deformation, including a Jacobian-based surrogate that supplies dense gradients throughout the lesion interior;
   \item a per-structure rigid-fit bone-rigidity penalty
   \item a score-driven checkpoint and submission selection procedure that mirrors the challenge ranking.
 \end{itemize}
@@ -42,19 +31,11 @@ The proposed registration pipeline with affine pre-registration, LapIRN-based re
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{overview.png}
-\caption{Overview of the proposed registration pipeline. The moving (follow-up) and
-fixed (baseline) PET/CT are first coarsely aligned by an affine pre-registration
-(red), and the affinely aligned pair is passed to the coarse-to-fine LapIRN network,
-which predicts a dense displacement field (DF, green grid) used to resample the
-moving scan into the fixed space (warped PET/CT). Training is driven by three groups
-of objectives: deformation regularisation on the DF, comprising a global smoothness
-and folding penalty and a per-structure bone-rigidity term that constrains the DF
-inside skeletal labels and thereby also acts as an anatomical surrogate for
-biomarker preservation, since a large fraction of the lesion volume is intraosseous;
-PET-biomarker preservation terms
-(MTV, TLG and Jacobian inside the tumour mask) comparing the moving and warped lesions (black dashed); and
-image- and label-based similarity, NCC and DSC, between the fixed and warped scans
-(grey dashed). At test time, the same objectives are descended per pair by instance
-optimisation (IO).}
+\caption{Overview of the proposed registration pipeline. The moving (follow-up) and fixed (baseline) PET/CT are first coarsely aligned by an affine pre-registration (red), and the affinely aligned pair is passed to the coarse-to-fine LapIRN network, which predicts a dense displacement field (DF, green grid) used to resample the moving scan into the fixed space (warped PET/CT).
+Training is driven by three groups of objectives:
+\textbf{(1) Regularisation} on the DF, a global smoothness and folding penalty together with a per-structure bone-rigidity term, which by keeping the skeleton rigid also preserves the biomarkers of the many lesions that are intraosseous;
+\textbf{(2) PET preservation}, the MTV, TLG and lesion-Jacobian terms, comparing the moving and warped lesions (black dashed);
+and \textbf{(3) NCC + DSC}, image- and label-based similarity between the fixed and warped scans (grey dashed).
+At test time, the same objectives are descended per pair by instance optimisation (IO).}
 \label{fig:pipeline}
 \end{figure}
