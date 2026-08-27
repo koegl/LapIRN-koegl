@@ -7,7 +7,7 @@ Each paired subject provides a baseline scan and one or more follow-up scans, ea
 
 Of the 146 paired and 212 unpaired subjects in the challenge training split, we used the paired ones, divided patient-wise into 117 for training and 29 for internal validation.
 Registration pairs always point from the temporally later scan to the earlier one: for training we took all such ordered time-point combinations, including follow-up-to-follow-up pairs (239 pairs).
-For our internal validation subjects we used every follow-up registered to its baseline giving 39 pairs from the 29 subjects.
+For our internal validation subjects, we used every follow-up registered to its baseline giving 39 pairs from the 29 subjects.
 The challenge validation split of 20 paired subjects served as our test set; the organisers' held-out test set ($\sim$200 pairs of private JHU data) is scored only by them.
 
 For the training split we used the labels released by the organisers: CT organ labels generated automatically with TotalSegmentator~\cite{ref_totalsegmentator} and PET lesion labels manually annotated by radiologists.
@@ -34,7 +34,7 @@ For the deformable stage we use LapIRN~\cite{ref_lapirn}, a Laplacian-pyramid ne
 Each level predicts a stationary velocity field that is added to the upsampled velocity of the coarser level; the sum is exponentiated by scaling and squaring to give a diffeomorphic $\varphi_{\theta}$, so large deformations are recovered coarse-to-fine while the transformation stays smooth and invertible.
 We adapted the architecture to the multi-modal, whole-body setting: each sub-network takes four input channels, the CT and PSMA PET of the affinely aligned moving scan and of the fixed scan, and uses 7 initial feature channels with five residual blocks per level.
 Image similarity is computed on CT only, since PET uptake is not conserved between time points and would otherwise drive the deformation towards matching disease rather than anatomy.
-The PET channel enters the network as input and the biomarker terms of Sec.~\ref{sec:losses}.
+The PET is used by the network as an additional input channel and for the PET preservation terms of Sec.~\ref{sec:losses}.
 The levels are trained in sequence, each initialised from the previous one, which is kept frozen for the first ten epochs and fine-tuned jointly afterwards.
 %At full resolution the network additionally carries two auxiliary segmentation heads predicting the PET lesion and the bone mask, whose outputs make the test-time objective self-sufficient where no labels are available.
 
@@ -42,25 +42,25 @@ The levels are trained in sequence, each initialised from the previous one, whic
 
 \subsection{Loss Functions}
 \label{sec:losses}
-The full objective combines image similarity, weak label supervision, the PET-biomarker terms, the bone-rigidity penalty and two deformation regularisers:
+The full objective is a weighted sum of three groups of terms, one per scored criterion:
 %
 \begin{equation}
   \begin{aligned}
     \mathcal{L} = \;
-      & \lambda_{\mathrm{NCC}}\,\mathcal{L}_{\mathrm{NCC}}
-      + \lambda_{\mathrm{DSC}}\,\mathcal{L}_{\mathrm{DSC}}
-      + \lambda_{\mathrm{MTV}}\,\mathcal{L}_{\mathrm{MTV}}
-      + \lambda_{\mathrm{MTV\text{-}J}}\,\mathcal{L}_{\mathrm{MTV\text{-}J}} \\
-      & + \lambda_{\mathrm{jac}}\,\mathcal{L}_{\mathrm{jac}}
-      + \lambda_{\mathrm{TLG}}\,\mathcal{L}_{\mathrm{TLG}}
-      + \lambda_{\mathrm{rigid}}\,\mathcal{L}_{\mathrm{rigid}}
+      & \underbrace{\lambda_{\mathrm{NCC}}\,\mathcal{L}_{\mathrm{NCC}}
+      + \lambda_{\mathrm{DSC}}\,\mathcal{L}_{\mathrm{DSC}}}_{\text{registration accuracy}} \\
+      & + \underbrace{\lambda_{\mathrm{MTV}}\,\mathcal{L}_{\mathrm{MTV}}
+      + \lambda_{\mathrm{MTV\text{-}J}}\,\mathcal{L}_{\mathrm{MTV\text{-}J}}
+      + \lambda_{\mathrm{jac}}\,\mathcal{L}_{\mathrm{jac}}
+      + \lambda_{\mathrm{TLG}}\,\mathcal{L}_{\mathrm{TLG}}}_{\text{PET quantification}} \\
+      & + \underbrace{\lambda_{\mathrm{rigid}}\,\mathcal{L}_{\mathrm{rigid}}
       + \lambda_{\mathrm{smooth}}\,\mathcal{L}_{\mathrm{smooth}}
-      + \lambda_{\mathrm{NDV}}\,\mathcal{L}_{\mathrm{NDV}} .
+      + \lambda_{\mathrm{NDV}}\,\mathcal{L}_{\mathrm{NDV}}}_{\text{deformation regularisation}} .
   \end{aligned}
   \label{eq:total}
 \end{equation}
 %
-All terms are evaluated on the composed transformation $\varphi$.
+Each group is described in turn below; all terms are evaluated on the composed transformation $\varphi$.
 Only the full-resolution level is trained with the complete objective.
 The two coarser levels (quarter and half resolution) use the similarity, label and regularisation terms alone, i.e.\ $\lambda_{\mathrm{MTV}} = \lambda_{\mathrm{MTV\text{-}J}} = \lambda_{\mathrm{jac}} = \lambda_{\mathrm{TLG}} = \lambda_{\mathrm{rigid}} = 0$, because the lesion and bone masks they would be evaluated on are only a few voxels wide there: after downsampling, thin ribs and small lesions are largely partial-volume, so both the volume ratios and the per-structure rigid fits measure interpolation rather than anatomy.
 
