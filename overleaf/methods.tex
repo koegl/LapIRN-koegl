@@ -39,21 +39,14 @@ We normalised CT by clipping to a fixed window of $[-1000, 1500]$~HU and PET by 
 \subsection{Registration Pipeline}
 \label{sec:pipeline}
 The pipeline consists of an affine pre-registration followed by a deformable LapIRN stage and, at test time, instance optimisation (Fig.~\ref{fig:pipeline}).
-Throughout, $I$ denotes the moving PET image, $M$ its lesion mask, $\varphi_{\mathrm{aff}}$ the affine pre-registration, $\varphi_{\theta}$ the displacement field predicted by the network, and
-%
-\begin{equation}
-  \varphi = \varphi_{\mathrm{aff}} \circ \varphi_{\theta}
-  \label{eq:composed}
-\end{equation}
-%
-the total transformation mapping the moving into the fixed image; $W$ denotes the lesion region in the fixed frame, i.e.\ the image of $M$ under $\varphi$.
+Throughout, $I$ denotes the moving PET image, $M$ its lesion mask, $\varphi_{\mathrm{aff}}$ the affine pre-registration and $\varphi_{\theta}$ the displacement field predicted by the network; their composition $\varphi$ is the total transformation mapping the moving into the fixed image, and $W$ the lesion region in the fixed frame, i.e.\ the image of $M$ under $\varphi$.
 
 \subsubsection{Affine pre-registration and preprocessing.}
 Baseline and follow-up scans of the same subject differ in field of view, table position and patient posture by far more than a locally regularised network can absorb, so we first remove the global component with a separate affine stage.
 We follow the baseline provided the challenger organisers, by removing the bed and normalizing the CTs.
 For each pair we estimate an affine transform with ANTs~\cite{ants} on the CT channel alone, at half resolution and with a Mattes mutual-information metric, after masking both volumes to the body and windowing them to $[-1000, 1000]$~HU.
 The result is converted into a dense voxel displacement field, cached per pair, and applied to the moving scan before the network sees it.
-Note that an affine transform is in general not volume-preserving, which is why all biomarker terms of Sec.~\ref{sec:losses} are evaluated on the composed transform~(\ref{eq:composed}) rather than on $\varphi_{\theta}$ alone.
+Note that an affine transform is in general not volume-preserving, which is why all biomarker terms of Sec.~\ref{sec:losses} are evaluated on the composed transform $\varphi$ rather than on $\varphi_{\theta}$ alone.
 
 \subsubsection{Deformable registration.}
 For the deformable stage we use LapIRN~\cite{ref_lapirn}, a Laplacian-pyramid network whose three sub-networks operate at a quarter, a half and the full resolution of the $192\times192\times288$ volumes.
@@ -86,7 +79,7 @@ The full objective combines image similarity, weak label supervision, the PET-bi
   \label{eq:total}
 \end{equation}
 %
-All terms are evaluated on the composed transformation~(\ref{eq:composed}).
+All terms are evaluated on the composed transformation $\varphi$.
 Only the full-resolution level is trained with the complete objective.
 The two coarser levels (quarter and half resolution) use the similarity, label and regularisation terms alone, i.e.\ $\lambda_{\mathrm{MTV}} = \lambda_{\mathrm{MTV\text{-}J}} = \lambda_{\mathrm{jac}} = \lambda_{\mathrm{TLG}} = \lambda_{\mathrm{rigid}} = 0$, because the lesion and bone masks they would be evaluated on are only a few voxels wide there: after downsampling, thin ribs and small lesions are largely partial-volume, so both the volume ratios and the per-structure rigid fits measure interpolation rather than anatomy.
 
