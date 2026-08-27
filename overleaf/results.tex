@@ -1,23 +1,11 @@
 \section{Results}
 
-% ===============================================================
-% OUTLINE
-%   3.1 Evaluation Protocol
-%   3.2 Ablation of the Objective
-%   3.3 Comparison against Baselines     >>> TABLE 2
-%   3.4 Validation Leaderboard           >>> TABLE 3 (placeholder)
-%   3.5 Qualitative Results              >>> FIGURE 5
-% ===============================================================
-
 \subsection{Evaluation Protocol}
 \label{sec:evaluation}
 
 The challenge does not release labels for the validation cases.
 Unless stated otherwise, the validation numbers we report are therefore computed against surrogate labels we generated ourselves: CT organ labels with TotalSegmentator and PET tumour labels with the winning autoPET-III submission.
-We report our method in three configurations.
-\emph{Ours (container)} is the submitted method of Sec.~\ref{sec:container}, run on a single NVIDIA H100 within the 90\,s per image pair the challenge allows; since it is the configuration the hidden test set will be scored on, it is the one we test the baselines against.
-\emph{Ours (validation)} is the unconstrained method of Sec.~\ref{sec:pipeline}, reported as the upper bound that the time budget gives up; the two differ only in instance optimisation and in how the segmentations it consumes are produced.
-\emph{Ours (no IO)} is the backbone alone, which isolates what test-time refinement contributes.
+We report our method in three configurations: \emph{ours (container)}, the submitted method of Sec.~\ref{sec:container}, which is what the hidden test set will be scored on and therefore the one we test the baselines against; \emph{ours (validation)}, the unconstrained method of Sec.~\ref{sec:pipeline}, reported as the upper bound the 90\,s per-pair budget gives up; and \emph{ours (no IO)}, the backbone alone, which isolates what test-time refinement contributes.
 The latter two carry no significance marks.
 
 \subsection{Ablation of the Objective}
@@ -28,11 +16,6 @@ We quantified the stencil leakage of Sec.~\ref{sec:losses} across five cases: 53
 A field with zero displacement inside every bone, which is perfectly rigid by construction and should therefore cost nothing, scored 56 (range 40 to 69), all of which vanished after a single mask erosion.
 The term was thus measuring the bone-to-soft tissue displacement discontinuity that any correct registration must exhibit.
 With the per-structure rigid-fit penalty of Sec.~\ref{sec:losses}, the zero displacement field now scores exactly 0 and a per-bone rigid field 2.4e-6, while anisotropic squeeze is still rejected at 1.16.
-
-% >>> FIGURE (OPTIONAL -- cut first if over length): a rib or vertebra
-%     crop showing (a) the bone mask, (b) the voxels that enter the
-%     stencil-based loss, (c) the voxels that enter the Kabsch loss.
-%     Makes the 53% number visual.
 
 \subsubsection{A surface-distance loss would not help.}
 Since HD95 is scored, a surface-distance term~\cite{salcudean} is the obvious addition to the objective, but the $2296$ scored (case,\,label) entries leave it nothing to do.
