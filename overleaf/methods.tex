@@ -25,8 +25,8 @@ Each paired subject provides a baseline scan and one or more follow-up scans, ea
 The challenge training split contains 146 paired and 212 unpaired subjects; the unpaired single-time-point cases were not used in this work.
 We divided the paired subjects patient-wise into 117 training and 29 internal validation subjects.
 Registration pairs are formed within a subject and always point from the temporally later to the earlier scan.
-For training we used all such ordered time-point combinations, including follow-up-to-follow-up pairs, which yields 239 pairs from the 117 subjects and acts as a mild augmentation of the 146 baseline-anchored pairs.
-For our internal validation subjects we kept only baseline-anchored pairs, i.e.\ every follow-up registered to its baseline, matching the pairing used at evaluation time and giving 39 pairs from the 29 subjects.
+For training we used all such ordered time-point combinations, including follow-up-to-follow-up pairs, which yields 239 pairs from the 117 subjects.
+For our internal validation subjects we used every follow-up registered to its baseline giving 39 pairs from the 29 subjects.
 The challenge validation split of 20 paired subjects, which is the split scored on the public validation leaderboard, served as our test set; the organisers' own held-out test set ($\sim$200 pairs of private JHU data) is scored only by them.
 
 For the training split we used the labels released by the organisers: CT organ labels generated automatically with TotalSegmentator~\cite{ref_totalsegmentator} and PET lesion labels manually annotated by radiologists.
@@ -59,7 +59,8 @@ Note that an affine transform is in general not volume-preserving, which is why 
 For the deformable stage we use LapIRN~\cite{ref_lapirn}, a Laplacian-pyramid network whose three sub-networks operate at a quarter, a half and the full resolution of the $192\times192\times288$ volumes.
 Each level predicts a stationary velocity field that is added to the upsampled velocity of the coarser level; the sum is exponentiated by scaling and squaring to give a diffeomorphic $\varphi_{\theta}$, so large deformations are recovered coarse-to-fine while the transformation stays smooth and invertible.
 We adapted the architecture to the multi-modal, whole-body setting: each sub-network takes four input channels, the CT and PSMA PET of the affinely aligned moving scan and of the fixed scan, and uses 7 initial feature channels with five residual blocks per level.
-Image similarity is computed on CT only, since PET uptake is not conserved between time points and would otherwise drive the deformation towards matching disease rather than anatomy; the PET channel enters the network as input and the biomarker terms of Sec.~\ref{sec:losses} instead.
+Image similarity is computed on CT only, since PET uptake is not conserved between time points and would otherwise drive the deformation towards matching disease rather than anatomy.
+The PET channel enters the network as input and the biomarker terms of Sec.~\ref{sec:losses}.
 The levels are trained in sequence, each initialised from the previous one, which is kept frozen for the first ten epochs and fine-tuned jointly afterwards.
 %At full resolution the network additionally carries two auxiliary segmentation heads predicting the PET lesion and the bone mask, whose outputs make the test-time objective self-sufficient where no labels are available.
 
@@ -87,16 +88,16 @@ The full objective combines image similarity, weak label supervision, the PET-bi
 %
 All terms are evaluated on the composed transformation~(\ref{eq:composed}).
 Only the full-resolution level is trained with the complete objective.
-The two coarser levels use the similarity, label and regularisation terms alone, i.e.\ $\lambda_{\mathrm{MTV}} = \lambda_{\mathrm{MTV\text{-}J}} = \lambda_{\mathrm{jac}} = \lambda_{\mathrm{TLG}} = \lambda_{\mathrm{rigid}} = 0$ at a quarter and half resolution, because the lesion and bone masks they would be evaluated on are only a few voxels wide there: after downsampling, thin ribs and small lesions are largely partial-volume, so both the volume ratios and the per-structure rigid fits measure interpolation rather than anatomy.
+The two coarser levels (quarter and half resolution) use the similarity, label and regularisation terms alone, i.e.\ $\lambda_{\mathrm{MTV}} = \lambda_{\mathrm{MTV\text{-}J}} = \lambda_{\mathrm{jac}} = \lambda_{\mathrm{TLG}} = \lambda_{\mathrm{rigid}} = 0$, because the lesion and bone masks they would be evaluated on are only a few voxels wide there: after downsampling, thin ribs and small lesions are largely partial-volume, so both the volume ratios and the per-structure rigid fits measure interpolation rather than anatomy.
 
 \subsubsection{Registration Accuracy.}
 Image similarity is measured by the local normalised cross correlation, evaluated as a multi-resolution sum over as many scales as the level has resolutions, i.e.\ one scale at the coarsest and three at the full-resolution level.
-It is computed on the CT channel only ($\lambda_{\mathrm{PET}} = 0$): PET intensity is not conserved between the two time points, as lesions appear, resolve or change uptake under therapy, so a PET similarity term would reward matching disease rather than anatomy.
+It is computed on the CT channel only: PET intensity is not conserved between the two time points, as lesions appear, resolve or change uptake under therapy, so a PET similarity term would reward matching disease rather than anatomy.
 Furthermore, we used a standard DSC loss for weak CT label supervision.
 %Since the challenge scores PET organ overlap but provides no PET organ annotations for training, we measured each of the 117 TotalSegmentator organs' mean SUV relative to skeletal muscle across all sessions.
 %As 90 organs fall below twice the muscle background and are thus indistinguishable in PET, we upweighted only the 10 exceeding 4 times the background (kidneys, gallbladder, spleen, liver, duodenum, bladder, portal vein, prostate, pancreas) by a factor of 2 in the per-class Dice loss.
 %This relies on PET and CT being well aligned within a session, so that CT-derived overlap on these organs approximates the PET organ overlap being scored.
-Note that the objective contains no surface-distance term, although HD95 is scored; Sec.~\ref{sec:ablation} shows that one would have nothing to improve.
+The objective contains no surface-distance term, although HD95 is scored; Sec.~\ref{sec:ablation} shows that one would have nothing to improve.
 
 
 \subsubsection{Preservation of PET quantification.}
@@ -154,11 +155,12 @@ The same terms (\ref{eq:mtv})-(\ref{eq:tlg}) are used during training and descen
 
 \subsubsection{Bone rigidity.}
 In 146 patients with paired baseline and follow-up scans, a median of 46.0\% (IQR 3.1 to 72.3\%) of total lesion volume at baseline lay within skeletal structures, rising to 63.8\% (IQR 12.1 to 77.4\%) at follow-up.
-Since a substantial fraction of lesion volume is therefore intraosseous, a rigidity penalty on a bone mask is an anatomically grounded surrogate for the biomarker terms: enforcing rigid bone motion is both physiologically correct and, where lesions sit in bone, keeps the deformation locally volume-preserving.
+Since a substantial fraction of lesion volume is therefore intraosseous, a rigidity penalty on a bone mask is an anatomically grounded surrogate for the biomarker terms.
+Furthermore, enforcing rigid bone motion is both physiologically correct and, where lesions sit in bone, keeps the deformation locally volume-preserving.
 A rigid motion has $\det J_{\varphi} = 1$ and resamples the PET signal without compressing or expanding it, so it protects both scored biomarkers at once, the lesion volume that MTV measures and the intensity mass that TLG measures.
 
 We first used the established local rigidity penalty, which combines deviation of the Jacobian $J_{\varphi}$ from orthogonality~\cite{ref_rigidity_1_loeckx,ref_rigidity_2_ruan} with local affineness and orientation preservation~\cite{ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki}.
-Its terms are evaluated by finite differences at every voxel and only then masked, so the stencil also reads non-bone voxels and, on thin cortical bone and ribs, ends up measuring the bone-to-soft-tissue displacement discontinuity that any correct registration must exhibit (Sec.~\ref{sec:ablation}).
+Its terms are evaluated by finite differences at every voxel and only then masked, so the stencil also reads non-bone voxels and, on thin cortical bone and ribs, ends up measuring the bone-to-soft-tissue displacement discontinuity (Sec.~\ref{sec:ablation}).
 Eroding the mask would fix this, but at whole-body resolution many bone labels are only a few voxels wide.
 
 We therefore replaced it with a per-structure rigid-fit residual over the 61 skeletal TotalSegmentator labels: for each structure we fit the best rigid transform to its own displacement in closed form by Kabsch alignment~\cite{ref_kabsch,ref_umeyama} and penalise the mean squared residual, averaged within and then across structures.
@@ -192,15 +194,15 @@ equals the scored percentage of non-diffeomorphic volume and places gradients on
 \label{sec:io}
 At test time we refine each pair individually.
 Keeping the predicted field fixed, we optimise a residual stationary velocity field, initialised to zero and exponentiated by scaling and squaring, on top of it, so the refined transformation stays diffeomorphic by construction and the network is only ever corrected, never overwritten.
-We descend it for 90 Adam steps with a learning rate of $10^{-2}$ and keep the best rather than the last iterate, scoring each step with the hard, nearest-neighbour-counted DSC, HD05, MTV and TLG instead of the bilinear proxies the optimiser differentiates, so the selected step is the one the scorer would prefer.
+We descend it for 100 Adam steps with a learning rate of $10^{-2}$ and keep the best rather than the last iterate, scoring each step with the DSC, HD05, MTV and TLG, so the selected step is the one the scorer would prefer.
 %Because the global biomarker terms constrain only net sums, in which per-lesion errors cancel, we additionally pin the largest lesions individually by evaluating the MTV and TLG terms per connected component \todo{keep or drop depending on the final configuration}.
 %Instance optimisation requires organ and lesion segmentations of both scans, which on our test set are the automatic labels described in Sec.~\ref{sec:data_and_preprocessing}, and adds \todo{n}~s per pair.
 
 \subsubsection{Submission container.}
 \label{sec:container}
-Instance optimisation needs organ segmentations of both scans and lesion segmentations of the moving scan, and the submitted container has to produce them and register the pair within a budget of 90~s per image pair, which the configuration above exceeds.
+Instance optimisation needs CT organ segmentations of both scans and PET lesion segmentations of the moving scan, and the submitted container has to produce them and register the pair within a budget of 90~s per image pair, which the configuration above exceeds.
 The deployed method therefore differs from the one evaluated in validation in three points, all of them inside instance optimisation or in the labels it consumes; everything up to and including the predicted field is identical.
-First, PET lesion masks come from an nnU-Net trained on this dataset with progressive patch-size growing~\cite{ref_progressive_patch}, which is faster at inference than the ensemble used in validation.
+First, PET lesion masks come from an nnU-Net~\cite{nnunet} trained on this dataset with progressive patch-size growing~\cite{ref_progressive_patch}, which is faster at inference than the ensemble used in validation.
 Second, CT organ labels are produced with TotalSegmentator in its fast mode together with its body segmentation.
 Third, instance optimisation runs until the 90s per-pair time limit is exhausted.
 We report both configurations separately in Sec.~\ref{sec:evaluation}, since only the validation one is free of the time constraint.
@@ -249,7 +251,7 @@ On CT we apply an intensity shift of $\pm0.02$ in the normalised window (about $
 On PET we apply a scaling of $0.85$ to $1.15$ but no shift: SUV depends on the injected dose, the uptake time and the patient's weight, all of which differ between sessions, so the network must not key on absolute uptake, whereas an additive offset has no physical counterpart in an SUV map.
 
 The last augmentation targets the difference the challenge singles out as the hardest.
-We crop randomly along the cranio-caudal axis, removing up to 40 slices from either end of both scans, which varies the extent of the acquired volume.
+We crop randomly along the axial axis, removing up to 40 slices from either end of both scans, which varies the extent of the acquired volume.
 On top of that we crop the moving and the fixed scan independently by up to a further 10 slices each, which is the part that actually reproduces a baseline/follow-up mismatch: it makes the two fields of view disagree, so the network is forced to register anatomy that is present in one scan and truncated in the other.
 
 \subsection{Training Setup}
@@ -258,7 +260,7 @@ Each pyramid level is trained in sequence with Adam, at a batch size of one with
 The convolutional trunk runs in \texttt{bfloat16} while the transformations and all losses are kept in single precision, since scaling and squaring and the Jacobian determinants compound rounding error.
 Every level starts with a five-epoch linear learning-rate warmup and keeps the preceding level frozen for its first ten epochs.
 The three levels are trained for $60$k, $60$k and $120$k steps at learning rates of $3\cdot10^{-4}$, $2\cdot10^{-4}$ and $2.5\cdot10^{-4}$.
-The loss weights were chosen by the sweep of Sec.~\ref{sec:evaluation} and are given in the released code.
+The loss weights were chosen by the sweep of Sec.~\ref{sec:evaluation}.
 
 \subsection{Computing Infrastructure}
 \label{sec:infrastructure}

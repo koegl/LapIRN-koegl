@@ -18,12 +18,10 @@
 %   P4  future work.
 % ===============================================================
 
-The biomarker terms are cheap to add and are descended identically during training and at test time, so the network is refined under the objective it was trained on.
-They reduce the MTV and TLG bias against every baseline without costing accuracy, which matters because the two are free to trade against each other: a deformation that maximises organ overlap may compress a lesion, and the scored biomarker changes with it.
+The biomarker terms are cheap to add and are descended identically during training and at test time, so the network is refined under the objective it was trained on - they help reduce the MTV and TLG bias against every baseline without costing accuracy.
 
-The rigidity result is the more transferable one.
 Derivative-based rigidity penalties are not wrong in general, but they assume that a structure is thicker than the stencil used to differentiate it.
-On whole-body CT at this resolution, ribs and cortical bone are not, so the term reads mostly soft tissue and measures the very displacement discontinuity that a correct registration must produce.
+On whole-body CT at this resolution, ribs and cortical bone are not, so the term reads mostly soft tissue and measures displacement discontinuity that a correct registration must produce.
 The per-structure rigid fit avoids this by reading nothing outside each label, and we would expect it to matter wherever rigid structures are thin relative to the voxel size, rather than as a universal replacement.
 
 Several limitations qualify these numbers.
