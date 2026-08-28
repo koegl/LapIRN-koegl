@@ -43,7 +43,6 @@ It is descended under the same objective as training (Sec.~\ref{sec:losses}) sco
 %Instance optimisation requires organ and lesion segmentations of both scans, which on our test set are the surrogate labels described in Sec.~\ref{sec:data_and_preprocessing}, and adds \todo{n}~s per pair.
 
 
-
 \subsection{Training Loss Function for deformable stage}
 \label{sec:losses}
 We propose to use  a weighted sum of three groups of terms, one per evaluation criterion:
@@ -70,9 +69,9 @@ Only the full-resolution level is trained with the complete objective.
 The two coarser levels (quarter and half resolution) use the similarity, label and regularisation terms alone, i.e.\ $\lambda_{\mathrm{MTV}} = \lambda_{\mathrm{MTV\text{-}J}} = \lambda_{\mathrm{jac}} = \lambda_{\mathrm{TLG}} = \lambda_{\mathrm{rigid}} = 0$, because the lesion and bone masks they would be evaluated on are only a few voxels wide there: after downsampling, thin ribs and small lesions are largely partial-volume, so both the volume ratios and the per-structure rigid fits measure interpolation rather than anatomy.
 
 \subsubsection{Registration Accuracy.}
-Image similarity is measured by the local normalised cross correlation, evaluated as a multi-resolution sum over as many scales as the level has resolutions, i.e.\ one scale at the coarsest and three at the full-resolution level.
+Image similarity is measured by the local normalised cross correlation (NCC), evaluated as a multi-resolution sum over as many scales as the level has resolutions, i.e.\ one scale at the coarsest and three at the full-resolution level.
 It is computed on the CT channel only: PET intensity is not conserved between the two time points, as lesions appear, resolve or change uptake under therapy, so a PET similarity term would reward matching disease rather than anatomy.
-Furthermore, we used a standard DSC loss for weak CT label supervision.
+Furthermore, we added DSC loss for weak CT label supervision.
 %Since the challenge scores PET organ overlap but provides no PET organ annotations for training, we measured each of the 117 TotalSegmentator organs' mean SUV relative to skeletal muscle across all sessions.
 %As 90 organs fall below twice the muscle background and are thus indistinguishable in PET, we upweighted only the 10 exceeding 4 times the background (kidneys, gallbladder, spleen, liver, duodenum, bladder, portal vein, prostate, pancreas) by a factor of 2 in the per-class Dice loss.
 %This relies on PET and CT being well aligned within a session, so that CT-derived overlap on these organs approximates the PET organ overlap being scored.
@@ -89,10 +88,9 @@ It rests on the change-of-variables identity: summing $\det J_{\varphi}$ over th
 Because only the mean is constrained, the term still permits internal redistribution of volume.
 Squaring the deviation per voxel rather than after the mean gives a third, stricter term, $\mathcal{L}_{\mathrm{jac}}$, which additionally discourages compensating compression and expansion inside the lesion.
 
-
 The challenge additionally scores the TLG, the PET-activity-weighted counterpart of the MTV, which we penalize analogously as the relative change of intensity mass after warping, i.e.\ the absolute difference between the sums of $I$ over $M$ before and after resampling, divided by the former.
 Since both the image and the mask are resampled with the same transformation, this term is sensitive not only to volume change but also to intensity blurring at the lesion boundary, and thus complements the purely geometric terms.
-All four PET preservation terms are used during training and descended at test time by our instance optimisation, so the network is trained on the objective it is later refined under.
+All four PET preservation terms are used during training and optimized at test time by our instance optimization, so the network is trained on the objective it is later refined under.
 
 \subsubsection{Bone rigidity.}
 A median of 46.0\% of the total lesion volume at baseline and 63.8\% at follow-up lies within skeletal structures, where a rigid motion is both physiologically plausible and volume- and intensity-preserving ($\det J_{\varphi} = 1$), so constraining the bones to move rigidly protects the MTV and TLG directly.
@@ -124,9 +122,7 @@ We report both configurations separately in Sec.~\ref{sec:evaluation}, since onl
 
 \subsection{Model Selection}
 \label{sec:model_selection}
-
-Selection enters our pipeline twice, to keep a checkpoint within a run and to choose a variant across runs, and both use the challenge's own ranking score, the weighted geometric mean of registration accuracy, biomarker preservation and deformation regularity with exponents $0.4$, $0.4$ and $0.2$.
-Selecting on accuracy alone would be wrong in either place, because the two do not peak together: validation Dice improves until it plateaus, whereas the tumour metrics reach their optimum roughly halfway through level-3 training and degrade thereafter (Fig.~\ref{fig:selection}).
+We use the challenge's composite ranking score for model selection, since registration accuracy and PET biomarker preservation do not peak at the same point during training (Fig.~\ref{fig:selection}). The score combines registration accuracy, PET biomarker preservation, and deformation regularity using weights of $0.4$, $0.4$, and $0.2$, respectively. We use this score both to select the training checkpoint within a run and to select the final variant across runs, rather than selecting on registration accuracy alone. In particular, Fig.~\ref{fig:selection} shows that validation DSC continues to improve after the MTV and TLG errors have reached their minima, so selecting by DSC would favour a later checkpoint with poorer biomarker preservation.
 
 \input{figures/dsc_plateau}
 
