@@ -13,18 +13,17 @@ Registration pairs always point from the later to the earlier time point: for ou
 Our training and validation sets come with the labels released by the organisers: CT organ labels generated automatically with TotalSegmentator~\cite{ref_totalsegmentator} and PET lesion labels manually annotated by radiologists.
 For our test set no labels are released, so we generated surrogate ones ourselves, with TotalSegmentator for the CT organs and the winning autoPET~III submission~\cite{rokuss2024fdgpsmahitchhikersguide} for the PET lesions; these are what both our evaluation and our instance optimisation consume on those cases.
 
+Following the ConvexAdam baseline provided by the challenge organisers, we remove the patient bed and normalise the CTs.
 
 \subsection{Registration Pipeline}
 \label{sec:pipeline}
 The proposed pipeline is described in detail below (see also Fig.~\ref{fig:pipeline}).
-Throughout, $I$ denotes the moving PET image, $M$ its lesion mask, $\varphi_{\mathrm{aff}}$ the affine pre-registration and $\varphi_{\theta}$ the displacement field predicted by the network; their composition $\varphi$ is the total transformation mapping the moving to the fixed image.
+Throughout, $I$ denotes the moving (follow-up) PET image, $M$ its lesion mask, $\varphi_{\mathrm{aff}}$ the affine pre-registration and $\varphi_{\theta}$ the displacement field predicted by the network; their composition $\varphi$ is the total transformation mapping the moving to the fixed image.
 $W$ denotes the lesion segmentation in the fixed frame, i.e.\ the image of $M$ under $\varphi$.
 
-\subsubsection{Step 1: Affine pre-registration and preprocessing.}
-Baseline and follow-up scans of the same subject differ in field of view, table position and patient posture by far more than a locally regularised network can absorb, so we first remove the global component with a separate affine stage.
-We follow the baseline provided the challenge organisers, by removing the bed and normalizing the CTs.
+\subsubsection{Step 1: Affine pre-registration.}
 For each image pair we estimate an affine transform with ANTs~\cite{ants} based on the CT channel alone, at half resolution and with a Mattes mutual-information metric, after masking both volumes to the body and windowing them to $[-1000, 1000]$~HU.
-The result is converted into a dense voxel displacement field which is then applied to the moving scan.
+The result is converted into a dense voxel displacement field, which is then applied to the moving scan.
 
 \subsubsection{Step 2: Deformable registration.}
 For the deformable stage we use LapIRN~\cite{ref_lapirn}, a Laplacian-pyramid network whose three sub-networks operate at a quarter, a half and the full resolution of the $192\times192\times288$ volumes.
