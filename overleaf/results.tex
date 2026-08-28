@@ -17,7 +17,7 @@ A field with zero displacement inside every bone, which is perfectly rigid by co
 The term was thus measuring the bone-to-soft tissue displacement discontinuity that any correct registration must exhibit.
 With the per-structure rigid-fit penalty of Sec.~\ref{sec:losses}, the zero displacement field now scores exactly 0 and a per-bone rigid field 2.4e-6, while anisotropic squeeze is still rejected at 1.16.
 
-\subsubsection{A surface-distance loss would not help.}
+\subsubsection{A surface-distance did not increase alignment accuracy.}
 Since HD95 is scored, a surface-distance term~\cite{salcudean} is the obvious addition to the objective, but the $2296$ scored (case,\,label) entries leave it nothing to do.
 Half the HD95 mass sits in the worst $10\%$ of entries, and splitting it against the unregistered pair shows that $48.1\%$ is inherent, already bad before registration and no better after, while none of it was created by our field.
 Those entries are limbs repositioned between sessions, hollow organs with changing filling and anatomy truncated by the field of view, none of which have a boundary to refine.
