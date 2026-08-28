@@ -35,7 +35,12 @@ PET is nevertheless used to inform the network's prediction and to evaluate the 
 The levels are trained in sequence, each initialised from the previous one, which is kept frozen for the first ten epochs and fine-tuned jointly afterwards.\\
 %At full resolution the network additionally carries two auxiliary segmentation heads predicting the PET lesion and the bone mask, whose outputs make the test-time objective self-sufficient where no labels are available.
 
-\textbf{Step 3: Instance optimization}...
+\subsubsection{Step 3: Instance optimization.}
+At test time, we refine each pair individually.
+Keeping the predicted field fixed, we optimise a residual stationary velocity field, initialised to zero and exponentiated by scaling and squaring, on top of it, so the refined transformation stays diffeomorphic by construction and the network is only ever corrected, never overwritten.
+We descend it for 100 Adam steps with a learning rate of $10^{-2}$ and keep the best rather than the last iterate, scoring each step with the DSC, HD05, MTV and TLG, so the selected step is the one the scorer would prefer.
+%Because the global biomarker terms constrain only net sums, in which per-lesion errors cancel, we additionally pin the largest lesions individually by evaluating the MTV and TLG terms per connected component \todo{keep or drop depending on the final configuration}.
+%Instance optimisation requires organ and lesion segmentations of both scans, which on our test set are the surrogate labels described in Sec.~\ref{sec:data_and_preprocessing}, and adds \todo{n}~s per pair.
 
 
 
@@ -87,7 +92,7 @@ Squaring the deviation per voxel rather than after the mean gives a third, stric
 
 The challenge additionally scores the TLG, the PET-activity-weighted counterpart of the MTV, which we penalize analogously as the relative change of intensity mass after warping, i.e.\ the absolute difference between the sums of $I$ over $M$ before and after resampling, divided by the former.
 Since both the image and the mask are resampled with the same transformation, this term is sensitive not only to volume change but also to intensity blurring at the lesion boundary, and thus complements the purely geometric terms.
-All four PET preservation terms are used during training and descended at test time by our instance optimisation (Sec.~\ref{sec:io}), so the network is trained on the objective it is later refined under.
+All four PET preservation terms are used during training and descended at test time by our instance optimisation, so the network is trained on the objective it is later refined under.
 
 \subsubsection{Bone rigidity.}
 A median of 46.0\% of the total lesion volume at baseline and 63.8\% at follow-up lies within skeletal structures, where a rigid motion is both physiologically plausible and volume- and intensity-preserving ($\det J_{\varphi} = 1$), so constraining the bones to move rigidly protects the MTV and TLG directly.
@@ -108,15 +113,7 @@ Writing $\det J^{(k)}_{\varphi}$ for the determinant of the $k$-th tetrahedral s
 %
 equals the scored percentage of non-diffeomorphic volume and places gradients on exactly the folded voxels, so that minimising it minimises the reported \%NDV directly.
 
-\subsection{Instance Optimisation}
-\label{sec:io}
-At test time we refine each pair individually.
-Keeping the predicted field fixed, we optimise a residual stationary velocity field, initialised to zero and exponentiated by scaling and squaring, on top of it, so the refined transformation stays diffeomorphic by construction and the network is only ever corrected, never overwritten.
-We descend it for 100 Adam steps with a learning rate of $10^{-2}$ and keep the best rather than the last iterate, scoring each step with the DSC, HD05, MTV and TLG, so the selected step is the one the scorer would prefer.
-%Because the global biomarker terms constrain only net sums, in which per-lesion errors cancel, we additionally pin the largest lesions individually by evaluating the MTV and TLG terms per connected component \todo{keep or drop depending on the final configuration}.
-%Instance optimisation requires organ and lesion segmentations of both scans, which on our test set are the surrogate labels described in Sec.~\ref{sec:data_and_preprocessing}, and adds \todo{n}~s per pair.
-
-\subsubsection{Submission container.}
+\subsection{Submission container}
 \label{sec:container}
 Instance optimisation needs CT organ segmentations of both scans and PET lesion segmentations of the moving scan, and the submitted container has to produce them and register the pair within a budget of 90~s per image pair, which the configuration above exceeds.
 The deployed method therefore differs from the one evaluated in validation in three points, all of them inside instance optimisation or in the labels it consumes; everything up to and including the predicted field is identical.
