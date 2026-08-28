@@ -19,29 +19,32 @@ We normalised CT by clipping to a fixed window of $[-1000, 1500]$~HU and PET by 
 
 \subsection{Registration Pipeline}
 \label{sec:pipeline}
-The pipeline consists of an affine pre-registration followed by a deformable LapIRN stage and, at test time, instance optimisation (Fig.~\ref{fig:pipeline}).
-Throughout, $I$ denotes the moving PET image, $M$ its lesion mask, $\varphi_{\mathrm{aff}}$ the affine pre-registration and $\varphi_{\theta}$ the displacement field predicted by the network; their composition $\varphi$ is the total transformation mapping the moving into the fixed image, and $W$ the lesion region in the fixed frame, i.e.\ the image of $M$ under $\varphi$.
+The proposed pipeline is described in detail below (see also Fig.~\ref{fig:pipeline}).
+Throughout, $I$ denotes the moving PET image, $M$ its lesion mask, $\varphi_{\mathrm{aff}}$ the affine pre-registration and $\varphi_{\theta}$ the displacement field predicted by the network; their composition $\varphi$ is the total transformation mapping the moving to the fixed image.
+$W$ denotes the lesion segmentation in the fixed frame, i.e.\ the image of $M$ under $\varphi$.
 
-\subsubsection{Affine pre-registration and preprocessing.}
+\subsubsection{Step 1: Affine pre-registration and preprocessing.}
 Baseline and follow-up scans of the same subject differ in field of view, table position and patient posture by far more than a locally regularised network can absorb, so we first remove the global component with a separate affine stage.
-We follow the baseline provided the challenger organisers, by removing the bed and normalizing the CTs.
-For each pair we estimate an affine transform with ANTs~\cite{ants} on the CT channel alone, at half resolution and with a Mattes mutual-information metric, after masking both volumes to the body and windowing them to $[-1000, 1000]$~HU.
-The result is converted into a dense voxel displacement field, cached per pair, and applied to the moving scan before the network sees it.
+We follow the baseline provided the challenge organisers, by removing the bed and normalizing the CTs.
+For each image pair we estimate an affine transform with ANTs~\cite{ants} based on the CT channel alone, at half resolution and with a Mattes mutual-information metric, after masking both volumes to the body and windowing them to $[-1000, 1000]$~HU.
+The result is converted into a dense voxel displacement field which is then applied to the moving scan.
 
-\subsubsection{Deformable registration.}
+\subsubsection{Step 2: Deformable registration.}
 For the deformable stage we use LapIRN~\cite{ref_lapirn}, a Laplacian-pyramid network whose three sub-networks operate at a quarter, a half and the full resolution of the $192\times192\times288$ volumes.
 Each level predicts a stationary velocity field that is added to the upsampled velocity of the coarser level; the sum is exponentiated by scaling and squaring to give a diffeomorphic $\varphi_{\theta}$, so large deformations are recovered coarse-to-fine while the transformation stays smooth and invertible.
-We adapted the architecture to the multi-modal, whole-body setting: each sub-network takes four input channels, the CT and PSMA PET of the affinely aligned moving scan and of the fixed scan, and uses 7 initial feature channels with five residual blocks per level.
-Image similarity is computed on CT only, since PET uptake is not conserved between time points and would otherwise drive the deformation towards matching disease rather than anatomy.
-The PET is used by the network as an additional input channel and for the PET preservation terms of Sec.~\ref{sec:losses}.
-The levels are trained in sequence, each initialised from the previous one, which is kept frozen for the first ten epochs and fine-tuned jointly afterwards.
+We adapted the architecture to the multi-modal setting by extending each sub-network to take four input channels: the fixed CT and PET, and the affinely aligned moving CT and PET.
+Although both CT and PET are provided as network inputs, the image similarity loss is computed only on CT, since PET uptake is not conserved between time points and would otherwise drive the deformation towards matching disease rather than anatomy.
+PET is nevertheless used to inform the network's prediction and to evaluate the dedicated PET preservation terms of Sec.~\ref{sec:losses}.
+The levels are trained in sequence, each initialised from the previous one, which is kept frozen for the first ten epochs and fine-tuned jointly afterwards.\\
 %At full resolution the network additionally carries two auxiliary segmentation heads predicting the PET lesion and the bone mask, whose outputs make the test-time objective self-sufficient where no labels are available.
 
+\textbf{Step 3: Instance optimization}...
 
 
-\subsection{Loss Functions}
+
+\subsection{Training Loss Function for deformable stage}
 \label{sec:losses}
-The full objective is a weighted sum of three groups of terms, one per scored criterion:
+We propose to use  a weighted sum of three groups of terms, one per evaluation criterion:
 %
 \begin{equation}
   \begin{aligned}
@@ -59,7 +62,8 @@ The full objective is a weighted sum of three groups of terms, one per scored cr
   \label{eq:total}
 \end{equation}
 %
-Each group is described in turn below; all terms are evaluated on the composed transformation $\varphi$.
+Each group is described below.
+All terms are evaluated on the composed transformation $\varphi$.
 Only the full-resolution level is trained with the complete objective.
 The two coarser levels (quarter and half resolution) use the similarity, label and regularisation terms alone, i.e.\ $\lambda_{\mathrm{MTV}} = \lambda_{\mathrm{MTV\text{-}J}} = \lambda_{\mathrm{jac}} = \lambda_{\mathrm{TLG}} = \lambda_{\mathrm{rigid}} = 0$, because the lesion and bone masks they would be evaluated on are only a few voxels wide there: after downsampling, thin ribs and small lesions are largely partial-volume, so both the volume ratios and the per-structure rigid fits measure interpolation rather than anatomy.
 
@@ -71,7 +75,7 @@ Furthermore, we used a standard DSC loss for weak CT label supervision.
 %As 90 organs fall below twice the muscle background and are thus indistinguishable in PET, we upweighted only the 10 exceeding 4 times the background (kidneys, gallbladder, spleen, liver, duodenum, bladder, portal vein, prostate, pancreas) by a factor of 2 in the per-class Dice loss.
 %This relies on PET and CT being well aligned within a session, so that CT-derived overlap on these organs approximates the PET organ overlap being scored.
 The objective contains no surface-distance term, although HD95 is scored - the ablation study in Sec.~\ref{sec:ablation} shows no benefit from including one.
-It rests on the change-of-variables identity: summing $\det J\varphi$ over the warped lesion region $W$ recovers the original lesion volume, so the mean determinant over $W$ equals the ratio of original to warped volume, and driving that mean to one preserves it.
+
 
 \subsubsection{Preservation of PET quantification.}
 The MTV bias scored by the challenge is the \emph{net} change in lesion volume under the deformation.
@@ -82,6 +86,7 @@ We therefore add a second term, $\mathcal{L}_{\mathrm{MTV\text{-}J}}$, which pin
 It rests on the change-of-variables identity: summing $\det J_{\varphi}$ over the warped lesion region $W$ recovers the original lesion volume, so the mean determinant over $W$ equals the ratio of original to warped volume, and driving that mean to one preserves it.
 Because only the mean is constrained, the term still permits internal redistribution of volume.
 Squaring the deviation per voxel rather than after the mean gives a third, stricter term, $\mathcal{L}_{\mathrm{jac}}$, which additionally discourages compensating compression and expansion inside the lesion.
+
 
 The challenge additionally scores the TLG, the PET-activity-weighted counterpart of the MTV, which we penalize analogously as the relative change of intensity mass after warping, i.e.\ the absolute difference between the sums of $I$ over $M$ before and after resampling, divided by the former.
 Since both the image and the mask are resampled with the same transformation, this term is sensitive not only to volume change but also to intensity blurring at the lesion boundary, and thus complements the purely geometric terms.
