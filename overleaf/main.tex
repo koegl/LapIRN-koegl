@@ -84,7 +84,7 @@ In this work, we adapt the diffeomorphic, coarse-to-fine LapIRN architecture to 
 The first is a set of biomarker terms that pin the metabolic tumour volume and total lesion glycolysis under the estimated transformation, including a Jacobian-based surrogate that supplies gradients throughout the lesion interior rather than only at its boundary.
 The second is a local rigidity constraint that promotes rigid transformation of the bones: classical derivative-based rigidity terms read a finite-difference stencil that, on ribs and cortical bone at whole-body resolution, is dominated by surrounding soft tissue, whereas a closed-form rigid fit per skeletal label reads nothing outside it.
 The same objective is descended per case at test time by instance optimisation.
-On the challenge validation cases our proposed method reaches $81.0\%$ DSC and $6.17$\,mm HD95 at MTV and TLG errors of $3.3\%$, against $73.3\%$, $7.09$\,mm and $4.5\%$ and $8.7\%$ for the strongest baseline; released from the 90\,s per pair the container must meet, the same method reaches $88.3\%$ DSC, $4.80$\,mm HD95 and $1.4\%$ and $2.1\%$ biomarker error.
+On our test set our proposed method reaches $81.0\%$ DSC and $6.17$\,mm HD95 at MTV and TLG errors of $3.3\%$, against $73.3\%$, $7.09$\,mm and $4.5\%$ and $8.7\%$ for the strongest baseline; released from the 90\,s per pair the container must meet, the same method reaches $88.3\%$ DSC, $4.80$\,mm HD95 and $1.4\%$ and $2.1\%$ biomarker error.
 
 \keywords{Deformable image registration \and PSMA PET/CT \and Longitudinal
 imaging \and Biomarker preservation.}

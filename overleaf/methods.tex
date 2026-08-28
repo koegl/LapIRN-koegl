@@ -118,7 +118,7 @@ At test time we refine each pair individually.
 Keeping the predicted field fixed, we optimise a residual stationary velocity field, initialised to zero and exponentiated by scaling and squaring, on top of it, so the refined transformation stays diffeomorphic by construction and the network is only ever corrected, never overwritten.
 We descend it for 100 Adam steps with a learning rate of $10^{-2}$ and keep the best rather than the last iterate, scoring each step with the DSC, HD05, MTV and TLG, so the selected step is the one the scorer would prefer.
 %Because the global biomarker terms constrain only net sums, in which per-lesion errors cancel, we additionally pin the largest lesions individually by evaluating the MTV and TLG terms per connected component \todo{keep or drop depending on the final configuration}.
-%Instance optimisation requires organ and lesion segmentations of both scans, which on the challenge validation set are the surrogate labels described in Sec.~\ref{sec:data_and_preprocessing}, and adds \todo{n}~s per pair.
+%Instance optimisation requires organ and lesion segmentations of both scans, which on our test set are the surrogate labels described in Sec.~\ref{sec:data_and_preprocessing}, and adds \todo{n}~s per pair.
 
 \subsubsection{Submission container.}
 \label{sec:container}
