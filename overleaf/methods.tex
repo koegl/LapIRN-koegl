@@ -70,7 +70,7 @@ The two coarser levels (quarter and half resolution) use the similarity, label a
 \subsubsection{Registration Accuracy.}
 Image similarity is measured by the local normalised cross correlation (NCC), evaluated as a multi-resolution sum over as many scales as the level has resolutions, i.e.\ one scale at the coarsest and three at the full-resolution level.
 It is computed on the CT channel only: PET intensity is not conserved between the two time points, as lesions appear, resolve or change uptake under therapy, so a PET similarity term would reward matching disease rather than anatomy.
-Furthermore, we added DSC loss for weak CT label supervision.
+Furthermore, we added a DSC loss for weak CT label supervision.
 %Since the challenge scores PET organ overlap but provides no PET organ annotations for training, we measured each of the 117 TotalSegmentator organs' mean SUV relative to skeletal muscle across all sessions.
 %As 90 organs fall below twice the muscle background and are thus indistinguishable in PET, we upweighted only the 10 exceeding 4 times the background (kidneys, gallbladder, spleen, liver, duodenum, bladder, portal vein, prostate, pancreas) by a factor of 2 in the per-class Dice loss.
 %This relies on PET and CT being well aligned within a session, so that CT-derived overlap on these organs approximates the PET organ overlap being scored.
