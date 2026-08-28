@@ -5,13 +5,13 @@
 We used the PSMAReg dataset of the Learn2Reg~2026 challenge~\cite{ref_psmareg_challenge}, a longitudinal whole-body PSMA PET/CT cohort adapted from the manually annotated autoPET data of~\cite{ref_psmaregdata}, in which each subject provides a baseline scan and one or more follow-up scans with a CT and a PSMA PET channel each; the follow-up is the moving and the baseline the fixed image.
 The images are provided already resampled to $2.7344\times2.7344\times3.27$~mm and cropped to $192\times192\times288$ voxels, so we applied no further geometric preprocessing and only normalised the intensities, clipping CT to $[-1000, 1500]$~HU and the PET SUV to $[0, 20]$ and rescaling both to $[0,1]$.
 
-Throughout, \emph{challenge training}, \emph{challenge validation} and \emph{challenge test set} denote the three splits defined by the organisers, and \emph{our training} and \emph{our internal validation set} the patient-wise subdivision we made of the challenge training set.
-From its 146 paired subjects (the 212 unpaired ones were not used) we took 117 for our training set and 29 for our internal validation set, the latter used only for checkpoint and variant selection (Sec.~\ref{sec:model_selection}).
-Registration pairs always point from the later to the earlier time point: for training all such ordered combinations, including follow-up-to-follow-up pairs (239 pairs), and for our internal validation set every follow-up registered to its baseline (39 pairs).
-All results we report are obtained on the challenge validation set (20 paired subjects), as the challenge test set ($\sim$200 pairs of private JHU data) is held out and scored by the organisers alone.
+The organisers release 358 training cases with labels and 20 validation cases without labels, and keep a test set of $\sim$200 pairs of private JHU data that is never released and is scored by them alone.
+Since that test set is inaccessible to us, we re-partitioned the released data into our own three sets: of the 358 training cases we used the 146 paired ones, split patient-wise into our training set (117 cases) and our validation set (29 cases), and the 20 challenge validation cases serve as our test set.
+Our validation set carries the validation losses during training and is the basis for checkpoint and variant selection (Sec.~\ref{sec:model_selection}); all results we report are computed on our test set, which is never trained or selected on.
+Registration pairs always point from the later to the earlier time point: for our training set all such ordered combinations, including follow-up-to-follow-up pairs (239 pairs), and for our validation set every follow-up registered to its baseline (39 pairs).
 
-Labels are released by the organisers for the challenge training set only: CT organ labels generated automatically with TotalSegmentator~\cite{ref_totalsegmentator} and PET lesion labels manually annotated by radiologists.
-For the challenge validation set we therefore generated surrogate labels ourselves, with TotalSegmentator for the CT organs and the winning autoPET~III submission~\cite{rokuss2024fdgpsmahitchhikersguide} for the PET lesions; these are what both our evaluation and our instance optimisation consume on those cases.
+Our training and validation sets come with the labels released by the organisers: CT organ labels generated automatically with TotalSegmentator~\cite{ref_totalsegmentator} and PET lesion labels manually annotated by radiologists.
+For our test set no labels are released, so we generated surrogate ones ourselves, with TotalSegmentator for the CT organs and the winning autoPET~III submission~\cite{rokuss2024fdgpsmahitchhikersguide} for the PET lesions; these are what both our evaluation and our instance optimisation consume on those cases.
 
 
 \subsection{Registration Pipeline}
