@@ -71,7 +71,7 @@ Furthermore, we used a standard DSC loss for weak CT label supervision.
 %Since the challenge scores PET organ overlap but provides no PET organ annotations for training, we measured each of the 117 TotalSegmentator organs' mean SUV relative to skeletal muscle across all sessions.
 %As 90 organs fall below twice the muscle background and are thus indistinguishable in PET, we upweighted only the 10 exceeding 4 times the background (kidneys, gallbladder, spleen, liver, duodenum, bladder, portal vein, prostate, pancreas) by a factor of 2 in the per-class Dice loss.
 %This relies on PET and CT being well aligned within a session, so that CT-derived overlap on these organs approximates the PET organ overlap being scored.
-The objective contains no surface-distance term, although HD95 is scored - the ablation study in Sec.~\ref{sec:ablation} shows no benefit from including one.
+% The objective contains no surface-distance term, although HD95 is scored - the ablation study in Sec.~\ref{sec:ablation} shows no benefit from including one.
 
 
 \subsubsection{Preservation of PET quantification.}
@@ -94,7 +94,7 @@ A median of 46.0\% of total lesion volume at baseline lay within skeletal struct
 Since so much of the lesion volume is intraosseous, a rigidity penalty on a bone mask is an anatomically grounded surrogate for the biomarker terms: a rigid motion has $\det J_{\varphi} = 1$ and resamples the PET signal without compressing or expanding it, so it protects the lesion volume MTV measures and the intensity mass TLG measures at once.
 
 We first used the established local rigidity penalty, which combines deviation of the Jacobian $J_{\varphi}$ from orthogonality~\cite{ref_rigidity_1_loeckx,ref_rigidity_2_ruan} with local affineness and orientation preservation~\cite{ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki}.
-Its terms are evaluated by finite differences at every voxel and only then masked, so the stencil also reads non-bone voxels and, on thin cortical bone and ribs, ends up measuring the bone-to-soft-tissue displacement discontinuity (Sec.~\ref{sec:ablation}); eroding the mask would fix this, but at whole-body resolution many bone labels are only a few voxels wide.
+Its terms are evaluated by finite differences at every voxel and only then masked, so the stencil also reads non-bone voxels and, on thin cortical bone and ribs, ends up measuring the bone-to-soft-tissue displacement discontinuity; eroding the mask would fix this, but at whole-body resolution many bone labels are only a few voxels wide.
 We therefore replaced it with a per-structure rigid-fit residual over the 61 skeletal TotalSegmentator labels: for each structure we fit the best rigid transform to its own displacement in closed form by Kabsch alignment~\cite{ref_kabsch,ref_umeyama} and penalise the mean squared residual, averaged within and then across structures.
 No stencil crosses the mask and each structure is fitted independently, so articulation is free, and unlike the derivative-based penalties~\cite{ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki} it constrains only the shape of the deformation and not its placement.
 

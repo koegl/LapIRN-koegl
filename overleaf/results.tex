@@ -6,21 +6,21 @@
 We report our method in three configurations: \emph{ours (container)}, the submitted method of Sec.~\ref{sec:container}, which is what the hidden test set will be scored on and therefore the one we test the baselines against; \emph{ours (validation)}, the method of Sec.~\ref{sec:pipeline}; and \emph{ours (no IO)}, the backbone alone, which isolates what instance optimization contributes.
 The latter two carry no significance marks.
 
-\subsection{Ablation of the Objective}
-\label{sec:ablation}
+% \subsection{Ablation of the Objective}
+% \label{sec:ablation}
 
-\subsubsection{Derivative-based rigidity is ill posed on thin bone.}
-We quantified the stencil leakage of Sec.~\ref{sec:losses} across five cases: 53.0\% (range 51.6 to 54.7) of the voxels entering the loss were not bone, and 44.8\% of the gradient magnitude fell outside bone.
-A field with zero displacement inside every bone, which is perfectly rigid by construction and should therefore cost nothing, scored 56 (range 40 to 69), all of which vanished after a single mask erosion.
-The term was thus measuring the bone-to-soft tissue displacement discontinuity that any correct registration must exhibit.
-With the per-structure rigid-fit penalty of Sec.~\ref{sec:losses}, the zero displacement field now scores exactly 0 and a per-bone rigid field 2.4e-6, while anisotropic squeeze is still rejected at 1.16.
+% \subsubsection{Derivative-based rigidity is ill posed on thin bone.}
+% We quantified the stencil leakage of Sec.~\ref{sec:losses} across five cases: 53.0\% (range 51.6 to 54.7) of the voxels entering the loss were not bone, and 44.8\% of the gradient magnitude fell outside bone.
+% A field with zero displacement inside every bone, which is perfectly rigid by construction and should therefore cost nothing, scored 56 (range 40 to 69), all of which vanished after a single mask erosion.
+% The term was thus measuring the bone-to-soft tissue displacement discontinuity that any correct registration must exhibit.
+% With the per-structure rigid-fit penalty of Sec.~\ref{sec:losses}, the zero displacement field now scores exactly 0 and a per-bone rigid field 2.4e-6, while anisotropic squeeze is still rejected at 1.16.
 
-\subsubsection{A surface-distance loss did not increase alignment accuracy.}
-Since HD95 is scored, a surface-distance term~\cite{salcudean} is the obvious addition to the objective, but the $2296$ scored (case,\,label) entries leave it nothing to do.
-Half the HD95 mass sits in the worst $10\%$ of entries, and splitting it against the unregistered pair shows that $48.1\%$ is inherent, already bad before registration and no better after, while none of it was created by our field.
-Those entries are limbs repositioned between sessions, hollow organs with changing filling and anatomy truncated by the field of view, none of which have a boundary to refine.
-The rest is already at the discretisation floor: the median per-label HD95 is one voxel and the third quartile two.
-We measured this before instance optimisation, so it holds for the training objective as well.
+% \subsubsection{A surface-distance loss did not increase alignment accuracy.}
+% Since HD95 is scored, a surface-distance term~\cite{salcudean} is the obvious addition to the objective, but the $2296$ scored (case,\,label) entries leave it nothing to do.
+% Half the HD95 mass sits in the worst $10\%$ of entries, and splitting it against the unregistered pair shows that $48.1\%$ is inherent, already bad before registration and no better after, while none of it was created by our field.
+% Those entries are limbs repositioned between sessions, hollow organs with changing filling and anatomy truncated by the field of view, none of which have a boundary to refine.
+% The rest is already at the discretisation floor: the median per-label HD95 is one voxel and the third quartile two.
+% We measured this before instance optimisation, so it holds for the training objective as well.
 
 \subsection{Comparison against Baselines}
 
