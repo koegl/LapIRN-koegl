@@ -1,26 +1,9 @@
 \section{Discussion}
 
-% ===============================================================
-% OUTLINE -- no figures in this section.
-%   P1  what worked: the biomarker terms are cheap to add, are
-%       descended identically at training and test time, and cut the
-%       MTV/TLG bias by more than a factor of two over the baselines
-%       without costing accuracy.
-%   P2  why derivative-based rigidity fails here and when it does not:
-%       the failure is specific to structures thinner than the
-%       derivative stencil; on thick bone the classical formulation is
-%       presumably fine. Position the Kabsch penalty as the fix for
-%       thin-structure regimes rather than a universal replacement.
-%   P3  limitations: surrogate labels carry their own error; a single
-%       challenge cohort; bone masks only a few voxels wide; validation
-%       cases only, with no test-set numbers at the time of writing;
-%       model selection performed on the same cases it is evaluated on.
-%   P4  future work.
-% ===============================================================
+The proposed method has some limitations.
+First, the biomarker terms are cheap to add and are descended identically during training and at test time, so the network is refined under the objective it was trained on - they help reduce the MTV and TLG bias against every baseline without costing accuracy.
 
-The biomarker terms are cheap to add and are descended identically during training and at test time, so the network is refined under the objective it was trained on - they help reduce the MTV and TLG bias against every baseline without costing accuracy.
-
-Derivative-based rigidity penalties are not wrong in general, but they assume that a structure is thicker than the stencil used to differentiate it.
+Second, derivative-based rigidity penalties are not wrong in general, but they assume that a structure is thicker than the stencil used to differentiate it.
 On whole-body CT at this resolution, ribs and cortical bone are not, so the term reads mostly soft tissue and measures displacement discontinuity that a correct registration must produce.
 The per-structure rigid fit avoids this by reading nothing outside each label, and we would expect it to matter wherever rigid structures are thin relative to the voxel size, rather than as a universal replacement.
 
