@@ -32,11 +32,9 @@ We propose:
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{overview.png}
-\caption{Overview of the proposed registration pipeline. The moving (follow-up) and fixed (baseline) PET/CT are first coarsely aligned by an affine pre-registration (red), and the affinely aligned pair is passed to the coarse-to-fine LapIRN network, which predicts a dense displacement field (DF, green grid) used to resample the moving scan into the fixed space (warped PET/CT).
-Training is driven by three groups of objectives:
-\textbf{(1) Regularisation} on the DF, a global smoothness and folding penalty together with a per-structure bone-rigidity term, which by keeping the skeleton rigid also preserves the biomarkers of the many lesions that are intraosseous;
-\textbf{(2) PET preservation}, the MTV, TLG and lesion-Jacobian terms, comparing the moving and warped lesions (black dashed);
-and \textbf{(3) NCC + DSC}, image- and label-based similarity between the fixed and warped scans (grey dashed).
-At test time, the same objectives are descended per pair by instance optimisation (IO).}
+\caption{Overview of the proposed registration pipeline.
+The moving (follow-up) and fixed (baseline) PET/CT are first coarsely aligned by an affine pre-registration, and the aligned pair is passed to the coarse-to-fine LapIRN network, which predicts a dense deformation field (green grid).
+Finally, after the LapIRN stage we refine this field per pair by instance optimisation (IO) and resample the moving scan with it into the fixed space (warped PET/CT).
+Both stages are driven by the same objective, a weighted sum of three groups of terms: registration accuracy, PET quantification and deformation regularisation (Sec.~\ref{sec:losses}).}
 \label{fig:pipeline}
 \end{figure}
