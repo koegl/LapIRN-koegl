@@ -37,8 +37,8 @@ The levels are trained in sequence, each initialised from the previous one, whic
 
 \subsubsection{Step 3: Instance optimization.}
 At test time, we refine each pair individually.
-Keeping the predicted field fixed, we optimise a residual stationary velocity field, initialised to zero and exponentiated by scaling and squaring, on top of it, so the refined transformation stays diffeomorphic by construction and the network is only ever corrected, never overwritten.
-We descend it for 100 Adam steps with a learning rate of $10^{-2}$ and keep the best rather than the last iterate, scoring each step with the DSC, HD05, MTV and TLG, so the selected step is the one the scorer would prefer.
+Keeping the predicted field fixed, we directly optimise a residual stationary velocity field on top of it, initialised to zero and exponentiated by scaling and squaring, so the refined transformation stays diffeomorphic by construction and the network is only ever corrected, never overwritten.
+It is descended under the same objective as training (Sec.~\ref{sec:losses}) scoring every step with the DSC, HD95, MTV and TLG and keeping the best rather than the last iterate, so the selected step is the one the scorer would prefer.
 %Because the global biomarker terms constrain only net sums, in which per-lesion errors cancel, we additionally pin the largest lesions individually by evaluating the MTV and TLG terms per connected component \todo{keep or drop depending on the final configuration}.
 %Instance optimisation requires organ and lesion segmentations of both scans, which on our test set are the surrogate labels described in Sec.~\ref{sec:data_and_preprocessing}, and adds \todo{n}~s per pair.
 
@@ -101,7 +101,7 @@ We therefore penalise a per-structure rigid-fit residual over the 61 skeletal To
 
 \subsubsection{Deformation regularisation.}
 To regularise the displacement field we used a diffusion regulariser, $\mathcal{L}_{\mathrm{smooth}}$, the mean squared spatial gradient of the displacement, together with a term penalising non-diffeomorphic voxels.
-Rather than the usual penalty on negative Jacobian determinants of a single finite-difference stencil, we differentiably reproduce the scored metric itself: the challenge computes the non-diffeomorphic volume by decomposing each voxel into six tetrahedra and accumulating the negative part of their determinants over the body mask~\cite{Liu2024}.
+Rather than the usual penalty on negative Jacobian determinants of a single finite-difference stencil, we differentiably reproduce the scored metric itself: the challenge computes the non-diffeomorphic volume (NDV) by decomposing each voxel into six tetrahedra and accumulating the negative part of their determinants over the body mask~\cite{Liu2024}.
 Writing $\det J^{(k)}_{\varphi}$ for the determinant of the $k$-th tetrahedral scheme, the loss
 %
 \begin{equation}
