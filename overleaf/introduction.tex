@@ -7,13 +7,9 @@ The Learn2Reg~2026 PSMAReg challenge~\cite{ref_learn2reg_alessa,ref_learn2reg_ha
 The evaluation is performed by a combination of an organ overlap metric, boundary distance and deformation regularity.
 Moreover, to measure the preservation of the PET-derived tumor biomarkers, two separate metrics are used: the metabolic tumor volume (MTV) and the total lesion glycolysis (TLG).
 
-The challenge organisers identify several factors that make establishing this correspondence by deformable image registration difficult in routine whole-body data~\cite{ref_psmareg_challenge}: baseline and follow-up scans differ substantially in field of view, patient positioning, respiratory state, disease burden, bladder and bowel filling, and body weight; CT and PET encode complementary but appearance-dissimilar information; and the registration must preserve the quantitative PET signal used for response assessment while remaining physically plausible in anatomical structures.
+Deformable registration has traditionally been posed as an iterative optimization over a regularised objective functional~\cite{ref_demons,ref_syn,bspline}, which is accurate but slow at whole-body resolution, whereas learning-based methods amortize this optimization into network weights and replace per-pair iteration with a single forward pass at inference~\cite{ref_voxelmorph_cvpr,ref_svf_voxelmorph,ref_transmorph}.
+Among the latter, we build on LapIRN~\cite{ref_lapirn}, whose Laplacian pyramid of coarse-to-fine sub-networks recovers the large deformations expected between whole-body scans while keeping the transformation smooth and invertible.
 
-Deformable registration has traditionally been posed as an iterative optimisation over a regularised objective functional, with widely used methods including the diffeomorphic Demons~\cite{ref_demons}, SyN~\cite{ref_syn}, and B-spline~\cite{bspline} frameworks.
-While accurate, these methods are slow at whole-body resolution.
-Learning-based methods instead amortise the optimisation over a training set into the network weights, replacing per-pair iterative optimisation with an efficient single forward pass at inference.
-VoxelMorph established the unsupervised paradigm~\cite{ref_voxelmorph_cvpr}, and subsequent work introduced diffeomorphic parameterisations through stationary velocity fields~\cite{ref_svf_voxelmorph}, transformer backbones such as TransMorph~\cite{ref_transmorph}, and multi-resolution architectures such as LapIRN~\cite{ref_lapirn}.
-Among the latter, LapIRN uses a Laplacian pyramid of coarse-to-fine sub-networks to recover large deformations while keeping the transformation smooth and invertible.
 
 The skeleton is the main location of PSMA ocurrences and thus, the accurate alignment of the bone structures is particular important. 
 In LapIRN, global smoothness regularization is employed, which prevents local folding.
