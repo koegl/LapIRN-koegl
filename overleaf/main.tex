@@ -78,13 +78,13 @@
 \maketitle              % typeset the header of the contribution
 %
 \begin{abstract}
-Longitudinal PSMA PET/CT registration has to align whole-body scans that differ in field of view, positioning , disease burden and bowel and bladder filling, while preserving the PET-derived biomarkers that the scans are acquired to measure.
-Accuracy and preservation pull against each other: a deformation that maximises organ overlap is free to compress or expand a lesion, changing exactly the quantity a clinician reads.
-We adapt the diffeomorphic, coarse-to-fine LapIRN architecture to this task for the Learn2Reg~2026 PSMAReg challenge, and add two anatomically motivated constraints to its objective.
+In longitudinal PSMA PET/CT registration, whole-body scans are aligned that differ in field of view, body positioning , disease burden, and bowel and bladder filling, while preserving the PET-derived biomarkers that the scans provide.
+Alignment accuracy and preservation pull against each other: a deformation that maximises organ overlap is free to compress or expand a lesion, changing exactly the quantity a clinician reads.
+In this work, we adapt the diffeomorphic, coarse-to-fine LapIRN architecture to this task for the Learn2Reg~2026 PSMAReg challenge, and add two anatomically motivated constraints to its objective.
 The first is a set of biomarker terms that pin the metabolic tumour volume and total lesion glycolysis under the estimated transformation, including a Jacobian-based surrogate that supplies gradients throughout the lesion interior rather than only at its boundary.
-The second is a bone-rigidity penalty formulated as a per-structure rigid fit: classical derivative-based rigidity terms read a finite-difference stencil that, on ribs and cortical bone at whole-body resolution, is dominated by surrounding soft tissue, whereas a closed-form rigid fit per skeletal label reads nothing outside it.
+The second is a local rigidity constraint that promotes rigid transformation of the bones: classical derivative-based rigidity terms read a finite-difference stencil that, on ribs and cortical bone at whole-body resolution, is dominated by surrounding soft tissue, whereas a closed-form rigid fit per skeletal label reads nothing outside it.
 The same objective is descended per case at test time by instance optimisation.
-On the challenge validation cases the submitted container reaches $81.0\%$ DSC and $6.17$\,mm HD95 at MTV and TLG errors of $3.3\%$, against $73.3\%$, $7.09$\,mm and $4.5\%$ and $8.7\%$ for the strongest baseline; released from the 90\,s per pair the container must meet, the same method reaches $88.3\%$ DSC, $4.80$\,mm HD95 and $1.4\%$ and $2.1\%$ biomarker error.
+On the challenge validation cases our proposed method reaches $81.0\%$ DSC and $6.17$\,mm HD95 at MTV and TLG errors of $3.3\%$, against $73.3\%$, $7.09$\,mm and $4.5\%$ and $8.7\%$ for the strongest baseline; released from the 90\,s per pair the container must meet, the same method reaches $88.3\%$ DSC, $4.80$\,mm HD95 and $1.4\%$ and $2.1\%$ biomarker error.
 
 \keywords{Deformable image registration \and PSMA PET/CT \and Longitudinal
 imaging \and Biomarker preservation.}
