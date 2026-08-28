@@ -3,9 +3,8 @@
 \subsection{Evaluation Protocol}
 \label{sec:evaluation}
 
-The challenge does not release labels for the validation cases.
-Unless stated otherwise, the validation numbers we report are therefore computed against surrogate labels we generated ourselves: CT organ labels with TotalSegmentator and PET tumour labels with the winning autoPET-III submission.
-We report our method in three configurations: \emph{ours (container)}, the submitted method of Sec.~\ref{sec:container}, which is what the hidden test set will be scored on and therefore the one we test the baselines against; \emph{ours (validation)}, the unconstrained method of Sec.~\ref{sec:pipeline}, reported as the upper bound the 90\,s per-pair budget gives up; and \emph{ours (no IO)}, the backbone alone, which isolates what test-time refinement contributes.
+All numbers below are computed on the challenge validation set and, unless stated otherwise, against the surrogate labels of Sec.~\ref{sec:data_and_preprocessing}, since the organisers release no labels for those cases.
+We report our method in three configurations: \emph{ours (container)}, the submitted method of Sec.~\ref{sec:container}, which is what the challenge test set will be scored on and therefore the one we test the baselines against; \emph{ours (validation)}, the unconstrained method of Sec.~\ref{sec:pipeline}, reported as the upper bound the 90\,s per-pair budget gives up; and \emph{ours (no IO)}, the backbone alone, which isolates what test-time refinement contributes.
 The latter two carry no significance marks.
 
 \subsection{Ablation of the Objective}
