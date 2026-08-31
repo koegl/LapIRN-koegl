@@ -41,7 +41,7 @@ For each pair, ANTs~\cite{ants} estimates an affine transform from the CT images
 The transform is converted to a dense displacement field and applied to the moving scan.
 
 \subsubsection{Step 2: Deformable registration.}
-The deformable stage uses LapIRN~\cite{ref_lapirn}, with three pyramid levels operating at quarter, half and full resolution.
+The deformable stage uses LapIRN~\cite{ref_lapirn}, with three pyramid levels operating at quarter, half, and full resolution.
 Each level predicts a stationary velocity field, adds it to the upsampled velocity from the coarser level, and exponentiates the result by scaling and squaring to obtain a diffeomorphic $\varphi_{\theta}$.
 To handle PSMA PET/CT, each sub-network receives four channels: fixed CT and PET, and affinely aligned moving CT and PET.
 The similarity loss is computed only on CT, because PET uptake may change after therapy; PET is used as input and in the preservation terms of Sec.~\ref{sec:losses}.
@@ -51,7 +51,7 @@ The levels are trained sequentially, with each finer level initialized from the 
 \subsubsection{Step 3: Instance optimization.}
 At test time, each pair is refined by optimizing a residual stationary velocity field on top of the network prediction.
 The residual is initialized to zero and exponentiated by scaling and squaring, preserving diffeomorphism while only correcting the predicted field.
-Optimization uses the training objective (Sec.~\ref{sec:losses}); each iterate is scored by DSC, HD95, MTV and TLG, and the best-scoring iterate is retained.
+Optimization uses the training objective (Sec.~\ref{sec:losses}); each iterate is scored by DSC, HD95, MTV, and TLG, and the best-scoring iterate is retained.
 %Because the global biomarker terms constrain only net sums, in which per-lesion errors cancel, we additionally pin the largest lesions individually by evaluating the MTV and TLG terms per connected component \todo{keep or drop depending on the final configuration}.
 %Instance optimisation requires organ and lesion segmentations of both scans, which on our test set are the surrogate labels described in Sec.~\ref{sec:data_and_preprocessing}, and adds \todo{n}~s per pair.
 
@@ -79,12 +79,12 @@ We use a weighted sum of three loss groups, one per evaluation criterion:
 Each group is described below.
 All terms are evaluated on the composed transformation $\varphi$.
 Only the full-resolution level is trained with the complete objective.
-The two coarser levels (quarter and half resolution) use only the similarity, label and regularization terms; thus $\lambda_{\mathrm{MTV}} = \lambda_{\mathrm{MTV\text{-}J}} = \lambda_{\mathrm{jac}} = \lambda_{\mathrm{TLG}} = \lambda_{\mathrm{rigid}} = 0$.
+The two coarser levels (quarter and half resolution) use only the similarity, label, and regularization terms; thus $\lambda_{\mathrm{MTV}} = \lambda_{\mathrm{MTV\text{-}J}} = \lambda_{\mathrm{jac}} = \lambda_{\mathrm{TLG}} = \lambda_{\mathrm{rigid}} = 0$.
 We omit the PET and bone-specific terms at these resolutions because downsampled lesions and thin ribs span only a few voxels, so volume ratios and per-structure rigid fits mainly reflect interpolation rather than anatomy.
 
 \subsubsection{Registration Accuracy.}
 Image similarity is measured using local normalized cross-correlation (NCC), computed as a multi-resolution sum over as many scales as the respective pyramid level has resolutions, i.e.\ one scale at the coarsest and three at the full-resolution level.
-NCC is computed on the CT channel only, since PET uptake can change substantially between time points and a PET similarity term could therefore encourage matching disease-related uptake rather than anatomy.
+NCC is computed on the CT channel only, since PET uptake can change substantially between time points, and a PET similarity term could therefore encourage matching disease-related uptake rather than anatomy.
 We additionally use a DSC loss for weak supervision from the CT organ labels.
 
 
@@ -115,7 +115,7 @@ To additionally constrain the deformation within the lesion, we use $\mathcal{L}
 A third term, $\mathcal{L}_{\mathrm{jac}}$, penalizes per-voxel deviations of the Jacobian determinant from one and therefore discourages local compensating compression and expansion.
 
 TLG is penalized analogously by $\mathcal{L}_{\mathrm{TLG}}$, the relative change in PET intensity mass within the lesion before and after warping.
-Because both the PET image and lesion mask are transformed, this term captures changes in both lesion volume and intensity interpolation.
+Because both the PET image and the lesion mask are transformed, this term captures changes in lesion volume and in intensity interpolation.
 All four PET preservation terms are used during training and instance optimization.
 
 
@@ -158,13 +158,13 @@ As shown in Fig.~\ref{fig:selection}, validation DSC continues to improve after 
 \label{sec:baselines}
 We compare against two references and two competing methods, all evaluated on the same pairs and under the identical protocol of Sec.~\ref{sec:evaluation}.
 
-As a classical iterative baseline we ran NiftyReg~\cite{MODAT2010,modat2014}, using \texttt{reg\_aladin} for the affine stage followed by \texttt{reg\_f3d} initialized with it, both with default parameters.
+As a classical iterative baseline, we ran NiftyReg~\cite{MODAT2010,modat2014}, using \texttt{reg\_aladin} for the affine stage followed by \texttt{reg\_f3d} initialized with it, both with default parameters.
 As a learning-free optimization baseline we ran ConvexAdam, in the form provided by the challenge organizers as the official baseline of the task.
 
 \subsection{Implementation Details}
 \label{sec:infrastructure}
 Augmentations were chosen to mimic longitudinal variability: left--right flipping ($p=0.5$), CT intensity shifting by $\pm0.02$ in the normalized window (about $\pm50$~HU), CT scaling from $0.9$ to $1.1$, and PET scaling from $0.85$ to $1.15$ without additive shifts.
-To simulate field-of-view mismatch, we crop up to 40 axial slices from either end of both scans, followed by independent moving and fixed crops of up to 10 additional slices.
+To simulate a field-of-view mismatch, we crop up to 40 axial slices from either end of both scans, followed by independent moving and fixed crops of up to 10 additional slices.
 
 The three pyramid levels are trained sequentially with Adam for $60$k, $60$k and $120$k steps, using learning rates of $3\cdot10^{-4}$, $2\cdot10^{-4}$ and $2.5\cdot10^{-4}$, batch size one, and gradient accumulation over four steps.
 Each level uses a five-epoch linear warmup; the preceding level is frozen for the first ten epochs and then fine-tuned jointly.

@@ -1,6 +1,6 @@
 \section{Discussion}
 The proposed PET preservation and bone-rigidity constraints are compatible with registration accuracy rather than requiring a trade-off.
-Compared with the strongest baseline, the submitted configuration improves DSC and HD95 while reducing MTV and TLG bias and non-diffeomorphic volume.
+Compared with the strongest baseline, the submitted configuration improves DSC and HD95 while reducing MTV and TLG bias, as well as non-diffeomorphic volume.
 The biomarker terms are applied consistently during training and instance optimization, while the per-structure rigid fit constrains skeletal structures without relying on finite-difference stencils that may extend into surrounding soft tissue.
 
 Several limitations qualify these results.
@@ -9,5 +9,5 @@ The reported results should therefore be interpreted as exploratory rather than 
 Hidden test-set results were unavailable at the time of writing.
 The rigidity term also depends on the quality of the skeletal segmentations and is primarily intended for structures that are thin relative to the image resolution.
 
-Finally, the 90 s runtime constraint reduces the accuracy of the submitted container configuration, largely due to the segmentations required for instance optimization.
-Future work will therefore focus on faster and more accurate segmentation and on evaluating biomarker preservation per lesion rather than only through aggregate MTV and TLG.
+Finally, the 90s runtime constraint reduces the accuracy of the submitted container configuration, largely due to the segmentations required for instance optimization.
+Future work will therefore focus on faster, more accurate segmentation and on evaluating biomarker preservation per lesion rather than only at the aggregate MTV and TLG levels.

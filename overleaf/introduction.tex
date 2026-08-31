@@ -2,7 +2,7 @@
 
 Prostate-specific membrane antigen (PSMA) PET/CT has become a central imaging modality for staging, treatment planning, radiopharmaceutical therapy, and post-therapy response assessment in prostate cancer~\cite{ref_psma_clinical}.
 In these settings, patients often undergo multiple scans over time, comprising a baseline scan before therapy and one or more follow-up scans.
-Accurate baseline-to-follow-up registration can support comparison of disease burden, localization of uptake changes, assessment of lesion progression or response, dose accumulation, and quantitative longitudinal analysis~\cite{ref_psmareg_challenge}.
+Accurate baseline-to-follow-up registration can support the comparison of disease burden, the localization of uptake changes, the assessment of lesion progression or response, dose accumulation, and quantitative longitudinal analysis~\cite{ref_psmareg_challenge}.
 The Learn2Reg~2026 PSMAReg challenge~\cite{ref_learn2reg_alessa,ref_learn2reg_hansen,ref_psmaregdata} formalizes this problem as the estimation of a dense displacement field that warps each follow-up (moving) scan to its baseline (fixed) scan.
 The challenge evaluates registration accuracy using organ overlap and boundary distance, deformation regularity, and preservation of two PET-derived biomarkers: metabolic tumor volume (MTV) and total lesion glycolysis (TLG).
 
@@ -35,8 +35,8 @@ In this work, we adapt LapIRN to longitudinal whole-body PSMA PET/CT registratio
 \centering
 \includegraphics[width=\linewidth]{overview.png}
 \caption{Overview of the proposed registration pipeline.
-The moving (follow-up) and fixed (baseline) PET/CT are first coarsely aligned by an affine pre-registration, and the aligned pair is passed to the coarse-to-fine LapIRN network, which predicts a dense deformation field (green grid).
-Finally, after the LapIRN stage we refine this field per pair by instance optimization (IO) and resample the moving scan with it into the fixed space (warped PET/CT).
-Both stages are driven by the same objective, a weighted sum of three groups of terms: registration accuracy, PET quantification and deformation regularization (Sec.~\ref{sec:losses}).}
+The moving (follow-up) and fixed (baseline) PET/CT scans are first coarsely aligned by an affine pre-registration, and the resulting pair is then passed to the coarse-to-fine LapIRN network, which predicts a dense deformation field (green grid).
+Finally, after the LapIRN stage, we refine this field per pair by instance optimization (IO) and resample the moving scan with it into the fixed space (warped PET/CT).
+Both stages are driven by the same objective, a weighted sum of three groups of terms: registration accuracy, PET quantification, and deformation regularization (Sec.~\ref{sec:losses}).}
 \label{fig:pipeline}
 \end{figure}
