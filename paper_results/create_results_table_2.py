@@ -16,7 +16,6 @@ import pandas as pd
 from create_results_table_1 import (
     ALPHA,
     CAPTION_SKIP,
-    HEADERS,
     HIGHER_IS_BETTER,
     METRICS,
     decimals_for,
@@ -87,7 +86,15 @@ OUR_ROWS = [
 # submitted container, since that is what gets ranked on the hidden test set.
 PRIMARY_KEY = "container"
 
-RUNTIME_HEADER = r"Time (s) $\downarrow$"
+HEADERS = {
+    "dice": r"\shortstack{DSC\\(\%) $\uparrow$}",
+    "hd95": r"\shortstack{HD95\\(mm) $\downarrow$}",
+    "mtv": r"\shortstack{MTV error\\(\%) $\downarrow$}",
+    "tlg": r"\shortstack{TLG error\\(\%) $\downarrow$}",
+    "ndv": r"\shortstack{NDV\\(ppm) $\downarrow$}",
+}
+
+RUNTIME_HEADER = r"\shortstack{Time\\(s) $\downarrow$}"
 
 
 def load_local_metrics(path, cases):
