@@ -5,7 +5,7 @@
 
 We report three configurations of our method.
 \emph{Ours (container)} is the submitted method of Sec.~\ref{sec:container}; it is the configuration evaluated against the baselines because it matches the hidden-test submission.
-\emph{Ours (validation)} uses the unconstrained pipeline of Sec.~\ref{sec:pipeline}, while \emph{ours (no IO)} removes instance optimisation to isolate its contribution.
+\emph{Ours (validation)} uses the unconstrained pipeline of Sec.~\ref{sec:pipeline}, while \emph{ours (no IO)} removes instance optimization to isolate its contribution.
 Significance markers are shown only for comparisons between \emph{ours (container)} and the baselines.
 
 % \subsection{Ablation of the Objective}
@@ -26,7 +26,7 @@ Significance markers are shown only for comparisons between \emph{ours (containe
 
 \subsection{Comparison against Baselines}
 
-We swept the loss weights and the instance-optimisation settings and selected the one reported below with the challenge ranking of Sec.~\ref{sec:model_selection}, applied to the surrogate protocol above.
+We swept the loss weights and the instance-optimization settings and selected the one reported below with the challenge ranking of Sec.~\ref{sec:model_selection}, applied to the surrogate protocol above.
 Table~\ref{tab:baselines} places the three configurations against the baselines.
 The container configuration improves DSC from $73.3\%$ (NiftyReg, the strongest baseline) to $81.0\%$ and reduces HD95 from $7.09$ to $6.17$\,mm, while also reducing the MTV and TLG errors and the non-diffeomorphic volume from $1525$ to $864$\,ppm.
 
