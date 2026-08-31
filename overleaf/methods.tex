@@ -2,18 +2,33 @@
 
 \subsection{Data and Preprocessing}
 \label{sec:data_and_preprocessing}
-We used the PSMAReg dataset of the Learn2Reg~2026 challenge~\cite{ref_psmareg_challenge}, a longitudinal whole-body PSMA PET/CT cohort adapted from the manually annotated autoPET data of~\cite{ref_psmaregdata}, in which each subject provides a baseline scan and one or more follow-up scans with a CT and a PSMA PET channel each; the follow-up is the moving and the baseline the fixed image.
-The images are provided already resampled to $2.7344\times2.7344\times3.27$~mm and cropped to $192\times192\times288$ voxels, so we applied no further geometric preprocessing and only normalised the intensities, clipping CT to $[-1000, 1500]$~HU and the PET SUV to $[0, 20]$ and rescaling both to $[0,1]$.
+%We used the PSMAReg dataset of the Learn2Reg~2026 challenge~\cite{ref_psmareg_challenge}, a longitudinal whole-body PSMA PET/CT cohort adapted from the manually annotated autoPET data of~\cite{ref_psmaregdata}, in which each subject provides a baseline scan and one or more follow-up scans with a CT and a PSMA PET channel each; the follow-up is the moving and the baseline the fixed image.
+%The images are provided already resampled to $2.7344\times2.7344\times3.27$~mm and cropped to $192\times192\times288$ voxels, so we applied no further geometric preprocessing and only normalised the intensities, clipping CT to $[-1000, 1500]$~HU and the PET SUV to $[0, 20]$ and rescaling both to $[0,1]$.
+%
+%The organisers release 358 training cases with labels and 20 validation cases without labels, and keep a test set of $\sim$200 pairs of private JHU data that is never released and is scored by them alone.
+%Since that test set is inaccessible to us, we re-partitioned the released data into our own three sets: of the 358 training cases we used the 146 paired ones, split patient-wise into our training set (117 cases) and our validation set (29 cases), and the 20 challenge validation cases serve as our test set.
+%Our validation set carries the validation losses during training and is the basis for checkpoint and variant selection (Sec.~\ref{sec:model_selection}); all results we report are computed on our test set, which is never trained or selected on.
+%Registration pairs always point from the later to the earlier time point: for our training set all such ordered combinations, including follow-up-to-follow-up pairs (239 pairs), and for our validation set every follow-up registered to its baseline (39 pairs).
+%
+%Our training and validation sets come with the labels released by the organisers: CT organ labels generated automatically with TotalSegmentator~\cite{ref_totalsegmentator} and PET lesion labels manually annotated by radiologists.
+%For our test set no labels are released, so we generated surrogate ones ourselves, with TotalSegmentator for the CT organs and the winning autoPET~III submission~\cite{rokuss2024fdgpsmahitchhikersguide} for the PET lesions; these are what both our evaluation and our instance optimisation consume on those cases.
+%
+%Following the ConvexAdam baseline provided by the challenge organisers, we remove the patient bed.
 
-The organisers release 358 training cases with labels and 20 validation cases without labels, and keep a test set of $\sim$200 pairs of private JHU data that is never released and is scored by them alone.
-Since that test set is inaccessible to us, we re-partitioned the released data into our own three sets: of the 358 training cases we used the 146 paired ones, split patient-wise into our training set (117 cases) and our validation set (29 cases), and the 20 challenge validation cases serve as our test set.
-Our validation set carries the validation losses during training and is the basis for checkpoint and variant selection (Sec.~\ref{sec:model_selection}); all results we report are computed on our test set, which is never trained or selected on.
-Registration pairs always point from the later to the earlier time point: for our training set all such ordered combinations, including follow-up-to-follow-up pairs (239 pairs), and for our validation set every follow-up registered to its baseline (39 pairs).
+We used the PSMAReg dataset of the Learn2Reg 2026 challenge~\cite{ref_psmareg_challenge}, a longitudinal whole-body PSMA PET/CT cohort in which each subject provides a baseline scan and one or more follow-up scans.
+Each scan contains CT and PSMA PET channels; follow-up scans were treated as moving images and baseline scans as fixed images.
+The images are provided at $2.7344\times2.7344\times3.27$~mm resolution and cropped to $192\times192\times288$ voxels.
+We therefore applied no further geometric preprocessing.
+CT was clipped to $[-1000, 1500]$~HU and PET SUV to $[0, 20]$, followed by rescaling to $[0,1]$.
 
-Our training and validation sets come with the labels released by the organisers: CT organ labels generated automatically with TotalSegmentator~\cite{ref_totalsegmentator} and PET lesion labels manually annotated by radiologists.
-For our test set no labels are released, so we generated surrogate ones ourselves, with TotalSegmentator for the CT organs and the winning autoPET~III submission~\cite{rokuss2024fdgpsmahitchhikersguide} for the PET lesions; these are what both our evaluation and our instance optimisation consume on those cases.
+Of the 358 released training cases, we used the 146 paired cases and split them patient-wise into 117 training and 29 validation cases.
+The 20 challenge validation cases, for which no labels are released, were used as our test set.
+For training and validation, we used the CT organ and PET lesion labels provided by the organisers.
+For the test set, we generated surrogate CT organ labels using TotalSegmentator~\cite{ref_totalsegmentator} and PET lesion labels using the winning autoPET III submission~\cite{rokuss2024fdgpsmahitchhikersguide}.
+Following the ConvexAdam~\cite{ref_convexadam} baseline provided by the challenge organisers, we additionally removed the patient bed and normalised the CT images.
 
-Following the ConvexAdam baseline provided by the challenge organisers, we remove the patient bed and normalise the CTs.
+
+
 
 \subsection{Registration Pipeline}
 \label{sec:pipeline}
