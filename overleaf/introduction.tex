@@ -7,27 +7,30 @@ The Learn2Reg~2026 PSMAReg challenge~\cite{ref_learn2reg_alessa,ref_learn2reg_ha
 The evaluation is performed by a combination of an organ overlap metric, boundary distance and deformation regularity.
 Moreover, to measure the preservation of the PET-derived tumor biomarkers, two separate metrics are used: the metabolic tumor volume (MTV) and the total lesion glycolysis (TLG).
 
-Deformable registration has traditionally been posed as an iterative optimization over a regularised objective functional~\cite{ref_demons,ref_syn,bspline}, which is accurate but slow at whole-body resolution, whereas learning-based methods amortize this optimization into network weights and replace per-pair iteration with a single forward pass at inference~\cite{ref_voxelmorph_cvpr,ref_svf_voxelmorph,ref_transmorph}.
-Among the latter, we build on LapIRN~\cite{ref_lapirn}, whose Laplacian pyramid of coarse-to-fine sub-networks recovers the large deformations expected between whole-body scans while keeping the transformation smooth and invertible.
+Deformable registration can be formulated as iterative optimisation of a regularised objective functional~\cite{ref_demons,ref_syn,bspline}, which can achieve high accuracy but is computationally demanding for whole-body images.
+Learning-based methods instead amortize this optimization into network weights and replace per-pair iteration with a single forward pass at inference~\cite{ref_voxelmorph_cvpr,ref_svf_voxelmorph,ref_transmorph}.
+We therefore build on LapIRN ~\cite{ref_lapirn}, whose coarse-to-fine Laplacian pyramid is well suited to recovering the large deformations expected between longitudinal whole-body scans while maintaining smooth and invertible transformations.
 
 
-The skeleton is the main location of PSMA ocurrences and thus, the accurate alignment of the bone structures is particular important. 
-In LapIRN, global smoothness regularization is employed, which prevents local folding.
-However, it is desired to constrain the bone structures to move rigidly.
-Anatomy-aware regularisation that locally penalises non-rigid deformation of individual structures was widely explored~\cite{ref_rigidity_1_loeckx,ref_rigidity_2_ruan,ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki}.
-The regularization is therefore particularly relevant for the registration problem of the challenge.
-
-In this work, we extend LapIRN by addressing the challenges presented above for longitudinal whole-body PSMA PET/CT registration in the PSMAReg task (Fig.~\ref{fig:pipeline}).
 
 
-Our contributions are threefold.
-We propose:
-\begin{itemize}
-  \item an adaptation of the diffeomorphic, coarse-to-fine LapIRN architecture to longitudinal whole-body PSMA PET/CT, combining an affine pre-registration with a three-level pyramid and
-        test-time instance optimization;
-  \item a set of losses that constrain the PET-derived MTV and TLG given the estimated deformation, including a Jacobian determinant-based loss term;
-  \item a local rigidity regularization for the bone structures;
-\end{itemize}
+%The skeleton is the main location of PSMA ocurrences and thus, the accurate alignment of the bone structures is particular important. 
+%In LapIRN, global smoothness regularization is employed, which prevents local folding.
+%However, it is desired to constrain the bone structures to move rigidly.
+%Anatomy-aware regularisation that locally penalises non-rigid deformation of individual structures was widely explored~\cite{ref_rigidity_1_loeckx,ref_rigidity_2_ruan,ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki}.
+%The regularization is therefore particularly relevant for the registration problem of the challenge.
+
+In this work, we adapt LapIRN to longitudinal whole-body PSMA PET/CT registration and extend it with PET biomarker preservation losses, local bone rigidity regularisation, and test-time instance optimisation.
+
+
+%Our contributions are threefold.
+%We propose:
+%\begin{itemize}
+%  \item an adaptation of the diffeomorphic, coarse-to-fine LapIRN architecture to longitudinal whole-body PSMA PET/CT, combining an affine pre-registration with a three-level pyramid and
+%        test-time instance optimization;
+%  \item a set of losses that constrain the PET-derived MTV and TLG given the estimated deformation, including a Jacobian determinant-based loss term;
+%  \item a local rigidity regularization for the bone structures;
+%\end{itemize}
 
 \begin{figure}[t]
 \centering
