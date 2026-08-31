@@ -131,18 +131,10 @@ This constrains the deformation within each structure while allowing independent
 
 
 \subsubsection{Deformation regularisation.}
-To regularise the displacement field we used a diffusion regulariser, $\mathcal{L}_{\mathrm{smooth}}$, the mean squared spatial gradient of the displacement, together with a term penalising non-diffeomorphic voxels.
-Rather than the usual penalty on negative Jacobian determinants of a single finite-difference stencil, we differentiably reproduce the scored metric itself: the challenge computes the non-diffeomorphic volume (NDV) by decomposing each voxel into six tetrahedra and accumulating the negative part of their determinants over the body mask~\cite{Liu2024}.
-Writing $\det J^{(k)}_{\varphi}$ for the determinant of the $k$-th tetrahedral scheme, the loss
-%
-\begin{equation}
-  \mathcal{L}_{\mathrm{NDV}}
-  = \frac{100}{12 \lvert \Omega \rvert} \sum_{p \in \Omega} \sum_{k=1}^{6}
-    \max\bigl(-\det J^{(k)}_{\varphi}(p),\, 0\bigr)
-  \label{eq:ndv}
-\end{equation}
-%
-equals the scored percentage of non-diffeomorphic volume and places gradients on exactly the folded voxels, so that minimising it minimises the reported \%NDV directly.
+We regularise the displacement field using a diffusion term, $\mathcal{L}_{\mathrm{smooth}}$, defined as the mean squared spatial gradient of the displacement, together with a penalty for non-diffeomorphic voxels.
+For the latter, we differentiably reproduce the challenge's non-diffeomorphic volume (NDV) metric, which decomposes each voxel into six tetrahedra and accumulates the negative part of their Jacobian determinants over the body mask~\cite{Liu2024}.
+The resulting $\mathcal{L}_{\mathrm{NDV}}$ directly corresponds to the scored percentage of non-diffeomorphic volume and provides gradients at the locations where folding occurs.
+
 
 \subsection{Submission container}
 \label{sec:container}
