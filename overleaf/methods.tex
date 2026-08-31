@@ -83,9 +83,11 @@ Only the full-resolution level is trained with the complete objective.
 The two coarser levels (quarter and half resolution) use the similarity, label and regularisation terms alone, i.e.\ $\lambda_{\mathrm{MTV}} = \lambda_{\mathrm{MTV\text{-}J}} = \lambda_{\mathrm{jac}} = \lambda_{\mathrm{TLG}} = \lambda_{\mathrm{rigid}} = 0$, because the lesion and bone masks they would be evaluated on are only a few voxels wide there: after downsampling, thin ribs and small lesions are largely partial-volume, so both the volume ratios and the per-structure rigid fits measure interpolation rather than anatomy.
 
 \subsubsection{Registration Accuracy.}
-Image similarity is measured by the local normalised cross correlation (NCC), evaluated as a multi-resolution sum over as many scales as the level has resolutions, i.e.\ one scale at the coarsest and three at the full-resolution level.
-It is computed on the CT channel only: PET intensity is not conserved between the two time points, as lesions appear, resolve or change uptake under therapy, so a PET similarity term would reward matching disease rather than anatomy.
-Furthermore, we added a DSC loss for weak CT label supervision.
+Image similarity is measured using local normalized cross-correlation (NCC), computed as a multi-resolution sum over as many scales as the respective pyramid level has resolutions, i.e.\ one scale at the coarsest and three at the full-resolution level.
+NCC is computed on the CT channel only, since PET uptake can change substantially between time points and a PET similarity term could therefore encourage matching disease-related uptake rather than anatomy.
+We additionally use a DSC loss for weak supervision from the CT organ labels.
+
+
 %Since the challenge scores PET organ overlap but provides no PET organ annotations for training, we measured each of the 117 TotalSegmentator organs' mean SUV relative to skeletal muscle across all sessions.
 %As 90 organs fall below twice the muscle background and are thus indistinguishable in PET, we upweighted only the 10 exceeding 4 times the background (kidneys, gallbladder, spleen, liver, duodenum, bladder, portal vein, prostate, pancreas) by a factor of 2 in the per-class Dice loss.
 %This relies on PET and CT being well aligned within a session, so that CT-derived overlap on these organs approximates the PET organ overlap being scored.
