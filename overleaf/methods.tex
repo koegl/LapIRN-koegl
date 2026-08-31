@@ -137,12 +137,10 @@ The resulting $\mathcal{L}_{\mathrm{NDV}}$ directly corresponds to the scored pe
 
 \subsection{Submission container}
 \label{sec:container}
-Instance optimisation needs CT organ segmentations of both scans and PET lesion segmentations of the moving scan, and the submitted container has to produce them and register the pair within a budget of 90~s per image pair, which the configuration above exceeds.
-The deployed method therefore differs from the one evaluated in validation in three points, all of them inside instance optimisation or in the labels it consumes; everything up to and including the predicted field is identical.
-First, PET lesion masks come from an nnU-Net~\cite{nnunet} trained on this dataset with progressive patch-size growing~\cite{ref_progressive_patch}, which is faster at inference than the ensemble used in validation.
-Second, CT organ labels are produced with TotalSegmentator in its fast mode together with its body segmentation.
-Third, instance optimisation runs until the 90s per-pair time limit is exhausted.
-We report both configurations separately in Sec.~\ref{sec:evaluation}, since only the validation one is free of the time constraint.
+The submitted container must produce all labels required by instance optimisation and register each pair within the 90~s time limit.
+It therefore differs from the validation configuration only in this final stage: PET lesion masks are predicted by a nnU-Net~\cite{nnunet} trained with progressive patch-size growing~\cite{ref_progressive_patch} on the challenge dataset, CT organ labels are generated with TotalSegmentator in fast mode, and instance optimisation runs until the time limit is reached.
+The affine and network-predicted deformable fields are unchanged.
+We report both configurations separately in Sec.~\ref{sec:evaluation}, since only the validation setting is unconstrained by runtime.
 
 \subsection{Model Selection}
 \label{sec:model_selection}
@@ -161,13 +159,13 @@ As a learning-free optimisation baseline we ran ConvexAdam, in the form provided
 
 \subsection{Implementation Details}
 \label{sec:infrastructure}
-Augmentation was chosen to reproduce the ways two sessions of the same patient differ rather than to maximise variety: a left--right flip ($p=0.5$), a CT intensity shift of $\pm0.02$ in the normalised window (about $\pm50$~HU) and scaling of $0.9$ to $1.1$, and a PET scaling of $0.85$ to $1.15$ without a shift, since SUV depends on dose, uptake time and body weight but an additive offset has no physical counterpart.
-We additionally crop up to 40 slices from either end of both scans along the axial axis, and then the moving and fixed scan independently by up to 10 further slices each; the latter is what reproduces a baseline/follow-up mismatch, forcing the network to register anatomy present in one scan and truncated in the other.
+Augmentations were chosen to mimic longitudinal variability: left--right flipping ($p=0.5$), CT intensity shifting by $\pm0.02$ in the normalised window (about $\pm50$~HU), CT scaling from $0.9$ to $1.1$, and PET scaling from $0.85$ to $1.15$ without additive shifts.
+To simulate field-of-view mismatch, we crop up to 40 axial slices from either end of both scans, followed by independent moving and fixed crops of up to 10 additional slices.
 
-Each pyramid level is trained in sequence with Adam, at a batch size of one with gradients accumulated over four steps, for $60$k, $60$k and $120$k steps at learning rates of $3\cdot10^{-4}$, $2\cdot10^{-4}$ and $2.5\cdot10^{-4}$.
-Every level starts with a five-epoch linear learning-rate warmup and keeps the preceding level frozen for its first ten epochs.
-The convolutional trunk runs in \texttt{bfloat16} while the transformations and all losses are kept in single precision, since scaling and squaring and the Jacobian determinants compound rounding error.
+The three pyramid levels are trained sequentially with Adam for $60$k, $60$k and $120$k steps, using learning rates of $3\cdot10^{-4}$, $2\cdot10^{-4}$ and $2.5\cdot10^{-4}$, batch size one, and gradient accumulation over four steps.
+Each level uses a five-epoch linear warmup; the preceding level is frozen for the first ten epochs and then fine-tuned jointly.
+The convolutional trunk runs in \texttt{bfloat16}, while transformations and losses remain in single precision to avoid numerical errors in scaling and squaring and Jacobian computations.
 The loss weights were chosen by the sweep of Sec.~\ref{sec:evaluation}.
 
-All models were trained and evaluated on a single NVIDIA H100 80\,GB HBM3 (driver 610.57.04), in Python~3.11 with PyTorch~2.6.0~\cite{ref_pytorch} and CUDA~12.4; the affine pre-registration uses ANTsPy~0.6.3~\cite{ants}, and image and array handling NiBabel~5.4.2, NumPy~2.4.4 and SciPy~1.17.1.
-Training all three levels takes 2d 6h 7m 6s.
+All models were trained and evaluated on a single NVIDIA H100 80\,GB HBM3 GPU (driver 610.57.04) using Python~3.11, PyTorch~2.6.0~\cite{ref_pytorch}, CUDA~12.4, ANTsPy~0.6.3~\cite{ants}, NiBabel~5.4.2, NumPy~2.4.4 and SciPy~1.17.1.
+Training all three levels took 2d 6h 7m 6s.
