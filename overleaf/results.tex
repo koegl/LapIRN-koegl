@@ -8,6 +8,9 @@ We report three configurations of our method.
 \emph{Ours (validation)} uses the unconstrained pipeline of Sec.~\ref{sec:pipeline}, while \emph{ours (no IO)} removes instance optimization to isolate its contribution.
 Significance markers are shown only for comparisons between \emph{ours (container)} and the baselines.
 
+Table~\ref{tab:baselines} is evaluated on the 20 official challenge validation cases using our surrogate labels and local evaluator.
+These results are therefore separate from the official Codabench validation leaderboard, which uses the organizers' scoring setup.
+
 % \subsection{Ablation of the Objective}
 % \label{sec:ablation}
 
@@ -33,4 +36,5 @@ The container configuration improves DSC from $73.3\%$ (NiftyReg, the strongest 
 \input{tables/table_results_2}   % \input, not \include: \include forces a \clearpage
 
 \subsection{Leaderboard Performance}
+These leaderboard numbers are reported separately because they were computed by the official evaluation server rather than by our surrogate-label protocol.
 On the validation leaderboard, our method (\emph{Ours (validation)}) achieved a Dice score of $0.789 \pm 0.0381$, HD95 of $5.99 \pm 2.39$\,mm, MTV error of $1.56 \pm 1.22\%$, TLG error of $4.18 \pm 2.49\%$, and NDV of $0.0041 \pm 0.0024\%$.
