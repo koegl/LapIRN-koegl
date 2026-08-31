@@ -1,12 +1,10 @@
 \section{Discussion}
+The proposed PET preservation and bone-rigidity constraints are compatible with registration accuracy rather than requiring a trade-off: compared with the strongest baseline, the submitted configuration improves DSC and HD95 while reducing MTV and TLG bias and non-diffeomorphic volume.
+The biomarker terms are applied consistently during training and instance optimisation, while the per-structure rigid fit constrains skeletal structures without relying on finite-difference stencils that may extend into surrounding soft tissue.
 
-The results show that the two proposed constraints are compatible with alignment accuracy rather than traded against it: the submitted configuration improves DSC and HD95 over the strongest baseline while at the same time reducing the MTV and TLG bias and the non-diffeomorphic volume.
-The biomarker terms are cheap to add and are descended identically during training and at test time, so the network is refined under the objective it was trained on.
-The per-structure rigid fit replaces a derivative-based penalty that, on whole-body CT at this resolution, reads mostly soft tissue: ribs and cortical bone are thinner than the stencil used to differentiate them, so the classical term measures the bone-to-soft-tissue displacement discontinuity that a correct registration must produce.
+Several limitations qualify these results.
+Evaluation relies on automatically generated surrogate labels, and the loss weights were selected on the same 20 cases used for comparison, making the results exploratory rather than confirmatory; hidden test-set results were unavailable at the time of writing.
+The rigidity term also depends on the quality of the skeletal segmentations and is primarily intended for structures that are thin relative to the image resolution.
 
-Several limitations qualify these numbers.
-All metrics are computed against automatic surrogate labels, which carry their own error, and the loss weights were selected on the same 20 cases the comparison is reported on, so it is exploratory rather than confirmatory; no test-set results were available at the time of writing.
-The rigidity term further depends on the quality of the skeletal segmentation, and we would expect it to matter wherever rigid structures are thin relative to the voxel size rather than as a universal replacement for derivative-based penalties.
-Finally, the container configuration loses accuracy under its 90\,s per-pair budget, most of it in the segmentations that instance optimisation consumes.
-
-In future work we will therefore replace that segmentation stage with a faster and more accurate one, which is the most direct improvement available to the submitted method, and evaluate the biomarker terms per lesion rather than only on their net sums.
+Finally, the 90 s runtime constraint reduces the accuracy of the submitted container configuration, largely due to the segmentations required for instance optimisation.
+Future work will therefore focus on faster and more accurate segmentation and on evaluating biomarker preservation per lesion rather than only through aggregate MTV and TLG.
