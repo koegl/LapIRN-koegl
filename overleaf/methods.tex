@@ -121,9 +121,14 @@ All four PET preservation terms are used during training and instance optimisati
 
 
 \subsubsection{Bone rigidity.}
-A median of 46.0\% of the total lesion volume at baseline and 63.8\% at follow-up lies within skeletal structures, where a rigid motion is both physiologically plausible and volume- and intensity-preserving ($\det J_{\varphi} = 1$), so constraining the bones to move rigidly protects the MTV and TLG directly.
-The established penalties measure deviation of the Jacobian $J_{\varphi}$ from orthogonality~\cite{ref_rigidity_1_loeckx,ref_rigidity_2_ruan}, local affineness and orientation preservation~\cite{ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki} by finite differences and mask only afterwards, so on thin cortical bone and ribs the stencil leaks into soft tissue and measures the bone-to-soft-tissue displacement discontinuity instead.
-We therefore penalise a per-structure rigid-fit residual over the 61 skeletal TotalSegmentator labels, fitting each structure's own displacement in closed form by Kabsch alignment~\cite{ref_kabsch,ref_umeyama}, so that no stencil crosses the mask, articulation stays free, and only the shape of the deformation is constrained, not its placement.
+%A median of 46.0\% of the total lesion volume at baseline and 63.8\% at follow-up lies within skeletal structures, where a rigid motion is both physiologically plausible and volume- and intensity-preserving ($\det J_{\varphi} = 1$), so constraining the bones to move rigidly protects the MTV and TLG directly.
+%The established penalties measure deviation of the Jacobian $J_{\varphi}$ from orthogonality~\cite{ref_rigidity_1_loeckx,ref_rigidity_2_ruan}, local affineness and orientation preservation~\cite{ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki} by finite differences and mask only afterwards, so on thin cortical bone and ribs the stencil leaks into soft tissue and measures the bone-to-soft-tissue displacement discontinuity instead.
+%We therefore penalise a per-structure rigid-fit residual over the 61 skeletal TotalSegmentator labels, fitting each structure's own displacement in closed form by Kabsch alignment~\cite{ref_kabsch,ref_umeyama}, so that no stencil crosses the mask, articulation stays free, and only the shape of the deformation is constrained, not its placement.
+A substantial proportion of the lesion volume lies within skeletal structures, where rigid motion is physiologically plausible and preserves both volume and intensity ($\det J_{\varphi} = 1$).
+We therefore constrain each skeletal structure to undergo rigid motion.
+For the 61 skeletal TotalSegmentator labels, we fit the displacement of each structure independently with a rigid transformation using closed-form Kabsch alignment~\cite{ref_kabsch,ref_umeyama} and penalise the residual.
+This constrains the deformation within each structure while allowing independent motion between structures.
+
 
 \subsubsection{Deformation regularisation.}
 To regularise the displacement field we used a diffusion regulariser, $\mathcal{L}_{\mathrm{smooth}}$, the mean squared spatial gradient of the displacement, together with a term penalising non-diffeomorphic voxels.
