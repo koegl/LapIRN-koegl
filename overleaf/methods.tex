@@ -32,27 +32,26 @@ Following the ConvexAdam~\cite{ref_convexadam} baseline provided by the challeng
 
 \subsection{Registration Pipeline}
 \label{sec:pipeline}
-The proposed pipeline is described in detail below (see also Fig.~\ref{fig:pipeline}).
-Throughout, $I$ denotes the moving (follow-up) PET image, $M$ its lesion mask, $\varphi_{\mathrm{aff}}$ the affine pre-registration and $\varphi_{\theta}$ the displacement field predicted by the network; their composition $\varphi$ is the total transformation mapping the moving to the fixed image.
-$W$ denotes the lesion segmentation in the fixed frame, i.e.\ the image of $M$ under $\varphi$.
+Our pipeline consists of CT-based affine pre-registration, LapIRN-based deformable registration, and optional test-time instance optimisation (Fig.~\ref{fig:pipeline}).
+Throughout, $I$ denotes the moving PET image, $M$ its lesion mask, $\varphi_{\mathrm{aff}}$ the affine pre-registration, $\varphi_{\theta}$ the network-predicted deformation, and $\varphi$ their composition.
+$W$ is the lesion mask warped into the fixed frame.
 
 \subsubsection{Step 1: Affine pre-registration.}
-For each image pair we estimate an affine transform with ANTs~\cite{ants} based on the CT channel alone, at half resolution and with a Mattes mutual-information metric, after masking both volumes to the body and windowing them to $[-1000, 1000]$~HU.
-The result is converted into a dense voxel displacement field, which is then applied to the moving scan.
+For each pair, ANTs~\cite{ants} estimates an affine transform from the CT images alone, using body masks, CT windowing to $[-1000,1000]$~HU, half-resolution images, and Mattes mutual information.
+The transform is converted to a dense displacement field and applied to the moving scan.
 
 \subsubsection{Step 2: Deformable registration.}
-For the deformable stage we use LapIRN~\cite{ref_lapirn}, a Laplacian-pyramid network whose three sub-networks operate at a quarter, a half and the full resolution of the $192\times192\times288$ volumes.
-Each level predicts a stationary velocity field that is added to the upsampled velocity of the coarser level; the sum is exponentiated by scaling and squaring to give a diffeomorphic $\varphi_{\theta}$, so large deformations are recovered coarse-to-fine while the transformation stays smooth and invertible.
-We adapted the architecture to the multi-modal setting by extending each sub-network to take four input channels: the fixed CT and PET, and the affinely aligned moving CT and PET.
-Although both CT and PET are provided as network inputs, the image similarity loss is computed only on CT, since PET uptake is not conserved between time points and would otherwise drive the deformation towards matching disease rather than anatomy.
-PET is nevertheless used to inform the network's prediction and to evaluate the dedicated PET preservation terms of Sec.~\ref{sec:losses}.
-The levels are trained in sequence, each initialised from the previous one, which is kept frozen for the first ten epochs and fine-tuned jointly afterwards.\\
+The deformable stage uses LapIRN~\cite{ref_lapirn}, with three pyramid levels operating at quarter, half and full resolution.
+Each level predicts a stationary velocity field, adds it to the upsampled velocity from the coarser level, and exponentiates the result by scaling and squaring to obtain a diffeomorphic $\varphi_{\theta}$.
+To handle PSMA PET/CT, each sub-network receives four channels: fixed CT and PET, and affinely aligned moving CT and PET.
+The similarity loss is computed only on CT, because PET uptake may change after therapy; PET is used as input and in the preservation terms of Sec.~\ref{sec:losses}.
+The levels are trained sequentially, with each finer level initialised from the previous one.
 %At full resolution the network additionally carries two auxiliary segmentation heads predicting the PET lesion and the bone mask, whose outputs make the test-time objective self-sufficient where no labels are available.
 
-\subsubsection{Step 3: Instance optimization.}
-At test time, we refine each pair individually.
-Keeping the predicted field fixed, we directly optimise a residual stationary velocity field on top of it, initialised to zero and exponentiated by scaling and squaring, so the refined transformation stays diffeomorphic by construction and the network is only ever corrected, never overwritten.
-It is descended under the same objective as training (Sec.~\ref{sec:losses}) scoring every step with the DSC, HD95, MTV and TLG and keeping the best rather than the last iterate, so the selected step is the one the scorer would prefer.
+\subsubsection{Step 3: Instance optimisation.}
+At test time, each pair is refined by optimising a residual stationary velocity field on top of the network prediction.
+The residual is initialised to zero and exponentiated by scaling and squaring, preserving diffeomorphism while only correcting the predicted field.
+Optimisation uses the training objective (Sec.~\ref{sec:losses}); each iterate is scored by DSC, HD95, MTV and TLG, and the best-scoring iterate is retained.
 %Because the global biomarker terms constrain only net sums, in which per-lesion errors cancel, we additionally pin the largest lesions individually by evaluating the MTV and TLG terms per connected component \todo{keep or drop depending on the final configuration}.
 %Instance optimisation requires organ and lesion segmentations of both scans, which on our test set are the surrogate labels described in Sec.~\ref{sec:data_and_preprocessing}, and adds \todo{n}~s per pair.
 
