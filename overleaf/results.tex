@@ -3,8 +3,10 @@
 \subsection{Evaluation Protocol}
 \label{sec:evaluation}
 
-We report our method in three configurations: \emph{ours (container)}, the submitted method of Sec.~\ref{sec:container}, which is what the hidden test set will be scored on and therefore the one we test the baselines against; \emph{ours (validation)}, the method of Sec.~\ref{sec:pipeline}; and \emph{ours (no IO)}, the backbone alone, which isolates what instance optimization contributes.
-The latter two carry no significance marks.
+We report three configurations of our method.
+\emph{Ours (container)} is the submitted method of Sec.~\ref{sec:container}; it is the configuration evaluated against the baselines because it matches the hidden-test submission.
+\emph{Ours (validation)} uses the unconstrained pipeline of Sec.~\ref{sec:pipeline}, while \emph{ours (no IO)} removes instance optimisation to isolate its contribution.
+Significance markers are shown only for comparisons between \emph{ours (container)} and the baselines.
 
 % \subsection{Ablation of the Objective}
 % \label{sec:ablation}
@@ -31,4 +33,4 @@ The container configuration improves DSC from $73.3\%$ (NiftyReg, the strongest 
 \input{tables/table_results_2}   % \input, not \include: \include forces a \clearpage
 
 \subsection{Leaderboard Performance}
-On the validation leaderboard, our method (\emph{Ours (validation)}) achieved a Dice score of 0.789 $\pm$ 0.0381, HD95 of 5.99 $\pm$ 2.39, MTV of 1.56 $\pm$ 1.22, TLG of 4.18 $\pm$ 2.49 and NDV of 0.0041 \% $\pm$ 0.0024\%.
+On the validation leaderboard, our method (\emph{Ours (validation)}) achieved a Dice score of $0.789 \pm 0.0381$, HD95 of $5.99 \pm 2.39$\,mm, MTV error of $1.56 \pm 1.22\%$, TLG error of $4.18 \pm 2.49\%$, and NDV of $0.0041 \pm 0.0024\%$.

@@ -58,7 +58,7 @@ Optimisation uses the training objective (Sec.~\ref{sec:losses}); each iterate i
 
 \subsection{Training Loss Function for deformable stage}
 \label{sec:losses}
-We propose to use  a weighted sum of three groups of terms, one per evaluation criterion:
+We use a weighted sum of three loss groups, one per evaluation criterion:
 %
 \begin{equation}
   \begin{aligned}
@@ -79,7 +79,8 @@ We propose to use  a weighted sum of three groups of terms, one per evaluation c
 Each group is described below.
 All terms are evaluated on the composed transformation $\varphi$.
 Only the full-resolution level is trained with the complete objective.
-The two coarser levels (quarter and half resolution) use the similarity, label and regularisation terms alone, i.e.\ $\lambda_{\mathrm{MTV}} = \lambda_{\mathrm{MTV\text{-}J}} = \lambda_{\mathrm{jac}} = \lambda_{\mathrm{TLG}} = \lambda_{\mathrm{rigid}} = 0$, because the lesion and bone masks they would be evaluated on are only a few voxels wide there: after downsampling, thin ribs and small lesions are largely partial-volume, so both the volume ratios and the per-structure rigid fits measure interpolation rather than anatomy.
+The two coarser levels (quarter and half resolution) use only the similarity, label and regularisation terms; thus $\lambda_{\mathrm{MTV}} = \lambda_{\mathrm{MTV\text{-}J}} = \lambda_{\mathrm{jac}} = \lambda_{\mathrm{TLG}} = \lambda_{\mathrm{rigid}} = 0$.
+We omit the PET and bone-specific terms at these resolutions because downsampled lesions and thin ribs span only a few voxels, so volume ratios and per-structure rigid fits mainly reflect interpolation rather than anatomy.
 
 \subsubsection{Registration Accuracy.}
 Image similarity is measured using local normalized cross-correlation (NCC), computed as a multi-resolution sum over as many scales as the respective pyramid level has resolutions, i.e.\ one scale at the coarsest and three at the full-resolution level.
@@ -110,8 +111,8 @@ We additionally use a DSC loss for weak supervision from the CT organ labels.
 The challenge evaluates the net change in metabolic tumour volume (MTV) and total lesion glycolysis (TLG) under the estimated transformation.
 All terms are evaluated on the composed transformation $\varphi$ and the original moving lesion mask $M$.
 
-The first term, $\mathcal{L}_{\mathrm{MTV}}$, penalises the squared relative error between the volume of the resampled lesion mask and the original volume.
-To additionally constrain the deformation within the lesion, we use $\mathcal{L}_{\mathrm{MTV\text{-}J}}$, which penalises deviations of the mean Jacobian determinant over the warped lesion region (W) from one. A third term, $\mathcal{L}_{\mathrm{jac}}$, penalises per-voxel deviations of the Jacobian determinant from one and therefore discourages local compensating compression and expansion.
+To additionally constrain the deformation within the lesion, we use $\mathcal{L}_{\mathrm{MTV\text{-}J}}$, which penalises deviations of the mean Jacobian determinant over the warped lesion region $W$ from one.
+A third term, $\mathcal{L}_{\mathrm{jac}}$, penalises per-voxel deviations of the Jacobian determinant from one and therefore discourages local compensating compression and expansion.
 
 TLG is penalised analogously by $\mathcal{L}_{\mathrm{TLG}}$, the relative change in PET intensity mass within the lesion before and after warping.
 Because both the PET image and lesion mask are transformed, this term captures changes in both lesion volume and intensity interpolation.
@@ -123,7 +124,7 @@ All four PET preservation terms are used during training and instance optimisati
 %A median of 46.0\% of the total lesion volume at baseline and 63.8\% at follow-up lies within skeletal structures, where a rigid motion is both physiologically plausible and volume- and intensity-preserving ($\det J_{\varphi} = 1$), so constraining the bones to move rigidly protects the MTV and TLG directly.
 %The established penalties measure deviation of the Jacobian $J_{\varphi}$ from orthogonality~\cite{ref_rigidity_1_loeckx,ref_rigidity_2_ruan}, local affineness and orientation preservation~\cite{ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki} by finite differences and mask only afterwards, so on thin cortical bone and ribs the stencil leaks into soft tissue and measures the bone-to-soft-tissue displacement discontinuity instead.
 %We therefore penalise a per-structure rigid-fit residual over the 61 skeletal TotalSegmentator labels, fitting each structure's own displacement in closed form by Kabsch alignment~\cite{ref_kabsch,ref_umeyama}, so that no stencil crosses the mask, articulation stays free, and only the shape of the deformation is constrained, not its placement.
-A substantial proportion of the lesion volume lies within skeletal structures, where rigid motion is physiologically plausible and preserves both volume and intensity ($\det J_{\varphi} = 1$).
+Many lesions lie within skeletal structures, where rigid motion is physiologically plausible and preserves both volume and intensity ($\det J_{\varphi} = 1$).
 We therefore constrain each skeletal structure to undergo rigid motion.
 For the 61 skeletal TotalSegmentator labels, we fit the displacement of each structure independently with a rigid transformation using closed-form Kabsch alignment~\cite{ref_kabsch,ref_umeyama} and penalise the residual.
 This constrains the deformation within each structure while allowing independent motion between structures.
@@ -138,7 +139,10 @@ The resulting $\mathcal{L}_{\mathrm{NDV}}$ directly corresponds to the scored pe
 \subsection{Submission container}
 \label{sec:container}
 The submitted container must produce all labels required by instance optimisation and register each pair within the 90~s time limit.
-It therefore differs from the validation configuration only in this final stage: PET lesion masks are predicted by a nnU-Net~\cite{nnunet} trained with progressive patch-size growing~\cite{ref_progressive_patch} on the challenge dataset, CT organ labels are generated with TotalSegmentator in fast mode, and instance optimisation runs until the time limit is reached.
+It therefore differs from the validation configuration only in this final stage.
+PET lesion masks are predicted by a nnU-Net~\cite{nnunet} trained on the challenge dataset with progressive patch-size growing~\cite{ref_progressive_patch}.
+CT organ labels are generated with TotalSegmentator in fast mode.
+Instance optimisation runs until the time limit is reached.
 The affine and network-predicted deformable fields are unchanged.
 We report both configurations separately in Sec.~\ref{sec:evaluation}, since only the validation setting is unconstrained by runtime.
 
@@ -146,7 +150,7 @@ We report both configurations separately in Sec.~\ref{sec:evaluation}, since onl
 \label{sec:model_selection}
 We use the challenge composite ranking score for model selection, which combines registration accuracy, PET biomarker preservation, and deformation regularity with weights of $0.4$, $0.4$, and $0.2$, respectively.
 This score is used for both checkpoint and final variant selection.
-As shown in Fig. 2, validation DSC continues to improve after MTV and TLG errors reach their minima, making registration accuracy alone unsuitable for model selection.
+As shown in Fig.~\ref{fig:selection}, validation DSC continues to improve after MTV and TLG errors reach their minima, making registration accuracy alone unsuitable for model selection.
 
 \input{figures/dsc_plateau}
 

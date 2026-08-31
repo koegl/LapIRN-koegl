@@ -4,12 +4,11 @@ Prostate-specific membrane antigen (PSMA) PET/CT has become a central imaging mo
 In these settings, patients often undergo multiple scans over time, comprising a baseline scan before therapy and one or more follow-up scans.
 Accurate baseline-to-follow-up registration can support comparison of disease burden, localisation of uptake changes, assessment of lesion progression or response, dose accumulation, and quantitative longitudinal analysis~\cite{ref_psmareg_challenge}.
 The Learn2Reg~2026 PSMAReg challenge~\cite{ref_learn2reg_alessa,ref_learn2reg_hansen,ref_psmaregdata} formalises this problem as the estimation of a dense displacement field that warps each follow-up (moving) scan to its baseline (fixed) scan.
-The evaluation is performed by a combination of an organ overlap metric, boundary distance and deformation regularity.
-Moreover, to measure the preservation of the PET-derived tumor biomarkers, two separate metrics are used: the metabolic tumor volume (MTV) and the total lesion glycolysis (TLG).
+The challenge evaluates registration accuracy using organ overlap and boundary distance, deformation regularity, and preservation of two PET-derived biomarkers: metabolic tumour volume (MTV) and total lesion glycolysis (TLG).
 
 Deformable registration can be formulated as iterative optimisation of a regularised objective functional~\cite{ref_demons,ref_syn,bspline}, which can achieve high accuracy but is computationally demanding for whole-body images.
 Learning-based methods instead amortize this optimization into network weights and replace per-pair iteration with a single forward pass at inference~\cite{ref_voxelmorph_cvpr,ref_svf_voxelmorph,ref_transmorph}.
-We therefore build on LapIRN ~\cite{ref_lapirn}, whose coarse-to-fine Laplacian pyramid is well suited to recovering the large deformations expected between longitudinal whole-body scans while maintaining smooth and invertible transformations.
+We therefore build on LapIRN~\cite{ref_lapirn}, whose coarse-to-fine Laplacian pyramid is well suited to recovering the large deformations expected between longitudinal whole-body scans while maintaining smooth and invertible transformations.
 
 
 
