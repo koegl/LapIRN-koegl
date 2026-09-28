@@ -1,0 +1,23 @@
+\begin{table}[htbp]
+\journalcolor
+\centering
+\caption{\journal{Planned matched-training ablations. Accuracy and general regularization terms are retained. The endpoint groups are alignment, aggregate/per-lesion PET preservation, and deformation quality. Results and patient-level paired effects are pending; any additional IO-only ablations must be reported separately.}}
+\label{tab:journal_ablations}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccc}
+\toprule
+Condition & PET terms & Rigidity & Results \\
+\midrule
+Neither & None & Off & Pending \\
+PET only & All four & Off & Pending \\
+Rigidity only & None & On & Pending \\
+Both (full) & All four & On & Pending \\
+\midrule
+Full minus $\mathcal{L}_{\mathrm{MTV}}$ & Other three & On & Pending \\
+Full minus $\mathcal{L}_{\mathrm{MTV\text{-}J}}$ & Other three & On & Pending \\
+Full minus $\mathcal{L}_{\mathrm{jac}}$ & Other three & On & Pending \\
+Full minus $\mathcal{L}_{\mathrm{TLG}}$ & Other three & On & Pending \\
+\bottomrule
+\end{tabular}
+\end{table}

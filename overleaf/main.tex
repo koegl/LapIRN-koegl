@@ -41,10 +41,13 @@
 }
 % Inline TODO marker.
 \newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
-% PLACEHOLDER: name of the finally selected variant. The model is not
-% fixed yet -- change this one macro once it is, and the whole paper
-% follows.
-\newcommand{\selvar}{V5}
+% Journal-extension markup: switch to \journalbluefalse for black text.
+\newif\ifjournalblue
+\journalbluetrue
+\newcommand{\journalcolor}{\ifjournalblue\color{blue}\fi}
+\newcommand{\journal}[1]{{\journalcolor #1}}
+\newenvironment{journaladdition}{\begingroup\journalcolor}{\endgroup}
+% TODOs stay red; blue prose/bullets describe the planned journal study.
 
 \begin{document}
 %
@@ -79,10 +82,12 @@
 %
 \begin{abstract}
 
-We adapt the diffeomorphic coarse-to-fine LapIRN architecture for longitudinal whole-body PSMA PET/CT registration in the Learn2Reg 2026 PSMAReg challenge.
-The method combines affine pre-registration, multi-modal deformable registration, and test-time instance optimization.
-We further introduce PET biomarker preservation losses for metabolic tumor volume (MTV) and total lesion glycolysis (TLG), including Jacobian-based constraints, and a per-structure rigidity regularization for skeletal structures.
-The submitted configuration achieved $81.0\%$ DSC and $6.17$\,mm HD95, with MTV and TLG errors of $3.3\%$ and $3.3\%$, respectively, on our evaluation protocol.
+\begin{journaladdition}
+We investigate how PET biomarker preservation and bone rigidity affect longitudinal whole-body PSMA PET/CT registration.
+The study uses a LapIRN pipeline with an affine stage and test-time instance optimization.
+The planned evaluation separates the contributions of PET preservation and rigidity, compares existing rigidity penalties, and characterizes the trade-off between anatomical alignment and lesion-level quantification preservation.
+\todo{Replace this prospective abstract after the independent evaluation: add patient counts, principal paired effects with uncertainty, and a conclusion supported by the results.}
+\end{journaladdition}
 
 \keywords{Deformable image registration \and PSMA PET/CT \and Longitudinal
 imaging \and Biomarker preservation.}

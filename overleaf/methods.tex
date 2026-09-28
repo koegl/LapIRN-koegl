@@ -2,18 +2,6 @@
 
 \subsection{Data and Preprocessing}
 \label{sec:data_and_preprocessing}
-%We used the PSMAReg dataset of the Learn2Reg~2026 challenge~\cite{ref_psmareg_challenge}, a longitudinal whole-body PSMA PET/CT cohort adapted from the manually annotated autoPET data of~\cite{ref_psmaregdata}, in which each subject provides a baseline scan and one or more follow-up scans with a CT and a PSMA PET channel each; the follow-up is the moving and the baseline the fixed image.
-%The images are provided already resampled to $2.7344\times2.7344\times3.27$~mm and cropped to $192\times192\times288$ voxels, so we applied no further geometric preprocessing and only normalised the intensities, clipping CT to $[-1000, 1500]$~HU and the PET SUV to $[0, 20]$ and rescaling both to $[0,1]$.
-%
-%The organisers release 358 training cases with labels and 20 validation cases without labels, and keep a test set of $\sim$200 pairs of private JHU data that is never released and is scored by them alone.
-%Since that test set is inaccessible to us, we re-partitioned the released data into our own three sets: of the 358 training cases we used the 146 paired ones, split patient-wise into our training set (117 cases) and our validation set (29 cases), and the 20 challenge validation cases serve as our test set.
-%Our validation set carries the validation losses during training and is the basis for checkpoint and variant selection (Sec.~\ref{sec:model_selection}); all results we report are computed on our test set, which is never trained or selected on.
-%Registration pairs always point from the later to the earlier time point: for our training set all such ordered combinations, including follow-up-to-follow-up pairs (239 pairs), and for our validation set every follow-up registered to its baseline (39 pairs).
-%
-%Our training and validation sets come with the labels released by the organisers: CT organ labels generated automatically with TotalSegmentator~\cite{ref_totalsegmentator} and PET lesion labels manually annotated by radiologists.
-%For our test set no labels are released, so we generated surrogate ones ourselves, with TotalSegmentator for the CT organs and the winning autoPET~III submission~\cite{rokuss2024fdgpsmahitchhikersguide} for the PET lesions; these are what both our evaluation and our instance optimisation consume on those cases.
-%
-%Following the ConvexAdam baseline provided by the challenge organisers, we remove the patient bed.
 
 We used the PSMAReg dataset of the Learn2Reg 2026 challenge~\cite{ref_psmareg_challenge}, a longitudinal whole-body PSMA PET/CT cohort in which each subject provides a baseline scan and one or more follow-up scans.
 Each scan contains CT and PSMA PET channels; follow-up scans were treated as moving images and baseline scans as fixed images.
@@ -21,10 +9,16 @@ The images are provided at $2.7344\times2.7344\times3.27$~mm resolution and crop
 We therefore applied no further geometric preprocessing.
 CT was clipped to $[-1000, 1500]$~HU and PET SUV to $[0, 20]$, followed by rescaling to $[0,1]$.
 
-Of the 358 released training cases, we used the 146 paired cases and split them patient-wise into 117 training and 29 validation cases.
-The 20 challenge validation cases, for which no labels are released, were used as our test set.
-For training and validation, we used the CT organ and PET lesion labels provided by the organizers.
-For the test set, we generated surrogate CT organ labels using TotalSegmentator~\cite{ref_totalsegmentator} and PET lesion labels using the winning autoPET III submission~\cite{rokuss2024fdgpsmahitchhikersguide}.
+\begin{journaladdition}
+The journal evaluation will use a patient-level train/validation/test partition of the labelled challenge training dataset, keeping every scan and registration pair from a patient in one partition.
+Registration models and the lesion nnU-Net will be trained only on training patients; validation patients will be used for all tuning and model selection.
+Previously unused patients will preferentially be reserved for testing, and prior patient exposure in pipeline development will be disclosed.
+\todo{Freeze the split manifest; report patients, scans, pairs, and lesions per partition, eligibility criteria, pair direction, and prior exposure. Confirm whether a previously unused test subset is feasible.}
+
+At test time, TotalSegmentator predictions and predictions from the training-only nnU-Net will supply the labels required by instance optimization (IO).
+Provided labels will be reserved for evaluation on test patients and will not enter IO or test-time iterate selection.
+\todo{Document the provenance of the provided organ and lesion labels, the segmentation models and their training data, and any dependence between evaluation annotations and predicted labels.}
+\end{journaladdition}
 Following the ConvexAdam~\cite{ref_convexadam} baseline provided by the challenge organizers, we additionally removed the patient bed and normalized the CT images.
 
 
@@ -42,24 +36,25 @@ The transform is converted to a dense displacement field and applied to the movi
 
 \subsubsection{Step 2: Deformable registration.}
 The deformable stage uses LapIRN~\cite{ref_lapirn}, with three pyramid levels operating at quarter, half, and full resolution.
-Each level predicts a stationary velocity field, adds it to the upsampled velocity from the coarser level, and exponentiates the result by scaling and squaring to obtain a diffeomorphic $\varphi_{\theta}$.
+Each level predicts a stationary velocity field, adds it to the upsampled velocity from the coarser level, \journal{and exponentiates the result by scaling and squaring to obtain $\varphi_{\theta}$.}
 To handle PSMA PET/CT, each sub-network receives four channels: fixed CT and PET, and affinely aligned moving CT and PET.
 The similarity loss is computed only on CT, because PET uptake may change after therapy; PET is used as input and in the preservation terms of Sec.~\ref{sec:losses}.
 The levels are trained sequentially, with each finer level initialized from the previous one.
-%At full resolution the network additionally carries two auxiliary segmentation heads predicting the PET lesion and the bone mask, whose outputs make the test-time objective self-sufficient where no labels are available.
 
 \subsubsection{Step 3: Instance optimization.}
 At test time, each pair is refined by optimizing a residual stationary velocity field on top of the network prediction.
-The residual is initialized to zero and exponentiated by scaling and squaring, preserving diffeomorphism while only correcting the predicted field.
-Optimization uses the training objective (Sec.~\ref{sec:losses}); each iterate is scored by DSC, HD95, MTV, and TLG, and the best-scoring iterate is retained.
-%Because the global biomarker terms constrain only net sums, in which per-lesion errors cancel, we additionally pin the largest lesions individually by evaluating the MTV and TLG terms per connected component \todo{keep or drop depending on the final configuration}.
-%Instance optimisation requires organ and lesion segmentations of both scans, which on our test set are the surrogate labels described in Sec.~\ref{sec:data_and_preprocessing}, and adds \todo{n}~s per pair.
+\begin{journaladdition}
+The residual is initialized to zero and exponentiated by scaling and squaring.
+The velocity formulation targets diffeomorphic transformations; discrete folding will nevertheless be measured explicitly.
+IO will use the objective appropriate to each experimental condition (Sec.~\ref{sec:experiments}).
+Its stopping and iterate-selection rule will be chosen on validation patients and frozen before testing; test evaluation labels will not be used to score or select iterates.
+\todo{Specify optimized variables, learning rate, iteration budget, and stopping/selection rule, including which predicted-label quantities it may use.}
+\end{journaladdition}
 
 
-\subsection{Training Loss Function for deformable stage}
+\subsection{\journal{Registration Objective}}
 \label{sec:losses}
 We use a weighted sum of three loss groups, one per evaluation criterion:
-%
 \begin{equation}
   \begin{aligned}
     \mathcal{L} = \;
@@ -75,7 +70,6 @@ We use a weighted sum of three loss groups, one per evaluation criterion:
   \end{aligned}
   \label{eq:total}
 \end{equation}
-%
 Each group is described below.
 All terms are evaluated on the composed transformation $\varphi$.
 Only the full-resolution level is trained with the complete objective.
@@ -88,27 +82,15 @@ NCC is computed on the CT channel only, since PET uptake can change substantiall
 We additionally use a DSC loss for weak supervision from the CT organ labels.
 
 
-%Since the challenge scores PET organ overlap but provides no PET organ annotations for training, we measured each of the 117 TotalSegmentator organs' mean SUV relative to skeletal muscle across all sessions.
-%As 90 organs fall below twice the muscle background and are thus indistinguishable in PET, we upweighted only the 10 exceeding 4 times the background (kidneys, gallbladder, spleen, liver, duodenum, bladder, portal vein, prostate, pancreas) by a factor of 2 in the per-class Dice loss.
-%This relies on PET and CT being well aligned within a session, so that CT-derived overlap on these organs approximates the PET organ overlap being scored.
-% The objective contains no surface-distance term, although HD95 is scored - the ablation study in Sec.~\ref{sec:ablation} shows no benefit from including one.
 
 
 \subsubsection{Preservation of PET quantification.}
-%The MTV bias scored by the challenge is the \emph{net} change in lesion volume under the deformation.
-%All terms are evaluated on the composed transformation $\varphi$ against the original moving lesion mask $M$, since the affine itself is generally not volume-preserving.
-%The first term, $\mathcal{L}_{\mathrm{MTV}}$, is the squared relative error between the volume of the resampled mask and that of $M$.
-%It matches the scored metric exactly, but only voxels on the lesion's sub-voxel boundary shell receive gradient from it, so the interior is free to deform as long as the boundary compensates.
-%We therefore add a second term, $\mathcal{L}_{\mathrm{MTV\text{-}J}}$, which pins the same net volume ratio but supplies gradients throughout the lesion interior.
-%It rests on the change-of-variables identity: summing $\det J_{\varphi}$ over the warped lesion region $W$ recovers the original lesion volume, so the mean determinant over $W$ equals the ratio of original to warped volume, and driving that mean to one preserves it.
-%Because only the mean is constrained, the term still permits internal redistribution of volume.
-%Squaring the deviation per voxel rather than after the mean gives a third, stricter term, $\mathcal{L}_{\mathrm{jac}}$, which additionally discourages compensating compression and expansion inside the lesion.
-%
-%The challenge additionally scores the TLG, the PET-activity-weighted counterpart of the MTV, which we penalize analogously as the relative change of intensity mass after warping, i.e.\ the absolute difference between the sums of $I$ over $M$ before and after resampling, divided by the former.
-%Since both the image and the mask are resampled with the same transformation, this term is sensitive not only to volume change but also to intensity blurring at the lesion boundary, and thus complements the purely geometric terms.
-%All four PET preservation terms are used during training and optimized at test time by our instance optimization, so the network is trained on the objective it is later refined under.
 
-The challenge evaluates the net change in metabolic tumor volume (MTV) and total lesion glycolysis (TLG) under the estimated transformation.
+\begin{journaladdition}
+PET preservation compares the moving scan before and after transformation, using the same source lesion definition.
+The direct MTV term, $\mathcal{L}_{\mathrm{MTV}}$, penalizes the squared relative difference between the volume of the resampled lesion mask and its original volume.
+\todo{Write the exact equations for all four PET terms and verify them against the implementation: transformation direction, Jacobian convention, mask interpolation, physical voxel volumes, reduction, and stabilization for empty or tiny lesions. Distinguish normalized/clipped PET used for training from SUV used for evaluation.}
+\end{journaladdition}
 All terms are evaluated on the composed transformation $\varphi$ and the original moving lesion mask $M$.
 
 To additionally constrain the deformation within the lesion, we use $\mathcal{L}_{\mathrm{MTV\text{-}J}}$, which penalizes deviations of the mean Jacobian determinant over the warped lesion region $W$ from one.
@@ -116,16 +98,13 @@ A third term, $\mathcal{L}_{\mathrm{jac}}$, penalizes per-voxel deviations of th
 
 TLG is penalized analogously by $\mathcal{L}_{\mathrm{TLG}}$, the relative change in PET intensity mass within the lesion before and after warping.
 Because both the PET image and the lesion mask are transformed, this term captures changes in lesion volume and in intensity interpolation.
-All four PET preservation terms are used during training and instance optimization.
+\journal{The full-objective condition uses all four PET preservation terms during training and instance optimization; the ablations remove the specified terms.}
 
 
 
 \subsubsection{Bone rigidity.}
-%A median of 46.0\% of the total lesion volume at baseline and 63.8\% at follow-up lies within skeletal structures, where a rigid motion is both physiologically plausible and volume- and intensity-preserving ($\det J_{\varphi} = 1$), so constraining the bones to move rigidly protects the MTV and TLG directly.
-%The established penalties measure deviation of the Jacobian $J_{\varphi}$ from orthogonality~\cite{ref_rigidity_1_loeckx,ref_rigidity_2_ruan}, local affineness and orientation preservation~\cite{ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki} by finite differences and mask only afterwards, so on thin cortical bone and ribs the stencil leaks into soft tissue and measures the bone-to-soft-tissue displacement discontinuity instead.
-%We therefore penalise a per-structure rigid-fit residual over the 61 skeletal TotalSegmentator labels, fitting each structure's own displacement in closed form by Kabsch alignment~\cite{ref_kabsch,ref_umeyama}, so that no stencil crosses the mask, articulation stays free, and only the shape of the deformation is constrained, not its placement.
 Many lesions lie within skeletal structures, where rigid motion is physiologically plausible and preserves both volume and intensity ($\det J_{\varphi} = 1$).
-We therefore constrain each skeletal structure to undergo rigid motion.
+\journal{We therefore penalize departures from rigid motion within each skeletal structure.}
 For the 61 skeletal TotalSegmentator labels, we fit the displacement of each structure independently with a rigid transformation using closed-form Kabsch alignment~\cite{ref_kabsch,ref_umeyama} and penalize the residual.
 This constrains the deformation within each structure while allowing independent motion between structures.
 
@@ -136,40 +115,20 @@ For the latter, we differentiably reproduce the challenge's non-diffeomorphic vo
 The resulting $\mathcal{L}_{\mathrm{NDV}}$ directly corresponds to the scored percentage of non-diffeomorphic volume and provides gradients at the locations where folding occurs.
 
 
-\subsection{Submission container}
-\label{sec:container}
-The submitted container must produce all labels required by instance optimization and register each pair within the 90~s time limit.
-It therefore differs from the validation configuration only in this final stage.
-PET lesion masks are predicted by a nnU-Net~\cite{nnunet} trained on the challenge dataset with progressive patch-size growing~\cite{ref_progressive_patch}.
-CT organ labels are generated with TotalSegmentator in fast mode.
-Instance optimization runs until the time limit is reached.
-The affine and network-predicted deformable fields are unchanged.
-We report both configurations separately in Sec.~\ref{sec:evaluation}, since only the validation setting is unconstrained by runtime.
-
-\subsection{Model Selection}
-\label{sec:model_selection}
-We use the challenge composite ranking score for model selection, which combines registration accuracy, PET biomarker preservation, and deformation regularity with weights of $0.4$, $0.4$, and $0.2$, respectively.
-This score is used for both checkpoint and final variant selection.
-As shown in Fig.~\ref{fig:selection}, validation DSC continues to improve after MTV and TLG errors reach their minima, making registration accuracy alone unsuitable for model selection.
-
-\input{figures/dsc_plateau}
-
-\subsection{Baselines}
-\label{sec:baselines}
-We compare against two references and two competing methods, all evaluated on the same pairs and under the identical protocol of Sec.~\ref{sec:evaluation}.
-
-As a classical iterative baseline, we ran NiftyReg~\cite{MODAT2010,modat2014}, using \texttt{reg\_aladin} for the affine stage followed by \texttt{reg\_f3d} initialized with it, both with default parameters.
-As a learning-free optimization baseline we ran ConvexAdam, in the form provided by the challenge organizers as the official baseline of the task.
+\input{journal_evaluation}
 
 \subsection{Implementation Details}
 \label{sec:infrastructure}
 Augmentations were chosen to mimic longitudinal variability: left--right flipping ($p=0.5$), CT intensity shifting by $\pm0.02$ in the normalized window (about $\pm50$~HU), CT scaling from $0.9$ to $1.1$, and PET scaling from $0.85$ to $1.15$ without additive shifts.
 To simulate a field-of-view mismatch, we crop up to 40 axial slices from either end of both scans, followed by independent moving and fixed crops of up to 10 additional slices.
 
-The three pyramid levels are trained sequentially with Adam for $60$k, $60$k and $120$k steps, using learning rates of $3\cdot10^{-4}$, $2\cdot10^{-4}$ and $2.5\cdot10^{-4}$, batch size one, and gradient accumulation over four steps.
-Each level uses a five-epoch linear warmup; the preceding level is frozen for the first ten epochs and then fine-tuned jointly.
-The convolutional trunk runs in \texttt{bfloat16}, while transformations and losses remain in single precision to avoid numerical errors in scaling and squaring and Jacobian computations.
-The loss weights were chosen by the sweep of Sec.~\ref{sec:evaluation}.
-
-All models were trained and evaluated on a single NVIDIA H100 80\,GB HBM3 GPU (driver 610.57.04) using Python~3.11, PyTorch~2.6.0~\cite{ref_pytorch}, CUDA~12.4, ANTsPy~0.6.3~\cite{ants}, NiBabel~5.4.2, NumPy~2.4.4 and SciPy~1.17.1.
-Training all three levels took 2d 6h 7m 6s.
+\begin{journaladdition}
+\paragraph{Training configuration to confirm.}
+The previous pipeline used sequential Adam training for $60$k, $60$k, and $120$k steps, learning rates of $3\cdot10^{-4}$, $2\cdot10^{-4}$, and $2.5\cdot10^{-4}$, batch size one, and gradient accumulation over four steps.
+These are starting settings for the journal retraining, not completed journal experiments.
+\begin{itemize}
+  \item Confirm the warmup and coarse-level freezing schedule, augmentations, loss weights, and random seeds. Keep the training budget and shared settings matched across central ablations.
+  \item Record mixed precision, transformation precision, final software versions, hardware, training time, and per-pair inference/IO time for the new runs.
+  \item Confirm which pyramid levels use PET and rigidity terms in each condition.
+\end{itemize}
+\end{journaladdition}

@@ -14,23 +14,21 @@ We therefore build on LapIRN~\cite{ref_lapirn}, whose coarse-to-fine Laplacian p
 
 
 
-%The skeleton is the main location of PSMA ocurrences and thus, the accurate alignment of the bone structures is particular important. 
-%In LapIRN, global smoothness regularization is employed, which prevents local folding.
-%However, it is desired to constrain the bone structures to move rigidly.
-%Anatomy-aware regularisation that locally penalises non-rigid deformation of individual structures was widely explored~\cite{ref_rigidity_1_loeckx,ref_rigidity_2_ruan,ref_rigidity_3_staring,ref_rigidity_4_staring_modersitzki}.
-%The regularization is therefore particularly relevant for the registration problem of the challenge.
 
-In this work, we adapt LapIRN to longitudinal whole-body PSMA PET/CT registration and extend it with PET biomarker preservation losses, local bone rigidity regularization, and test-time instance optimization.
+\begin{journaladdition}
+This journal study builds on our earlier registration pipeline and asks how PET preservation and bone rigidity affect alignment, lesion quantification, and deformation quality.
+Preservation refers to changes introduced by warping the same scan; it does not require uptake or tumor burden to remain equal between longitudinal examinations.
+\todo{Add the citation to the earlier paper and a concise statement of the journal extension.}
+The study is organized around three questions:
+\begin{itemize}
+  \item What are the separate and combined effects of PET preservation and bone rigidity, and what does each PET loss term contribute?
+  \item How do existing rigidity penalties compare in low-resolution whole-body CT, including their effects on bone shape and surrounding tissue?
+  \item How does the strength of PET preservation change the balance between anatomical alignment, lesion preservation, and deformation quality?
+\end{itemize}
+The rigidity study evaluates existing approaches in this setting rather than introducing a new rigidity method.
+\end{journaladdition}
 
 
-%Our contributions are threefold.
-%We propose:
-%\begin{itemize}
-%  \item an adaptation of the diffeomorphic, coarse-to-fine LapIRN architecture to longitudinal whole-body PSMA PET/CT, combining an affine pre-registration with a three-level pyramid and
-%        test-time instance optimization;
-%  \item a set of losses that constrain the PET-derived MTV and TLG given the estimated deformation, including a Jacobian determinant-based loss term;
-%  \item a local rigidity regularization for the bone structures;
-%\end{itemize}
 
 \begin{figure}[t]
 \centering

@@ -1,40 +1,49 @@
-\section{Results}
+\section{\journal{Results}}
+\begin{journaladdition}
+\noindent\textit{Journal draft: experiments are pending. All tables and figures below are planned outputs, not findings. The previous evaluation and leaderboard results have been removed because they used a different protocol.}
 
-\subsection{Evaluation Protocol}
-\label{sec:evaluation}
+\subsection{Independent-Test Comparison}
+\begin{itemize}
+  \item Report the final cohort, exclusions, and evaluable structures/lesions.
+  \item Compare baselines and the full model with and without IO on the frozen test partition (Table~\ref{tab:journal_baselines}).
+  \item Add paired patient-level effects and uncertainty; describe alignment, preservation, folding, and runtime without selecting a winner from test results.
+\end{itemize}
+\end{journaladdition}
+\input{tables/journal_baselines}
 
-We report three configurations of our method.
-\emph{Ours (container)} is the submitted method of Sec.~\ref{sec:container}; it is the configuration evaluated against the baselines because it matches the hidden-test submission.
-\emph{Ours (validation)} uses the unconstrained pipeline of Sec.~\ref{sec:pipeline}, while \emph{ours (no IO)} removes instance optimization to isolate its contribution.
-Significance markers are shown only for comparisons between \emph{ours (container)} and the baselines.
+\begin{journaladdition}
+\subsection{Separate and Combined Effects of PET Preservation and Rigidity}
+\label{sec:ablation}
+\begin{itemize}
+  \item Fill the matched-training $2\times2$ comparison and the four PET-term removal conditions (Table~\ref{tab:journal_ablations}).
+  \item Report aggregate versus per-lesion changes; check whether aggregate cancellation hides large individual errors.
+  \item Show signed, absolute, and upper-tail errors by lesion size and bone association (Fig.~\ref{fig:journal_lesions}).
+\end{itemize}
+\end{journaladdition}
+\input{tables/journal_ablations}
+\input{figures/journal_lesion_preservation}
 
-Table~\ref{tab:baselines} is evaluated on the 20 official challenge validation cases using our surrogate labels and local evaluator.
-These results are therefore separate from the official Codabench validation leaderboard, which uses the organizers' scoring setup.
+\begin{journaladdition}
+\subsection{Rigidity Comparison and Boundary Effects}
+\begin{itemize}
+  \item Compare each rigidity method over its own weight range: bone/organ alignment, distance distortion, regional folding, and secondary BRE.
+  \item Relate stencil leakage and erosion retention to the observed outcomes without assuming a mechanism in advance (Fig.~\ref{fig:journal_rigidity}).
+  \item Include representative bone-boundary examples under a documented case-selection rule.
+\end{itemize}
+\end{journaladdition}
+\input{figures/journal_rigidity_comparison}
 
-% \subsection{Ablation of the Objective}
-% \label{sec:ablation}
+\begin{journaladdition}
+\subsection{Accuracy--Preservation Trade-off}
+\begin{itemize}
+  \item Show the predeclared PET-weight settings and their patient-level uncertainty (Fig.~\ref{fig:journal_tradeoff}).
+  \item Identify the validation-selected operating point and report its frozen test performance.
+  \item Discuss whether preservation changes alignment or folding, including heterogeneous lesion responses.
+\end{itemize}
+\end{journaladdition}
+\input{figures/journal_pet_tradeoff}
 
-% \subsubsection{Derivative-based rigidity is ill posed on thin bone.}
-% We quantified the stencil leakage of Sec.~\ref{sec:losses} across five cases: 53.0\% (range 51.6 to 54.7) of the voxels entering the loss were not bone, and 44.8\% of the gradient magnitude fell outside bone.
-% A field with zero displacement inside every bone, which is perfectly rigid by construction and should therefore cost nothing, scored 56 (range 40 to 69), all of which vanished after a single mask erosion.
-% The term was thus measuring the bone-to-soft tissue displacement discontinuity that any correct registration must exhibit.
-% With the per-structure rigid-fit penalty of Sec.~\ref{sec:losses}, the zero displacement field now scores exactly 0 and a per-bone rigid field 2.4e-6, while anisotropic squeeze is still rejected at 1.16.
-
-% \subsubsection{A surface-distance loss did not increase alignment accuracy.}
-% Since HD95 is scored, a surface-distance term~\cite{salcudean} is the obvious addition to the objective, but the $2296$ scored (case,\,label) entries leave it nothing to do.
-% Half the HD95 mass sits in the worst $10\%$ of entries, and splitting it against the unregistered pair shows that $48.1\%$ is inherent, already bad before registration and no better after, while none of it was created by our field.
-% Those entries are limbs repositioned between sessions, hollow organs with changing filling and anatomy truncated by the field of view, none of which have a boundary to refine.
-% The rest is already at the discretisation floor: the median per-label HD95 is one voxel and the third quartile two.
-% We measured this before instance optimisation, so it holds for the training objective as well.
-
-\subsection{Comparison against Baselines}
-
-We swept the loss weights and the instance-optimization settings and selected the one reported below with the challenge ranking of Sec.~\ref{sec:model_selection}, applied to the surrogate protocol above.
-Table~\ref{tab:baselines} places the three configurations against the baselines.
-The container configuration improves DSC from $73.3\%$ (NiftyReg, the strongest baseline) to $81.0\%$ and reduces HD95 from $7.09$ to $6.17$\,mm, while also reducing the MTV and TLG errors and the non-diffeomorphic volume from $1525$ to $864$\,ppm.
-
-\input{tables/table_results_2}   % \input, not \include: \include forces a \clearpage
-
-\subsection{Leaderboard Performance}
-These leaderboard numbers are reported separately because they were computed by the official evaluation server rather than by our surrogate-label protocol.
-On the validation leaderboard, our method (\emph{Ours (validation)}) achieved a Dice score of $0.789 \pm 0.0381$, HD95 of $5.99 \pm 2.39$\,mm, MTV error of $1.56 \pm 1.22\%$, TLG error of $4.18 \pm 2.49\%$, and NDV of $0.0041 \pm 0.0024\%$.
+\begin{journaladdition}
+\subsection{Optional Supporting Results}
+\todo{Include gradient analysis and/or external-cohort results only if completed; otherwise remove this subsection. Do not imply external validation from surrogate measurements alone.}
+\end{journaladdition}
