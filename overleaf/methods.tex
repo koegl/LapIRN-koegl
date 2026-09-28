@@ -88,16 +88,29 @@ We additionally use a DSC loss for weak supervision from the CT organ labels.
 
 \begin{journaladdition}
 PET preservation compares the moving scan before and after transformation, using the same source lesion definition.
-The direct MTV term, $\mathcal{L}_{\mathrm{MTV}}$, penalizes the squared relative difference between the volume of the resampled lesion mask and its original volume.
-\todo{Write the exact equations for all four PET terms and verify them against the implementation: transformation direction, Jacobian convention, mask interpolation, physical voxel volumes, reduction, and stabilization for empty or tiny lesions. Distinguish normalized/clipped PET used for training from SUV used for evaluation.}
+For the differentiable training and IO objective, let $\widetilde I=W_{\mathrm{lin}}[I]$ and $\widetilde M=W_{\mathrm{lin}}[M]$ denote the linearly warped PET image and soft lesion mask.
+We compute
+\begin{equation}
+  b_{\mathrm{MTV}}=
+  \frac{\left|\sum_x\widetilde M(x)-\sum_xM(x)\right|}{\sum_xM(x)+10^{-5}},
+  \qquad
+  b_{\mathrm{TLG}}=
+  \frac{\left|\sum_x\widetilde I(x)\widetilde M(x)-\sum_xI(x)M(x)\right|}
+  {\sum_xI(x)M(x)+10^{-5}},
+  \label{eq:pet_training_surrogates}
+\end{equation}
+and use $\mathcal{L}_{\mathrm{MTV}}=b_{\mathrm{MTV}}^2$ and $\mathcal{L}_{\mathrm{TLG}}=b_{\mathrm{TLG}}$ in Eq.~\eqref{eq:total}.
+These losses deliberately differ from the official evaluation metrics of Sec.~\ref{sec:pet_evaluation_metrics}.
+Nearest-neighbour mask interpolation is piecewise constant with respect to the displacement and therefore provides no useful gradient for registration; linear interpolation instead supplies a differentiable soft boundary.
+The additive denominator stabilizes optimization for empty or very small masks, and squaring $b_{\mathrm{MTV}}$ gives a smooth quadratic penalty that emphasizes larger volume errors.
+Training uses clipped, normalized PET to keep gradient scales bounded, whereas official TLG evaluation uses PET in SUV units.
+\todo{Write the exact equations for the two Jacobian-based PET terms and verify transformation direction, Jacobian convention, reduction, and handling of empty or tiny lesions against the final implementation.}
 \end{journaladdition}
 All terms are evaluated on the composed transformation $\varphi$ and the original moving lesion mask $M$.
 
 To additionally constrain the deformation within the lesion, we use $\mathcal{L}_{\mathrm{MTV\text{-}J}}$, which penalizes deviations of the mean Jacobian determinant over the warped lesion region $W$ from one.
 A third term, $\mathcal{L}_{\mathrm{jac}}$, penalizes per-voxel deviations of the Jacobian determinant from one and therefore discourages local compensating compression and expansion.
 
-TLG is penalized analogously by $\mathcal{L}_{\mathrm{TLG}}$, the relative change in PET intensity mass within the lesion before and after warping.
-Because both the PET image and the lesion mask are transformed, this term captures changes in lesion volume and in intensity interpolation.
 \journal{The full-objective condition uses all four PET preservation terms during training and instance optimization; the ablations remove the specified terms.}
 
 

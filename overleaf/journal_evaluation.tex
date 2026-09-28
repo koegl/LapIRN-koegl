@@ -39,9 +39,46 @@ Report the full method with and without IO.
 
 \subsection{Evaluation Endpoints and Statistical Analysis}
 \label{sec:evaluation}
+\subsubsection{Official PET preservation metrics.}
+\label{sec:pet_evaluation_metrics}
+For official evaluation, PET is represented in SUV units and resampled linearly, whereas the binary lesion mask is resampled with nearest-neighbour interpolation:
+\begin{equation}
+  I'=W_{\mathrm{lin}}[I],
+  \qquad
+  M'=W_{\mathrm{NN}}[M].
+  \label{eq:official_pet_warp}
+\end{equation}
+With physical voxel volume $v$, the two biomarkers are
+\begin{equation}
+  \mathrm{MTV}(M)=v\sum_x M(x),
+  \qquad
+  \mathrm{TLG}(I,M)=v\sum_x I(x)M(x).
+  \label{eq:pet_biomarkers}
+\end{equation}
+For MTV, $Q_{\mathrm{before}}=\mathrm{MTV}(M)$ and $Q_{\mathrm{after}}=\mathrm{MTV}(M')$; for TLG, $Q_{\mathrm{before}}=\mathrm{TLG}(I,M)$ and $Q_{\mathrm{after}}=\mathrm{TLG}(I',M')$.
+Following the official challenge implementation, both are reported as absolute percentage errors:
+\begin{equation}
+  E_Q=100\,
+  \frac{\left|Q_{\mathrm{after}}-Q_{\mathrm{before}}\right|}
+  {\max\!\left(Q_{\mathrm{before}},10^{-6}\right)},
+  \qquad Q\in\{\mathrm{MTV},\mathrm{TLG}\}.
+  \label{eq:official_pet_error}
+\end{equation}
+Because PET and the lesion mask are interpolated separately before multiplication, $E_{\mathrm{TLG}}$ captures both deformation-related changes and resampling effects at the lesion boundary.
+
+\subsubsection{Metric implementation validation.}
+Before model comparison, deterministic controls verify the complete metric implementation on a real PET/CT case.
+An identity field must preserve MTV, TLG, Dice, HD95, and within-bone distances and produce no folding.
+A whole-voxel translation, chosen to avoid field-of-view clipping, must preserve MTV, TLG, and within-bone distances, produce no folding, and recover the prescribed displacement in physical units.
+A known uniform stretch must produce the expected relative within-bone distance change.
+To characterize resampling alone, we additionally apply translations of $0.25$, $0.49$, $0.50$, $0.51$, and $0.75$ voxels while holding the underlying lesion and transformation geometry fixed.
+For each shift, the official calculation above is compared with a control that first forms $I M$, linearly warps this product once, and sums the result over the whole image.
+The $0.49$- and $0.51$-voxel conditions bracket the nearest-neighbour tie at exactly half a voxel.
+These controls define a numerical resampling baseline and are not treated as registration-performance experiments.
+
 \begin{itemize}
   \item \textbf{Alignment:} per-bone and soft-tissue organ Dice and surface distance; near-bone landmarks only if independently available. Define aggregation over structures and handling of absent or truncated anatomy.
-  \item \textbf{PET preservation:} aggregate and per-lesion MTV/TLG change from the original moving scan to that same scan after warping. Report signed, absolute, and upper-tail errors, stratified by bone association and lesion size.
+  \item \textbf{PET preservation:} aggregate and per-lesion MTV/TLG error from the original moving scan to that same scan after warping. Use the official absolute percentage errors, together with upper-tail errors stratified by bone association and lesion size.
   \item \textbf{Lesion measurement:} define lesions on the source scan and track them through the transformation. Predefine size bins, bone-association rules, minimum denominators, empty-mask handling, field-of-view exclusions, SUV units, and interpolation. Distinguish resampling effects from deformation effects using a specified control.
   \item \textbf{Bone shape:} measure distortion of sampled within-bone point-pair distances in physical coordinates, covering short and long distances. Predefine sampling, distance bins, and normalization; report BRE secondarily.
   \item \textbf{Deformation quality:} report NDV/folding inside bones, in an outside boundary band, and across the body. Specify masks, band width in physical units, denominators, and consistent units.

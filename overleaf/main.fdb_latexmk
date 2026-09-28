@@ -1,14 +1,13 @@
 # Fdb version 3
-["bibtex main"] 1790597304 "main.aux" "main.bbl" "main" 1790597306
+["bibtex main"] 1790598839 "main.aux" "main.bbl" "main" 1790598841
   "./splncs04-etal.bst" 1790597173 32417 92369654c355ad323add374e3b630763 ""
-  "main.aux" 1790597306 8298 f1310135b8497e73301d15d51ad1a8a4 "pdflatex"
+  "main.aux" 1790598841 8868 25ff469e7ec7971e1bdcfffa35c8cc85 "pdflatex"
   "references.bib" 1790597173 35300 cd0926d71dae0f650bb51557c8694848 ""
   (generated)
   "main.bbl"
   "main.blg"
-["pdflatex"] 1790597304 "/home/iml/fryderyk.koegl/code/LapIRN-koegl/overleaf/main.tex" "main.pdf" "main" 1790597306
+["pdflatex"] 1790598839 "main.tex" "main.pdf" "main" 1790598841
   "/etc/texmf/web2c/texmf.cnf" 1717060414 475 c0e671620eb5563b2130f56340a5fde8 ""
-  "/home/iml/fryderyk.koegl/code/LapIRN-koegl/overleaf/main.tex" 1790597173 4559 14f3b057b9998c62b410b9a72d912e15 ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/jknappen/ec/ecbx0900.tfm" 1136768653 3584 1a7de6c99457381c64abc1a7c545505f ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/jknappen/ec/ecbx1000.tfm" 1136768653 3584 2d666ecf6d466d8b007246bc2f94d9da ""
@@ -199,19 +198,19 @@
   "/usr/share/texmf/web2c/texmf.cnf" 1644012257 39432 7155514e09a3d69036fac785183a21c2 ""
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1717061642 4234243 4a42437c56f0785ccfd4e39da48c38dc ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1769837860 1405648 015dee954f4a5341581e0dc5f15cefd9 ""
-  "discussion.tex" 1790597173 2061 7559aaed29f9d99bc446d431645fcd99 ""
-  "figures/journal_lesion_preservation.tex" 1790597173 548 8c6bdd837ce494cff749675ad575d6e7 ""
+  "discussion.tex" 1790598523 2512 7df95ac8e15611222f537894fcfd6877 ""
+  "figures/journal_lesion_preservation.tex" 1790598524 537 9e77ee3aa0e90fccadeb21843b833fed ""
   "figures/journal_pet_tradeoff.tex" 1790597173 607 10a21098c038d44d9e0dcfa6adeca14a ""
   "figures/journal_rigidity_comparison.tex" 1790597173 596 a384bed2f4877a76048ba0a7a556593f ""
   "introduction.tex" 1790597173 3822 9220efe4d10eaa2eada47f59dd215d41 ""
-  "journal_evaluation.tex" 1790597173 6387 719326b98bcfac0f079359a44c87b55a ""
+  "journal_evaluation.tex" 1790598819 8823 3f460bc4f54690b453b4375a63a42d89 ""
   "llncs.cls" 1790597173 43402 5fb5a2dc40571aa40f3d199c00cbb986 ""
-  "main.aux" 1790597306 8298 f1310135b8497e73301d15d51ad1a8a4 "pdflatex"
-  "main.bbl" 1790597304 5149 2f52f8c5b12d004722e19d5654eee4e8 "bibtex main"
+  "main.aux" 1790598841 8868 25ff469e7ec7971e1bdcfffa35c8cc85 "pdflatex"
+  "main.bbl" 1790598839 5149 2f52f8c5b12d004722e19d5654eee4e8 "bibtex main"
   "main.tex" 1790597173 4559 14f3b057b9998c62b410b9a72d912e15 ""
-  "methods.tex" 1790597173 11065 87c79788d43f9cce6a8160f9e3dcefb3 ""
+  "methods.tex" 1790598819 11760 90390bf9204349fd503e780c15228aa2 ""
   "overview.png" 1790597173 1301356 cbb8044026157b26006b8b0e09f7c516 ""
-  "results.tex" 1790597173 2729 072ce643d98d1ccc3dfe475fdf38020f ""
+  "results.tex" 1790598523 3916 c492066b165f99c5ee9cb1e45d1c0a95 ""
   "tables/journal_ablations.tex" 1790597173 1020 57d53c4001236c559e955a1fbe84d49c ""
   "tables/journal_baselines.tex" 1790597173 889 1ed2577f90e849b6670288f0bd001890 ""
   (generated)

@@ -30,45 +30,53 @@
 \citation{ref_kabsch,ref_umeyama}
 \citation{Liu2024}
 \@writefile{toc}{\contentsline {subsubsection}{Preservation of PET quantification.}{5}{}\protected@file@percent }
+\newlabel{eq:pet_training_surrogates}{{2}{5}}
 \@writefile{toc}{\contentsline {subsubsection}{Bone rigidity.}{5}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{Deformation regularization.}{5}{}\protected@file@percent }
 \citation{ref_rigidity_3_staring}
 \citation{ref_kabsch}
-\citation{MODAT2010,modat2014}
-\citation{ref_convexadam}
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Experimental Design and Model Selection}{6}{}\protected@file@percent }
 \newlabel{sec:experiments}{{2.4}{6}}
 \newlabel{sec:model_selection}{{2.4}{6}}
 \@writefile{toc}{\contentsline {subsubsection}{PET and rigidity ablations.}{6}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{Comparison of rigidity penalties.}{6}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{Accuracy--preservation trade-off.}{6}{}\protected@file@percent }
+\citation{MODAT2010,modat2014}
+\citation{ref_convexadam}
+\@writefile{toc}{\contentsline {subsubsection}{Accuracy--preservation trade-off.}{7}{}\protected@file@percent }
 \newlabel{sec:baselines}{{2.4}{7}}
 \@writefile{toc}{\contentsline {subsubsection}{Baselines.}{7}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.5}Evaluation Endpoints and Statistical Analysis}{7}{}\protected@file@percent }
 \newlabel{sec:evaluation}{{2.5}{7}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.6}Optional Supporting Analyses}{7}{}\protected@file@percent }
-\newlabel{sec:optional}{{2.6}{7}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.7}Implementation Details}{8}{}\protected@file@percent }
-\newlabel{sec:infrastructure}{{2.7}{8}}
-\@writefile{toc}{\contentsline {paragraph}{Training configuration to confirm.}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {3}{\color  {blue}Results}}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Independent-Test Comparison}{8}{}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces {\color  {blue}Planned independent-test comparison. All entries are pending; ``pending'' is not a numerical result. Report patient-level uncertainty and paired effects in the final table/text. Per-lesion and regional endpoints are detailed separately.}}}{9}{}\protected@file@percent }
-\newlabel{tab:journal_baselines}{{1}{9}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Separate and Combined Effects of PET Preservation and Rigidity}{9}{}\protected@file@percent }
-\newlabel{sec:ablation}{{3.2}{9}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces {\color  {blue}Planned matched-training ablations. Accuracy and general regularization terms are retained. The endpoint groups are alignment, aggregate/per-lesion PET preservation, and deformation quality. Results and patient-level paired effects are pending; any additional IO-only ablations must be reported separately.}}}{9}{}\protected@file@percent }
-\newlabel{tab:journal_ablations}{{2}{9}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Rigidity Comparison and Boundary Effects}{9}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces {\color  {blue}Planned lesion-preservation analysis for the matched PET and rigidity ablations. Compare each moving scan before and after warping, with patient-level uncertainty. State subgroup counts and the predeclared upper-tail statistic. No experimental data are shown.}}}{10}{}\protected@file@percent }
-\newlabel{fig:journal_lesions}{{2}{10}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces {\color  {blue}Planned comparison of no rigidity, Staring, Staring with erosion, and Kabsch. Report regional folding alongside alignment and distance distortion, and show boundary-mechanism measurements separately. BRE is secondary. No experimental data are shown.}}}{10}{}\protected@file@percent }
-\newlabel{fig:journal_rigidity}{{3}{10}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Accuracy--Preservation Trade-off}{11}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces {\color  {blue}Planned accuracy--preservation trade-off. Mark the operating point selected on validation patients and distinguish validation curves from frozen-setting test results. Include patient-level uncertainty and identify whether settings change matched training or IO only. No experimental data are shown.}}}{11}{}\protected@file@percent }
-\newlabel{fig:journal_tradeoff}{{4}{11}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Optional Supporting Results}{11}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {4}{\color  {blue}Discussion}}{11}{}\protected@file@percent }
+\newlabel{sec:pet_evaluation_metrics}{{2.5}{7}}
+\@writefile{toc}{\contentsline {subsubsection}{Official PET preservation metrics.}{7}{}\protected@file@percent }
+\newlabel{eq:official_pet_warp}{{3}{7}}
+\newlabel{eq:pet_biomarkers}{{4}{7}}
+\newlabel{eq:official_pet_error}{{5}{7}}
+\@writefile{toc}{\contentsline {subsubsection}{Metric implementation validation.}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.6}Optional Supporting Analyses}{8}{}\protected@file@percent }
+\newlabel{sec:optional}{{2.6}{8}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.7}Implementation Details}{9}{}\protected@file@percent }
+\newlabel{sec:infrastructure}{{2.7}{9}}
+\@writefile{toc}{\contentsline {paragraph}{Training configuration to confirm.}{9}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}{\color  {blue}Results}}{9}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Metric Implementation Validation}{9}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Independent-Test Comparison}{10}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces {\color  {blue}Planned independent-test comparison. All entries are pending; ``pending'' is not a numerical result. Report patient-level uncertainty and paired effects in the final table/text. Per-lesion and regional endpoints are detailed separately.}}}{10}{}\protected@file@percent }
+\newlabel{tab:journal_baselines}{{1}{10}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Separate and Combined Effects of PET Preservation and Rigidity}{10}{}\protected@file@percent }
+\newlabel{sec:ablation}{{3.3}{10}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Rigidity Comparison and Boundary Effects}{10}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces {\color  {blue}Planned matched-training ablations. Accuracy and general regularization terms are retained. The endpoint groups are alignment, aggregate/per-lesion PET preservation, and deformation quality. Results and patient-level paired effects are pending; any additional IO-only ablations must be reported separately.}}}{11}{}\protected@file@percent }
+\newlabel{tab:journal_ablations}{{2}{11}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces {\color  {blue}Planned lesion-preservation analysis for the matched PET and rigidity ablations. Compare each moving scan before and after warping, with patient-level uncertainty. State subgroup counts and the predeclared upper-tail statistic. No experimental data are shown.}}}{11}{}\protected@file@percent }
+\newlabel{fig:journal_lesions}{{2}{11}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces {\color  {blue}Planned comparison of no rigidity, Staring, Staring with erosion, and Kabsch. Report regional folding alongside alignment and distance distortion, and show boundary-mechanism measurements separately. BRE is secondary. No experimental data are shown.}}}{11}{}\protected@file@percent }
+\newlabel{fig:journal_rigidity}{{3}{11}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Accuracy--Preservation Trade-off}{12}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces {\color  {blue}Planned accuracy--preservation trade-off. Mark the operating point selected on validation patients and distinguish validation curves from frozen-setting test results. Include patient-level uncertainty and identify whether settings change matched training or IO only. No experimental data are shown.}}}{12}{}\protected@file@percent }
+\newlabel{fig:journal_tradeoff}{{4}{12}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}Optional Supporting Results}{12}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}{\color  {blue}Discussion}}{12}{}\protected@file@percent }
 \bibstyle{splncs04-etal}
 \bibdata{references}
 \bibcite{ref_syn}{1}
@@ -77,11 +85,11 @@
 \bibcite{ref_transmorph}{4}
 \bibcite{ref_svf_voxelmorph}{5}
 \bibcite{ref_psma_clinical}{6}
+\@writefile{toc}{\contentsline {paragraph}{Conclusion to write after evaluation.}{13}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Acknowledgments.}{13}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Disclosure of Interests.}{13}{}\protected@file@percent }
 \bibcite{ref_learn2reg_hansen}{7}
 \bibcite{ref_learn2reg_alessa}{8}
-\@writefile{toc}{\contentsline {paragraph}{Conclusion to write after evaluation.}{12}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{Acknowledgments.}{12}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{Disclosure of Interests.}{12}{}\protected@file@percent }
 \bibcite{ref_psmaregdata}{9}
 \bibcite{ref_kabsch}{10}
 \bibcite{ref_psmareg_challenge}{11}
@@ -94,4 +102,4 @@
 \bibcite{ref_rigidity_3_staring}{18}
 \bibcite{ref_umeyama}{19}
 \bibcite{ref_demons}{20}
-\gdef \@abspage@last{13}
+\gdef \@abspage@last{14}

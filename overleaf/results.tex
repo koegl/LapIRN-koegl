@@ -1,6 +1,14 @@
 \section{\journal{Results}}
 \begin{journaladdition}
-\noindent\textit{Journal draft: experiments are pending. All tables and figures below are planned outputs, not findings. The previous evaluation and leaderboard results have been removed because they used a different protocol.}
+\noindent\textit{Journal draft: model-comparison experiments are pending. Except for the deterministic metric-validation controls reported below, all tables and figures are planned outputs rather than findings. The previous evaluation and leaderboard results have been removed because they used a different protocol.}
+
+\subsection{Metric Implementation Validation}
+On PSMAReg subject 0006 at time point 02, the identity control produced zero MTV and TLG error, zero within-bone distance distortion, zero folding, Dice of one, and HD95 of zero.
+A non-clipping whole-voxel translation likewise preserved MTV, TLG, and within-bone distances exactly, produced no folding, and recovered the prescribed $26.91$~mm displacement.
+For subvoxel translations of $0.25$, $0.49$, $0.50$, $0.51$, and $0.75$ voxels, the official absolute TLG errors were $1.50\%$, $2.94\%$, $2.95\%$, $2.76\%$, and $1.41\%$, respectively, despite the transformation being a pure translation.
+In contrast, linearly warping the pre-multiplied PET--mask product changed its global sum by at most $1.4\times10^{-4}\%$.
+MTV was preserved on either side of the nearest-neighbour tie ($0.49$ and $0.51$ voxels); at exactly $0.50$ voxels, tie-dependent nearest-neighbour assignment changed MTV by $0.16\%$.
+These controls confirm the implementation and quantify a case-specific interpolation floor; they do not measure registration accuracy or biological change.
 
 \subsection{Independent-Test Comparison}
 \begin{itemize}
@@ -17,7 +25,7 @@
 \begin{itemize}
   \item Fill the matched-training $2\times2$ comparison and the four PET-term removal conditions (Table~\ref{tab:journal_ablations}).
   \item Report aggregate versus per-lesion changes; check whether aggregate cancellation hides large individual errors.
-  \item Show signed, absolute, and upper-tail errors by lesion size and bone association (Fig.~\ref{fig:journal_lesions}).
+  \item Show absolute and upper-tail errors by lesion size and bone association (Fig.~\ref{fig:journal_lesions}).
 \end{itemize}
 \end{journaladdition}
 \input{tables/journal_ablations}
