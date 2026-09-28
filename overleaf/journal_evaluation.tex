@@ -41,26 +41,13 @@ Report the full method with and without IO.
 \label{sec:evaluation}
 \subsubsection{Official PET preservation metrics.}
 \label{sec:pet_evaluation_metrics}
-For official evaluation, PET is represented in SUV units and resampled linearly, whereas the binary lesion mask is resampled with nearest-neighbour interpolation:
+For the official evaluation, PET is expressed in SUV and resampled using linear interpolation, while the binary lesion mask is resampled using nearest-neighbour interpolation. MTV is the physical volume of all lesion voxels. TLG is the sum of their PET intensities multiplied by the physical voxel volume. Both biomarkers are measured before and after registration.
+
+Following the official challenge implementation, the error for either biomarker $Q$ is its absolute percentage change:
 \begin{equation}
-  I'=W_{\mathrm{lin}}[I],
-  \qquad
-  M'=W_{\mathrm{NN}}[M].
-  \label{eq:official_pet_warp}
-\end{equation}
-With physical voxel volume $v$, the two biomarkers are
-\begin{equation}
-  \mathrm{MTV}(M)=v\sum_x M(x),
-  \qquad
-  \mathrm{TLG}(I,M)=v\sum_x I(x)M(x).
-  \label{eq:pet_biomarkers}
-\end{equation}
-For MTV, $Q_{\mathrm{before}}=\mathrm{MTV}(M)$ and $Q_{\mathrm{after}}=\mathrm{MTV}(M')$; for TLG, $Q_{\mathrm{before}}=\mathrm{TLG}(I,M)$ and $Q_{\mathrm{after}}=\mathrm{TLG}(I',M')$.
-Following the official challenge implementation, both are reported as absolute percentage errors:
-\begin{equation}
-  E_Q=100\,
-  \frac{\left|Q_{\mathrm{after}}-Q_{\mathrm{before}}\right|}
-  {\max\!\left(Q_{\mathrm{before}},10^{-6}\right)},
+  E_Q(\%)=100\,
+  \frac{|Q_{\mathrm{after}}-Q_{\mathrm{before}}|}
+  {\max(Q_{\mathrm{before}},10^{-6})},
   \qquad Q\in\{\mathrm{MTV},\mathrm{TLG}\}.
   \label{eq:official_pet_error}
 \end{equation}
