@@ -31,10 +31,10 @@ adjacent to soft tissue is scored using soft-tissue displacements, and a bone
 voxel adjacent to a different bone is scored across that joint.
 
 Usage:
-    python test_bone_rigidity_loss.py
-    python test_bone_rigidity_loss.py --ct <path> --labels <path> --size 192
-    python test_bone_rigidity_loss.py --sweep 10
-    python test_bone_rigidity_loss.py --sweep 10 --seed 1 --size 128
+    python Code/test/test_bone_rigidity_loss.py
+    python Code/test/test_bone_rigidity_loss.py --ct <path> --labels <path> --size 192
+    python Code/test/test_bone_rigidity_loss.py --sweep 10
+    python Code/test/test_bone_rigidity_loss.py --sweep 10 --seed 1 --size 128
 """
 
 from __future__ import annotations
@@ -43,6 +43,7 @@ import argparse
 import glob
 import os
 import sys
+from pathlib import Path
 import traceback
 
 import nibabel as nib
@@ -50,7 +51,7 @@ import numpy as np
 import torch
 from scipy import ndimage
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import jacobian  # noqa: E402
 import synthetic  # noqa: E402

@@ -1,20 +1,20 @@
 """Tests for the sampled bone distance-preservation metric.
 
 Run directly:
-    python Code/test_bone_deformation_metric.py
+    python Code/test/test_bone_deformation_metric.py
 
 or with pytest:
-    pytest Code/test_bone_deformation_metric.py
+    pytest Code/test/test_bone_deformation_metric.py
 """
 
 from __future__ import annotations
 
-import os
 import sys
+from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from bone_deformation_metric import (  # noqa: E402
     PairSamplingConfig,

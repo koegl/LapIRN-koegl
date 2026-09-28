@@ -18,11 +18,17 @@ Verifies the planned edits BEFORE they are applied to the model code:
    fp32 for the composition / transform / loss code.
 
 Run:
-    python Code/test_bf16_changes.py
+    python Code/test/test_bf16_changes.py
 """
+
+import sys
+from pathlib import Path
 
 import torch
 import torch.nn.functional as F
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from miccai2020_model_stage import (
     DiffeomorphicTransform_unit,
     NCC_fast,

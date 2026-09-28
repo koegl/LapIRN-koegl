@@ -8,13 +8,18 @@ two is the hard-Dice log (computed under no_grad, never added to the loss), so
 the scalar losses must match bit-for-bit given identical inputs.
 
 Run:
-    python3 Code/test_io_objective_parity.py
+    python3 Code/test/test_io_objective_parity.py
 or under pytest:
-    pytest Code/test_io_objective_parity.py
+    pytest Code/test/test_io_objective_parity.py
 """
+
+import sys
+from pathlib import Path
 
 import numpy as np
 import torch
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import config as config_mod
 import instance_opt
@@ -99,6 +104,8 @@ def run_parity(class_weights=None, seed=0):
         bone_values,
         loss_ncc=loss_ncc,
         ncc_weight=ncc_weight,
+        include_pet=True,
+        include_rigidity=True,
         class_weights=class_weights,
     )
 

@@ -1,7 +1,7 @@
 """End-to-end identity-transform check on PSMAReg case 0006, timepoint 02.
 
 Run directly:
-    uv run python Code/test_identity_transform.py
+    uv run python Code/test/test_identity_transform.py
 
 The dataset location can be overridden with ``PSMAREG_DATASET_ROOT``.
 """
@@ -16,7 +16,7 @@ import nibabel as nib
 import numpy as np
 import torch
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import jacobian  # noqa: E402
 import synthetic  # noqa: E402
