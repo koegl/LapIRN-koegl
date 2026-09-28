@@ -31,3 +31,8 @@ submission_results/niftyreg/logs/*
 submission/validation_predictions/segmentations/*.nii.gz
 submission/validation_predictions/*.nii.gz
 submission/*.tar.gz
+overleaf/main.fdb_latexmk
+overleaf/main.fdb_latexmk
+overleaf/main.fls
+overleaf/main.log
+overleaf/main.synctex.gz
