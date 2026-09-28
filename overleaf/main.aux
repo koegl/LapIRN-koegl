@@ -1,0 +1,88 @@
+\relax 
+\citation{ref_psma_clinical}
+\citation{ref_psmareg_challenge}
+\citation{ref_learn2reg_alessa,ref_learn2reg_hansen,ref_psmaregdata}
+\citation{ref_demons,ref_syn,bspline}
+\citation{ref_voxelmorph_cvpr,ref_svf_voxelmorph,ref_transmorph}
+\citation{ref_lapirn}
+\@writefile{toc}{\contentsline {title}{PET Quantification-Preserving Registration for Longitudinal Whole-Body PSMA PET/CT}{1}{}\protected@file@percent }
+\@writefile{toc}{\authcount {1}}
+\@writefile{toc}{\contentsline {author}{Anonymous Author(s)}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{}\protected@file@percent }
+\citation{ref_psmareg_challenge}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overview of the proposed registration pipeline. The moving (follow-up) and fixed (baseline) PET/CT scans are first coarsely aligned by an affine pre-registration, and the resulting pair is then passed to the coarse-to-fine LapIRN network, which predicts a dense deformation field (green grid). Finally, after the LapIRN stage, we refine this field per pair by instance optimization (IO) and resample the moving scan with it into the fixed space (warped PET/CT). Both stages are driven by the same objective, a weighted sum of three groups of terms: registration accuracy, PET quantification, and deformation regularization (Sec.~\ref {sec:losses}).}}{2}{}\protected@file@percent }
+\newlabel{fig:pipeline}{{1}{2}{}{figure.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Methods}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Data and Preprocessing}{2}{}\protected@file@percent }
+\newlabel{sec:data_and_preprocessing}{{2.1}{2}{}{subsection.2.1}{}}
+\citation{ref_totalsegmentator}
+\citation{rokuss2024fdgpsmahitchhikersguide}
+\citation{ref_convexadam}
+\citation{ants}
+\citation{ref_lapirn}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Registration Pipeline}{3}{}\protected@file@percent }
+\newlabel{sec:pipeline}{{2.2}{3}{}{subsection.2.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{Step 1: Affine pre-registration.}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Step 2: Deformable registration.}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Step 3: Instance optimization.}{3}{}\protected@file@percent }
+\citation{ref_kabsch,ref_umeyama}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Training Loss Function for deformable stage}{4}{}\protected@file@percent }
+\newlabel{sec:losses}{{2.3}{4}{}{subsection.2.3}{}}
+\newlabel{eq:total}{{1}{4}{}{equation.1}{}}
+\@writefile{toc}{\contentsline {subsubsection}{Registration Accuracy.}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Preservation of PET quantification.}{4}{}\protected@file@percent }
+\citation{Liu2024}
+\citation{nnunet}
+\citation{ref_progressive_patch}
+\citation{MODAT2010,modat2014}
+\@writefile{toc}{\contentsline {subsubsection}{Bone rigidity.}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Deformation regularization.}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Submission container}{5}{}\protected@file@percent }
+\newlabel{sec:container}{{2.4}{5}{}{subsection.2.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.5}Model Selection}{5}{}\protected@file@percent }
+\newlabel{sec:model_selection}{{2.5}{5}{}{subsection.2.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.6}Baselines}{5}{}\protected@file@percent }
+\newlabel{sec:baselines}{{2.6}{5}{}{subsection.2.6}{}}
+\citation{ref_pytorch}
+\citation{ants}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Registration accuracy and biomarker preservation peak at different checkpoints. Validation CT Dice (left) continues to improve after MTV and TLG bias (right) reach their minima. The red dashed line indicates the checkpoint selected using the challenge composite ranking score.}}{6}{}\protected@file@percent }
+\newlabel{fig:selection}{{2}{6}{}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.7}Implementation Details}{6}{}\protected@file@percent }
+\newlabel{sec:infrastructure}{{2.7}{6}{}{subsection.2.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Results}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Evaluation Protocol}{6}{}\protected@file@percent }
+\newlabel{sec:evaluation}{{3.1}{6}{}{subsection.3.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Our method against the baselines on the official challenge validation set ($n=20$ cases), evaluated against the surrogate labels of Sec.~\ref {sec:evaluation}. Every cell is a mean over the cases, runtime included: DSC and the MTV/TLG errors in \%, NDV in ppm, and time in seconds per image pair on the hardware of Sec.~\ref {sec:infrastructure}. Bold marks the best value in each column. $^{*}$ marks metrics on which \emph  {ours (container)} is significantly better than the baseline in that row (paired Wilcoxon signed-rank, Holm-corrected within each metric, $p<0.05$); runtime is not tested. Dashes mark metrics undefined for a baseline.}}{7}{}\protected@file@percent }
+\newlabel{tab:baselines}{{1}{7}{}{table.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Comparison against Baselines}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Leaderboard Performance}{7}{}\protected@file@percent }
+\bibstyle{splncs04-etal}
+\bibdata{references}
+\bibcite{ref_syn}{1}
+\bibcite{ants}{2}
+\bibcite{ref_voxelmorph_cvpr}{3}
+\bibcite{ref_transmorph}{4}
+\bibcite{ref_svf_voxelmorph}{5}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Discussion}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Acknowledgments.}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Disclosure of Interests.}{8}{}\protected@file@percent }
+\bibcite{ref_psma_clinical}{6}
+\bibcite{ref_progressive_patch}{7}
+\bibcite{ref_learn2reg_hansen}{8}
+\bibcite{ref_learn2reg_alessa}{9}
+\bibcite{nnunet}{10}
+\bibcite{ref_psmaregdata}{11}
+\bibcite{ref_kabsch}{12}
+\bibcite{ref_psmareg_challenge}{13}
+\bibcite{Liu2024}{14}
+\bibcite{modat2014}{15}
+\bibcite{MODAT2010}{16}
+\bibcite{ref_lapirn}{17}
+\bibcite{ref_pytorch}{18}
+\bibcite{rokuss2024fdgpsmahitchhikersguide}{19}
+\bibcite{bspline}{20}
+\bibcite{ref_convexadam}{21}
+\bibcite{ref_umeyama}{22}
+\bibcite{ref_demons}{23}
+\bibcite{ref_totalsegmentator}{24}
+\gdef \@abspage@last{10}
