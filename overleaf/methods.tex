@@ -91,18 +91,21 @@ PET preservation compares the moving scan before and after transformation, using
 For the differentiable training and IO objective, let $\widetilde I=W_{\mathrm{lin}}[I]$ and $\widetilde M=W_{\mathrm{lin}}[M]$ denote the linearly warped PET image and soft lesion mask.
 We compute
 \begin{equation}
-  b_{\mathrm{MTV}}=
-  \frac{\left|\sum_x\widetilde M(x)-\sum_xM(x)\right|}{\sum_xM(x)+10^{-5}},
-  \qquad
-  b_{\mathrm{TLG}}=
-  \frac{\left|\sum_x\widetilde I(x)\widetilde M(x)-\sum_xI(x)M(x)\right|}
-  {\sum_xI(x)M(x)+10^{-5}},
-  \label{eq:pet_training_surrogates}
+  \mathcal{L}_{\mathrm{MTV}}=
+  \left(
+  \frac{\left|\sum_x\widetilde M(x)-\sum_xM(x)\right|}{\sum_xM(x)+10^{-5}}
+  \right)^2.
+  \label{eq:mtv_training_loss}
 \end{equation}
-and use $\mathcal{L}_{\mathrm{MTV}}=b_{\mathrm{MTV}}^2$ and $\mathcal{L}_{\mathrm{TLG}}=b_{\mathrm{TLG}}$ in Eq.~\eqref{eq:total}.
-These losses deliberately differ from the official evaluation metrics of Sec.~\ref{sec:pet_evaluation_metrics}.
+\begin{equation}
+  \mathcal{L}_{\mathrm{TLG}}=
+  \frac{\left|\sum_x\widetilde I(x)\widetilde M(x)-\sum_xI(x)M(x)\right|}
+  {\sum_xI(x)M(x)+10^{-5}}.
+  \label{eq:tlg_training_loss}
+\end{equation}
+These losses enter Eq.~\eqref{eq:total} and deliberately differ from the official evaluation metrics of Sec.~\ref{sec:pet_evaluation_metrics}.
 Nearest-neighbour mask interpolation is piecewise constant with respect to the displacement and therefore provides no useful gradient for registration; linear interpolation instead supplies a differentiable soft boundary.
-The additive denominator stabilizes optimization for empty or very small masks, and squaring $b_{\mathrm{MTV}}$ gives a smooth quadratic penalty that emphasizes larger volume errors.
+The additive denominator stabilizes optimization for empty or very small masks, and squaring the relative MTV error gives a smooth quadratic penalty that emphasizes larger volume errors.
 Training uses clipped, normalized PET to keep gradient scales bounded, whereas official TLG evaluation uses PET in SUV units.
 \todo{Write the exact equations for the two Jacobian-based PET terms and verify transformation direction, Jacobian convention, reduction, and handling of empty or tiny lesions against the final implementation.}
 \end{journaladdition}
