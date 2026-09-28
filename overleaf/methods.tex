@@ -10,10 +10,10 @@ We therefore applied no further geometric preprocessing.
 CT was clipped to $[-1000, 1500]$~HU and PET SUV to $[0, 20]$, followed by rescaling to $[0,1]$.
 
 \begin{journaladdition}
-The journal evaluation will use a patient-level train/validation/test partition of the labelled challenge training dataset, keeping every scan and registration pair from a patient in one partition.
+We split the 146 labelled challenge training patients with at least two scans into training, validation, and test sets at the patient level, targeting a 70/15/15\% division of registration pairs and balancing the sets for tumour burden and bone versus soft-tissue lesion location.
+Training uses all forward pairs of a patient, whereas validation and testing use only follow-up-to-baseline pairs, matching the challenge task.
+This yielded 92/26/28 patients and 178/38/38 pairs.
 Registration models and the lesion nnU-Net will be trained only on training patients; validation patients will be used for all tuning and model selection.
-Previously unused patients will preferentially be reserved for testing, and prior patient exposure in pipeline development will be disclosed.
-\todo{Freeze the split manifest; report patients, scans, pairs, and lesions per partition, eligibility criteria, pair direction, and prior exposure. Confirm whether a previously unused test subset is feasible.}
 
 At test time, TotalSegmentator predictions and predictions from the training-only nnU-Net will supply the labels required by instance optimization (IO).
 Provided labels will be reserved for evaluation on test patients and will not enter IO or test-time iterate selection.
@@ -141,7 +141,7 @@ To simulate a field-of-view mismatch, we crop up to 40 axial slices from either 
 \begin{journaladdition}
 \paragraph{Training configuration to confirm.}
 The previous pipeline used sequential Adam training for $60$k, $60$k, and $120$k steps, learning rates of $3\cdot10^{-4}$, $2\cdot10^{-4}$, and $2.5\cdot10^{-4}$, batch size one, and gradient accumulation over four steps.
-These are starting settings for the journal retraining, not completed journal experiments.
+These are starting settings for retraining, not completed experiments.
 \begin{itemize}
   \item Confirm the warmup and coarse-level freezing schedule, augmentations, loss weights, and random seeds. Keep the training budget and shared settings matched across central ablations.
   \item Record mixed precision, transformation precision, final software versions, hardware, training time, and per-pair inference/IO time for the new runs.

@@ -1,154 +1,154 @@
 {
   "train": [
-    "0028",
+    "0006",
     "0049",
     "0051",
     "0053",
     "0058",
+    "0060",
+    "0061",
     "0062",
+    "0065",
     "0069",
-    "0071",
     "0072",
-    "0078",
     "0081",
+    "0083",
     "0087",
+    "0089",
     "0100",
+    "0102",
+    "0103",
     "0106",
-    "0111",
-    "0113",
+    "0112",
     "0118",
     "0122",
-    "0124",
     "0126",
+    "0127",
+    "0129",
     "0133",
-    "0134",
     "0135",
-    "0136",
-    "0138",
+    "0141",
+    "0145",
+    "0149",
     "0150",
     "0152",
     "0153",
     "0157",
     "0160",
     "0161",
-    "0162",
     "0163",
-    "0166",
     "0167",
-    "0170",
+    "0168",
     "0171",
-    "0173",
-    "0177",
     "0185",
     "0186",
+    "0187",
+    "0193",
     "0196",
-    "0200",
+    "0199",
     "0201",
     "0206",
     "0212",
     "0213",
     "0215",
-    "0216",
     "0218",
-    "0219",
     "0224",
+    "0229",
     "0231",
+    "0234",
+    "0242",
     "0243",
     "0244",
     "0245",
-    "0249",
-    "0250",
+    "0246",
     "0251",
-    "0252",
     "0255",
+    "0256",
     "0261",
-    "0264",
-    "0268",
+    "0267",
     "0270",
+    "0271",
+    "0276",
     "0285",
     "0286",
     "0293",
-    "0294",
+    "0297",
     "0298",
-    "0300",
+    "0299",
+    "0305",
     "0313",
+    "0314",
+    "0315",
+    "0322",
     "0325",
-    "0327",
-    "0335",
+    "0332",
+    "0336",
     "0337",
-    "0351",
+    "0341",
+    "0347",
     "0352",
-    "0356",
     "0359",
     "0360",
     "0362",
-    "0363",
     "0369",
     "0378"
   ],
   "val": [
-    "0054",
-    "0089",
-    "0090",
-    "0102",
-    "0103",
+    "0071",
+    "0078",
+    "0113",
+    "0124",
     "0125",
-    "0141",
-    "0145",
+    "0134",
+    "0138",
+    "0140",
     "0148",
-    "0156",
     "0159",
-    "0168",
-    "0176",
-    "0187",
-    "0193",
+    "0162",
+    "0181",
+    "0200",
     "0203",
     "0211",
-    "0234",
+    "0219",
     "0236",
-    "0267",
     "0291",
     "0292",
-    "0297",
-    "0299",
+    "0294",
+    "0319",
+    "0327",
     "0328",
     "0331",
-    "0338",
-    "0341",
+    "0356",
     "0370"
   ],
   "test": [
-    "0006",
     "0015",
+    "0028",
+    "0054",
     "0055",
-    "0060",
-    "0061",
-    "0065",
     "0080",
-    "0083",
-    "0112",
+    "0090",
+    "0111",
     "0120",
-    "0127",
-    "0129",
-    "0140",
+    "0136",
     "0146",
-    "0149",
-    "0181",
-    "0199",
-    "0229",
-    "0242",
-    "0246",
-    "0256",
-    "0271",
-    "0276",
-    "0305",
-    "0314",
-    "0315",
-    "0319",
-    "0322",
-    "0332",
-    "0336",
-    "0347",
+    "0156",
+    "0166",
+    "0170",
+    "0173",
+    "0176",
+    "0177",
+    "0216",
+    "0249",
+    "0250",
+    "0252",
+    "0264",
+    "0268",
+    "0300",
+    "0335",
+    "0338",
+    "0351",
+    "0363",
     "0371"
   ],
   "meta": {
@@ -163,20 +163,948 @@
       "val": false,
       "test": false
     },
+    "n_candidates": 10000,
     "n_patients": {
-      "train": 85,
-      "val": 29,
-      "test": 32
+      "train": 92,
+      "val": 26,
+      "test": 28
     },
     "n_pairs": {
-      "train": 187,
-      "val": 40,
-      "test": 40
+      "train": 178,
+      "val": 38,
+      "test": 38
     },
     "pair_fractions": {
-      "train": 0.700374531835206,
-      "val": 0.149812734082397,
-      "test": 0.149812734082397
+      "train": 0.7007874015748031,
+      "val": 0.14960629921259844,
+      "test": 0.14960629921259844
+    },
+    "burden_quartiles_ml": [
+      11.827496874332427,
+      104.16143371343614,
+      430.74093267917635
+    ],
+    "bone_fraction_threshold": 0.5,
+    "cohort_group_shares": {
+      "stratum_high_bone": 0.3835616438356164,
+      "stratum_high_soft": 0.11643835616438356,
+      "stratum_low_bone": 0.136986301369863,
+      "stratum_low_soft": 0.363013698630137,
+      "burden_q1": 0.2534246575342466,
+      "burden_q2": 0.2465753424657534,
+      "burden_q3": 0.2465753424657534,
+      "burden_q4": 0.2534246575342466
+    },
+    "group_shares": {
+      "train": {
+        "stratum_high_bone": 0.391304347826087,
+        "stratum_high_soft": 0.10869565217391304,
+        "stratum_low_bone": 0.14130434782608695,
+        "stratum_low_soft": 0.358695652173913,
+        "burden_q1": 0.2608695652173913,
+        "burden_q2": 0.2391304347826087,
+        "burden_q3": 0.22826086956521738,
+        "burden_q4": 0.2717391304347826
+      },
+      "val": {
+        "stratum_high_bone": 0.34615384615384615,
+        "stratum_high_soft": 0.15384615384615385,
+        "stratum_low_bone": 0.11538461538461539,
+        "stratum_low_soft": 0.38461538461538464,
+        "burden_q1": 0.2692307692307692,
+        "burden_q2": 0.23076923076923078,
+        "burden_q3": 0.2692307692307692,
+        "burden_q4": 0.23076923076923078
+      },
+      "test": {
+        "stratum_high_bone": 0.39285714285714285,
+        "stratum_high_soft": 0.10714285714285714,
+        "stratum_low_bone": 0.14285714285714285,
+        "stratum_low_soft": 0.35714285714285715,
+        "burden_q1": 0.21428571428571427,
+        "burden_q2": 0.2857142857142857,
+        "burden_q3": 0.2857142857142857,
+        "burden_q4": 0.21428571428571427
+      }
+    },
+    "max_share_deviation": 0.039138943248532315,
+    "patient_stats": {
+      "0006": {
+        "burden_ml": 603.2532772699992,
+        "fraction_in_bone": 0.8513644960821399,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0015": {
+        "burden_ml": 0.7660876528422037,
+        "fraction_in_bone": 0.09574468085106383,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0028": {
+        "burden_ml": 0.1874469788869222,
+        "fraction_in_bone": 0.0,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0049": {
+        "burden_ml": 42.94573283672333,
+        "fraction_in_bone": 0.00569313976658127,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0051": {
+        "burden_ml": 3.594092073440552,
+        "fraction_in_bone": 0.0,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0053": {
+        "burden_ml": 609.2230560541152,
+        "fraction_in_bone": 0.6870673221631384,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0054": {
+        "burden_ml": 989.438878054619,
+        "fraction_in_bone": 0.6602913377071056,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0055": {
+        "burden_ml": 26.087729539871216,
+        "fraction_in_bone": 0.04358013120899719,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0058": {
+        "burden_ml": 582.4018383359909,
+        "fraction_in_bone": 0.7094519426544363,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0060": {
+        "burden_ml": 681.8261608982086,
+        "fraction_in_bone": 0.7497938107361853,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0061": {
+        "burden_ml": 724.9552657794952,
+        "fraction_in_bone": 0.7813227209874878,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0062": {
+        "burden_ml": 3.398495225906372,
+        "fraction_in_bone": 0.0,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0065": {
+        "burden_ml": 1480.8392830753328,
+        "fraction_in_bone": 0.7806231115954233,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0069": {
+        "burden_ml": 261.56188436508177,
+        "fraction_in_bone": 0.7693494111048794,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0071": {
+        "burden_ml": 1.4792011594772339,
+        "fraction_in_bone": 0.48484848484848486,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0072": {
+        "burden_ml": 167.8709943962097,
+        "fraction_in_bone": 0.5337896883192543,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0078": {
+        "burden_ml": 3.887487344741821,
+        "fraction_in_bone": 0.20754716981132076,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0080": {
+        "burden_ml": 862.0808807039261,
+        "fraction_in_bone": 0.8393766219033169,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0081": {
+        "burden_ml": 0.3911936950683594,
+        "fraction_in_bone": 0.5714285714285714,
+        "stratum": "low_bone",
+        "burden_quartile": 0
+      },
+      "0083": {
+        "burden_ml": 2.4042112509409588,
+        "fraction_in_bone": 0.24067796610169492,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0087": {
+        "burden_ml": 200.36452069282532,
+        "fraction_in_bone": 0.7090909090909091,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0089": {
+        "burden_ml": 188.60426023483276,
+        "fraction_in_bone": 0.6534871661913404,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0090": {
+        "burden_ml": 1.874469788869222,
+        "fraction_in_bone": 0.8130434782608695,
+        "stratum": "low_bone",
+        "burden_quartile": 0
+      },
+      "0100": {
+        "burden_ml": 88.54424791812897,
+        "fraction_in_bone": 0.7888996272262875,
+        "stratum": "low_bone",
+        "burden_quartile": 1
+      },
+      "0102": {
+        "burden_ml": 11.650237231254577,
+        "fraction_in_bone": 0.046169989506820566,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0103": {
+        "burden_ml": 37.23674984931946,
+        "fraction_in_bone": 0.044320420223243596,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0106": {
+        "burden_ml": 281.67168525218966,
+        "fraction_in_bone": 0.0016058330801614513,
+        "stratum": "high_soft",
+        "burden_quartile": 2
+      },
+      "0111": {
+        "burden_ml": 12.359275803565978,
+        "fraction_in_bone": 0.058358061325420374,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0112": {
+        "burden_ml": 68.20217577457429,
+        "fraction_in_bone": 0.04588635956264563,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0113": {
+        "burden_ml": 2.8117046833038333,
+        "fraction_in_bone": 0.24782608695652175,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0118": {
+        "burden_ml": 221.18336015224457,
+        "fraction_in_bone": 0.1390593047034765,
+        "stratum": "high_soft",
+        "burden_quartile": 2
+      },
+      "0120": {
+        "burden_ml": 149.16704585075377,
+        "fraction_in_bone": 0.4860678577282413,
+        "stratum": "high_soft",
+        "burden_quartile": 2
+      },
+      "0122": {
+        "burden_ml": 1316.7335279941558,
+        "fraction_in_bone": 0.017147897131185592,
+        "stratum": "high_soft",
+        "burden_quartile": 3
+      },
+      "0124": {
+        "burden_ml": 132.54131381034853,
+        "fraction_in_bone": 0.872348275225973,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0125": {
+        "burden_ml": 130.12080282211303,
+        "fraction_in_bone": 0.6993611424276588,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0126": {
+        "burden_ml": 883.1197666168214,
+        "fraction_in_bone": 0.5938953488372093,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0127": {
+        "burden_ml": 37.65239315032959,
+        "fraction_in_bone": 0.18766233766233767,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0129": {
+        "burden_ml": 35.305230979919436,
+        "fraction_in_bone": 0.5844875346260388,
+        "stratum": "low_bone",
+        "burden_quartile": 1
+      },
+      "0133": {
+        "burden_ml": 7.228933490117391,
+        "fraction_in_bone": 0.6922209695603156,
+        "stratum": "low_bone",
+        "burden_quartile": 0
+      },
+      "0134": {
+        "burden_ml": 75.36591031551362,
+        "fraction_in_bone": 0.28499594484995944,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0135": {
+        "burden_ml": 12.42039981842041,
+        "fraction_in_bone": 0.0,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0136": {
+        "burden_ml": 0.8679610109329223,
+        "fraction_in_bone": 0.056338028169014086,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0138": {
+        "burden_ml": 105.50004963874818,
+        "fraction_in_bone": 0.0862108922363847,
+        "stratum": "high_soft",
+        "burden_quartile": 2
+      },
+      "0140": {
+        "burden_ml": 1145.3051159334184,
+        "fraction_in_bone": 0.8179790152315689,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0141": {
+        "burden_ml": 1073.887816977501,
+        "fraction_in_bone": 0.6491547612271614,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0145": {
+        "burden_ml": 54.93826455116272,
+        "fraction_in_bone": 0.5982791870642338,
+        "stratum": "low_bone",
+        "burden_quartile": 1
+      },
+      "0146": {
+        "burden_ml": 325.0697357988358,
+        "fraction_in_bone": 0.8109886803805799,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0148": {
+        "burden_ml": 78.23873901367188,
+        "fraction_in_bone": 0.1625,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0149": {
+        "burden_ml": 74.03340679168701,
+        "fraction_in_bone": 0.8517173051519155,
+        "stratum": "low_bone",
+        "burden_quartile": 1
+      },
+      "0150": {
+        "burden_ml": 380.14247318267826,
+        "fraction_in_bone": 0.7759518909184461,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0152": {
+        "burden_ml": 1.0329958510398864,
+        "fraction_in_bone": 0.0,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0153": {
+        "burden_ml": 1057.8122010707857,
+        "fraction_in_bone": 0.7966370045071074,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0156": {
+        "burden_ml": 102.82281778812408,
+        "fraction_in_bone": 0.011770300796575912,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0157": {
+        "burden_ml": 131.99119767665863,
+        "fraction_in_bone": 0.7967027878114291,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0159": {
+        "burden_ml": 157.3209894323349,
+        "fraction_in_bone": 0.8433444712098842,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0160": {
+        "burden_ml": 771.3361682510376,
+        "fraction_in_bone": 0.7404272854063649,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0161": {
+        "burden_ml": 959.8059556531907,
+        "fraction_in_bone": 0.721332772916587,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0162": {
+        "burden_ml": 18.104933199882506,
+        "fraction_in_bone": 0.8399729912221472,
+        "stratum": "low_bone",
+        "burden_quartile": 1
+      },
+      "0163": {
+        "burden_ml": 126.69785799026491,
+        "fraction_in_bone": 0.7088961790814358,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0166": {
+        "burden_ml": 119.38742581367494,
+        "fraction_in_bone": 0.8936104853573623,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0167": {
+        "burden_ml": 114.82757430553436,
+        "fraction_in_bone": 0.4451719365484936,
+        "stratum": "high_soft",
+        "burden_quartile": 2
+      },
+      "0168": {
+        "burden_ml": 2042.3122587251662,
+        "fraction_in_bone": 0.6880398412574897,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0170": {
+        "burden_ml": 121.33116948604584,
+        "fraction_in_bone": 0.8035264483627204,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0171": {
+        "burden_ml": 123.80057968616487,
+        "fraction_in_bone": 0.7923373160857115,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0173": {
+        "burden_ml": 10.948533540725709,
+        "fraction_in_bone": 0.0,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0176": {
+        "burden_ml": 828.5482461547851,
+        "fraction_in_bone": 0.6185080264400378,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0177": {
+        "burden_ml": 208.4451154565811,
+        "fraction_in_bone": 0.7869333176939769,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0181": {
+        "burden_ml": 127.93256309032441,
+        "fraction_in_bone": 0.39369326325848064,
+        "stratum": "high_soft",
+        "burden_quartile": 2
+      },
+      "0185": {
+        "burden_ml": 14.694213171005249,
+        "fraction_in_bone": 0.8186356073211315,
+        "stratum": "low_bone",
+        "burden_quartile": 1
+      },
+      "0186": {
+        "burden_ml": 844.0981955337525,
+        "fraction_in_bone": 0.4825049241107635,
+        "stratum": "high_soft",
+        "burden_quartile": 3
+      },
+      "0187": {
+        "burden_ml": 779.8813055276871,
+        "fraction_in_bone": 0.8461007915980876,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0193": {
+        "burden_ml": 279.6708924992879,
+        "fraction_in_bone": 0.7821132999184054,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0196": {
+        "burden_ml": 4.804347567558288,
+        "fraction_in_bone": 0.0,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0199": {
+        "burden_ml": 4.046409783363343,
+        "fraction_in_bone": 0.45468277945619334,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0200": {
+        "burden_ml": 2.078216505050659,
+        "fraction_in_bone": 0.11764705882352941,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0201": {
+        "burden_ml": 442.79866334279376,
+        "fraction_in_bone": 0.8034675697563131,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0203": {
+        "burden_ml": 63.837921113967894,
+        "fraction_in_bone": 0.6589429337418613,
+        "stratum": "low_bone",
+        "burden_quartile": 1
+      },
+      "0206": {
+        "burden_ml": 0.8862982153892517,
+        "fraction_in_bone": 0.36551724137931035,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0211": {
+        "burden_ml": 5.12219244480133,
+        "fraction_in_bone": 0.0,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0212": {
+        "burden_ml": 271.3295019388199,
+        "fraction_in_bone": 0.5971164676728993,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0213": {
+        "burden_ml": 6.332447938919067,
+        "fraction_in_bone": 0.0019305019305019305,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0215": {
+        "burden_ml": 1960.4183036231996,
+        "fraction_in_bone": 0.7974108902247388,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0216": {
+        "burden_ml": 783.4753976011277,
+        "fraction_in_bone": 0.7396901184290596,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0218": {
+        "burden_ml": 428.3570960998535,
+        "fraction_in_bone": 0.5845319634703197,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0219": {
+        "burden_ml": 1011.9447403240205,
+        "fraction_in_bone": 0.7728381937229699,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0224": {
+        "burden_ml": 7.677176265716553,
+        "fraction_in_bone": 0.0,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0229": {
+        "burden_ml": 305.9379191493988,
+        "fraction_in_bone": 0.19164069367857428,
+        "stratum": "high_soft",
+        "burden_quartile": 2
+      },
+      "0231": {
+        "burden_ml": 28.251519665718078,
+        "fraction_in_bone": 0.5482475118996105,
+        "stratum": "low_bone",
+        "burden_quartile": 1
+      },
+      "0234": {
+        "burden_ml": 93.06742501735687,
+        "fraction_in_bone": 0.447786680677788,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0236": {
+        "burden_ml": 2.155058123724801,
+        "fraction_in_bone": 0.10696920583468396,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0242": {
+        "burden_ml": 2.0904413080215454,
+        "fraction_in_bone": 0.5087719298245614,
+        "stratum": "low_bone",
+        "burden_quartile": 0
+      },
+      "0243": {
+        "burden_ml": 21.13668433666229,
+        "fraction_in_bone": 0.27530364372469635,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0244": {
+        "burden_ml": 0.8068369960784912,
+        "fraction_in_bone": 0.015151515151515152,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0245": {
+        "burden_ml": 2.4205109882354736,
+        "fraction_in_bone": 0.2996632996632997,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0246": {
+        "burden_ml": 87.67628690719604,
+        "fraction_in_bone": 0.5875627440044618,
+        "stratum": "low_bone",
+        "burden_quartile": 1
+      },
+      "0249": {
+        "burden_ml": 93.72756437778473,
+        "fraction_in_bone": 0.7913134211556019,
+        "stratum": "low_bone",
+        "burden_quartile": 1
+      },
+      "0250": {
+        "burden_ml": 505.886796541214,
+        "fraction_in_bone": 0.6649509448552511,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0251": {
+        "burden_ml": 139.24050583839417,
+        "fraction_in_bone": 0.6653204565408253,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0252": {
+        "burden_ml": 138.55591687202454,
+        "fraction_in_bone": 0.4312687488971237,
+        "stratum": "high_soft",
+        "burden_quartile": 2
+      },
+      "0255": {
+        "burden_ml": 40.31740019798279,
+        "fraction_in_bone": 0.468465736810188,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0256": {
+        "burden_ml": 0.42379316965738933,
+        "fraction_in_bone": 0.7884615384615384,
+        "stratum": "low_bone",
+        "burden_quartile": 0
+      },
+      "0261": {
+        "burden_ml": 2.970627121925354,
+        "fraction_in_bone": 0.0,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0264": {
+        "burden_ml": 216.03671810150146,
+        "fraction_in_bone": 0.5882752376641014,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0267": {
+        "burden_ml": 774.8813611125946,
+        "fraction_in_bone": 0.7932982046508693,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0268": {
+        "burden_ml": 763.548968758583,
+        "fraction_in_bone": 0.8339070430202212,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0270": {
+        "burden_ml": 862.1664543247223,
+        "fraction_in_bone": 0.7211950202762102,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0271": {
+        "burden_ml": 413.9929526090622,
+        "fraction_in_bone": 0.026044588808504354,
+        "stratum": "high_soft",
+        "burden_quartile": 2
+      },
+      "0276": {
+        "burden_ml": 133.7271196985245,
+        "fraction_in_bone": 0.3757199012706829,
+        "stratum": "high_soft",
+        "burden_quartile": 2
+      },
+      "0285": {
+        "burden_ml": 26.04698019663493,
+        "fraction_in_bone": 0.0,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0286": {
+        "burden_ml": 158.44567130565645,
+        "fraction_in_bone": 0.06781884113880102,
+        "stratum": "high_soft",
+        "burden_quartile": 2
+      },
+      "0291": {
+        "burden_ml": 600.6167947626113,
+        "fraction_in_bone": 0.24060165679509882,
+        "stratum": "high_soft",
+        "burden_quartile": 3
+      },
+      "0292": {
+        "burden_ml": 215.95114448070527,
+        "fraction_in_bone": 0.7273705066515709,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0293": {
+        "burden_ml": 22.05354455947876,
+        "fraction_in_bone": 0.7749445676274944,
+        "stratum": "low_bone",
+        "burden_quartile": 1
+      },
+      "0294": {
+        "burden_ml": 56.73531058788299,
+        "fraction_in_bone": 0.2452057746175393,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0297": {
+        "burden_ml": 1.0635578584671022,
+        "fraction_in_bone": 0.41379310344827586,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0298": {
+        "burden_ml": 11.132720572153728,
+        "fraction_in_bone": 0.02635431918008785,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0299": {
+        "burden_ml": 0.4808422501881917,
+        "fraction_in_bone": 0.0,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0300": {
+        "burden_ml": 239.92398310661315,
+        "fraction_in_bone": 0.14333027616427188,
+        "stratum": "high_soft",
+        "burden_quartile": 2
+      },
+      "0305": {
+        "burden_ml": 666.5696067905426,
+        "fraction_in_bone": 0.7476249862450941,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0313": {
+        "burden_ml": 694.5032815790177,
+        "fraction_in_bone": 0.10705673197092112,
+        "stratum": "high_soft",
+        "burden_quartile": 3
+      },
+      "0314": {
+        "burden_ml": 2.053766899108887,
+        "fraction_in_bone": 0.0,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0315": {
+        "burden_ml": 13.679554524421691,
+        "fraction_in_bone": 0.5898123324396782,
+        "stratum": "low_bone",
+        "burden_quartile": 1
+      },
+      "0319": {
+        "burden_ml": 627.7436325550079,
+        "fraction_in_bone": 0.6442843232716651,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0322": {
+        "burden_ml": 431.53554487228394,
+        "fraction_in_bone": 0.8440509915014164,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0325": {
+        "burden_ml": 20.696591429710388,
+        "fraction_in_bone": 0.22917897223862965,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0327": {
+        "burden_ml": 274.3490282726288,
+        "fraction_in_bone": 0.785491489172088,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0328": {
+        "burden_ml": 1578.6988308572768,
+        "fraction_in_bone": 0.7870589055204082,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0331": {
+        "burden_ml": 621.8635023260117,
+        "fraction_in_bone": 0.33486013092453165,
+        "stratum": "high_soft",
+        "burden_quartile": 3
+      },
+      "0332": {
+        "burden_ml": 199.06869157791138,
+        "fraction_in_bone": 0.7275853598624417,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0335": {
+        "burden_ml": 17.491248090744016,
+        "fraction_in_bone": 0.6410399776348896,
+        "stratum": "low_bone",
+        "burden_quartile": 1
+      },
+      "0336": {
+        "burden_ml": 3.4718440437316893,
+        "fraction_in_bone": 0.18309859154929578,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0337": {
+        "burden_ml": 791.5315427589417,
+        "fraction_in_bone": 0.7468338790387348,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0338": {
+        "burden_ml": 37.48124590873718,
+        "fraction_in_bone": 0.06816699282452707,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0341": {
+        "burden_ml": 3.6796656942367556,
+        "fraction_in_bone": 0.0,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0347": {
+        "burden_ml": 42.847934412956235,
+        "fraction_in_bone": 0.00884450784593438,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0351": {
+        "burden_ml": 26.772318506240847,
+        "fraction_in_bone": 0.0,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0352": {
+        "burden_ml": 23.47977157274882,
+        "fraction_in_bone": 0.021520305449496704,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0356": {
+        "burden_ml": 33.66710738182068,
+        "fraction_in_bone": 0.6423384168482208,
+        "stratum": "low_bone",
+        "burden_quartile": 1
+      },
+      "0359": {
+        "burden_ml": 868.5111270666123,
+        "fraction_in_bone": 0.6391582799634035,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0360": {
+        "burden_ml": 258.958001332283,
+        "fraction_in_bone": 0.5367039607232215,
+        "stratum": "high_bone",
+        "burden_quartile": 2
+      },
+      "0362": {
+        "burden_ml": 1105.9779247760773,
+        "fraction_in_bone": 0.6659445119929258,
+        "stratum": "high_bone",
+        "burden_quartile": 3
+      },
+      "0363": {
+        "burden_ml": 4.189032484690348,
+        "fraction_in_bone": 0.933852140077821,
+        "stratum": "low_bone",
+        "burden_quartile": 0
+      },
+      "0369": {
+        "burden_ml": 55.63507832050324,
+        "fraction_in_bone": 0.0035157108327840037,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0370": {
+        "burden_ml": 3.704115300178528,
+        "fraction_in_bone": 0.14521452145214522,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      },
+      "0371": {
+        "burden_ml": 55.02383817195893,
+        "fraction_in_bone": 0.021106420795378805,
+        "stratum": "low_soft",
+        "burden_quartile": 1
+      },
+      "0378": {
+        "burden_ml": 4.694324340820312,
+        "fraction_in_bone": 0.109375,
+        "stratum": "low_soft",
+        "burden_quartile": 0
+      }
     }
   }
 }

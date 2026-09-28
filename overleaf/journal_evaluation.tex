@@ -5,7 +5,7 @@
 \label{sec:model_selection}
 All experiments below are planned. Settings will be selected on validation patients and frozen before evaluation on test patients.
 The split, endpoints, and analysis rules will be fixed before running the core experiments.
-\todo{Define the validation selection criterion, sweep ranges, compute budgets, and repeat/seed policy. Do not reuse the previous surrogate-set ranking as journal test evidence.}
+\todo{Define the validation selection criterion, sweep ranges, compute budgets, and repeat/seed policy. Do not reuse the previous surrogate-set ranking as test evidence.}
 
 \subsubsection{PET and rigidity ablations.}
 \begin{itemize}
@@ -35,7 +35,7 @@ Select operating points on validation patients and evaluate frozen settings on t
 \label{sec:baselines}
 Re-evaluate the initial alignment, affine registration, NiftyReg~\cite{MODAT2010,modat2014}, and ConvexAdam~\cite{ref_convexadam} on the new test partition under the same evaluation definitions.
 Report the full method with and without IO.
-\todo{Freeze baseline configurations, validation tuning allowances, and runtime measurement. The previous container and surrogate-validation configurations are not journal comparison groups.}
+\todo{Freeze baseline configurations, validation tuning allowances, and runtime measurement. The previous container and surrogate-validation configurations are not comparison groups.}
 
 \subsection{Evaluation Endpoints and Statistical Analysis}
 \label{sec:evaluation}

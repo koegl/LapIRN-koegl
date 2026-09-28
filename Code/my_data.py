@@ -1,4 +1,5 @@
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Dict, Hashable, List, Mapping, Optional, Tuple
 
@@ -307,6 +308,36 @@ def get_train_val_split(
     return train_ids, val_ids
 
 
+def patient_tumour_stats(
+    data_dir: Path, case_id: str, timepoints: List[str]
+) -> Dict[str, float]:
+    """Tumour burden and location of one patient, over all its sessions.
+
+    burden_ml is the mean total tumour volume per session. fraction_in_bone
+    pools the tumour voxels of all sessions and is the share lying on a bone
+    label (synthetic.BONE_LABEL_VALUES) of the CT label map; 0 if the patient
+    has no tumour at all.
+    """
+    label_dir = data_dir / "labelsTr"
+    volumes_ml = []
+    n_tumour = 0
+    n_in_bone = 0
+    for tp in timepoints:
+        tumour_nii = nib.load(label_dir / f"PSMARegPSMA_{case_id}_0001_{tp}.nii.gz")
+        tumour = np.asarray(tumour_nii.dataobj) == 1
+        organs = np.asarray(
+            nib.load(label_dir / f"PSMARegPSMA_{case_id}_0000_{tp}.nii.gz").dataobj
+        )
+        voxel_ml = float(np.prod(tumour_nii.header.get_zooms()[:3])) / 1000.0
+        volumes_ml.append(float(tumour.sum()) * voxel_ml)
+        n_tumour += int(tumour.sum())
+        n_in_bone += int((tumour & np.isin(organs, synthetic.BONE_LABEL_VALUES)).sum())
+    return {
+        "burden_ml": float(np.mean(volumes_ml)),
+        "fraction_in_bone": n_in_bone / n_tumour if n_tumour else 0.0,
+    }
+
+
 def get_train_val_test_split(
     data_dir: Path,
     split_path: Path,
@@ -314,6 +345,10 @@ def get_train_val_test_split(
     seed: int = 0,
     train_intermediate_pairs: bool = True,
     eval_intermediate_pairs: bool = False,
+    bone_fraction_threshold: float = 0.5,
+    n_candidates: int = 10000,
+    max_pair_deviation: float = 0.005,
+    num_workers: int = 8,
 ) -> Tuple[List[str], List[str], List[str]]:
     """Get or create a patient-level train/val/test split of the challenge cases.
 
@@ -323,12 +358,23 @@ def get_train_val_test_split(
     actually uses: train counts a patient's pairs built with
     train_intermediate_pairs, val/test with eval_intermediate_pairs. With
     intermediate pairs a patient with n sessions yields n(n-1)/2 pairs instead
-    of n-1, so splitting by patient count would skew the pair ratio. Patients
-    are visited in a seeded random order and each is assigned to the split
-    furthest behind its target share.
+    of n-1, so splitting by patient count would skew the pair ratio.
+
+    The split is also balanced so that no split is systematically easier or
+    harder. Patients are grouped into four strata by tumour burden (above or
+    below the cohort median of patient_tumour_stats' burden_ml) and lesion
+    location (bone-dominant if fraction_in_bone >= bone_fraction_threshold,
+    else soft tissue), and separately into cohort burden quartiles. n_candidates
+    splits are drawn: each visits the patients in a seeded random order and
+    assigns each to the split furthest behind its target pair share. Among the
+    candidates whose pair fractions are within max_pair_deviation of the
+    targets, the one whose worst deviation of a stratum or quartile share (per
+    split, as a share of its patients) from the cohort share is smallest wins.
+    Shares are compared rather than raw volumes so strata and quartiles weigh
+    the same.
 
     The split is created once and written to split_path; later calls just read
-    it back.
+    it back. Building it reads every tumour and CT label map once.
 
     Returns:
         (train_ids, val_ids, test_ids), each sorted.
@@ -363,18 +409,79 @@ def get_train_val_test_split(
     # a patient without any pair (single session, or no baseline) is unusable
     eligible_ids = [c for c in challenge_ids if n_pairs["val"][c] > 0]
 
-    rng = np.random.default_rng(seed)
-    shuffled = [str(c) for c in rng.permutation(eligible_ids)]
+    with ThreadPoolExecutor(num_workers) as pool:
+        stats = dict(
+            zip(
+                eligible_ids,
+                pool.map(
+                    lambda c: patient_tumour_stats(data_dir, c, case_timepoints[c]),
+                    eligible_ids,
+                ),
+            )
+        )
+    burden_quartiles = np.percentile(
+        [s["burden_ml"] for s in stats.values()], [25, 50, 75]
+    )
+    for case_id in eligible_ids:
+        s = stats[case_id]
+        burden = "high" if s["burden_ml"] >= burden_quartiles[1] else "low"
+        location = "bone" if s["fraction_in_bone"] >= bone_fraction_threshold else "soft"
+        s["stratum"] = f"{burden}_{location}"
+        s["burden_quartile"] = int(
+            np.searchsorted(burden_quartiles, s["burden_ml"], side="right")
+        )
+    # every split should hold each of these groups in the same proportion as
+    # the whole cohort
+    groups = {
+        f"stratum_{st}": {c for c in eligible_ids if stats[c]["stratum"] == st}
+        for st in sorted({s["stratum"] for s in stats.values()})
+    }
+    groups.update(
+        {
+            f"burden_q{q + 1}": {
+                c for c in eligible_ids if stats[c]["burden_quartile"] == q
+            }
+            for q in range(4)
+        }
+    )
+    cohort_shares = {g: len(m) / len(eligible_ids) for g, m in groups.items()}
 
-    assigned: Dict[str, List[str]] = {name: [] for name in names}
-    pair_counts = {name: 0 for name in names}
+    def group_shares(ids: List[str]) -> Dict[str, float]:
+        return {g: len(m.intersection(ids)) / len(ids) for g, m in groups.items()}
+
+    rng = np.random.default_rng(seed)
     target = dict(zip(names, fractions))
-    for case_id in shuffled:
-        # the split furthest behind its target share; ties go to the earlier
-        # split in names
-        name = min(names, key=lambda s: pair_counts[s] / target[s])
-        assigned[name].append(case_id)
-        pair_counts[name] += n_pairs[name][case_id]
+    best = None
+    for _ in range(n_candidates):
+        # each patient goes to the split furthest behind its target pair
+        # share; ties go to the earlier split in names
+        assigned: Dict[str, List[str]] = {name: [] for name in names}
+        pair_counts = {name: 0 for name in names}
+        for case_id in rng.permutation(eligible_ids):
+            name = min(names, key=lambda s: pair_counts[s] / target[s])
+            assigned[name].append(str(case_id))
+            pair_counts[name] += n_pairs[name][case_id]
+
+        total_pairs = sum(pair_counts.values())
+        pair_deviation = max(
+            abs(pair_counts[n] / total_pairs - target[n]) for n in names
+        )
+        if pair_deviation > max_pair_deviation:
+            continue
+        share_deviation = max(
+            abs(share - cohort_shares[g])
+            for n in names
+            for g, share in group_shares(assigned[n]).items()
+        )
+        if best is None or share_deviation < best[0]:
+            best = (share_deviation, assigned, pair_counts)
+
+    if best is None:
+        raise RuntimeError(
+            f"no candidate split within {max_pair_deviation} of the pair "
+            "fractions; raise n_candidates or max_pair_deviation"
+        )
+    share_deviation, assigned, pair_counts = best
 
     total_pairs = sum(pair_counts.values())
     split = {name: sorted(assigned[name]) for name in names}
@@ -382,11 +489,18 @@ def get_train_val_test_split(
         "seed": seed,
         "fractions": list(fractions),
         "intermediate_pairs": intermediate,
+        "n_candidates": n_candidates,
         "n_patients": {name: len(assigned[name]) for name in names},
         "n_pairs": pair_counts,
         "pair_fractions": {
             name: pair_counts[name] / total_pairs for name in names
         },
+        "burden_quartiles_ml": burden_quartiles.tolist(),
+        "bone_fraction_threshold": bone_fraction_threshold,
+        "cohort_group_shares": cohort_shares,
+        "group_shares": {name: group_shares(assigned[name]) for name in names},
+        "max_share_deviation": share_deviation,
+        "patient_stats": stats,
     }
 
     split_path.parent.mkdir(parents=True, exist_ok=True)
