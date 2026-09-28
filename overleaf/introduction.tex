@@ -1,0 +1,41 @@
+\section{Introduction}
+
+Prostate-specific membrane antigen (PSMA) PET/CT has become a central imaging modality for staging, treatment planning, radiopharmaceutical therapy, and post-therapy response assessment in prostate cancer~\cite{ref_psma_clinical}.
+In these settings, patients often undergo multiple scans over time, comprising a baseline scan before therapy and one or more follow-up scans.
+Accurate baseline-to-follow-up registration can support the comparison of disease burden, the localization of uptake changes, the assessment of lesion progression or response, dose accumulation, and quantitative longitudinal analysis~\cite{ref_psmareg_challenge}.
+For such analyses, the deformation should align anatomy without introducing artificial changes in PET-derived tumor burden measures.
+The Learn2Reg~2026 PSMAReg challenge~\cite{ref_learn2reg_alessa,ref_learn2reg_hansen,ref_psmaregdata} formalizes this problem as the estimation of a dense displacement field that warps each follow-up (moving) scan to its baseline (fixed) scan.
+The challenge evaluates registration accuracy using organ overlap and boundary distance, deformation regularity, and preservation of two PET-derived biomarkers: metabolic tumor volume (MTV) and total lesion glycolysis (TLG).
+
+Deformable registration can be formulated as iterative optimization of a regularized objective functional~\cite{ref_demons,ref_syn,bspline}, which can achieve high accuracy but is computationally demanding for whole-body images.
+Learning-based methods instead amortize this optimization into network weights and replace per-pair iteration with a single forward pass at inference~\cite{ref_voxelmorph_cvpr,ref_svf_voxelmorph,ref_transmorph}.
+We therefore build on LapIRN~\cite{ref_lapirn}, whose coarse-to-fine Laplacian pyramid is well suited to recovering the large deformations expected between longitudinal whole-body scans while maintaining smooth and invertible transformations.
+
+
+
+
+
+\begin{journaladdition}
+This journal study builds on our earlier registration pipeline and asks how PET preservation and bone rigidity affect alignment, lesion quantification, and deformation quality.
+Preservation refers to changes introduced by warping the same scan; it does not require uptake or tumor burden to remain equal between longitudinal examinations.
+\todo{Add the citation to the earlier paper and a concise statement of the journal extension.}
+The study is organized around three questions:
+\begin{itemize}
+  \item What are the separate and combined effects of PET preservation and bone rigidity, and what does each PET loss term contribute?
+  \item How do existing rigidity penalties compare in low-resolution whole-body CT, including their effects on bone shape and surrounding tissue?
+  \item How does the strength of PET preservation change the balance between anatomical alignment, lesion preservation, and deformation quality?
+\end{itemize}
+The rigidity study evaluates existing approaches in this setting rather than introducing a new rigidity method.
+\end{journaladdition}
+
+
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{overview.png}
+\caption{Overview of the proposed registration pipeline.
+The moving (follow-up) and fixed (baseline) PET/CT scans are first coarsely aligned by an affine pre-registration, and the resulting pair is then passed to the coarse-to-fine LapIRN network, which predicts a dense deformation field (green grid).
+Finally, after the LapIRN stage, we refine this field per pair by instance optimization (IO) and resample the moving scan with it into the fixed space (warped PET/CT).
+Both stages are driven by the same objective, a weighted sum of three groups of terms: registration accuracy, PET quantification, and deformation regularization (Sec.~\ref{sec:losses}).}
+\label{fig:pipeline}
+\end{figure}

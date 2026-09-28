@@ -1,0 +1,60 @@
+% Prospective journal protocol; replace planning language after experiments.
+\begin{journaladdition}
+\subsection{Experimental Design and Model Selection}
+\label{sec:experiments}
+\label{sec:model_selection}
+All experiments below are planned. Settings will be selected on validation patients and frozen before evaluation on test patients.
+The split, endpoints, and analysis rules will be fixed before running the core experiments.
+\todo{Define the validation selection criterion, sweep ranges, compute budgets, and repeat/seed policy. Do not reuse the previous surrogate-set ranking as journal test evidence.}
+
+\subsubsection{PET and rigidity ablations.}
+\begin{itemize}
+  \item Train the $2\times2$ conditions: neither PET preservation nor rigidity, PET only, rigidity only, and both. Retain the same registration-accuracy and general regularization terms.
+  \item Within the full objective, remove each of $\mathcal{L}_{\mathrm{MTV}}$, $\mathcal{L}_{\mathrm{MTV\text{-}J}}$, $\mathcal{L}_{\mathrm{jac}}$, and $\mathcal{L}_{\mathrm{TLG}}$ individually.
+  \item Prioritize matched training for the central claims. Specify each condition's training and IO objective separately; identify any IO-only ablation as such.
+  \item Report paired effects of PET, rigidity, and their combination on alignment, lesion preservation, and deformation quality; include the PET--rigidity interaction if estimable under the chosen analysis.
+\end{itemize}
+
+\subsubsection{Comparison of rigidity penalties.}
+Compare no rigidity, Staring with all three components~\cite{ref_rigidity_3_staring}, Staring with mask erosion, and the existing Kabsch rigid-fit penalty~\cite{ref_kabsch}.
+Tune or sweep each method's weight separately; equal numerical weights need not imply comparable constraint strength.
+\begin{itemize}
+  \item Document the three Staring components, their scaling, derivative stencils, boundary handling, and coordinate units. Specify the erosion rule and report bones/voxels retained.
+  \item Use alignment versus physical within-bone distance distortion as the main comparison, with folding alongside. Report bone rigidity error (BRE) only as a secondary endpoint because it closely matches the Kabsch objective.
+  \item Measure direct stencil leakage separately from the effect on surrounding tissue. Kabsch avoids direct stencil leakage, but shared deformation parameters and regularization can still influence soft tissue.
+  \item Scope conclusions to the tested resolutions, implementations, and weight ranges.
+\end{itemize}
+
+\subsubsection{Accuracy--preservation trade-off.}
+Run a small PET-weight sweep including zero and the current setting.
+\todo{Specify whether one multiplier scales the whole PET group, which relative term weights remain fixed, and whether each setting is retrained or changes IO only.}
+Plot alignment against lesion preservation and report deformation quality for every setting.
+Select operating points on validation patients and evaluate frozen settings on the test partition, without choosing a preferred setting from test results.
+
+\subsubsection{Baselines.}
+\label{sec:baselines}
+Re-evaluate the initial alignment, affine registration, NiftyReg~\cite{MODAT2010,modat2014}, and ConvexAdam~\cite{ref_convexadam} on the new test partition under the same evaluation definitions.
+Report the full method with and without IO.
+\todo{Freeze baseline configurations, validation tuning allowances, and runtime measurement. The previous container and surrogate-validation configurations are not journal comparison groups.}
+
+\subsection{Evaluation Endpoints and Statistical Analysis}
+\label{sec:evaluation}
+\begin{itemize}
+  \item \textbf{Alignment:} per-bone and soft-tissue organ Dice and surface distance; near-bone landmarks only if independently available. Define aggregation over structures and handling of absent or truncated anatomy.
+  \item \textbf{PET preservation:} aggregate and per-lesion MTV/TLG change from the original moving scan to that same scan after warping. Report signed, absolute, and upper-tail errors, stratified by bone association and lesion size.
+  \item \textbf{Lesion measurement:} define lesions on the source scan and track them through the transformation. Predefine size bins, bone-association rules, minimum denominators, empty-mask handling, field-of-view exclusions, SUV units, and interpolation. Distinguish resampling effects from deformation effects using a specified control.
+  \item \textbf{Bone shape:} measure distortion of sampled within-bone point-pair distances in physical coordinates, covering short and long distances. Predefine sampling, distance bins, and normalization; report BRE secondarily.
+  \item \textbf{Deformation quality:} report NDV/folding inside bones, in an outside boundary band, and across the body. Specify masks, band width in physical units, denominators, and consistent units.
+  \item \textbf{Boundary mechanism:} quantify the fraction of stencil samples outside bone and the fraction of bones/voxels retained after erosion. State how bones that disappear after erosion are handled.
+  \item \textbf{Uncertainty:} report paired method effects with patient-level confidence intervals, accounting for multiple pairs and lesions per patient. A candidate is patient-cluster bootstrap resampling that retains all within-patient observations and method pairing.
+\end{itemize}
+\todo{Freeze primary endpoints and contrasts, the upper-tail statistic, patient weighting, uncertainty procedure, and multiplicity handling before test evaluation. Report evaluable patient/pair/lesion counts and exclusions.}
+
+\subsection{Optional Supporting Analyses}
+\label{sec:optional}
+\begin{itemize}
+  \item \textbf{Gradient analysis:} one loss-pair cosine matrix, selected IO trajectories, and representative maps. Distinguish displacement-space maps from gradients in optimized velocity coordinates; mask near-zero gradients and report weighted magnitudes. Local cosine similarity is not evidence of a final performance trade-off.
+  \item \textbf{External cohort:} include only if feasible. Combine automatic measurements with blinded, randomized clinician review; add sparse landmarks if available. Separate IO labels from independent evaluation. Distinguish resampling from deformation effects.
+\end{itemize}
+These analyses are optional; independent evaluation and the core experiments take priority.
+\end{journaladdition}

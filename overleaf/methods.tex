@@ -1,0 +1,134 @@
+\section{Methods}
+
+\subsection{Data and Preprocessing}
+\label{sec:data_and_preprocessing}
+
+We used the PSMAReg dataset of the Learn2Reg 2026 challenge~\cite{ref_psmareg_challenge}, a longitudinal whole-body PSMA PET/CT cohort in which each subject provides a baseline scan and one or more follow-up scans.
+Each scan contains CT and PSMA PET channels; follow-up scans were treated as moving images and baseline scans as fixed images.
+The images are provided at $2.7344\times2.7344\times3.27$~mm resolution and cropped to $192\times192\times288$ voxels.
+We therefore applied no further geometric preprocessing.
+CT was clipped to $[-1000, 1500]$~HU and PET SUV to $[0, 20]$, followed by rescaling to $[0,1]$.
+
+\begin{journaladdition}
+The journal evaluation will use a patient-level train/validation/test partition of the labelled challenge training dataset, keeping every scan and registration pair from a patient in one partition.
+Registration models and the lesion nnU-Net will be trained only on training patients; validation patients will be used for all tuning and model selection.
+Previously unused patients will preferentially be reserved for testing, and prior patient exposure in pipeline development will be disclosed.
+\todo{Freeze the split manifest; report patients, scans, pairs, and lesions per partition, eligibility criteria, pair direction, and prior exposure. Confirm whether a previously unused test subset is feasible.}
+
+At test time, TotalSegmentator predictions and predictions from the training-only nnU-Net will supply the labels required by instance optimization (IO).
+Provided labels will be reserved for evaluation on test patients and will not enter IO or test-time iterate selection.
+\todo{Document the provenance of the provided organ and lesion labels, the segmentation models and their training data, and any dependence between evaluation annotations and predicted labels.}
+\end{journaladdition}
+Following the ConvexAdam~\cite{ref_convexadam} baseline provided by the challenge organizers, we additionally removed the patient bed and normalized the CT images.
+
+
+
+
+\subsection{Registration Pipeline}
+\label{sec:pipeline}
+Our pipeline consists of CT-based affine pre-registration, LapIRN-based deformable registration, and optional test-time instance optimization (Fig.~\ref{fig:pipeline}).
+Throughout, $I$ denotes the moving PET image, $M$ its lesion mask, $\varphi_{\mathrm{aff}}$ the affine pre-registration, $\varphi_{\theta}$ the network-predicted deformation, and $\varphi$ their composition.
+$W$ is the lesion mask warped into the fixed frame.
+
+\subsubsection{Step 1: Affine pre-registration.}
+For each pair, ANTs~\cite{ants} estimates an affine transform from the CT images alone, using body masks, CT windowing to $[-1000,1000]$~HU, half-resolution images, and Mattes mutual information.
+The transform is converted to a dense displacement field and applied to the moving scan.
+
+\subsubsection{Step 2: Deformable registration.}
+The deformable stage uses LapIRN~\cite{ref_lapirn}, with three pyramid levels operating at quarter, half, and full resolution.
+Each level predicts a stationary velocity field, adds it to the upsampled velocity from the coarser level, \journal{and exponentiates the result by scaling and squaring to obtain $\varphi_{\theta}$.}
+To handle PSMA PET/CT, each sub-network receives four channels: fixed CT and PET, and affinely aligned moving CT and PET.
+The similarity loss is computed only on CT, because PET uptake may change after therapy; PET is used as input and in the preservation terms of Sec.~\ref{sec:losses}.
+The levels are trained sequentially, with each finer level initialized from the previous one.
+
+\subsubsection{Step 3: Instance optimization.}
+At test time, each pair is refined by optimizing a residual stationary velocity field on top of the network prediction.
+\begin{journaladdition}
+The residual is initialized to zero and exponentiated by scaling and squaring.
+The velocity formulation targets diffeomorphic transformations; discrete folding will nevertheless be measured explicitly.
+IO will use the objective appropriate to each experimental condition (Sec.~\ref{sec:experiments}).
+Its stopping and iterate-selection rule will be chosen on validation patients and frozen before testing; test evaluation labels will not be used to score or select iterates.
+\todo{Specify optimized variables, learning rate, iteration budget, and stopping/selection rule, including which predicted-label quantities it may use.}
+\end{journaladdition}
+
+
+\subsection{\journal{Registration Objective}}
+\label{sec:losses}
+We use a weighted sum of three loss groups, one per evaluation criterion:
+\begin{equation}
+  \begin{aligned}
+    \mathcal{L} = \;
+      & \underbrace{\lambda_{\mathrm{NCC}}\,\mathcal{L}_{\mathrm{NCC}}
+      + \lambda_{\mathrm{DSC}}\,\mathcal{L}_{\mathrm{DSC}}}_{\text{registration accuracy}} \\
+      & + \underbrace{\lambda_{\mathrm{MTV}}\,\mathcal{L}_{\mathrm{MTV}}
+      + \lambda_{\mathrm{MTV\text{-}J}}\,\mathcal{L}_{\mathrm{MTV\text{-}J}}
+      + \lambda_{\mathrm{jac}}\,\mathcal{L}_{\mathrm{jac}}
+      + \lambda_{\mathrm{TLG}}\,\mathcal{L}_{\mathrm{TLG}}}_{\text{PET quantification}} \\
+      & + \underbrace{\lambda_{\mathrm{rigid}}\,\mathcal{L}_{\mathrm{rigid}}
+      + \lambda_{\mathrm{smooth}}\,\mathcal{L}_{\mathrm{smooth}}
+      + \lambda_{\mathrm{NDV}}\,\mathcal{L}_{\mathrm{NDV}}}_{\text{deformation regularization}} .
+  \end{aligned}
+  \label{eq:total}
+\end{equation}
+Each group is described below.
+All terms are evaluated on the composed transformation $\varphi$.
+Only the full-resolution level is trained with the complete objective.
+The two coarser levels (quarter and half resolution) use only the similarity, label, and regularization terms; thus $\lambda_{\mathrm{MTV}} = \lambda_{\mathrm{MTV\text{-}J}} = \lambda_{\mathrm{jac}} = \lambda_{\mathrm{TLG}} = \lambda_{\mathrm{rigid}} = 0$.
+We omit the PET and bone-specific terms at these resolutions because downsampled lesions and thin ribs span only a few voxels, so volume ratios and per-structure rigid fits mainly reflect interpolation rather than anatomy.
+
+\subsubsection{Registration Accuracy.}
+Image similarity is measured using local normalized cross-correlation (NCC), computed as a multi-resolution sum over as many scales as the respective pyramid level has resolutions, i.e.\ one scale at the coarsest and three at the full-resolution level.
+NCC is computed on the CT channel only, since PET uptake can change substantially between time points, and a PET similarity term could therefore encourage matching disease-related uptake rather than anatomy.
+We additionally use a DSC loss for weak supervision from the CT organ labels.
+
+
+
+
+\subsubsection{Preservation of PET quantification.}
+
+\begin{journaladdition}
+PET preservation compares the moving scan before and after transformation, using the same source lesion definition.
+The direct MTV term, $\mathcal{L}_{\mathrm{MTV}}$, penalizes the squared relative difference between the volume of the resampled lesion mask and its original volume.
+\todo{Write the exact equations for all four PET terms and verify them against the implementation: transformation direction, Jacobian convention, mask interpolation, physical voxel volumes, reduction, and stabilization for empty or tiny lesions. Distinguish normalized/clipped PET used for training from SUV used for evaluation.}
+\end{journaladdition}
+All terms are evaluated on the composed transformation $\varphi$ and the original moving lesion mask $M$.
+
+To additionally constrain the deformation within the lesion, we use $\mathcal{L}_{\mathrm{MTV\text{-}J}}$, which penalizes deviations of the mean Jacobian determinant over the warped lesion region $W$ from one.
+A third term, $\mathcal{L}_{\mathrm{jac}}$, penalizes per-voxel deviations of the Jacobian determinant from one and therefore discourages local compensating compression and expansion.
+
+TLG is penalized analogously by $\mathcal{L}_{\mathrm{TLG}}$, the relative change in PET intensity mass within the lesion before and after warping.
+Because both the PET image and the lesion mask are transformed, this term captures changes in lesion volume and in intensity interpolation.
+\journal{The full-objective condition uses all four PET preservation terms during training and instance optimization; the ablations remove the specified terms.}
+
+
+
+\subsubsection{Bone rigidity.}
+Many lesions lie within skeletal structures, where rigid motion is physiologically plausible and preserves both volume and intensity ($\det J_{\varphi} = 1$).
+\journal{We therefore penalize departures from rigid motion within each skeletal structure.}
+For the 61 skeletal TotalSegmentator labels, we fit the displacement of each structure independently with a rigid transformation using closed-form Kabsch alignment~\cite{ref_kabsch,ref_umeyama} and penalize the residual.
+This constrains the deformation within each structure while allowing independent motion between structures.
+
+
+\subsubsection{Deformation regularization.}
+We regularize the displacement field using a diffusion term, $\mathcal{L}_{\mathrm{smooth}}$, defined as the mean squared spatial gradient of the displacement, together with a penalty for non-diffeomorphic voxels.
+For the latter, we differentiably reproduce the challenge's non-diffeomorphic volume (NDV) metric, which decomposes each voxel into six tetrahedra and accumulates the negative part of their Jacobian determinants over the body mask~\cite{Liu2024}.
+The resulting $\mathcal{L}_{\mathrm{NDV}}$ directly corresponds to the scored percentage of non-diffeomorphic volume and provides gradients at the locations where folding occurs.
+
+
+\input{journal_evaluation}
+
+\subsection{Implementation Details}
+\label{sec:infrastructure}
+Augmentations were chosen to mimic longitudinal variability: left--right flipping ($p=0.5$), CT intensity shifting by $\pm0.02$ in the normalized window (about $\pm50$~HU), CT scaling from $0.9$ to $1.1$, and PET scaling from $0.85$ to $1.15$ without additive shifts.
+To simulate a field-of-view mismatch, we crop up to 40 axial slices from either end of both scans, followed by independent moving and fixed crops of up to 10 additional slices.
+
+\begin{journaladdition}
+\paragraph{Training configuration to confirm.}
+The previous pipeline used sequential Adam training for $60$k, $60$k, and $120$k steps, learning rates of $3\cdot10^{-4}$, $2\cdot10^{-4}$, and $2.5\cdot10^{-4}$, batch size one, and gradient accumulation over four steps.
+These are starting settings for the journal retraining, not completed journal experiments.
+\begin{itemize}
+  \item Confirm the warmup and coarse-level freezing schedule, augmentations, loss weights, and random seeds. Keep the training budget and shared settings matched across central ablations.
+  \item Record mixed precision, transformation precision, final software versions, hardware, training time, and per-pair inference/IO time for the new runs.
+  \item Confirm which pyramid levels use PET and rigidity terms in each condition.
+\end{itemize}
+\end{journaladdition}

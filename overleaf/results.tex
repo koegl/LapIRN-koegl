@@ -1,0 +1,49 @@
+\section{\journal{Results}}
+\begin{journaladdition}
+\noindent\textit{Journal draft: experiments are pending. All tables and figures below are planned outputs, not findings. The previous evaluation and leaderboard results have been removed because they used a different protocol.}
+
+\subsection{Independent-Test Comparison}
+\begin{itemize}
+  \item Report the final cohort, exclusions, and evaluable structures/lesions.
+  \item Compare baselines and the full model with and without IO on the frozen test partition (Table~\ref{tab:journal_baselines}).
+  \item Add paired patient-level effects and uncertainty; describe alignment, preservation, folding, and runtime without selecting a winner from test results.
+\end{itemize}
+\end{journaladdition}
+\input{tables/journal_baselines}
+
+\begin{journaladdition}
+\subsection{Separate and Combined Effects of PET Preservation and Rigidity}
+\label{sec:ablation}
+\begin{itemize}
+  \item Fill the matched-training $2\times2$ comparison and the four PET-term removal conditions (Table~\ref{tab:journal_ablations}).
+  \item Report aggregate versus per-lesion changes; check whether aggregate cancellation hides large individual errors.
+  \item Show signed, absolute, and upper-tail errors by lesion size and bone association (Fig.~\ref{fig:journal_lesions}).
+\end{itemize}
+\end{journaladdition}
+\input{tables/journal_ablations}
+\input{figures/journal_lesion_preservation}
+
+\begin{journaladdition}
+\subsection{Rigidity Comparison and Boundary Effects}
+\begin{itemize}
+  \item Compare each rigidity method over its own weight range: bone/organ alignment, distance distortion, regional folding, and secondary BRE.
+  \item Relate stencil leakage and erosion retention to the observed outcomes without assuming a mechanism in advance (Fig.~\ref{fig:journal_rigidity}).
+  \item Include representative bone-boundary examples under a documented case-selection rule.
+\end{itemize}
+\end{journaladdition}
+\input{figures/journal_rigidity_comparison}
+
+\begin{journaladdition}
+\subsection{Accuracy--Preservation Trade-off}
+\begin{itemize}
+  \item Show the predeclared PET-weight settings and their patient-level uncertainty (Fig.~\ref{fig:journal_tradeoff}).
+  \item Identify the validation-selected operating point and report its frozen test performance.
+  \item Discuss whether preservation changes alignment or folding, including heterogeneous lesion responses.
+\end{itemize}
+\end{journaladdition}
+\input{figures/journal_pet_tradeoff}
+
+\begin{journaladdition}
+\subsection{Optional Supporting Results}
+\todo{Include gradient analysis and/or external-cohort results only if completed; otherwise remove this subsection. Do not imply external validation from surrogate measurements alone.}
+\end{journaladdition}
