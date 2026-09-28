@@ -670,7 +670,7 @@ def evaluate_split(
     hd95s_before: Dict[str, float] = {}
     per_case: Dict[str, Dict[int, float]] = {}
     runtimes: Dict[str, float] = {}
-    for case_id in tqdm.tqdm(subjects, desc=desc, ncols=150):
+    for case_id in tqdm.tqdm(subjects, desc=desc, ncols=100):
         (
             dice_after,
             dice_before,
@@ -1279,9 +1279,10 @@ models_to_evaluate = [
     # "PSMAReg_LapIRN_nervous-pig-39235734_stagelvl3_best_combined.pth",
     # "PSMAReg_LapIRN_angry-mare-39459564_stagelvl3_best_combined.pth",
     # "PSMAReg_LapIRN_auspicious-sloth-39469081_stagelvl3_best_accuracy.pth",
-    "PSMAReg_LapIRN_auspicious-sloth-39469081_stagelvl3_best_combined.pth",
+    # "PSMAReg_LapIRN_auspicious-sloth-39469081_stagelvl3_best_combined.pth",
     # "PSMAReg_LapIRN_treasured-deer-39462712_stagelvl3_best_accuracy.pth",
     # "PSMAReg_LapIRN_treasured-deer-39462712_stagelvl3_best_combined.pth",
+    "PSMAReg_LapIRN_PSMAReg_LapIRN-39837839_stagelvl3_best_combined.pth",
 ]
 
 # each inner list is one ensemble: the velocity fields of its models are
@@ -1417,9 +1418,9 @@ def main() -> None:
     # --- what to evaluate ---
     eval_official: bool = True
     eval_my_val: bool = False
-    baselines_done: bool = False
+    baselines_done: bool = True
 
-    use_io: bool = True
+    use_io: bool = False
     io_label_free: bool = False
     include_pet: bool = True
     include_rigidity: bool = False
@@ -1435,7 +1436,7 @@ def main() -> None:
     # scores a directory of submission-format fields (ConvexAdam or NiftyReg)
     # through the same metrics and csvs as every model.
     eval_external: bool = False
-    external_baseline: str = "niftyreg"
+    external_baseline: str = "convexadam"
     external_disp_dirs: Dict[str, Path] = {
         "convexadam": convexadam_disp_dir,
         "niftyreg": niftyreg_disp_dir,
@@ -1669,7 +1670,6 @@ def main() -> None:
             run_baseline("affine", baseline_polyaffine=False)
             # run_baseline("polyaffine", baseline_polyaffine=True)
             baselines_done = True
-        return
 
         if eval_official:
             # print("warning: reducing number of my val subjects")

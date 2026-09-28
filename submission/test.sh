@@ -8,7 +8,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-IMAGE="${IMAGE:-psmareg_lapirn}"
+IMAGE="${IMAGE:-psmareg_koegl}"
 DATA_DIR="${DATA_DIR:-/home/iml/fryderyk.koegl/data/PSMAReg/PSMAReg_dataset/imagesTs}"
 OUTPUT_DIR="${OUTPUT_DIR:-$REPO_ROOT/submission/validation_predictions}"
 DATASET_JSON="${DATASET_JSON:-$REPO_ROOT/submission/PSMAReg_val_dataset.json}"

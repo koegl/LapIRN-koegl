@@ -531,6 +531,7 @@ def run_io(
     opt_shape: Optional[Tuple[int, int, int]] = None,
     history_csv: Optional[Path] = None,
     deadline: Optional[float] = None,
+    step_callback: Optional[Callable[[int, torch.Tensor], None]] = None,
 ) -> torch.Tensor:
     # `deadline` is an absolute time.time() value by which this function must
     # have returned, or None for "run all cfg.io_it steps regardless" (training,
@@ -636,6 +637,8 @@ def run_io(
         disp_unit = svf_to_disp(
             base, velocity, identity_vox, cfg, n_integration, shape=var_shape
         )
+        if step_callback is not None:
+            step_callback(i, to_full(disp_unit).detach())
         loss, logs = compute_io_loss(
             to_full(disp_unit),
             y,
@@ -714,9 +717,22 @@ def run_io(
     # rather than a second return value: run_io has four call sites and only the
     # submission container cares, so widening the signature would churn the rest.
     run_io.steps_taken = len(history)
+    run_io.best_step = best_disp_i
+
+    # `step_callback(i, field)` sees the full-res field each step is evaluated
+    # at (after i updates), and once more after the loop with the field after
+    # the final update, which the loop itself never evaluates (so it is not a
+    # best-step candidate). For diagnostics only; the optimisation is unchanged.
+    if step_callback is not None:
+        with torch.no_grad():
+            final = svf_to_disp(
+                base, velocity, identity_vox, cfg, n_integration, shape=var_shape
+            )
+            step_callback(len(history), to_full(final))
 
     refined = best_disp
     return refined
 
 
 run_io.steps_taken = 0
+run_io.best_step = 0
