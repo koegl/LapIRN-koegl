@@ -377,13 +377,13 @@ def create_datasets(
     dict,
 ]:
 
-    train_ids, val_ids = my_data.get_train_val_split(
+    # test_ids are never loaded during training; they are only logged so the
+    # run records which patients it must not be evaluated on
+    train_ids, val_ids, test_ids = my_data.get_train_val_test_split(
         data_dir=config.data_dir,
-        split_path=config.split_path,
-        val_fraction=config.val_fraction,
-        tubingen=False,
-        nlst=False,
-        abdomen=False,
+        split_path=config.split_path_journal,
+        fractions=config.split_fractions,
+        seed=config.split_seed,
     )
     train_ids_tubingen, val_ids_tubingen = my_data.get_train_val_split(
         data_dir=config.data_dir,
@@ -415,6 +415,7 @@ def create_datasets(
             config.data_dir,
             exclude_case_ids=train_ids
             + val_ids
+            + test_ids
             + train_ids_tubingen
             + val_ids_tubingen
             + train_ids_nlst
@@ -435,6 +436,8 @@ def create_datasets(
     config_to_log["val_indices_tubingen"] = val_ids_tubingen
     config_to_log["val_indices_nlst"] = val_ids_nlst
     config_to_log["val_indices_abdomen"] = val_ids_abdomen
+
+    config_to_log["test_indices"] = test_ids
 
     val_dataset_tubingen = None
     val_dataset_nlst = None

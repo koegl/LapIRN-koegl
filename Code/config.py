@@ -27,6 +27,10 @@ class TrainingConfig:
     cache_dir_poly = DATA_PATH / "PSMAReg/poly_cache"
     split_path = repo_dir / "split.json"
     val_fraction: float = 0.15
+    # patient-level train/val/test split of the challenge cases (journal)
+    split_path_journal = repo_dir / "split_journal.json"
+    split_fractions: Tuple[float, float, float] = (0.70, 0.15, 0.15)
+    split_seed: int = 0
     use_cache_train_real: bool = True
     use_cache_train_synthetic: bool = True
     use_cache_valid: bool = True

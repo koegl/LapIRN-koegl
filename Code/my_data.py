@@ -307,6 +307,95 @@ def get_train_val_split(
     return train_ids, val_ids
 
 
+def get_train_val_test_split(
+    data_dir: Path,
+    split_path: Path,
+    fractions: Tuple[float, float, float] = (0.70, 0.15, 0.15),
+    seed: int = 0,
+    train_intermediate_pairs: bool = True,
+    eval_intermediate_pairs: bool = False,
+) -> Tuple[List[str], List[str], List[str]]:
+    """Get or create a patient-level train/val/test split of the challenge cases.
+
+    Only challenge cases (ids starting with "0") are split. Patients are the
+    unit of assignment, so no patient contributes pairs to more than one split,
+    but the fractions are targets on the number of registration pairs each split
+    actually uses: train counts a patient's pairs built with
+    train_intermediate_pairs, val/test with eval_intermediate_pairs. With
+    intermediate pairs a patient with n sessions yields n(n-1)/2 pairs instead
+    of n-1, so splitting by patient count would skew the pair ratio. Patients
+    are visited in a seeded random order and each is assigned to the split
+    furthest behind its target share.
+
+    The split is created once and written to split_path; later calls just read
+    it back.
+
+    Returns:
+        (train_ids, val_ids, test_ids), each sorted.
+    """
+    if split_path.exists():
+        with open(split_path, "r") as f:
+            split = json.load(f)
+        return split["train"], split["val"], split["test"]
+
+    case_timepoints = list_case_timepoints(data_dir)
+    challenge_ids = sorted(c for c in case_timepoints if c.startswith("0"))
+
+    def count_pairs(case_id: str, intermediate: bool) -> int:
+        return len(
+            build_registration_pairs(
+                case_timepoints,
+                case_ids=[case_id],
+                include_intermediate_pairs=intermediate,
+            )
+        )
+
+    names = ("train", "val", "test")
+    intermediate = {
+        "train": train_intermediate_pairs,
+        "val": eval_intermediate_pairs,
+        "test": eval_intermediate_pairs,
+    }
+    n_pairs = {
+        name: {c: count_pairs(c, intermediate[name]) for c in challenge_ids}
+        for name in names
+    }
+    # a patient without any pair (single session, or no baseline) is unusable
+    eligible_ids = [c for c in challenge_ids if n_pairs["val"][c] > 0]
+
+    rng = np.random.default_rng(seed)
+    shuffled = [str(c) for c in rng.permutation(eligible_ids)]
+
+    assigned: Dict[str, List[str]] = {name: [] for name in names}
+    pair_counts = {name: 0 for name in names}
+    target = dict(zip(names, fractions))
+    for case_id in shuffled:
+        # the split furthest behind its target share; ties go to the earlier
+        # split in names
+        name = min(names, key=lambda s: pair_counts[s] / target[s])
+        assigned[name].append(case_id)
+        pair_counts[name] += n_pairs[name][case_id]
+
+    total_pairs = sum(pair_counts.values())
+    split = {name: sorted(assigned[name]) for name in names}
+    split["meta"] = {
+        "seed": seed,
+        "fractions": list(fractions),
+        "intermediate_pairs": intermediate,
+        "n_patients": {name: len(assigned[name]) for name in names},
+        "n_pairs": pair_counts,
+        "pair_fractions": {
+            name: pair_counts[name] / total_pairs for name in names
+        },
+    }
+
+    split_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(split_path, "w") as f:
+        json.dump(split, f, indent=2)
+
+    return split["train"], split["val"], split["test"]
+
+
 def list_single_session_sources(
     data_dir: Path,
     exclude_case_ids: Optional[List[str]] = None,
