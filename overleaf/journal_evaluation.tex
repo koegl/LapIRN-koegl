@@ -64,6 +64,7 @@ Following the official challenge implementation, both are reported as absolute p
   \qquad Q\in\{\mathrm{MTV},\mathrm{TLG}\}.
   \label{eq:official_pet_error}
 \end{equation}
+Both official errors are aggregate scan-level measures: biomarker increases in some lesions and decreases in others can cancel before the absolute difference is taken, yielding a small aggregate error despite substantial individual lesion errors.
 Because PET and the lesion mask are interpolated separately before multiplication, $E_{\mathrm{TLG}}$ captures both deformation-related changes and resampling effects at the lesion boundary.
 
 \subsubsection{Metric implementation validation.}
@@ -78,8 +79,8 @@ These controls define a numerical resampling baseline and are not treated as reg
 
 \begin{itemize}
   \item \textbf{Alignment:} per-bone and soft-tissue organ Dice and surface distance; near-bone landmarks only if independently available. Define aggregation over structures and handling of absent or truncated anatomy.
-  \item \textbf{PET preservation:} aggregate and per-lesion MTV/TLG error from the original moving scan to that same scan after warping. Use the official absolute percentage errors, together with upper-tail errors stratified by bone association and lesion size.
-  \item \textbf{Lesion measurement:} define lesions on the source scan and track them through the transformation. Predefine size bins, bone-association rules, minimum denominators, empty-mask handling, field-of-view exclusions, SUV units, and interpolation. Distinguish resampling effects from deformation effects using a specified control.
+  \item \textbf{PET preservation:} retain the official aggregate MTV/TLG errors as primary endpoints. Additionally compute absolute MTV/TLG error for each source lesion, summarize lesion errors within each patient before cohort-level aggregation, and report a predeclared upper-tail statistic stratified by bone association and lesion size. Compare aggregate and per-lesion summaries to assess cancellation without changing the official endpoint.
+  \item \textbf{Lesion measurement:} define lesions on the source scan and track them through the transformation. Retain one analysis row per registration pair and lesion, but give patients equal weight in cohort summaries so patients with many scans or lesions do not dominate. Predefine size bins, bone-association rules, minimum denominators, empty-mask handling, field-of-view exclusions, SUV units, and interpolation. Distinguish resampling effects from deformation effects using a specified control.
   \item \textbf{Bone shape:} measure distortion of sampled within-bone point-pair distances in physical coordinates, covering short and long distances. Predefine sampling, distance bins, and normalization; report BRE secondarily.
   \item \textbf{Deformation quality:} report NDV/folding inside bones, in an outside boundary band, and across the body. Specify masks, band width in physical units, denominators, and consistent units.
   \item \textbf{Boundary mechanism:} quantify the fraction of stencil samples outside bone and the fraction of bones/voxels retained after erosion. State how bones that disappear after erosion are handled.
