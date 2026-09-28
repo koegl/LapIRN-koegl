@@ -30,3 +30,4 @@ submission_results/niftyreg/logs/*
 submission/validation_predictions/segmentations/*.nii.gz
 submission/validation_predictions/*.nii.gz
 submission/*.tar.gz
+.codex_tmp/*
