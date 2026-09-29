@@ -93,7 +93,7 @@ class TrainingConfig:
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
     warmup_epochs: float = 5
-    start_channel: int = 7
+    start_channel: int = 24
 
     # Per-level res-block trunk capacity, independent of start_channel (so no
     # inter-level tensor shape changes).
@@ -105,8 +105,8 @@ class TrainingConfig:
     #   *_resblock_expansion -> inverted bottleneck inside each block: conv1
     #                          lifts to 4x*expansion channels, conv2 projects
     #                          back. Roughly multiplies per-block params.
-    n_resblocks: int = 5  # 5
-    resblock_expansion: int = 1  # 1
+    n_resblocks: int = 10  # 5
+    resblock_expansion: int = 2  # 1
 
     # PWC-Net style local cost volume in lvl1, fused into the res-block trunk.
     #   "off"  -> baseline
@@ -129,8 +129,8 @@ class TrainingConfig:
     cost_volume_out_channels: int = 16
 
     # train val
-    total_steps_lvl1: int = 100000
-    total_steps_lvl2: int = 100000
+    total_steps_lvl1: int = 1  # 100000
+    total_steps_lvl2: int = 1  # 100000
     total_steps_lvl3: int = 140000
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
@@ -150,6 +150,10 @@ class TrainingConfig:
     sel_scale_dice_ct: float = 0.0090181
     sel_scale_mtv: float = 0.0051981
     sel_scale_tlg: float = 0.0050091
+    # model selection for all runs: the best_accuracy_capped checkpoint is the
+    # best accuracy score among validation rounds with mean %NDV (same units as
+    # valid_lvl3/val_ndv) at or below this cap
+    sel_max_ndv_percent: float = 0.00014
 
     # --- HD95 validation logging ------------------------------------------
     hd95_spacing_mm: Tuple[float, float, float] = (2.7344, 2.7344, 3.27)
@@ -245,6 +249,11 @@ class TrainingConfig:
     w_rig_det: float = 1.0
     w_rig_ortho: float = 1.0
     w_rig_affine: float = 1.0
+
+    #   use_tumour_losses -> w_mtv, w_mtv_avg, w_tlg, w_jacobian_tumor
+    #   use_rigidity_loss -> w_bone_rigidity
+    use_tumour_losses: bool = False
+    use_rigidity_loss: bool = False
     # Swap the local finite-difference rigidity term for a per-label rigid fit
     # (utils.per_label_rigid_loss). The old term's stencils read one voxel past
     # the mask, so ~53% of the voxels entering it were soft tissue and ~45% of
@@ -256,7 +265,7 @@ class TrainingConfig:
     use_per_label_rigidity: bool = True
     # labels smaller than this are skipped: the rigid fit is ill-posed
     rigidity_min_voxels: int = 50
-    w_dvf: float = 100.0
+    w_dvf: float = 0.0
 
     # --- auxiliary PET-tumour segmentation head (lvl3 only) ---------------
     # A second head on the lvl3 trunk predicts the fixed and the (lvl2-warped)

@@ -347,12 +347,17 @@ def evaluate_lvl3(
                 loss_multiNCC
                 + config.w_non_diff * loss_non_diff
                 + config.w_smooth * loss_regulation
-                + config.w_tlg * loss_tlg
-                + config.w_mtv * loss_mtv**2
-                + config.w_mtv_avg * loss_mtv_avg
-                + config.w_jacobian_tumor * loss_jacobian_tumor
-                + config.w_bone_rigidity * loss_rigidity
             )
+            if config.use_tumour_losses:
+                loss = (
+                    loss
+                    + config.w_tlg * loss_tlg
+                    + config.w_mtv * loss_mtv**2
+                    + config.w_mtv_avg * loss_mtv_avg
+                    + config.w_jacobian_tumor * loss_jacobian_tumor
+                )
+            if config.use_rigidity_loss:
+                loss = loss + config.w_bone_rigidity * loss_rigidity
             if loss_dice_ct is not None:
                 loss = loss + config.w_dice_ct_lvl3 * loss_dice_ct
             if loss_dice_pet is not None:
@@ -457,7 +462,12 @@ def train_lvl3(
     best_accuracy = float("-inf")
     best_tumour = float("inf")
     best_combined = float("-inf")
+    best_accuracy_capped = float("-inf")
     config.model_save_dir.mkdir(parents=True, exist_ok=True)
+    best_accuracy_capped_model_path = (
+        config.model_save_dir
+        / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best_accuracy_capped.pth"
+    )
     best_accuracy_model_path = (
         config.model_save_dir
         / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best_accuracy.pth"
@@ -490,6 +500,10 @@ def train_lvl3(
     best_combined_optimizer_path = (
         config.model_save_dir
         / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best_combined_optimizer.pth"
+    )
+    best_accuracy_capped_optimizer_path = (
+        config.model_save_dir
+        / f"{config.mlflow_experiment}_{run_name}_stagelvl3_best_accuracy_capped_optimizer.pth"
     )
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -593,6 +607,7 @@ def train_lvl3(
         best_accuracy = opt_ckpt.get("best_accuracy", float("-inf"))
         best_tumour = opt_ckpt.get("best_tumour", float("inf"))
         best_combined = opt_ckpt.get("best_combined_final", float("-inf"))
+        best_accuracy_capped = opt_ckpt.get("best_accuracy_capped", float("-inf"))
 
     train_iter = utils.cycle(train_generator)
 
@@ -900,21 +915,24 @@ def train_lvl3(
 
         moving_pet_mask = (X_lbl_pet == 1).float()
         moving_pet_mask_orig = (X_lbl_pet_orig == 1).float()
-        # tumour-jac on det(J_total): the residual-only det(J) was blind to
-        # volume changes the pre-registration introduced (det(A) != 1)
-        if is_synthetic:
-            jac_det_total = jac_det
-        else:
-            jac_det_total, _ = jacobian.jacobian_matrix(flow_total_norm)
-        # det(J_total) lives on the fixed grid, so mask it with the
-        # fixed-frame lesion (the composed-warped mask)
-        with torch.no_grad():
-            warped_pet_mask_hard = transform_nearest(
-                moving_pet_mask_orig, flow_total, grid_full
+        if config.use_tumour_losses:
+            # tumour-jac on det(J_total): the residual-only det(J) was blind to
+            # volume changes the pre-registration introduced (det(A) != 1)
+            if is_synthetic:
+                jac_det_total = jac_det
+            else:
+                jac_det_total, _ = jacobian.jacobian_matrix(flow_total_norm)
+            # det(J_total) lives on the fixed grid, so mask it with the
+            # fixed-frame lesion (the composed-warped mask)
+            with torch.no_grad():
+                warped_pet_mask_hard = transform_nearest(
+                    moving_pet_mask_orig, flow_total, grid_full
+                )
+            loss_jacobian_tumor = utils.masked_jac_det_loss(
+                jac_det_total, warped_pet_mask_hard
             )
-        loss_jacobian_tumor = utils.masked_jac_det_loss(
-            jac_det_total, warped_pet_mask_hard
-        )
+        else:
+            loss_jacobian_tumor = torch.zeros((), device=device)
 
         bone_labels_tensor = torch.tensor(
             synthetic.BONE_LABEL_VALUES, device=device, dtype=X_lbl_ct.dtype
@@ -926,7 +944,7 @@ def train_lvl3(
         loss_rig_worst = zero_rig
         rig_worst_label = zero_rig
         n_rig_labels = zero_rig
-        if batch["is_abdomen"]:
+        if batch["is_abdomen"] or not config.use_rigidity_loss:
             loss_rigidity = zero_rig
         elif config.use_per_label_rigidity:
             # rigidity on the TOTAL field over the FIXED-frame bones: no label
@@ -1022,6 +1040,9 @@ def train_lvl3(
         if is_synthetic:
             loss_dvf = ((F_X_Y - gt_unit) ** 2).mean()
             loss = loss + config.w_dvf * loss_dvf
+        else:
+            loss_dvf = torch.zeros((), device=device)
+        if is_synthetic or not config.use_tumour_losses:
             loss_mtv = torch.zeros((), device=device)
             loss_tlg = torch.zeros((), device=device)
             loss_mtv_avg = torch.zeros((), device=device)
@@ -1049,7 +1070,6 @@ def train_lvl3(
                 + config.w_mtv * loss_mtv**2
                 + config.w_mtv_avg * loss_mtv_avg
             )
-            loss_dvf = torch.zeros((), device=device)
 
         # meta-learned / unrolled IO: run a few differentiable IO steps starting
         # from the net's output and add the loss on the *refined* field. This
@@ -1493,7 +1513,7 @@ def train_lvl3(
             )
 
             def save_selected(model_path: Path, optimizer_path: Path) -> None:
-                # every optimizer checkpoint carries all three bests, so a resume
+                # every optimizer checkpoint carries all bests, so a resume
                 # from any of them will not re-save worse checkpoints over better
                 torch.save(model.state_dict(), model_path)
                 torch.save(
@@ -1503,6 +1523,7 @@ def train_lvl3(
                         "best_accuracy": best_accuracy,
                         "best_tumour": best_tumour,
                         "best_combined_final": best_combined,
+                        "best_accuracy_capped": best_accuracy_capped,
                     },
                     optimizer_path,
                 )
@@ -1516,6 +1537,25 @@ def train_lvl3(
                     f"step {global_step}: new best accuracy {best_accuracy:.4f} "
                     f"(dice_ct {val_losses['dice_ct']:.4f} "
                     f"hd95 {val_losses['hd95']:.4f}) -> saved best_accuracy"
+                )
+
+            # the model-selection rule used for every run: best accuracy among
+            # rounds whose validation %NDV stays under the cap. Neutral to the
+            # PET/rigidity terms, so ablations are not selected on the effect
+            # they are measuring.
+            if (
+                val_losses["ndv"] <= config.sel_max_ndv_percent
+                and accuracy_score > best_accuracy_capped
+            ):
+                best_accuracy_capped = accuracy_score
+                save_selected(
+                    best_accuracy_capped_model_path,
+                    best_accuracy_capped_optimizer_path,
+                )
+                tqdm.tqdm.write(
+                    f"step {global_step}: new best accuracy under ndv cap "
+                    f"{best_accuracy_capped:.4f} (ndv {val_losses['ndv']:.6f}) "
+                    "-> saved best_accuracy_capped"
                 )
 
             if tumour_score < best_tumour:
@@ -1556,7 +1596,9 @@ def train_lvl3(
         "best_accuracy": best_accuracy_model_path,
         "best_tumour": best_tumour_model_path,
         "best_combined": best_combined_model_path,
+        "best_accuracy_capped": best_accuracy_capped_model_path,
         "best_accuracy_optimizer": best_accuracy_optimizer_path,
+        "best_accuracy_capped_optimizer": best_accuracy_capped_optimizer_path,
         "best_tumour_optimizer": best_tumour_optimizer_path,
         "best_combined_optimizer": best_combined_optimizer_path,
     }
