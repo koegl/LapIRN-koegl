@@ -17,19 +17,15 @@
 #SBATCH --job-name=psmareg_full
 #SBATCH --output=/home/iml/fryderyk.koegl/logs/%x_%j.out
 #SBATCH --error=/home/iml/fryderyk.koegl/logs/%x_%j.err
-#SBATCH -t 1-00:00:00
+#SBATCH -t 3-00:00:00
 #SBATCH -p gpu_p
 #SBATCH --mem=120G
-#SBATCH --qos=gpu_normal
-# H100 only. A bare `--gres=gpu:1` lets SLURM satisfy the request with whatever
-# is free -- V100, A100 or H100 -- which makes training runs incomparable to
-# each other and to the container timings, and can silently halve throughput.
-# Naming the GRES *type* is what enforces it; the job stays queued until an H100
-# node (supergpu[14-32]) frees up rather than starting on the wrong hardware.
-#
-# If the H100 nodes are contended and the run is not being compared against
-# earlier ones, `--gres=gpu:a100_80gb:1` is the next best option.
-#SBATCH --gres=gpu:h100:1
+# Runs on the IML reservation. The reservation decides which nodes (and so which
+# GPU type) are available, so no GRES type is pinned here.
+#SBATCH --qos=gpu_reservation
+#SBATCH --reservation=iml_user
+#SBATCH --nice=10000
+#SBATCH --gres=gpu:1
 
 # pipefail only: `set -u` would break `source .venv/bin/activate`, whose
 # activate script reads $PS1, and $CUDA_VISIBLE_DEVICES is legitimately unset on
