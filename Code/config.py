@@ -86,7 +86,7 @@ class TrainingConfig:
 
     in_channel: int = field(init=False)
     n_classes: int = 3
-    lr_lvl1: float = 0.0003
+    lr_lvl1: float = 0.00015
     lr_lvl2: float = 0.0002
     lr_lvl3: float = 0.00025
     # linear LR warmup (0 -> full lr) applied at the start of every level,
