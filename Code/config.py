@@ -370,9 +370,9 @@ class TrainingConfig:
     mind_dilation: int = 2
 
     mlflow_tracking_uri: str = "file:///home/iml/fryderyk.koegl/code/mlruns"
-    mlflow_experiment: str = "PSMAReg_LapIRN"
+    mlflow_experiment: str = "psmareg_journal"
     logger_backend: str = "both"  # one of: "mlflow", "wandb", "both", "none"
-    wandb_project: str = "PSMAReg_LapIRN"
+    wandb_project: str = "psmareg_journal"
     wandb_entity: Optional[str] = None
     wandb_mode: Optional[str] = None  # e.g. "offline" on clusters without internet
 
