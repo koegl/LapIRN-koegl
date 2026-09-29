@@ -2393,6 +2393,13 @@ class PreActBlock(nn.Module):
         self.conv2 = nn.Conv3d(
             hidden_planes, planes, kernel_size=3, stride=1, padding=1, bias=bias
         )
+        # Zero-init the last conv so each block starts as identity (out = 0 +
+        # shortcut). Without normalization, stacked blocks otherwise grow the
+        # activations, which made deep trunks (n_resblocks=10) diverge early.
+        # Loaded checkpoints overwrite this, so old weights are unaffected.
+        nn.init.zeros_(self.conv2.weight)
+        if self.conv2.bias is not None:
+            nn.init.zeros_(self.conv2.bias)
 
         if stride != 1 or in_planes != planes:
             self.shortcut = nn.Sequential(
