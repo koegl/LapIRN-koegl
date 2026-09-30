@@ -5,9 +5,14 @@
 # to a timestamped snapshot and passes it as CODE_DIR, so edits made while the
 # job waits in the queue cannot leak into the run:
 #
-#   bash Code/submit_with_config_snapshot.sh
+#   bash Code/submit_with_config_snapshot.sh general
 #
-# Submitting this file directly with `sbatch Code/psmareg.sbatch` also works and
+# Two variants differ only in their resource header: psmareg_iml.sbatch runs on
+# the IML reservation (4 days, but only 2 jobs in parallel) and
+# psmareg_general.sbatch on the general pool (1 day, H100/A100-80GB). The
+# submit script's first argument (iml|general) picks one.
+#
+# Submitting this file directly with `sbatch Code/psmareg_general.sbatch` also works and
 # runs the live working tree -- fine for a quick test, but the run is then not
 # reproducible from a snapshot.
 #
@@ -17,15 +22,19 @@
 #SBATCH --job-name=psmareg_full
 #SBATCH --output=/home/iml/fryderyk.koegl/logs/%x_%j.out
 #SBATCH --error=/home/iml/fryderyk.koegl/logs/%x_%j.err
-#SBATCH -t 4-00:00:00
+#SBATCH -t 1-00:00:00
 #SBATCH -p gpu_p
 #SBATCH --mem=120G
-# Runs on the IML reservation. The reservation decides which nodes (and so which
-# GPU type) are available, so no GRES type is pinned here.
-#SBATCH --qos=gpu_reservation
-#SBATCH --reservation=iml_user
+# Runs in the general pool rather than the IML reservation, so more jobs can run
+# in parallel, but the time limit there is 1 day. The constraint keeps it off
+# smaller GPUs; gpu_reservation QOS is only valid with a reservation, hence
+# gpu_normal.
+#SBATCH --qos=gpu_normal
 #SBATCH --nice=10000
 #SBATCH --gres=gpu:1
+# data loading uses several worker processes; the default 1-2 CPUs starve them
+#SBATCH --cpus-per-task=16
+#SBATCH --constraint="h100_80gb|a100_80gb"
 
 # pipefail only: `set -u` would break `source .venv/bin/activate`, whose
 # activate script reads $PS1, and $CUDA_VISIBLE_DEVICES is legitimately unset on
