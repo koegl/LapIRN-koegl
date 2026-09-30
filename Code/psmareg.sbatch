@@ -17,7 +17,7 @@
 #SBATCH --job-name=psmareg_full
 #SBATCH --output=/home/iml/fryderyk.koegl/logs/%x_%j.out
 #SBATCH --error=/home/iml/fryderyk.koegl/logs/%x_%j.err
-#SBATCH -t 3-00:00:00
+#SBATCH -t 4-00:00:00
 #SBATCH -p gpu_p
 #SBATCH --mem=120G
 # Runs on the IML reservation. The reservation decides which nodes (and so which
