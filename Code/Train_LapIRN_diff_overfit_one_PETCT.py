@@ -158,7 +158,7 @@ def main() -> None:
                 #     "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_merciful-shrike-local_stagelvl2_best.pth"
                 # )
                 path_model_level_2 = Path(
-                    "/lustre/groups/iml/data/PSMAReg/models/PSMAReg_LapIRN_nosy-rat-40732681_stagelvl2_best.pth"
+                    "/lustre/groups/iml/data/PSMAReg/models/psmareg_journal_nosy-rat-40732681_stagelvl2_best.pth"
                 )
                 path_model_level3 = level3.train_lvl3(
                     config,
