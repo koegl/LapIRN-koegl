@@ -633,6 +633,11 @@ def optimizer_step_with_guard(
                 optimizer.zero_grad()
     else:
         tqdm.tqdm.write(f"[lvl{level}] step {global_step}: non-finite loss (skipped)")
+        # backward only to free the graph: without it the skipped step's graph
+        # stays alive into the next forward and doubles activation memory (OOM).
+        # The resulting non-finite gradients are discarded right after.
+        if loss_scaled.requires_grad:
+            loss_scaled.backward()
         optimizer.zero_grad()
 
 
