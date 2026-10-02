@@ -88,7 +88,7 @@ class TrainingConfig:
     n_classes: int = 3
     lr_lvl1: float = 0.00015
     lr_lvl2: float = 0.0012
-    lr_lvl3: float = 0.000125
+    lr_lvl3: float = 0.00005
     # linear LR warmup (0 -> full lr) applied at the start of every level,
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
