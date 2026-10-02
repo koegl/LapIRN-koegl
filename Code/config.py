@@ -93,6 +93,9 @@ class TrainingConfig:
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
     warmup_epochs: float = 5
+    # after warmup, cosine decay of every level's LR down to lr_min_factor times
+    # its base LR at the level's last step. 1.0 disables the decay.
+    lr_min_factor: float = 0.1
     start_channel: int = 24
 
     # Per-level res-block trunk capacity, independent of start_channel (so no

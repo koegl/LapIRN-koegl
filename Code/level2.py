@@ -451,7 +451,12 @@ def train_lvl2(
         is_last_step = global_step == total_steps - 1
 
         current_lr = utils.apply_warmup_lr(
-            optimizer, config.lr_lvl2, global_step, warmup_steps
+            optimizer,
+            config.lr_lvl2,
+            global_step,
+            warmup_steps,
+            total_steps,
+            config.lr_min_factor,
         )
 
         if is_epoch_start:

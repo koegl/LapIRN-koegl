@@ -548,12 +548,21 @@ def create_datasets(
     )
 
 
-def warmup_lr_factor(global_step: int, warmup_steps: int) -> float:
-    """Linear LR warmup factor: ramps 0 -> 1 over the first `warmup_steps`
-    training steps, then stays at 1. `warmup_steps <= 0` disables warmup."""
-    if warmup_steps <= 0:
-        return 1.0
-    return min(1.0, (global_step + 1) / warmup_steps)
+def warmup_lr_factor(
+    global_step: int,
+    warmup_steps: int,
+    total_steps: int,
+    min_factor: float,
+) -> float:
+    """LR factor: linear warmup 0 -> 1 over the first `warmup_steps` training
+    steps, then cosine decay 1 -> `min_factor` over the remaining steps up to
+    `total_steps`. `warmup_steps <= 0` disables warmup, `min_factor = 1`
+    disables the decay."""
+    if global_step < warmup_steps:
+        return (global_step + 1) / warmup_steps
+    progress = (global_step - warmup_steps) / max(1, total_steps - warmup_steps)
+    progress = min(1.0, progress)
+    return min_factor + (1.0 - min_factor) * 0.5 * (1.0 + math.cos(math.pi * progress))
 
 
 def apply_warmup_lr(
@@ -561,10 +570,12 @@ def apply_warmup_lr(
     base_lr: float,
     global_step: int,
     warmup_steps: int,
+    total_steps: int,
+    min_factor: float,
 ) -> float:
-    """Set the optimizer LR to `base_lr` scaled by the linear warmup factor.
+    """Set the optimizer LR to `base_lr` scaled by the warmup + cosine factor.
     Returns the LR applied (for logging)."""
-    lr = base_lr * warmup_lr_factor(global_step, warmup_steps)
+    lr = base_lr * warmup_lr_factor(global_step, warmup_steps, total_steps, min_factor)
     for param_group in optimizer.param_groups:
         param_group["lr"] = lr
     return lr
