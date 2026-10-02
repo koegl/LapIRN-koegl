@@ -88,7 +88,7 @@ class TrainingConfig:
     n_classes: int = 3
     lr_lvl1: float = 0.00015
     lr_lvl2: float = 0.0012
-    lr_lvl3: float = 0.00005
+    lr_lvl3: float = 0.000025
     # linear LR warmup (0 -> full lr) applied at the start of every level,
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
@@ -177,11 +177,11 @@ class TrainingConfig:
     )
     # 1.0 disables the weighting entirely (all labels equal)
     w_dice_pet_visible: float = 1.0
-    w_tlg: float = 5.0
-    w_jacobian_tumor: float = 5.0
-    w_mtv: float = 20.0
-    w_mtv_avg: float = 0.5
-    w_bone_rigidity: float = 0.2
+    w_tlg: float = 10.0
+    w_jacobian_tumor: float = 10.0
+    w_mtv: float = 40.0
+    w_mtv_avg: float = 1
+    w_bone_rigidity: float = 0.4
 
     # io params
     io_lr: float = 0.25e-1
