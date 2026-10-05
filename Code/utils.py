@@ -762,8 +762,10 @@ def restore_rng_state(
 
     random.setstate(state["python"])
     np.random.set_state(state["numpy"])
-    torch.set_rng_state(state["torch"])
-    torch.cuda.set_rng_state(state["cuda"], device)
+    # torch.load(map_location=cuda) moves these onto the GPU; both setters
+    # need a CPU ByteTensor
+    torch.set_rng_state(state["torch"].cpu())
+    torch.cuda.set_rng_state(state["cuda"].cpu(), device)
     monai_states = _monai_random_states(dataset)
     if len(monai_states) != len(state["monai"]):
         raise ValueError(
