@@ -1,4 +1,5 @@
 from pathlib import Path
+import time
 from typing import Callable, Dict, Optional
 
 import affine_reg
@@ -681,7 +682,18 @@ def train_lvl3(
                 "state); the resumed run will not match the original exactly"
             )
 
+    use_cuda_timing = device.type == "cuda"
+
+    def mark_timing(marks: list[tuple[str, torch.cuda.Event]], name: str) -> None:
+        if use_cuda_timing:
+            event = torch.cuda.Event(enable_timing=True)
+            event.record()
+            marks.append((name, event))
+
     for global_step in range(start_global_step, total_steps):
+        if use_cuda_timing:
+            torch.cuda.synchronize()
+        step_wall_start = time.perf_counter()
         epoch = global_step // steps_per_epoch
         is_epoch_start = global_step % steps_per_epoch == 0
         is_epoch_end = global_step % steps_per_epoch == steps_per_epoch - 1
@@ -703,7 +715,11 @@ def train_lvl3(
         if global_step == unfreeze_step:
             model.unfreeze_modellvl2()
 
+        batch_start = time.perf_counter()
         batch = next(train_iter)
+        data_time = time.perf_counter() - batch_start
+        timing_marks: list[tuple[str, torch.cuda.Event]] = []
+        mark_timing(timing_marks, "data_ready")
 
         is_synthetic = bool(batch["is_synthetic"][0])
 
@@ -829,7 +845,9 @@ def train_lvl3(
 
                 X_prereg = transform(X, flow_prereg, grid_full)
 
+        mark_timing(timing_marks, "after_prereg")
         F_X_Y, X_Y, Y_4x, F_xy, _, _, _ = model(X_prereg, Y)
+        mark_timing(timing_marks, "after_model_forward")
 
         if config.overfit is True and saved_initial is False:
             my_data.save_initial(
@@ -873,6 +891,7 @@ def train_lvl3(
         F_xy[:, 1, :, :, :] = F_xy[:, 1, :, :, :] * (y - 1)
         F_xy[:, 2, :, :, :] = F_xy[:, 2, :, :, :] * (x - 1)
         loss_regulation = loss_smooth(F_xy)
+        mark_timing(timing_marks, "after_jacobian_smooth")
 
         # synthetic labels are already in the (deformed) moving frame; the
         # real branch needs the affine applied first. The pre-affine labels are
@@ -897,6 +916,7 @@ def train_lvl3(
         X_Y_total = transform(X, flow_total, grid_full)
         X_Y_ct = X_Y_total[:, 0:1]
         X_Y_pet = X_Y_total[:, 1:2]
+        mark_timing(timing_marks, "after_total_warp")
 
         if is_synthetic:
             use_dice_pet = True
@@ -930,6 +950,7 @@ def train_lvl3(
             loss_multiNCC = config.w_ct * loss_ncc_ct
 
         x = 0
+        mark_timing(timing_marks, "after_ncc")
 
         flow_total_ch = flow_total.permute(0, 4, 1, 2, 3)
         loss_dice_ct = utils.dice_loss_with_grad_bbox(
@@ -950,6 +971,7 @@ def train_lvl3(
                 transform,
                 use_checkpoint=True,
             )
+        mark_timing(timing_marks, "after_dice")
 
         moving_pet_mask = (X_lbl_pet == 1).float()
         moving_pet_mask_orig = (X_lbl_pet_orig == 1).float()
@@ -971,6 +993,7 @@ def train_lvl3(
             )
         else:
             loss_jacobian_tumor = torch.zeros((), device=device)
+        mark_timing(timing_marks, "after_tumour_jacobian")
 
         bone_labels_tensor = torch.tensor(
             synthetic.BONE_LABEL_VALUES, device=device, dtype=X_lbl_ct.dtype
@@ -1012,6 +1035,7 @@ def train_lvl3(
                     w_affine=config.w_rig_affine,
                 )
             )
+        mark_timing(timing_marks, "after_rigidity")
 
         # Auxiliary segmentation heads. Both are predicted in the fixed frame
         # (that is what the lvl3 trunk sees: its input is warped_x, not x), and
@@ -1108,6 +1132,7 @@ def train_lvl3(
                 + config.w_mtv * loss_mtv**2
                 + config.w_mtv_avg * loss_mtv_avg
             )
+        mark_timing(timing_marks, "after_tumour_mtv_tlg")
 
         # meta-learned / unrolled IO: run a few differentiable IO steps starting
         # from the net's output and add the loss on the *refined* field. This
@@ -1161,6 +1186,7 @@ def train_lvl3(
             loss = loss + config.w_unrolled * loss_unrolled
         else:
             loss_unrolled = torch.zeros((), device=device)
+        mark_timing(timing_marks, "after_unrolled_io")
 
         # Gradient-conflict diagnostic. Must run before the backward in
         # optimizer_step_with_guard (it needs the graph alive) but it uses
@@ -1262,6 +1288,20 @@ def train_lvl3(
         utils.optimizer_step_with_guard(
             loss, loss_scaled, optimizer, model, is_step, global_step, level=3
         )
+        mark_timing(timing_marks, "after_backward_step")
+
+        timing_metrics = {"timing_lvl3/data_s": data_time}
+        if use_cuda_timing and timing_marks:
+            torch.cuda.synchronize()
+            prev_name, prev_event = timing_marks[0]
+            for name, event in timing_marks[1:]:
+                timing_metrics[f"timing_lvl3/{prev_name}_to_{name}_s"] = (
+                    prev_event.elapsed_time(event) / 1000.0
+                )
+                prev_name, prev_event = name, event
+        timing_metrics["timing_lvl3/step_wall_s"] = (
+            time.perf_counter() - step_wall_start
+        )
 
         lossall[:, global_step] = np.array(
             [
@@ -1313,6 +1353,7 @@ def train_lvl3(
             "train_lvl3/ndv": ndv,
             "train_lvl3/dvf": loss_dvf.item(),
             "train_lvl3/lr": current_lr,
+            **timing_metrics,
         }
         if config.use_seg_pet_head:
             train_metrics["train_lvl3/seg_pet"] = loss_seg_pet.item()
