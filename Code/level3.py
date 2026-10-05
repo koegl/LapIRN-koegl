@@ -598,18 +598,31 @@ def train_lvl3(
     lossall = np.zeros((4, total_steps))
 
     start_global_step = 0
+    opt_ckpt = None
     if resume_model_path is not None:
         print("Resuming lvl3 from...", resume_model_path)
         model.load_state_dict(torch.load(resume_model_path, map_location=device))
-        opt_ckpt = torch.load(resume_optimizer_path, map_location=device)
+        # weights_only=False: the checkpoint carries numpy RNG states
+        opt_ckpt = torch.load(
+            resume_optimizer_path, map_location=device, weights_only=False
+        )
         optimizer.load_state_dict(opt_ckpt["optimizer"])
-        start_global_step = opt_ckpt["global_step"]
+        # the checkpoint is written at the end of step global_step, so that
+        # step is already in the weights and must not be run again
+        start_global_step = opt_ckpt["global_step"] + 1
         best_accuracy = opt_ckpt.get("best_accuracy", float("-inf"))
         best_tumour = opt_ckpt.get("best_tumour", float("inf"))
         best_combined = opt_ckpt.get("best_combined_final", float("-inf"))
         best_accuracy_capped = opt_ckpt.get("best_accuracy_capped", float("-inf"))
 
-    train_iter = utils.cycle(train_generator)
+    train_iter = utils.resumable_train_batches(
+        train_generator.dataset,
+        batch_size=train_generator.batch_size,
+        shuffle=config.shuffle,
+        seed=config.shuffle_seed,
+        start_step=start_global_step,
+        steps_per_epoch=steps_per_epoch,
+    )
 
     warmup_steps = int(round(config.warmup_epochs * steps_per_epoch))
     if config.warmup_epochs >= config.unfreeze_epoch_in_lvl3:
@@ -647,6 +660,26 @@ def train_lvl3(
     _flag.parent.mkdir(parents=True, exist_ok=True)
     tqdm.tqdm.write(f"[lvl3] stop early with:  touch {_flag}")
     utils.log_text(f"touch {_flag}", "stop_lvl3_cmd.txt")
+
+    if opt_ckpt is not None:
+        if "rng" in opt_ckpt:
+            # gradients accumulated since the last optimizer step
+            params = dict(model.named_parameters())
+            for name, grad in opt_ckpt["grads"].items():
+                params[name].grad = grad.to(device)
+            loop_state = opt_ckpt["loop_state"]
+            epoch_metrics = loop_state["epoch_metrics"]
+            n_gated = loop_state["n_gated"]
+            saved_initial = loop_state["saved_initial"]
+            grad_conflict_pending = loop_state["grad_conflict_pending"]
+            grad_conflict_tracker._hist = loop_state["grad_conflict_hist"]
+            # last, so nothing between here and the first step draws from it
+            utils.restore_rng_state(opt_ckpt["rng"], train_generator.dataset, device)
+        else:
+            print(
+                "[WARN] checkpoint predates exact resume (no RNG / gradient "
+                "state); the resumed run will not match the original exactly"
+            )
 
     for global_step in range(start_global_step, total_steps):
         epoch = global_step // steps_per_epoch
@@ -1517,21 +1550,13 @@ def train_lvl3(
                 step=global_step,
             )
 
+            # checkpoints are written after every best is updated, so each one
+            # carries this round's final bests and a resume from any of them
+            # will not re-save worse checkpoints over better
+            to_save: list[tuple[Path, Path]] = []
+
             def save_selected(model_path: Path, optimizer_path: Path) -> None:
-                # every optimizer checkpoint carries all bests, so a resume
-                # from any of them will not re-save worse checkpoints over better
-                torch.save(model.state_dict(), model_path)
-                torch.save(
-                    {
-                        "optimizer": optimizer.state_dict(),
-                        "global_step": global_step,
-                        "best_accuracy": best_accuracy,
-                        "best_tumour": best_tumour,
-                        "best_combined_final": best_combined,
-                        "best_accuracy_capped": best_accuracy_capped,
-                    },
-                    optimizer_path,
-                )
+                to_save.append((model_path, optimizer_path))
 
             # NaN never satisfies `>`, so a round that produced no accuracy
             # component at all simply does not save.
@@ -1582,6 +1607,36 @@ def train_lvl3(
                     f"reg {selection['regularity']:.4f})"
                     " -> saved best_combined"
                 )
+
+            if to_save:
+                # everything the next step depends on, so a resume continues
+                # exactly as this run would have
+                resume_state = {
+                    "optimizer": optimizer.state_dict(),
+                    "global_step": global_step,
+                    "best_accuracy": best_accuracy,
+                    "best_tumour": best_tumour,
+                    "best_combined_final": best_combined,
+                    "best_accuracy_capped": best_accuracy_capped,
+                    "grads": {
+                        name: p.grad.detach().clone()
+                        for name, p in model.named_parameters()
+                        if p.grad is not None
+                    },
+                    "loop_state": {
+                        "epoch_metrics": dict(epoch_metrics),
+                        "n_gated": n_gated,
+                        "saved_initial": saved_initial,
+                        "grad_conflict_pending": grad_conflict_pending,
+                        "grad_conflict_hist": {
+                            k: list(v) for k, v in grad_conflict_tracker._hist.items()
+                        },
+                    },
+                    "rng": utils.capture_rng_state(train_generator.dataset, device),
+                }
+                for model_path, optimizer_path in to_save:
+                    torch.save(model.state_dict(), model_path)
+                    torch.save(resume_state, optimizer_path)
 
         if config.overfit is False:
             pbar.update(1)

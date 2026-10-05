@@ -658,6 +658,122 @@ def cycle(loader: torch.utils.data.DataLoader):
             yield batch
 
 
+class EpochSeededSampler(torch_data.Sampler):
+    """Shuffle order that is a pure function of (seed, epoch), so a resumed run
+    can rebuild the exact order of any epoch and skip into it mid-way. The
+    default RandomSampler draws its order from the global torch RNG at every
+    epoch start, which cannot be repositioned mid-epoch."""
+
+    def __init__(self, n: int, shuffle: bool, seed: int) -> None:
+        self.n = n
+        self.shuffle = shuffle
+        self.seed = seed
+        self.epoch = 0
+        self.start = 0
+
+    def set_position(self, epoch: int, start: int) -> None:
+        self.epoch = epoch
+        self.start = start
+
+    def __iter__(self) -> Iterator[int]:
+        if self.shuffle:
+            g = torch.Generator().manual_seed(self.seed + self.epoch)
+            order = torch.randperm(self.n, generator=g).tolist()
+        else:
+            order = list(range(self.n))
+        return iter(order[self.start :])
+
+    def __len__(self) -> int:
+        return self.n - self.start
+
+
+def resumable_train_batches(
+    dataset: torch_data.Dataset,
+    batch_size: int,
+    shuffle: bool,
+    seed: int,
+    start_step: int,
+    steps_per_epoch: int,
+) -> Iterator[Dict[str, Any]]:
+    """Endless batch stream (like `cycle`) that starts at batch `start_step`."""
+    sampler = EpochSeededSampler(len(dataset), shuffle, seed)
+    epoch, offset = divmod(start_step, steps_per_epoch)
+    # a private generator: DataLoader.__iter__ otherwise draws its base seed
+    # from the global torch RNG, an extra draw a resumed run would make at a
+    # different point than the original run
+    loader = torch_data.DataLoader(
+        dataset,
+        batch_size=batch_size,
+        sampler=sampler,
+        generator=torch.Generator(),
+    )
+    while True:
+        sampler.set_position(epoch, offset * batch_size)
+        yield from loader
+        epoch += 1
+        offset = 0
+
+
+def _collect_random_states(obj: Any, out: list, seen: set) -> None:
+    from monai.transforms import Transform
+
+    if id(obj) in seen:
+        return
+    seen.add(id(obj))
+    if isinstance(obj, np.random.RandomState):
+        out.append(obj)
+    elif isinstance(obj, (list, tuple)):
+        for item in obj:
+            _collect_random_states(item, out, seen)
+    elif isinstance(obj, (Transform, torch_data.Dataset)):
+        for value in vars(obj).values():
+            _collect_random_states(value, out, seen)
+
+
+def _monai_random_states(dataset: torch_data.Dataset) -> list:
+    """Every RandomState the dataset's MONAI transforms draw from, in a fixed
+    traversal order. Transforms without set_random_state share the class-level
+    Randomizable.R, so that one is always included first."""
+    from monai.transforms import Randomizable
+
+    out: list = []
+    seen: set = set()
+    _collect_random_states(Randomizable.R, out, seen)
+    _collect_random_states(dataset, out, seen)
+    return out
+
+
+def capture_rng_state(dataset: torch_data.Dataset, device: torch.device) -> Dict:
+    import random
+
+    return {
+        "python": random.getstate(),
+        "numpy": np.random.get_state(),
+        "torch": torch.get_rng_state(),
+        "cuda": torch.cuda.get_rng_state(device),
+        "monai": [r.get_state() for r in _monai_random_states(dataset)],
+    }
+
+
+def restore_rng_state(
+    state: Dict, dataset: torch_data.Dataset, device: torch.device
+) -> None:
+    import random
+
+    random.setstate(state["python"])
+    np.random.set_state(state["numpy"])
+    torch.set_rng_state(state["torch"])
+    torch.cuda.set_rng_state(state["cuda"], device)
+    monai_states = _monai_random_states(dataset)
+    if len(monai_states) != len(state["monai"]):
+        raise ValueError(
+            f"checkpoint has {len(state['monai'])} MONAI RNG states but the "
+            f"dataset has {len(monai_states)}; the augmentation pipeline changed"
+        )
+    for r, s in zip(monai_states, state["monai"]):
+        r.set_state(s)
+
+
 @contextlib.contextmanager
 def track_peak_memory(label: str = ""):
     torch.cuda.reset_peak_memory_stats()

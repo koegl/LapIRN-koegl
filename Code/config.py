@@ -357,6 +357,9 @@ class TrainingConfig:
 
     batch_size: int = 1
     shuffle: bool = True
+    # the training order of epoch e is randperm(seed=shuffle_seed + e), so a
+    # resumed run reproduces it exactly
+    shuffle_seed: int = 0
     num_workers: int = 8
 
     lvl1_ncc_win: int = 5
