@@ -618,10 +618,13 @@ def optimizer_step_with_guard(
     is_step: bool,
     global_step: int,
     level: int,
+    timing_callback: Optional[Callable[[str], None]] = None,
 ) -> None:
 
     if torch.isfinite(loss):
         loss_scaled.backward()
+        if timing_callback is not None:
+            timing_callback("after_backward")
 
         if is_step:
             # clip_grad_norm_ returns the PRE-clip norm and already scales the
@@ -632,6 +635,8 @@ def optimizer_step_with_guard(
             total_norm = torch.nn.utils.clip_grad_norm_(
                 model.parameters(), max_norm=5.0
             )
+            if timing_callback is not None:
+                timing_callback("after_grad_clip")
             log_metrics({f"lvl{level}/grad_norm": total_norm.item()}, step=global_step)
             if not torch.isfinite(total_norm):
                 tqdm.tqdm.write(
@@ -641,7 +646,11 @@ def optimizer_step_with_guard(
                 optimizer.zero_grad()
             else:
                 optimizer.step()
+                if timing_callback is not None:
+                    timing_callback("after_optimizer_step")
                 optimizer.zero_grad()
+                if timing_callback is not None:
+                    timing_callback("after_zero_grad")
     else:
         tqdm.tqdm.write(f"[lvl{level}] step {global_step}: non-finite loss (skipped)")
         # backward only to free the graph: without it the skipped step's graph
@@ -649,7 +658,11 @@ def optimizer_step_with_guard(
         # The resulting non-finite gradients are discarded right after.
         if loss_scaled.requires_grad:
             loss_scaled.backward()
+            if timing_callback is not None:
+                timing_callback("after_backward")
         optimizer.zero_grad()
+        if timing_callback is not None:
+            timing_callback("after_zero_grad")
 
 
 def cycle(loader: torch.utils.data.DataLoader):

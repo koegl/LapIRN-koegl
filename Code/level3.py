@@ -1290,7 +1290,14 @@ def train_lvl3(
         is_step = (global_step + 1) % config.accumulation_steps == 0 or is_last_step
 
         utils.optimizer_step_with_guard(
-            loss, loss_scaled, optimizer, model, is_step, global_step, level=3
+            loss,
+            loss_scaled,
+            optimizer,
+            model,
+            is_step,
+            global_step,
+            level=3,
+            timing_callback=lambda name: mark_timing(timing_marks, name),
         )
         mark_timing(timing_marks, "after_backward_step")
 
