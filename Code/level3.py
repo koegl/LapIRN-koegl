@@ -942,8 +942,10 @@ def train_lvl3(
         # (a no-op today, protective if a future edit wraps the loop body).
         assert not torch.is_autocast_enabled(), "losses must run outside autocast"
         loss_ncc_ct = loss_similarity_ct(X_Y_ct, Y_4x_ct)
-        with torch.no_grad():
+        if use_ncc_pet:
             loss_ncc_pet = loss_similarity_pet(X_Y_pet, Y_4x_pet)
+        else:
+            loss_ncc_pet = torch.zeros((), device=device)
         if use_ncc_pet:
             loss_multiNCC = config.w_ct * loss_ncc_ct + config.w_pet * loss_ncc_pet
         else:
@@ -962,7 +964,7 @@ def train_lvl3(
             use_checkpoint=True,
             class_weights=dice_class_weights,
         )
-        with torch.no_grad():
+        if use_dice_pet:
             loss_dice_pet = utils.dice_loss_with_grad_bbox(
                 X_lbl_pet_orig.float(),
                 Y_lbl_pet,
@@ -971,6 +973,8 @@ def train_lvl3(
                 transform,
                 use_checkpoint=True,
             )
+        else:
+            loss_dice_pet = None
         mark_timing(timing_marks, "after_dice")
 
         moving_pet_mask = (X_lbl_pet == 1).float()
