@@ -88,7 +88,7 @@ class TrainingConfig:
     n_classes: int = 3
     lr_lvl1: float = 0.00015
     lr_lvl2: float = 0.0012
-    lr_lvl3: float = 0.00005
+    lr_lvl3: float = 0.000125
     # linear LR warmup (0 -> full lr) applied at the start of every level,
     # measured in epochs. Keep below unfreeze_epoch_in_lvl2/3 so the fresh
     # level head is fully warmed before the previous level is unfrozen.
@@ -134,7 +134,7 @@ class TrainingConfig:
     # train val
     total_steps_lvl1: int = 100000
     total_steps_lvl2: int = 100000
-    total_steps_lvl3: int = 140000
+    total_steps_lvl3: int = 120000
     unfreeze_epoch_in_lvl2: int = 10
     unfreeze_epoch_in_lvl3: int = 10
     val_interval: int = 2
@@ -255,8 +255,8 @@ class TrainingConfig:
 
     #   use_tumour_losses -> w_mtv, w_mtv_avg, w_tlg, w_jacobian_tumor
     #   use_rigidity_loss -> w_bone_rigidity
-    use_tumour_losses: bool = False
-    use_rigidity_loss: bool = False
+    use_tumour_losses: bool = True
+    use_rigidity_loss: bool = True
     # Swap the local finite-difference rigidity term for a per-label rigid fit
     # (utils.per_label_rigid_loss). The old term's stencils read one voxel past
     # the mask, so ~53% of the voxels entering it were soft tissue and ~45% of
