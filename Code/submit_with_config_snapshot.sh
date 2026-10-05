@@ -1,19 +1,34 @@
 #!/bin/bash
 set -euo pipefail
 
-# Usage: submit_with_config_snapshot.sh {iml|general} [SRC_DIR]
+# Usage: submit_with_config_snapshot.sh iml [JOB_ID] [SRC_DIR]
+#        submit_with_config_snapshot.sh general [SRC_DIR]
 #   iml     -> psmareg_iml.sbatch     (IML reservation, 4 days, max 2 parallel)
 #   general -> psmareg_general.sbatch (general pool, 1 day, H100/A100-80GB)
-usage() { echo "usage: $0 {iml|general} [SRC_DIR]" >&2; exit 1; }
+usage() {
+    echo "usage: $0 iml [JOB_ID] [SRC_DIR] | general [SRC_DIR]" >&2
+    exit 1
+}
 [[ $# -ge 1 ]] || usage
 TARGET=$1
 [[ "$TARGET" == iml || "$TARGET" == general ]] || usage
+shift
+
+DEPENDENCY=""
+SBATCH_ARGS=()
+if [[ "${1:-}" =~ ^[0-9]+$ ]]; then
+    [[ "$TARGET" == iml && "$1" =~ [1-9] ]] || usage
+    DEPENDENCY=$1
+    SBATCH_ARGS+=("--dependency=afterany:$DEPENDENCY")
+    shift
+fi
+[[ $# -le 1 ]] || usage
 
 # This script lives in Code/, so the directory to snapshot is its own -- no
 # absolute path needed, and a second checkout works without editing anything.
-# Override by passing a path as the second argument.
+# Override by passing a path after the target and optional dependency job ID.
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-SRC=$(realpath "${2:-$HERE}")
+SRC=$(realpath "${1:-$HERE}")
 STAMP=$(date +%Y%m%d_%H%M%S)
 SNAP_DIR="${SNAP_DIR:-/home/iml/fryderyk.koegl/code_snapshots}"
 SNAP="$SNAP_DIR/$STAMP"
@@ -38,7 +53,7 @@ tar -cf - -C "$SRC" \
 git -C "$SRC" rev-parse HEAD > "$SNAP/.snapshot_git_head" 2>/dev/null || true
 git -C "$SRC" diff HEAD > "$SNAP/.snapshot_git_diff" 2>/dev/null || true
 
-JOBID=$(sbatch --parsable --export=ALL,CODE_DIR="$SNAP" "$JOB_SCRIPT")
+JOBID=$(sbatch --parsable "${SBATCH_ARGS[@]}" --export=ALL,CODE_DIR="$SNAP" "$JOB_SCRIPT")
 
 # record the job <-> snapshot link at submit time, so runs never have to be
 # matched back to a snapshot by timestamp arithmetic
@@ -46,3 +61,6 @@ echo "$JOBID" > "$SNAP/.snapshot_jobid"
 printf '%s\t%s\t%s\n' "$JOBID" "$STAMP" "$SNAP" >> "$SNAP_DIR/index.tsv"
 
 echo "Submitted job $JOBID ($TARGET) with snapshot: $SNAP"
+if [[ -n "$DEPENDENCY" ]]; then
+    echo "Waiting for job $DEPENDENCY to end (afterany)."
+fi
