@@ -382,6 +382,8 @@ class TrainingConfig:
     wandb_entity: Optional[str] = None
     wandb_mode: Optional[str] = None  # e.g. "offline" on clusters without internet
 
+    profile_lvl3_timing: bool = False
+
     @property
     def img_shape_2(self) -> Tuple[int, int, int]:
         return (self.img_shape[0] // 2, self.img_shape[1] // 2, self.img_shape[2] // 2)

@@ -682,7 +682,8 @@ def train_lvl3(
                 "state); the resumed run will not match the original exactly"
             )
 
-    use_cuda_timing = device.type == "cuda"
+    profile_timing = config.profile_lvl3_timing
+    use_cuda_timing = profile_timing and device.type == "cuda"
 
     def mark_timing(marks: list[tuple[str, torch.cuda.Event]], name: str) -> None:
         if use_cuda_timing:
@@ -693,7 +694,7 @@ def train_lvl3(
     for global_step in range(start_global_step, total_steps):
         if use_cuda_timing:
             torch.cuda.synchronize()
-        step_wall_start = time.perf_counter()
+        step_wall_start = time.perf_counter() if profile_timing else 0.0
         epoch = global_step // steps_per_epoch
         is_epoch_start = global_step % steps_per_epoch == 0
         is_epoch_end = global_step % steps_per_epoch == steps_per_epoch - 1
@@ -715,9 +716,9 @@ def train_lvl3(
         if global_step == unfreeze_step:
             model.unfreeze_modellvl2()
 
-        batch_start = time.perf_counter()
+        batch_start = time.perf_counter() if profile_timing else 0.0
         batch = next(train_iter)
-        data_time = time.perf_counter() - batch_start
+        data_time = time.perf_counter() - batch_start if profile_timing else 0.0
         timing_marks: list[tuple[str, torch.cuda.Event]] = []
         mark_timing(timing_marks, "data_ready")
 
@@ -1301,18 +1302,20 @@ def train_lvl3(
         )
         mark_timing(timing_marks, "after_backward_step")
 
-        timing_metrics = {"timing_lvl3/data_s": data_time}
-        if use_cuda_timing and timing_marks:
-            torch.cuda.synchronize()
-            prev_name, prev_event = timing_marks[0]
-            for name, event in timing_marks[1:]:
-                timing_metrics[f"timing_lvl3/{prev_name}_to_{name}_s"] = (
-                    prev_event.elapsed_time(event) / 1000.0
-                )
-                prev_name, prev_event = name, event
-        timing_metrics["timing_lvl3/step_wall_s"] = (
-            time.perf_counter() - step_wall_start
-        )
+        timing_metrics = {}
+        if profile_timing:
+            timing_metrics["timing_lvl3/data_s"] = data_time
+            if use_cuda_timing and timing_marks:
+                torch.cuda.synchronize()
+                prev_name, prev_event = timing_marks[0]
+                for name, event in timing_marks[1:]:
+                    timing_metrics[f"timing_lvl3/{prev_name}_to_{name}_s"] = (
+                        prev_event.elapsed_time(event) / 1000.0
+                    )
+                    prev_name, prev_event = name, event
+            timing_metrics["timing_lvl3/step_wall_s"] = (
+                time.perf_counter() - step_wall_start
+            )
 
         lossall[:, global_step] = np.array(
             [
