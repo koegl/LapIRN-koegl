@@ -1,4 +1,5 @@
 import os
+import random
 
 os.environ["MLFLOW_ALLOW_FILE_STORE"] = "true"
 
@@ -8,6 +9,7 @@ from pathlib import Path
 import level1
 import level2
 import level3
+import numpy as np
 import torch
 import utils
 from config import TrainingConfig
@@ -19,6 +21,9 @@ def main() -> None:
     torch.backends.cudnn.benchmark = True
 
     config = TrainingConfig()
+    random.seed(config.seed)
+    np.random.seed(config.seed)
+    torch.manual_seed(config.seed)
 
     with utils.start_logging_run(config):
         (

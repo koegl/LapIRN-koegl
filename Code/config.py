@@ -13,6 +13,8 @@ else:
 
 @dataclass
 class TrainingConfig:
+    # Model initialization, training augmentation, and training shuffle.
+    seed: int = 0
     repo_dir: Path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl")
     save_dir: Path = repo_dir / "saved"
     # save_dir: Path = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/saved")
@@ -357,9 +359,7 @@ class TrainingConfig:
 
     batch_size: int = 1
     shuffle: bool = True
-    # the training order of epoch e is randperm(seed=shuffle_seed + e), so a
-    # resumed run reproduces it exactly
-    shuffle_seed: int = 0
+    # Level 3 uses seed + epoch to reproduce training order when resuming.
     num_workers: int = 8
 
     lvl1_ncc_win: int = 5

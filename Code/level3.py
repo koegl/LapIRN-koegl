@@ -620,7 +620,7 @@ def train_lvl3(
         train_generator.dataset,
         batch_size=train_generator.batch_size,
         shuffle=config.shuffle,
-        seed=config.shuffle_seed,
+        seed=config.seed,
         start_step=start_global_step,
         steps_per_epoch=steps_per_epoch,
     )
