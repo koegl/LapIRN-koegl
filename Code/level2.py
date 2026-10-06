@@ -829,7 +829,7 @@ def train_lvl2(
                     f"dice={epoch_metrics['train_lvl2/dice_ct']:.4f}; dice_weighted={epoch_metrics['train_lvl2/dice_ct'] * config.w_dice_ct_lvl2:.4f}\t"
                 )
 
-        if config.overfit is False and (
+        if config.overfit is False and global_step > 0 and (
             global_step % val_step_interval == 0 or is_last_step
         ):
             val_losses = evaluate_lvl2(

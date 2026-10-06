@@ -1460,7 +1460,7 @@ def train_lvl3(
                         f"dice_ct={epoch_metrics['train_lvl3/dice_ct']:.4f}\t"
                         f"non_diff={epoch_metrics['train_lvl3/non_diff_loss']:.6f}\t"
                     )
-        if config.overfit is False and (
+        if config.overfit is False and global_step > 0 and (
             global_step % val_step_interval == 0 or is_last_step
         ):
             val_losses = evaluate_lvl3(
