@@ -1,12 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-# Usage: submit_with_config_snapshot.sh iml [JOB_ID] [SRC_DIR]
-#        submit_with_config_snapshot.sh general [SRC_DIR]
+# Usage: submit_with_config_snapshot.sh {iml|general} [JOB_ID] [SRC_DIR]
 #   iml     -> psmareg_iml.sbatch     (IML reservation, 4 days, max 2 parallel)
 #   general -> psmareg_general.sbatch (general pool, 1 day, H100/A100-80GB)
 usage() {
-    echo "usage: $0 iml [JOB_ID] [SRC_DIR] | general [SRC_DIR]" >&2
+    echo "usage: $0 {iml|general} [JOB_ID] [SRC_DIR]" >&2
     exit 1
 }
 [[ $# -ge 1 ]] || usage
@@ -17,7 +16,7 @@ shift
 DEPENDENCY=""
 SBATCH_ARGS=()
 if [[ "${1:-}" =~ ^[0-9]+$ ]]; then
-    [[ "$TARGET" == iml && "$1" =~ [1-9] ]] || usage
+    [[ "$1" =~ [1-9] ]] || usage
     DEPENDENCY=$1
     SBATCH_ARGS+=("--dependency=afterany:$DEPENDENCY")
     shift
