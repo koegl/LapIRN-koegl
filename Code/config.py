@@ -257,7 +257,7 @@ class TrainingConfig:
 
     #   use_tumour_losses -> w_mtv, w_mtv_avg, w_tlg, w_jacobian_tumor
     #   use_rigidity_loss -> w_bone_rigidity
-    use_tumour_losses: bool = False
+    use_tumour_losses: bool = True
     use_rigidity_loss: bool = False
     # Swap the local finite-difference rigidity term for a per-label rigid fit
     # (utils.per_label_rigid_loss). The old term's stencils read one voxel past
