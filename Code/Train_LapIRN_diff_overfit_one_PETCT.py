@@ -21,11 +21,14 @@ def main() -> None:
     torch.backends.cudnn.benchmark = True
 
     config = TrainingConfig()
-    random.seed(config.seed)
-    np.random.seed(config.seed)
-    torch.manual_seed(config.seed)
 
     with utils.start_logging_run(config):
+        # seed only after the run is started: MLflow draws its random run name
+        # from Python's `random`, so seeding first gives every run the same name
+        random.seed(config.seed)
+        np.random.seed(config.seed)
+        torch.manual_seed(config.seed)
+
         (
             train_combined,
             train_dataset,
