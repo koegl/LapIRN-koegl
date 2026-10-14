@@ -26,10 +26,12 @@ import my_data
 import ndv_official
 import numpy as np
 import pandas as pd
+import synthetic
 import torch
 import torch.nn.functional as F
 import tqdm
 from config import DATA_PATH, TrainingConfig
+from scipy import ndimage
 
 # --- training runs: plan ID -> cluster run name (as in the .pth file names) ---
 TRAINING_RUNS: Dict[str, str] = {
@@ -110,6 +112,16 @@ PRED_LABEL_DIR = DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr_pred"
 GT_LABEL_DIR = DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr"
 # a run whose CSV exists is skipped; delete the CSV to rerun it
 SKIP_EXISTING = True
+
+# --- per-lesion analysis ---
+# a lesion is a 26-connected component of the moving scan's lesion mask
+LESION_STRUCTURE = np.ones((3, 3, 3), dtype=bool)
+# bone-associated if at least this fraction of its voxels lies on a bone label
+LESION_BONE_FRACTION = 0.5
+# size bins by volume; below LESION_MIN_VOXELS the relative change is mostly
+# interpolation noise ("tiny", excluded from the per-lesion analysis)
+LESION_MIN_VOXELS = 5
+LESION_SIZE_BINS_ML = ((0.5, "small"), (5.0, "medium"), (float("inf"), "large"))
 
 
 class SpatialTransformer(torch.nn.Module):
@@ -320,6 +332,67 @@ def relative_change(after: torch.Tensor, before: torch.Tensor) -> float:
     return (float(after) - before) / before if before > 0 else float("nan")
 
 
+def lesion_size_bin(n_voxels: int, voxel_ml: float) -> str:
+    if n_voxels < LESION_MIN_VOXELS:
+        return "tiny"
+    volume_ml = n_voxels * voxel_ml
+    return next(name for upper, name in LESION_SIZE_BINS_ML if volume_ml < upper)
+
+
+def per_lesion_metrics(
+    lesion_moving: torch.Tensor,
+    organs_moving: torch.Tensor,
+    suv_moving: torch.Tensor,
+    suv_warped: torch.Tensor,
+    disp_eval: torch.Tensor,
+    warp_nearest: SpatialTransformer,
+    voxel_ml: float,
+) -> List[Dict[str, float]]:
+    """One row per lesion (connected component) of the moving scan: its MTV and
+    TLG after vs. before warping, size, and bone association.
+
+    The component map is warped once with nearest neighbour (components are
+    disjoint, so this equals warping each lesion mask on its own)."""
+    components, n_lesions = ndimage.label(
+        lesion_moving[0, 0].cpu().numpy() > 0, structure=LESION_STRUCTURE
+    )
+    if n_lesions == 0:
+        return []
+    components_t = torch.from_numpy(components)[None, None].to(lesion_moving.device)
+    warped = warp_nearest(components_t.float(), disp_eval).round().long()[0, 0]
+    components_t = components_t[0, 0]
+
+    bone_values = torch.tensor(synthetic.BONE_LABEL_VALUES, device=organs_moving.device)
+    on_bone = torch.isin(organs_moving[0, 0].round().long(), bone_values)
+    suv_moving, suv_warped = suv_moving[0, 0], suv_warped[0, 0]
+
+    rows = []
+    for lesion_id in range(1, n_lesions + 1):
+        mask_before = components_t == lesion_id
+        mask_after = warped == lesion_id
+        n_voxels = int(mask_before.sum())
+        bone_fraction = float(on_bone[mask_before].float().mean())
+        mtv_change = relative_change(mask_after.sum(), n_voxels)
+        tlg_change = relative_change(
+            suv_warped[mask_after].sum(), suv_moving[mask_before].sum()
+        )
+        rows.append(
+            {
+                "lesion_id": lesion_id,
+                "lesion_voxels": n_voxels,
+                "lesion_ml": n_voxels * voxel_ml,
+                "size_bin": lesion_size_bin(n_voxels, voxel_ml),
+                "bone_fraction": bone_fraction,
+                "bone_associated": bone_fraction >= LESION_BONE_FRACTION,
+                "mtv_change": mtv_change,
+                "mtv_bias": abs(mtv_change),
+                "tlg_change": tlg_change,
+                "tlg_bias": abs(tlg_change),
+            }
+        )
+    return rows
+
+
 def evaluate_pair(
     total_unit_flow: torch.Tensor,
     Y: torch.Tensor,
@@ -330,7 +403,7 @@ def evaluate_pair(
     warp_nearest: SpatialTransformer,
     warp_linear: SpatialTransformer,
     device: torch.device,
-) -> Dict[str, float]:
+) -> Tuple[Dict[str, float], List[Dict[str, float]]]:
     """Metrics of one registered pair, all against the ground-truth labels.
 
     Accuracy: CT Dice and HD95 over the 117 CT labels (official definitions),
@@ -379,8 +452,18 @@ def evaluate_pair(
     tlg_change = relative_change(
         (suv_warped * lesion_warped).sum(), (suv_moving * lesion_moving).sum()
     )
+    voxel_ml = float(np.prod(spacing_mm)) / 1000.0
+    lesion_rows = per_lesion_metrics(
+        lesion_moving,
+        seg_moving,
+        suv_moving,
+        suv_warped,
+        disp_eval,
+        warp_nearest,
+        voxel_ml,
+    )
 
-    return {
+    pair_metrics = {
         "dice_ct_before": instance_opt.multilabel_dice(moving_i, fixed_i),
         "dice_ct": instance_opt.multilabel_dice(warped_i, fixed_i),
         "hd95_before": float(
@@ -399,7 +482,9 @@ def evaluate_pair(
         "mtv_bias": abs(mtv_change),
         "tlg_change": tlg_change,
         "tlg_bias": abs(tlg_change),
+        "n_lesions": len(lesion_rows),
     }
+    return pair_metrics, lesion_rows
 
 
 def evaluate_run(run_id: str, split: str, device: torch.device) -> None:
@@ -423,6 +508,7 @@ def evaluate_run(run_id: str, split: str, device: torch.device) -> None:
     warp_linear = SpatialTransformer(cfg.img_shape, mode="bilinear").to(device)
 
     rows = []
+    lesion_rows = []
     for case_id, tp_x, tp_y in tqdm.tqdm(split_pairs(cfg, split), desc=run_id):
         if device.type == "cuda":
             torch.cuda.synchronize(device)
@@ -448,7 +534,7 @@ def evaluate_run(run_id: str, split: str, device: torch.device) -> None:
             torch.cuda.synchronize(device)
         runtime_s = time.perf_counter() - t_start
 
-        metrics = evaluate_pair(
+        metrics, pair_lesion_rows = evaluate_pair(
             total_unit_flow,
             Y,
             cfg,
@@ -459,17 +545,21 @@ def evaluate_run(run_id: str, split: str, device: torch.device) -> None:
             warp_linear,
             device,
         )
+        pair_keys = {
+            "run_id": run_id,
+            "case_id": case_id,
+            "tp_moving": tp_x,
+            "tp_fixed": tp_y,
+        }
         rows.append(
             {
-                "run_id": run_id,
+                **pair_keys,
                 "model": model_path.name,
-                "case_id": case_id,
-                "tp_moving": tp_x,
-                "tp_fixed": tp_y,
                 "runtime_s": runtime_s,
                 **metrics,
             }
         )
+        lesion_rows += [{**pair_keys, **row} for row in pair_lesion_rows]
         tqdm.tqdm.write(
             f"[{run_id}] {case_id} {tp_x}->{tp_y}: "
             + " ".join(f"{k}={v:.4f}" for k, v in metrics.items())
@@ -481,6 +571,18 @@ def evaluate_run(run_id: str, split: str, device: torch.device) -> None:
     print(
         f"[{run_id}] wrote {out_csv}\n{df.drop(columns=['model']).mean(numeric_only=True)}"
     )
+
+    # one row per lesion; "tiny" lesions are kept here and excluded in the
+    # analysis
+    lesions_csv = out_csv.with_name(f"{run_id}_lesions.csv")
+    df_lesions = pd.DataFrame(lesion_rows)
+    df_lesions.to_csv(lesions_csv, index=False)
+    if not df_lesions.empty:
+        kept = df_lesions[df_lesions["size_bin"] != "tiny"]
+        summary = kept.groupby(["bone_associated", "size_bin"])["mtv_bias"].describe(
+            percentiles=[0.5, 0.95]
+        )
+        print(f"[{run_id}] wrote {lesions_csv}\nper-lesion |MTV change|:\n{summary}")
 
 
 def main() -> None:
