@@ -15,7 +15,6 @@ from config import TrainingConfig
 from Functions import (
     generate_grid,
     generate_grid_unit,
-    transform_unit_flow_to_flow_cuda,
 )
 from miccai2020_model_stage import (
     Miccai2020_LDR_laplacian_unit_add_lvl1,
@@ -196,7 +195,7 @@ def evaluate_lvl2(
             loss_ncc_pet = loss_similarity_pet(X_Y_pet, Y_4x_pet)
             loss_multiNCC = config.w_ct * loss_ncc_ct + config.w_pet * loss_ncc_pet
 
-            F_X_Y_norm = transform_unit_flow_to_flow_cuda(
+            F_X_Y_norm = jacobian.unit_flow_to_voxel_flow(
                 F_X_Y.permute(0, 2, 3, 4, 1).clone()
             )
             body_mask = torch.nn.functional.interpolate(
@@ -629,7 +628,7 @@ def train_lvl2(
         Y_4x_ct = Y_4x[:, 0:1, ...]
         Y_4x_pet = Y_4x[:, 1:2, ...]
 
-        F_X_Y_norm = transform_unit_flow_to_flow_cuda(
+        F_X_Y_norm = jacobian.unit_flow_to_voxel_flow(
             F_X_Y.permute(0, 2, 3, 4, 1).clone()
         )
         body_mask = torch.nn.functional.interpolate(

@@ -320,10 +320,11 @@ def register_pair(
     return total_unit_flow.detach(), X, Y
 
 
-def compute_ndv(total_voxel: torch.Tensor, body_mask: np.ndarray) -> float:
+def compute_ndv(disp: torch.Tensor, body_mask: np.ndarray) -> float:
     """%NDV as computed by the challenge scorer, inside the fixed body mask.
-    total_voxel: (1, 3, H, W, D) voxel displacement, training component order."""
-    disp = total_voxel[0].detach().cpu().numpy().astype(np.float32)
+    disp: (1, 3, H, W, D) voxel displacement, channel i along array axis i
+    (disp_eval; the training order would permute the Jacobian)."""
+    disp = disp[0].detach().cpu().numpy().astype(np.float32)
     trans = disp + ndv_official.get_identity_grid(disp)
     jac_dets = ndv_official.calc_jac_dets(trans)
     mask_inner = body_mask[1:-1, 1:-1, 1:-1]
@@ -481,7 +482,7 @@ def evaluate_pair(
                 fixed_np, moving_np, warped_np, spacing_mm
             )
         ),
-        "ndv_percent": compute_ndv(total_voxel, body_mask),
+        "ndv_percent": compute_ndv(disp_eval, body_mask),
         "lesion_voxels": float(lesion_moving.sum()),
         "mtv_change": mtv_change,
         "mtv_bias": abs(mtv_change),

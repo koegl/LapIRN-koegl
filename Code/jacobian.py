@@ -40,6 +40,28 @@ _CORNER_SCHEMES = [
 _INNER = slice(1, -1)
 
 
+def unit_flow_to_voxel_flow(flow_unit: torch.Tensor) -> torch.Tensor:
+    """Network unit flow (B, D, H, W, 3) -> voxel displacement in the layout of
+    this module (component c along spatial axis c).
+
+    The network / grid_sample layout is reversed: unit-flow component 0 moves
+    along the LAST spatial axis (W) and component 2 along the first (D), and
+    Functions.transform_unit_flow_to_flow_cuda keeps that order. Feeding its
+    output here directly swaps the D and W components, which turns rigid
+    motions into shears and misplaces folding. Always convert with this.
+
+    Scale: the grid is align_corners=False (Functions.generate_grid_unit), so
+    a unit-flow step of 1 is n/2 voxels along an axis of n voxels -- the
+    displacement the network's warp actually applies. transform_unit_flow_to_
+    flow_cuda uses (n - 1)/2 on purpose: that is what the challenge scorer's
+    (n - 1)-normalised transformer needs to reproduce the same warp, so keep
+    it for submissions / evaluation and use this for the geometry.
+    """
+    b, d, h, w, _ = flow_unit.shape
+    scale = flow_unit.new_tensor([w / 2.0, h / 2.0, d / 2.0])
+    return (flow_unit * scale).flip(-1)
+
+
 def identity_grid(shape, device, dtype) -> torch.Tensor:
     """Identity coordinate grid of shape (1, D, H, W, 3), component c along axis c."""
     d, h, w = shape

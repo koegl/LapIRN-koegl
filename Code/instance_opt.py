@@ -124,7 +124,7 @@ def io_objective(
     first-order smooth, so parity there is best paired with mode="fomaml"."""
     device = disp_unit.device
     disp_flow = disp_unit.permute(0, 2, 3, 4, 1)
-    disp_voxel = Functions.transform_unit_flow_to_flow_cuda(disp_flow.clone())
+    disp_voxel = jacobian.unit_flow_to_voxel_flow(disp_flow)
     loss_jac = jacobian.non_diff_volume_loss(disp_voxel)
     loss_smooth = smoothloss(disp_unit)
 

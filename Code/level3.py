@@ -16,7 +16,6 @@ from config import TrainingConfig
 from Functions import (
     generate_grid,
     generate_grid_unit,
-    transform_unit_flow_to_flow_cuda,
 )
 from miccai2020_model_stage import (
     NCC,
@@ -227,7 +226,7 @@ def evaluate_lvl3(
             flow_total = poly_affine_reg.compose_flows(
                 flow_prereg, F_X_Y.permute(0, 2, 3, 4, 1), grid_full
             )
-            flow_total_norm = transform_unit_flow_to_flow_cuda(flow_total.clone())
+            flow_total_norm = jacobian.unit_flow_to_voxel_flow(flow_total.clone())
             X_Y_total = transform(X, flow_total, grid_full)
             X_Y_ct = X_Y_total[:, 0:1]
             X_Y_pet = X_Y_total[:, 1:2]
@@ -236,7 +235,7 @@ def evaluate_lvl3(
             loss_ncc_pet = loss_similarity_pet(X_Y_pet, Y_4x_pet)
             loss_multiNCC = config.w_ct * loss_ncc_ct + config.w_pet * loss_ncc_pet
 
-            F_X_Y_norm = transform_unit_flow_to_flow_cuda(
+            F_X_Y_norm = jacobian.unit_flow_to_voxel_flow(
                 F_X_Y.permute(0, 2, 3, 4, 1).clone()
             )
             jac_det, jac = jacobian.jacobian_matrix(F_X_Y_norm)
@@ -879,7 +878,7 @@ def train_lvl3(
         Y_4x_ct = Y_4x[:, 0:1, ...]
         Y_4x_pet = Y_4x[:, 1:2, ...]
 
-        F_X_Y_norm = transform_unit_flow_to_flow_cuda(
+        F_X_Y_norm = jacobian.unit_flow_to_voxel_flow(
             F_X_Y.permute(0, 2, 3, 4, 1).clone()
         )
         jac_det, jac = jacobian.jacobian_matrix(F_X_Y_norm)
@@ -907,7 +906,7 @@ def train_lvl3(
             flow_total = poly_affine_reg.compose_flows(
                 flow_prereg, F_X_Y.permute(0, 2, 3, 4, 1), grid_full
             )
-            flow_total_norm = transform_unit_flow_to_flow_cuda(flow_total.clone())
+            flow_total_norm = jacobian.unit_flow_to_voxel_flow(flow_total.clone())
         else:
             # no pre-registration on this branch: the network field IS the total
             flow_total = F_X_Y.permute(0, 2, 3, 4, 1)
