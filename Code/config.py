@@ -236,9 +236,10 @@ class TrainingConfig:
     # the scored global bias is ~1.8%. These terms pin each lesion individually
     # and sit alongside (not instead of) the global ones. Set the weights to 0
     # to disable and skip the component warp entirely.
-    w_io_mtv_cc: float = 80.0
-    w_io_tlg_cc: float = 80.0
-    w_io_mtv_avg_cc: float = 150.0
+    # off for the journal: IO uses exactly the training PET terms
+    w_io_mtv_cc: float = 0.0  # 80.0
+    w_io_tlg_cc: float = 0.0  # 80.0
+    w_io_mtv_avg_cc: float = 0.0  # 150.0
     # each kept component costs one full-resolution channel in the warp, so this
     # caps the memory; components beyond it are still covered by the global terms
     io_cc_max_components: int = 8
