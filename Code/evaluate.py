@@ -18,12 +18,12 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import affine_reg
+import bone_metrics
 import Functions
 import hd95_official
 import instance_opt
 import miccai2020_model_stage
 import my_data
-import ndv_official
 import numpy as np
 import pandas as pd
 import synthetic
@@ -320,18 +320,6 @@ def register_pair(
     return total_unit_flow.detach(), X, Y
 
 
-def compute_ndv(disp: torch.Tensor, body_mask: np.ndarray) -> float:
-    """%NDV as computed by the challenge scorer, inside the fixed body mask.
-    disp: (1, 3, H, W, D) voxel displacement, channel i along array axis i
-    (disp_eval; the training order would permute the Jacobian)."""
-    disp = disp[0].detach().cpu().numpy().astype(np.float32)
-    trans = disp + ndv_official.get_identity_grid(disp)
-    jac_dets = ndv_official.calc_jac_dets(trans)
-    mask_inner = body_mask[1:-1, 1:-1, 1:-1]
-    _, _, non_diff_volume, _ = ndv_official.calc_measurements(jac_dets, mask_inner)
-    return float(non_diff_volume / mask_inner.sum() * 100.0)
-
-
 def relative_change(after: torch.Tensor, before: torch.Tensor) -> float:
     """Signed relative change (after - before) / before; NaN if before is 0."""
     before = float(before)
@@ -469,6 +457,21 @@ def evaluate_pair(
         voxel_ml,
     )
 
+    # per-label HD95 once; its mean over all labels is the official HD95, and
+    # the bone / soft-tissue subsets feed bone_metrics
+    hd95_per_label = bone_metrics.per_label_hd95(
+        fixed_np, moving_np, warped_np, spacing_mm
+    )
+    bone = bone_metrics.bone_pair_metrics(
+        total_unit_flow,
+        disp_eval,
+        fixed_i,
+        warped_i,
+        hd95_per_label,
+        body_mask,
+        spacing_mm,
+    )
+
     pair_metrics = {
         "dice_ct_before": instance_opt.multilabel_dice(moving_i, fixed_i),
         "dice_ct": instance_opt.multilabel_dice(warped_i, fixed_i),
@@ -477,12 +480,9 @@ def evaluate_pair(
                 fixed_np, moving_np, moving_np, spacing_mm
             )
         ),
-        "hd95": float(
-            hd95_official.compute_average_ct_label_hd95(
-                fixed_np, moving_np, warped_np, spacing_mm
-            )
-        ),
-        "ndv_percent": compute_ndv(disp_eval, body_mask),
+        "hd95": bone_metrics.mean_over(hd95_per_label, range(1, 118)),
+        "ndv_percent": bone.pop("ndv_body_percent"),
+        **bone,
         "lesion_voxels": float(lesion_moving.sum()),
         "mtv_change": mtv_change,
         "mtv_bias": abs(mtv_change),
