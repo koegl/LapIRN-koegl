@@ -1,0 +1,406 @@
+"""Evaluation of the journal experiments (see journal_extension_plan.md).
+
+Every evaluation run is identified by its ID from the plan (T1, I5, L2, ...).
+A run is a trained network plus, optionally, instance optimisation (IO) on top.
+For every follow-up -> baseline pair of the chosen split it registers the pair
+(affine prereg -> network -> optional IO) and writes one row per pair to
+<OUT_DIR>/<split>/<run_id>.csv. Ground-truth labels are used for evaluation
+only; IO gets the predicted (TotalSegmentator + nnU-Net) labels.
+
+Run from the Code directory: python evaluate.py
+"""
+
+import copy
+import json
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+import affine_reg
+import Functions
+import instance_opt
+import miccai2020_model_stage
+import my_data
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn.functional as F
+import tqdm
+from config import DATA_PATH, TrainingConfig
+
+# --- training runs: plan ID -> cluster run name (as in the .pth file names) ---
+TRAINING_RUNS: Dict[str, str] = {
+    "T1": "",  # neither
+    "T2": "",  # PET
+    "T3": "",  # rigidity
+    "T4": "",  # PET + rigidity
+}
+
+# config fields that differ from TrainingConfig() for a training run (e.g. the
+# architecture); must match the checkpoint
+TRAINING_CFG_OVERRIDES: Dict[str, Dict[str, object]] = {
+    "T1": {},
+    "T2": {},
+    "T3": {},
+    "T4": {},
+}
+
+
+@dataclass(frozen=True)
+class IOSpec:
+    pet: bool
+    rigidity: bool
+    # IO weight overrides on top of the frozen IO settings in TrainingConfig,
+    # e.g. a single PET term switched off for the leave-one-out runs
+    cfg_overrides: Dict[str, float] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class EvalRun:
+    network: str  # key of TRAINING_RUNS
+    io: Optional[IOSpec] = None  # None = network output only
+    checkpoint: str = "best_accuracy_capped"
+
+
+IO_NONE = IOSpec(pet=False, rigidity=False)
+IO_PET = IOSpec(pet=True, rigidity=False)
+IO_RIG = IOSpec(pet=False, rigidity=True)
+IO_BOTH = IOSpec(pet=True, rigidity=True)
+
+# one PET term removed per leave-one-out run
+LOO_TERMS: Dict[str, Dict[str, float]] = {
+    "L1": {"w_io_mtv": 0.0},  # MTV
+    "L2": {"w_io_mtv_avg": 0.0},  # MTV-avg
+    "L3": {"w_io_tlg": 0.0},  # TLG
+    "L4": {"w_io_jacobian_tumor": 0.0},  # tumour Jacobian
+}
+
+# --- evaluation runs: plan ID -> what to run ---
+# R* (rigidity comparison) and W* (PET-weight sweep) are added once Staring IO
+# and the frozen IO settings exist; B* (baselines) are not networks.
+EVAL_RUNS: Dict[str, EvalRun] = {
+    "T1": EvalRun("T1"),
+    "T2": EvalRun("T2"),
+    "T3": EvalRun("T3"),
+    "T4": EvalRun("T4"),
+    "T1-tum": EvalRun("T1", checkpoint="best_tumour"),
+    "I1": EvalRun("T1", IO_NONE),
+    "I2": EvalRun("T2", IO_PET),
+    "I3": EvalRun("T3", IO_RIG),
+    "I4": EvalRun("T4", IO_BOTH),
+    "I5": EvalRun("T1", IO_PET),
+    "I6": EvalRun("T1", IO_RIG),
+    "I7": EvalRun("T1", IO_BOTH),
+    **{
+        run_id: EvalRun("T1", IOSpec(pet=True, rigidity=False, cfg_overrides=terms))
+        for run_id, terms in LOO_TERMS.items()
+    },
+}
+
+# --- what to run (no argparse) ---
+SPLIT = "val"  # "val" while developing; "test" only for frozen final runs
+RUN_IDS: List[str] = ["T1"]
+OUT_DIR = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/evaluation")
+# predicted CT organ labels (TotalSegmentator) and PET lesion labels (nnU-Net),
+# same file names as labelsTr; the only labels IO may see
+PRED_LABEL_DIR = DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr_pred"
+GT_LABEL_DIR = DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr"
+# a run whose CSV exists is skipped; delete the CSV to rerun it
+SKIP_EXISTING = True
+
+
+class SpatialTransformer(torch.nn.Module):
+    """Voxel-displacement warp as used by the challenge scorer (from
+    voxelmorph); evaluation warps go through this, not through the training
+    transforms, so the numbers match the official metrics."""
+
+    def __init__(self, size: Tuple[int, int, int], mode: str = "bilinear") -> None:
+        super().__init__()
+        self.mode = mode
+        vectors = [torch.arange(0, s) for s in size]
+        grid = torch.stack(torch.meshgrid(*vectors, indexing="ij"))[None].float()
+        self.register_buffer("grid", grid)
+
+    def forward(self, src: torch.Tensor, flow: torch.Tensor) -> torch.Tensor:
+        new_locs = self.grid + flow
+        shape = flow.shape[2:]
+        for i in range(len(shape)):
+            new_locs[:, i, ...] = 2 * (new_locs[:, i, ...] / (shape[i] - 1) - 0.5)
+        new_locs = new_locs.permute(0, 2, 3, 4, 1)[..., [2, 1, 0]]
+        return F.grid_sample(src, new_locs, align_corners=False, mode=self.mode)
+
+
+def model_path_for(cfg: TrainingConfig, run: EvalRun) -> Path:
+    run_name = TRAINING_RUNS[run.network]
+    if not run_name:
+        raise ValueError(f"no cluster run name set for {run.network} in TRAINING_RUNS")
+    return (
+        cfg.model_save_dir
+        / f"{cfg.mlflow_experiment}_{run_name}_stagelvl3_{run.checkpoint}.pth"
+    )
+
+
+def create_model(
+    cfg: TrainingConfig, model_path: Path, device: torch.device
+) -> torch.nn.Module:
+    model_lvl1 = None
+    if cfg.use_lvl1:
+        model_lvl1 = miccai2020_model_stage.Miccai2020_LDR_laplacian_unit_add_lvl1(
+            in_channel=cfg.in_channel,
+            n_classes=cfg.n_classes,
+            start_channel=cfg.start_channel,
+            is_train=True,
+            imgshape=cfg.img_shape_4,
+            range_flow=cfg.range_flow,
+            cost_volume_mode=cfg.cost_volume_mode,
+            cost_volume_radius=cfg.cost_volume_radius,
+            cost_volume_dilation=cfg.cost_volume_dilation,
+            cost_volume_feat_channels=cfg.cost_volume_feat_channels,
+            cost_volume_out_channels=cfg.cost_volume_out_channels,
+            n_resblocks=cfg.n_resblocks,
+            resblock_expansion=cfg.resblock_expansion,
+        ).to(device)
+    model_lvl2 = miccai2020_model_stage.Miccai2020_LDR_laplacian_unit_add_lvl2(
+        in_channel=cfg.in_channel,
+        n_classes=cfg.n_classes,
+        start_channel=cfg.start_channel,
+        is_train=True,
+        imgshape=cfg.img_shape_2,
+        range_flow=cfg.range_flow,
+        model_lvl1=model_lvl1,
+        n_resblocks=cfg.n_resblocks,
+        resblock_expansion=cfg.resblock_expansion,
+    ).to(device)
+    model = miccai2020_model_stage.Miccai2020_LDR_laplacian_unit_add_lvl3(
+        in_channel=cfg.in_channel,
+        n_classes=cfg.n_classes,
+        start_channel=cfg.start_channel,
+        is_train=True,
+        imgshape=cfg.img_shape,
+        range_flow=cfg.range_flow,
+        model_lvl2=model_lvl2,
+        n_resblocks=cfg.n_resblocks,
+        resblock_expansion=cfg.resblock_expansion,
+        use_seg_pet_head=cfg.use_seg_pet_head,
+        seg_pet_head_channels=cfg.seg_pet_head_channels,
+        use_bone_head=cfg.use_seg_bone_head,
+        bone_head_channels=cfg.seg_bone_head_channels,
+    ).to(device)
+    model.load_state_dict(torch.load(model_path, map_location=device))
+    model.eval()
+    return model
+
+
+def split_pairs(cfg: TrainingConfig, split: str) -> List[Tuple[str, str, str]]:
+    """(case_id, tp_moving, tp_fixed) for every follow-up -> baseline pair."""
+    with open(cfg.split_path_journal) as f:
+        case_ids = json.load(f)[split]
+    case_timepoints = my_data.list_case_timepoints(cfg.data_dir)
+    return my_data.build_registration_pairs(case_timepoints, case_ids=case_ids)
+
+
+def load_label(label_dir: Path, case_id: str, channel: str, tp: str, device) -> torch.Tensor:
+    path = label_dir / f"PSMARegPSMA_{case_id}_{channel}_{tp}.nii.gz"
+    arr = my_data.nib.load(str(path)).get_fdata().astype(np.int16)
+    return torch.from_numpy(arr)[None, None].to(device).float()
+
+
+def register_pair(
+    model: torch.nn.Module,
+    run: EvalRun,
+    cfg: TrainingConfig,
+    case_id: str,
+    tp_x: str,
+    tp_y: str,
+    transform: torch.nn.Module,
+    transform_nearest: torch.nn.Module,
+    grid_full: torch.Tensor,
+    device: torch.device,
+    history_csv: Path,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Affine prereg -> network -> optional IO.
+
+    Returns the total unit flow (1, 3, H, W, D) that maps the ORIGINAL moving
+    image onto the fixed one, and the moving / fixed images X, Y (1, 2, H, W, D).
+    """
+    pair = my_data.load_pair_to_dict(cfg.data_dir, case_id, tp_x, tp_y)
+    X = torch.cat([pair["x_ct"], pair["x_pet"]], dim=0)[None].to(device).float()
+    Y = torch.cat([pair["y_ct"], pair["y_pet"]], dim=0)[None].to(device).float()
+
+    image_dir = cfg.data_dir / "imagesTr"
+    dvf = affine_reg.get_affine_dvf(
+        case_id_x=case_id,
+        case_id_y=case_id,
+        tp_x=tp_x,
+        tp_y=tp_y,
+        fixed_ct_path=image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz",
+        moving_ct_path=image_dir / f"PSMARegPSMA_{case_id}_0000_{tp_x}.nii.gz",
+        make_lowres_ants_image_fn=affine_reg.make_lowres_ants_image,
+        preprocess_ct_fn=affine_reg.preprocess_ct,
+        ants_affine_to_fullres_voxel_disp_fn=affine_reg.ants_affine_to_fullres_voxel_disp,
+    )
+    dvf_tensor = affine_reg.dvf_to_tensor(dvf, device)
+    h, w, d = cfg.img_shape
+    flow_affine = torch.stack(
+        [
+            dvf_tensor[:, 2] / (d / 2.0),
+            dvf_tensor[:, 1] / (w / 2.0),
+            dvf_tensor[:, 0] / (h / 2.0),
+        ],
+        dim=1,
+    ).permute(0, 2, 3, 4, 1)
+
+    with torch.no_grad():
+        X_affine = transform(X, flow_affine, grid_full)
+        F_X_Y, _, _, _, _, _, _ = model(X_affine, Y)
+
+    # compose affine (outer) with the network field (inner), so IO optimises
+    # and the evaluation scores the TOTAL transform of the original moving image
+    deform_grid = grid_full + F_X_Y.permute(0, 2, 3, 4, 1)
+    affine_grid = (grid_full + flow_affine).permute(0, 4, 1, 2, 3)
+    composed_grid = F.grid_sample(
+        affine_grid,
+        deform_grid,
+        mode="bilinear",
+        padding_mode="border",
+        align_corners=False,
+    ).permute(0, 2, 3, 4, 1)
+    total_unit_flow = (composed_grid - grid_full).permute(0, 4, 1, 2, 3)
+
+    if run.io is not None:
+        io_cfg = copy.copy(cfg)
+        for key, value in run.io.cfg_overrides.items():
+            if not hasattr(io_cfg, key):
+                raise ValueError(f"unknown config field {key}")
+            setattr(io_cfg, key, value)
+        # labels stay in the original moving frame; IO warps them with the
+        # total field (single interpolation)
+        x_lbl_ct = load_label(PRED_LABEL_DIR, case_id, "0000", tp_x, device)
+        x_lbl_pet = load_label(PRED_LABEL_DIR, case_id, "0001", tp_x, device)
+        y_lbl_ct = load_label(PRED_LABEL_DIR, case_id, "0000", tp_y, device)
+        total_unit_flow = instance_opt.run_io(
+            Y,
+            total_unit_flow,
+            X,
+            x_lbl_ct,
+            x_lbl_pet,
+            y_lbl_ct,
+            transform,
+            transform_nearest,
+            grid_full,
+            io_cfg,
+            device,
+            include_pet=run.io.pet,
+            include_rigidity=run.io.rigidity,
+            history_csv=history_csv,
+        )
+
+    return total_unit_flow.detach(), X, Y
+
+
+def evaluate_pair(
+    total_unit_flow: torch.Tensor,
+    cfg: TrainingConfig,
+    case_id: str,
+    tp_x: str,
+    tp_y: str,
+    warp_nearest: SpatialTransformer,
+    device: torch.device,
+) -> Dict[str, float]:
+    """Metrics of one registered pair against the ground-truth labels.
+    Skeleton: CT Dice only; the full metric set is added in the next steps."""
+    total_voxel = Functions.transform_unit_flow_to_flow_cuda(
+        total_unit_flow.permute(0, 2, 3, 4, 1).clone()
+    ).permute(0, 4, 1, 2, 3)
+    # the scorer's transformer expects the components in the opposite order
+    disp_eval = total_voxel.flip(1)
+
+    seg_moving = load_label(GT_LABEL_DIR, case_id, "0000", tp_x, device)
+    seg_fixed = load_label(GT_LABEL_DIR, case_id, "0000", tp_y, device)
+    seg_warped = warp_nearest(seg_moving, disp_eval)
+    fixed_i = seg_fixed[0, 0].round().long()
+    return {
+        "dice_ct_before": instance_opt.multilabel_dice(
+            seg_moving[0, 0].round().long(), fixed_i
+        ),
+        "dice_ct": instance_opt.multilabel_dice(
+            seg_warped[0, 0].round().long(), fixed_i
+        ),
+    }
+
+
+def evaluate_run(run_id: str, split: str, device: torch.device) -> None:
+    out_csv = OUT_DIR / split / f"{run_id}.csv"
+    if SKIP_EXISTING and out_csv.exists():
+        print(f"[{run_id}] {out_csv} exists, skipping")
+        return
+
+    run = EVAL_RUNS[run_id]
+    cfg = TrainingConfig()
+    for key, value in TRAINING_CFG_OVERRIDES[run.network].items():
+        setattr(cfg, key, value)
+    model_path = model_path_for(cfg, run)
+    model = create_model(cfg, model_path, device)
+
+    transform = miccai2020_model_stage.SpatialTransform_unit().to(device)
+    transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
+    grid = Functions.generate_grid_unit(cfg.img_shape)
+    grid_full = torch.from_numpy(grid[None]).to(device).float()
+    warp_nearest = SpatialTransformer(cfg.img_shape, mode="nearest").to(device)
+
+    rows = []
+    for case_id, tp_x, tp_y in tqdm.tqdm(split_pairs(cfg, split), desc=run_id):
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        t_start = time.perf_counter()
+        total_unit_flow, _, _ = register_pair(
+            model,
+            run,
+            cfg,
+            case_id,
+            tp_x,
+            tp_y,
+            transform,
+            transform_nearest,
+            grid_full,
+            device,
+            history_csv=OUT_DIR / split / "io_history" / run_id / f"{case_id}_{tp_x}.csv",
+        )
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        runtime_s = time.perf_counter() - t_start
+
+        metrics = evaluate_pair(
+            total_unit_flow, cfg, case_id, tp_x, tp_y, warp_nearest, device
+        )
+        rows.append(
+            {
+                "run_id": run_id,
+                "model": model_path.name,
+                "case_id": case_id,
+                "tp_moving": tp_x,
+                "tp_fixed": tp_y,
+                "runtime_s": runtime_s,
+                **metrics,
+            }
+        )
+        tqdm.tqdm.write(
+            f"[{run_id}] {case_id} {tp_x}->{tp_y}: "
+            + " ".join(f"{k}={v:.4f}" for k, v in metrics.items())
+        )
+
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
+    df = pd.DataFrame(rows)
+    df.to_csv(out_csv, index=False)
+    print(f"[{run_id}] wrote {out_csv}\n{df.drop(columns=['model']).mean(numeric_only=True)}")
+
+
+def main() -> None:
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    for run_id in RUN_IDS:
+        evaluate_run(run_id, SPLIT, device)
+
+
+if __name__ == "__main__":
+    main()
