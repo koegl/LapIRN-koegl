@@ -228,12 +228,30 @@ def io_objective(
     loss_rigidity = zero
     if include_rigidity:
         assert bone_values is not None, "include_rigidity requires bone_values"
-        loss_rigidity, _ = utils.per_label_rigid_loss(
-            disp_voxel,
-            x_lbl_ct,
-            bone_values,
-            min_voxels=cfg.rigidity_min_voxels,
-        )
+        # disp_unit is the total field on the FIXED grid, so the bones come
+        # from the fixed labels (as in lvl3 training), not the moving ones,
+        # which sit a whole affine away
+        assert y_lbl_ct is not None, "include_rigidity requires y_lbl_ct"
+        if cfg.io_rigidity_method == "kabsch":
+            loss_rigidity, _ = utils.per_label_rigid_loss(
+                disp_voxel,
+                y_lbl_ct,
+                bone_values,
+                min_voxels=cfg.rigidity_min_voxels,
+            )
+        elif cfg.io_rigidity_method in ("staring", "staring_eroded"):
+            loss_rigidity = utils.staring_rigidity_loss(
+                disp_voxel,
+                jac_det,
+                jac,
+                utils.bone_label_map(y_lbl_ct, bone_values),
+                erode=cfg.io_rigidity_method == "staring_eroded",
+                w_det=cfg.w_rig_det,
+                w_ortho=cfg.w_rig_ortho,
+                w_affine=cfg.w_rig_affine,
+            )
+        else:
+            raise ValueError(f"unknown io_rigidity_method {cfg.io_rigidity_method}")
         loss = loss + cfg.w_io_bone_rigidity * loss_rigidity
 
     hard_dice = float("nan")

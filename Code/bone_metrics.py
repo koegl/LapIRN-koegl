@@ -24,6 +24,7 @@ import ndv_official
 import numpy as np
 import synthetic
 import torch
+import utils
 from scipy import ndimage
 
 BONE_LABELS: Tuple[int, ...] = tuple(synthetic.BONE_LABEL_VALUES)
@@ -35,9 +36,9 @@ BONE_MIN_VOXELS = 50
 BAND_VOXELS = 3
 # a soft-tissue label enters the near-bone Dice if it has this many voxels in the band
 NEAR_BONE_MIN_VOXELS = 20
-# distance distortion: pairs sampled in the bone interior (eroded by this many
-# voxels, so boundary partial-volume does not dominate)
-ERODE_VOXELS = 1
+# distance distortion: pairs sampled in the bone interior, i.e. each bone
+# eroded with the 3x3x3 element of utils.erode_label_map (the same erosion as
+# the "staring_eroded" IO term), so boundary partial-volume does not dominate
 INTERIOR_MIN_VOXELS = 20
 N_PAIRS = 2000
 SHORT_RANGE_MM = (5.0, 15.0)
@@ -163,6 +164,24 @@ def distance_distortion(
     return short_range, long_range
 
 
+def stencil_leakage(bone_labels: torch.Tensor, centres: torch.Tensor) -> float:
+    """Share of the voxels read by the Staring stencils
+    (utils.STARING_STENCIL_OFFSETS around each centre voxel) that do not belong
+    to the centre voxel's own bone, i.e. lie in soft tissue or a neighbouring
+    bone.
+
+    bone_labels: (D, H, W) bone label map (non-bone = 0); centres: (D, H, W)
+    bool, the voxels the loss is evaluated on."""
+    centre_labels = bone_labels[centres]
+    if centre_labels.numel() == 0:
+        return float("nan")
+    leaked = sum(
+        int((neighbour[centres] != centre_labels).sum())
+        for neighbour in utils.stencil_neighbours(bone_labels)
+    )
+    return leaked / (len(utils.STARING_STENCIL_OFFSETS) * centre_labels.numel())
+
+
 def bone_pair_metrics(
     total_unit_flow: torch.Tensor,
     disp_eval: torch.Tensor,
@@ -227,6 +246,11 @@ def bone_pair_metrics(
     det_dev = (det[0, 0, 1:-1, 1:-1, 1:-1].double() - 1.0).abs()
     inner = (slice(1, -1),) * 3
 
+    # one erosion for everything: interiors for the distance distortion, the
+    # retention after erosion, and the eroded Staring mask
+    bone_map = torch.where(fixed_bone, fixed_i, torch.zeros_like(fixed_i)).float()
+    eroded = utils.erode_label_map(bone_map[None, None])[0, 0] > 0
+
     generator = torch.Generator(device=device).manual_seed(SEED)
     bre, det_errors, ortho_errors, dd_short, dd_long = [], [], [], [], []
     n_voxels = n_interior = n_retained = 0
@@ -240,8 +264,7 @@ def bone_pair_metrics(
         det_errors.append(float(det_dev[bone_inner].mean()))
         ortho_errors.append(float(ortho[bone_inner].mean()))
 
-        interior_np = ndimage.binary_erosion(bone.cpu().numpy(), iterations=ERODE_VOXELS)
-        interior = torch.from_numpy(interior_np).to(device)
+        interior = bone & eroded
         n_voxels += idx.shape[0]
         n_interior += int(interior.sum())
         if int(interior.sum()) < INTERIOR_MIN_VOXELS:
@@ -267,6 +290,10 @@ def bone_pair_metrics(
         "ndv_bone_percent": ndv["bone"],
         "ndv_band_percent": ndv["band"],
         "ndv_body_percent": ndv["body"],
+        # direct stencil leakage of the Staring term on these bones: 0 for
+        # Kabsch (no stencil) by construction
+        "stencil_leakage_staring": stencil_leakage(bone_map, fixed_bone),
+        "stencil_leakage_staring_eroded": stencil_leakage(bone_map, eroded),
         "bre_mm": nanmean(bre),
         "jac_det_dev_bone": nanmean(det_errors),
         "jac_ortho_dev_bone": nanmean(ortho_errors),

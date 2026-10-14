@@ -229,6 +229,13 @@ class TrainingConfig:
     w_io_tlg: float = 160.0  # 100.0
     w_io_jacobian_tumor: float = 40  # 5.0
     w_io_bone_rigidity: float = 1.0  # 2.0
+    # rigidity term used by IO (journal experiment 2), on the fixed-frame bones:
+    #   "kabsch"         -> per-bone rigid fit (utils.per_label_rigid_loss)
+    #   "staring"        -> det / orthonormality / affine stencils on the bone mask
+    #   "staring_eroded" -> the same on the mask eroded per bone, so no stencil
+    #                       reads outside its own bone
+    # The terms have different units: retune w_io_bone_rigidity per method.
+    io_rigidity_method: str = "kabsch"
 
     # --- per-lesion (connected component) tumour bias terms in IO -----------
     # The scored MTV / TLG are global sums, so per-lesion errors cancel: on the

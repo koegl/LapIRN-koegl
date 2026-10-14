@@ -62,7 +62,7 @@ class IOSpec:
     rigidity: bool
     # IO weight overrides on top of the frozen IO settings in TrainingConfig,
     # e.g. a single PET term switched off for the leave-one-out runs
-    cfg_overrides: Dict[str, float] = field(default_factory=dict)
+    cfg_overrides: Dict[str, object] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -85,9 +85,18 @@ LOO_TERMS: Dict[str, Dict[str, float]] = {
     "L4": {"w_io_jacobian_tumor": 0.0},  # tumour Jacobian
 }
 
+# rigidity comparison (experiment 2): PET IO on the PET-only network (T2) plus
+# one rigidity method; R1 (no rigidity) is I2. The weight of each method is
+# swept on val by overriding w_io_bone_rigidity (step 7).
+RIGIDITY_METHODS: Dict[str, str] = {
+    "R2": "staring",
+    "R3": "staring_eroded",
+    "R4": "kabsch",
+}
+
 # --- evaluation runs: plan ID -> what to run ---
-# R* (rigidity comparison) and W* (PET-weight sweep) are added once Staring IO
-# and the frozen IO settings exist; B* (baselines) are not networks.
+# W* (PET-weight sweep) is added once the IO settings are frozen; B*
+# (baselines) are not networks.
 EVAL_RUNS: Dict[str, EvalRun] = {
     "T1": EvalRun("T1"),
     "T2": EvalRun("T2"),
@@ -104,6 +113,18 @@ EVAL_RUNS: Dict[str, EvalRun] = {
     **{
         run_id: EvalRun("T1", IOSpec(pet=True, rigidity=False, cfg_overrides=terms))
         for run_id, terms in LOO_TERMS.items()
+    },
+    "R1": EvalRun("T2", IO_PET),
+    **{
+        run_id: EvalRun(
+            "T2",
+            IOSpec(
+                pet=True,
+                rigidity=True,
+                cfg_overrides={"io_rigidity_method": method},
+            ),
+        )
+        for run_id, method in RIGIDITY_METHODS.items()
     },
 }
 

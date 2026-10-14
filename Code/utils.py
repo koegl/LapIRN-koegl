@@ -1878,6 +1878,73 @@ def enforce_rigidity_loss(
     return total, (det, ortho, affine)
 
 
+def bone_label_map(labels: torch.Tensor, bone_values: torch.Tensor) -> torch.Tensor:
+    """(B, 1, D, H, W) label map with every non-bone voxel set to 0."""
+    labels = labels.round()
+    return torch.where(
+        torch.isin(labels, bone_values.to(labels.dtype)), labels, torch.zeros_like(labels)
+    )
+
+
+# Neighbours read by the Staring stencils around a centre voxel: the 6 face
+# neighbours (central first differences of det(J) / orthonormality, and the
+# pure second differences of affine_loss) and the 12 edge neighbours (its mixed
+# second differences). The 8 corners are never read.
+STARING_STENCIL_OFFSETS: Tuple[Tuple[int, int, int], ...] = tuple(
+    (i, j, k)
+    for i in (-1, 0, 1)
+    for j in (-1, 0, 1)
+    for k in (-1, 0, 1)
+    if 1 <= abs(i) + abs(j) + abs(k) <= 2
+)
+
+
+def stencil_neighbours(labels: torch.Tensor) -> Iterator[torch.Tensor]:
+    """For each offset in STARING_STENCIL_OFFSETS, the label of that neighbour
+    of every voxel (zero padding at the border). labels: (..., D, H, W)."""
+    d, h, w = labels.shape[-3:]
+    padded = torch.nn.functional.pad(labels, (1, 1, 1, 1, 1, 1))
+    for i, j, k in STARING_STENCIL_OFFSETS:
+        yield padded[..., 1 + i : 1 + i + d, 1 + j : 1 + j + h, 1 + k : 1 + k + w]
+
+
+def erode_label_map(bone_labels: torch.Tensor) -> torch.Tensor:
+    """Per-bone erosion by the Staring stencil footprint: a bone voxel survives
+    only if every neighbour the stencils read (STARING_STENCIL_OFFSETS) carries
+    the same bone label. On the eroded mask no stencil reads a voxel outside its
+    own bone, neither soft tissue nor a neighbouring bone.
+
+    bone_labels: (B, 1, D, H, W) from bone_label_map. Returns a binary float mask.
+    """
+    keep = bone_labels > 0
+    for neighbour in stencil_neighbours(bone_labels):
+        keep = keep & (neighbour == bone_labels)
+    return keep.float()
+
+
+def staring_rigidity_loss(
+    flow: torch.Tensor,
+    jac_det: torch.Tensor,
+    jac: torch.Tensor,
+    bone_labels: torch.Tensor,
+    erode: bool,
+    w_det: float = 1.0,
+    w_ortho: float = 1.0,
+    w_affine: float = 1.0,
+) -> torch.Tensor:
+    """Staring/Modersitzki local rigidity (enforce_rigidity_loss) on the bone
+    mask, optionally eroded per bone so its stencils stay inside each bone.
+
+    flow: (B, D, H, W, 3) voxel displacement, component c along axis c.
+    bone_labels: (B, 1, D, H, W) from bone_label_map, in the frame of flow.
+    """
+    mask = erode_label_map(bone_labels) if erode else (bone_labels > 0).float()
+    total, _ = enforce_rigidity_loss(
+        jac_det, jac, flow, mask, w_det=w_det, w_ortho=w_ortho, w_affine=w_affine
+    )
+    return total
+
+
 def per_label_rigid_loss(
     flow: torch.Tensor,
     labels: torch.Tensor,
