@@ -178,7 +178,17 @@ def io_objective(
         # Detached: gradient must flow through det(J), not through shifting the
         # mask off the high-det region.
         fixed_pet_mask = warped_pet_mask.detach()
-        loss_masked_jac = utils.masked_jac_det_loss(jac_det, fixed_pet_mask)
+        # tumour-jac on the nearest-warped (hard) mask, exactly as in lvl3
+        # training. The training-time unroll passes no transform_nearest and
+        # keeps the soft mask.
+        if transform_nearest is not None:
+            with torch.no_grad():
+                jac_pet_mask = warp_label(
+                    moving_pet_mask, disp_unit, grid, transform_nearest
+                )
+        else:
+            jac_pet_mask = fixed_pet_mask
+        loss_masked_jac = utils.masked_jac_det_loss(jac_det, jac_pet_mask)
 
         loss_mtv_avg = utils.mtv_mean_bias_loss(jac_det, fixed_pet_mask)
 
