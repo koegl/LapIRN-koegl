@@ -32,8 +32,8 @@ from config import DATA_PATH, TrainingConfig
 # --- training runs: plan ID -> cluster run name (as in the .pth file names) ---
 TRAINING_RUNS: Dict[str, str] = {
     "T1": "",  # neither
-    "T2": "",  # PET
-    "T3": "",  # rigidity
+    "T2": "overjoyed-slug-41355419",  # PET
+    "T3": "overjoyed-slug-41355436",  # rigidity
     "T4": "",  # PET + rigidity
 }
 
