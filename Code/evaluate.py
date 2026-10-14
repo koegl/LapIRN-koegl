@@ -67,9 +67,17 @@ class IOSpec:
 
 @dataclass(frozen=True)
 class EvalRun:
-    network: str  # key of TRAINING_RUNS
+    network: Optional[str] = None  # key of TRAINING_RUNS; None = no network
     io: Optional[IOSpec] = None  # None = network output only
     checkpoint: str = "best_accuracy_capped"
+    # without a network: apply our affine prereg (True) or the identity (False)
+    affine: bool = True
+    # precomputed baseline: a key of BASELINE_METHODS (its chosen config) or a
+    # directory of fields; replaces affine and network
+    external: Optional[object] = None
+    # False: score the moving scan as it is (no resampling at all); only for
+    # the identity, where it gives the exact "initial" row (MTV / TLG change 0)
+    warp: bool = True
 
 
 IO_NONE = IOSpec(pet=False, rigidity=False)
@@ -126,7 +134,21 @@ EVAL_RUNS: Dict[str, EvalRun] = {
         )
         for run_id, method in RIGIDITY_METHODS.items()
     },
+    # baselines (experiment 4); B5 / B6 (full method with / without IO) are T4 / I4
+    "B1": EvalRun(affine=False, warp=False),  # initial alignment, not resampled
+    # the identity pushed through the scorer's warp: its MTV / TLG change is the
+    # resampling floor every warped method carries (findings.md)
+    "B1-floor": EvalRun(affine=False),
+    "B2": EvalRun(),  # our affine prereg only
+    "B3": EvalRun(external="niftyreg"),
+    "B4": EvalRun(external="convexadam"),
 }
+
+# precomputed baseline fields, written by journal_results/tune_*.py:
+# <BASELINE_DIR>/<method>/<config>/fields/disp_<case>_<tp moving>_<tp fixed>.nii.gz,
+# the config chosen on val named in <BASELINE_DIR>/<method>/chosen.json
+BASELINE_DIR = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/journal_results/baselines")
+BASELINE_METHODS = ("niftyreg", "convexadam")
 
 # --- what to run (no argparse) ---
 SPLIT = "val"  # "val" while developing; "test" only for frozen final runs
@@ -248,8 +270,46 @@ def load_label(
     return torch.from_numpy(arr)[None, None].to(device).float()
 
 
+def baseline_field_dir(external: object) -> Path:
+    """Field directory of a baseline: the val-chosen config of a method in
+    BASELINE_METHODS, or an explicit directory (used while tuning)."""
+    if external in BASELINE_METHODS:
+        method_dir = BASELINE_DIR / str(external)
+        with open(method_dir / "chosen.json") as f:
+            return method_dir / json.load(f)["config"] / "fields"
+    return Path(external)
+
+
+def baseline_field_path(field_dir: Path, case_id: str, tp_x: str, tp_y: str) -> Path:
+    return field_dir / f"disp_{case_id}_{tp_x}_{tp_y}.nii.gz"
+
+
+def load_external_unit_flow(
+    path: Path, full_shape: Tuple[int, int, int], device: torch.device
+) -> torch.Tensor:
+    """A baseline's total displacement field -> total unit flow (1, 3, H, W, D).
+
+    The field is stored channel-first, channel i along array axis i, in
+    full-resolution voxels, on the full grid or a coarser one (ConvexAdam).
+    It is converted with the (n - 1)/2 convention of transform_unit_flow_to_
+    flow_cuda, so evaluate_pair hands the scorer exactly the stored field.
+    Unit flow is resolution-independent, so a coarse field is upsampled after
+    the conversion."""
+    field = my_data.nib.load(str(path)).get_fdata().astype(np.float32)
+    if field.shape[0] != 3:
+        raise ValueError(f"{path}: expected a channel-first field, got {field.shape}")
+    shape = field.shape[1:]
+    # unit-flow layout: channel 0 along the LAST array axis
+    unit = torch.from_numpy(field[::-1].copy())[None].to(device)
+    for c, n in enumerate(reversed(full_shape)):
+        unit[:, c] /= (n - 1) / 2.0
+    if tuple(shape) != tuple(full_shape):
+        unit = F.interpolate(unit, size=full_shape, mode="trilinear", align_corners=False)
+    return unit
+
+
 def register_pair(
-    model: torch.nn.Module,
+    model: Optional[torch.nn.Module],
     run: EvalRun,
     cfg: TrainingConfig,
     case_id: str,
@@ -269,6 +329,12 @@ def register_pair(
     pair = my_data.load_pair_to_dict(cfg.data_dir, case_id, tp_x, tp_y)
     X = torch.cat([pair["x_ct"], pair["x_pet"]], dim=0)[None].to(device).float()
     Y = torch.cat([pair["y_ct"], pair["y_pet"]], dim=0)[None].to(device).float()
+
+    if run.external is not None:
+        path = baseline_field_path(baseline_field_dir(run.external), case_id, tp_x, tp_y)
+        return load_external_unit_flow(path, tuple(cfg.img_shape), device), X, Y
+    if model is None and not run.affine:
+        return torch.zeros(1, 3, *cfg.img_shape, device=device), X, Y
 
     image_dir = cfg.data_dir / "imagesTr"
     dvf = affine_reg.get_affine_dvf(
@@ -293,9 +359,13 @@ def register_pair(
         dim=1,
     ).permute(0, 2, 3, 4, 1)
 
-    with torch.no_grad():
-        X_affine = transform(X, flow_affine, grid_full)
-        F_X_Y, _, _, _, _, _, _ = model(X_affine, Y)
+    if model is None:
+        # affine prereg only
+        F_X_Y = torch.zeros(1, 3, *cfg.img_shape, device=device)
+    else:
+        with torch.no_grad():
+            X_affine = transform(X, flow_affine, grid_full)
+            F_X_Y, _, _, _, _, _, _ = model(X_affine, Y)
 
     # compose affine (outer) with the network field (inner), so IO optimises
     # and the evaluation scores the TOTAL transform of the original moving image
@@ -514,18 +584,34 @@ def evaluate_pair(
     return pair_metrics, lesion_rows
 
 
-def evaluate_run(run_id: str, split: str, device: torch.device) -> None:
-    out_csv = OUT_DIR / split / f"{run_id}.csv"
+def evaluate_run(
+    run_id: str,
+    split: str,
+    device: torch.device,
+    run: Optional[EvalRun] = None,
+    out_dir: Optional[Path] = None,
+) -> Path:
+    """Evaluate one run on every pair of the split; returns the pair CSV.
+    `run` / `out_dir` default to EVAL_RUNS[run_id] / OUT_DIR (the tuning
+    scripts pass their own)."""
+    out_csv = (out_dir or OUT_DIR) / split / f"{run_id}.csv"
     if SKIP_EXISTING and out_csv.exists():
         print(f"[{run_id}] {out_csv} exists, skipping")
-        return
+        return out_csv
 
-    run = EVAL_RUNS[run_id]
+    run = run or EVAL_RUNS[run_id]
     cfg = TrainingConfig()
-    for key, value in TRAINING_CFG_OVERRIDES[run.network].items():
-        setattr(cfg, key, value)
-    model_path = model_path_for(cfg, run)
-    model = create_model(cfg, model_path, device)
+    model = None
+    if run.network is not None:
+        for key, value in TRAINING_CFG_OVERRIDES[run.network].items():
+            setattr(cfg, key, value)
+        model_path = model_path_for(cfg, run)
+        model = create_model(cfg, model_path, device)
+        source = model_path.name
+    elif run.external is not None:
+        source = str(baseline_field_dir(run.external))
+    else:
+        source = "affine" if run.affine else "identity"
 
     transform = miccai2020_model_stage.SpatialTransform_unit().to(device)
     transform_nearest = miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
@@ -533,6 +619,10 @@ def evaluate_run(run_id: str, split: str, device: torch.device) -> None:
     grid_full = torch.from_numpy(grid[None]).to(device).float()
     warp_nearest = SpatialTransformer(cfg.img_shape, mode="nearest").to(device)
     warp_linear = SpatialTransformer(cfg.img_shape, mode="bilinear").to(device)
+    if not run.warp:
+        if run.network is not None or run.external is not None or run.affine:
+            raise ValueError("warp=False is only meaningful for the identity")
+        warp_nearest = warp_linear = lambda src, flow: src
 
     rows = []
     lesion_rows = []
@@ -581,7 +671,7 @@ def evaluate_run(run_id: str, split: str, device: torch.device) -> None:
         rows.append(
             {
                 **pair_keys,
-                "model": model_path.name,
+                "model": source,
                 "runtime_s": runtime_s,
                 **metrics,
             }
@@ -610,6 +700,7 @@ def evaluate_run(run_id: str, split: str, device: torch.device) -> None:
             percentiles=[0.5, 0.95]
         )
         print(f"[{run_id}] wrote {lesions_csv}\nper-lesion |MTV change|:\n{summary}")
+    return out_csv
 
 
 def main() -> None:

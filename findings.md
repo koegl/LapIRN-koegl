@@ -27,3 +27,21 @@ val, test and single-session), ground-truth CT labels. Identical across splits.
 
 Source: `journal_results/erosion_leakage.py` → `journal_results/erosion_leakage/`
 (`per_scan.csv`, `per_bone.csv`, `summary.txt`).
+
+## The scorer's warp changes TLG even for the identity transform
+
+**Status:** preliminary — 1 validation pair (case 0071, 01→00), our copy of the
+scorer's transformer (`evaluate.SpatialTransformer`, from voxelmorph). To check
+against the official scorer code.
+
+- The transformer normalises voxel positions with (n − 1) but samples with
+  `align_corners=False`, so voxel i is read at i·n/(n − 1) − 0.5: a zero field
+  shifts the image by up to half a voxel (−0.5 at one end, +0.5 at the other).
+- With an all-zero field, the linearly resampled PET changes TLG by **2.5%**;
+  MTV (nearest-neighbour mask) stays at 0%.
+- Handling: the "initial" row (B1) is scored without any resampling (MTV / TLG
+  change exactly 0); all other methods keep the scorer's warp. The floor itself
+  is measured by B1-floor (identity through the scorer's warp) on the full test
+  set and stated in the paper as a resampling effect common to all methods.
+
+Source: `evaluate.py` runs B1, B1-floor.

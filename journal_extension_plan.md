@@ -14,6 +14,9 @@
 - Train registration and nnU-Net on training patients only; tune all weights, checkpoints, and IO settings on validation patients, then freeze them for test.
 - At test time, use TotalSegmentator and nnU-Net predictions for IO. Reserve provided labels for evaluation only; document their provenance.
 - Report paired effects and patient-level uncertainty, accounting for multiple pairs/lesions per patient.
+- **Patient-level aggregation:** a patient can contribute several pairs (and many lesions); average them per patient before any test, ranking, or bootstrap.
+- **Tuning (IO weights, NiftyReg, ConvexAdam):** one continuous challenge-style score for every method: weighted geometric mean of accuracy (CT Dice + HD95, 0.4), PET biomarker preservation (|MTV|, |TLG|, 0.4), and regularity (%NDV with the 0.005 % equivalence threshold, 0.2) (`utils.challenge_selection_score`, references recalibrated on val). Training checkpoints keep accuracy + NDV cap (see Training setup).
+- **Final results (test):** raw metrics with patient-level CIs, plus the challenge's significance ranking over all methods (per metric: pairwise one-sided Wilcoxon on patient-level values, Holm-adjusted, score = (#significantly beaten + 1) / K; components and 0.4/0.4/0.2 geometric mean as above; PET Dice/HD95 omitted, no labels) and 95 % rank intervals from 1,000 patient bootstrap samples.
 
 ## Training setup
 
@@ -28,7 +31,7 @@
 |---|---|---|
 | S1–S4 | Full lvl1→3 training, architectures (5,1), (5,2), (10,1), (10,2) | val |
 | S5… | Regularisation vs. NCC/Dice sweep on the chosen architecture; the winner's lvl2 becomes the shared checkpoint | val |
-| IO tuning | IO step size, stopping rule, and loss weights, set once on val and frozen for all IO runs below | val |
+| IO tuning | IO step size, stopping rule, and loss weights, set once on val with the combined tuning score and frozen for all IO runs below | val |
 
 ## Core experiments
 
