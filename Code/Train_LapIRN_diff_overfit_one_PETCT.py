@@ -178,10 +178,10 @@ def main() -> None:
                 #     valid_abdomen_generator,
                 # )
                 resume_model_path_lvl3 = Path(
-                    "/lustre/groups/iml/data/PSMAReg/models/psmareg_journal_bold-ox-41371433_stagelvl3_best_accuracy.pth"
+                    "/lustre/groups/iml/data/PSMAReg/models/psmareg_journal_ambitious-koi-41357618_stagelvl3_best_accuracy.pth"
                 )
                 resume_optimizer_path_lvl3 = Path(
-                    "/lustre/groups/iml/data/PSMAReg/models/psmareg_journal_bold-ox-41371433_stagelvl3_best_accuracy_optimizer.pth"
+                    "/lustre/groups/iml/data/PSMAReg/models/psmareg_journal_ambitious-koi-41357618_stagelvl3_best_accuracy_optimizer.pth"
                 )
                 path_model_level3 = level3.train_lvl3(
                     config,
