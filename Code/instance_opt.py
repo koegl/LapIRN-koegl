@@ -706,7 +706,7 @@ def run_io(
             best_i=best_disp_i,
         )
 
-    if False and history_csv is not None and history:
+    if history_csv is not None and history:
         history_csv.parent.mkdir(parents=True, exist_ok=True)
         with open(history_csv, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=list(history[0].keys()))
