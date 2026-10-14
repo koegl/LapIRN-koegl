@@ -19,9 +19,11 @@ from typing import Dict, List, Optional, Tuple
 
 import affine_reg
 import Functions
+import hd95_official
 import instance_opt
 import miccai2020_model_stage
 import my_data
+import ndv_official
 import numpy as np
 import pandas as pd
 import torch
@@ -200,7 +202,9 @@ def split_pairs(cfg: TrainingConfig, split: str) -> List[Tuple[str, str, str]]:
     return my_data.build_registration_pairs(case_timepoints, case_ids=case_ids)
 
 
-def load_label(label_dir: Path, case_id: str, channel: str, tp: str, device) -> torch.Tensor:
+def load_label(
+    label_dir: Path, case_id: str, channel: str, tp: str, device
+) -> torch.Tensor:
     path = label_dir / f"PSMARegPSMA_{case_id}_{channel}_{tp}.nii.gz"
     arr = my_data.nib.load(str(path)).get_fdata().astype(np.int16)
     return torch.from_numpy(arr)[None, None].to(device).float()
@@ -299,34 +303,102 @@ def register_pair(
     return total_unit_flow.detach(), X, Y
 
 
+def compute_ndv(total_voxel: torch.Tensor, body_mask: np.ndarray) -> float:
+    """%NDV as computed by the challenge scorer, inside the fixed body mask.
+    total_voxel: (1, 3, H, W, D) voxel displacement, training component order."""
+    disp = total_voxel[0].detach().cpu().numpy().astype(np.float32)
+    trans = disp + ndv_official.get_identity_grid(disp)
+    jac_dets = ndv_official.calc_jac_dets(trans)
+    mask_inner = body_mask[1:-1, 1:-1, 1:-1]
+    _, _, non_diff_volume, _ = ndv_official.calc_measurements(jac_dets, mask_inner)
+    return float(non_diff_volume / mask_inner.sum() * 100.0)
+
+
+def relative_change(after: torch.Tensor, before: torch.Tensor) -> float:
+    """Signed relative change (after - before) / before; NaN if before is 0."""
+    before = float(before)
+    return (float(after) - before) / before if before > 0 else float("nan")
+
+
 def evaluate_pair(
     total_unit_flow: torch.Tensor,
+    Y: torch.Tensor,
     cfg: TrainingConfig,
     case_id: str,
     tp_x: str,
     tp_y: str,
     warp_nearest: SpatialTransformer,
+    warp_linear: SpatialTransformer,
     device: torch.device,
 ) -> Dict[str, float]:
-    """Metrics of one registered pair against the ground-truth labels.
-    Skeleton: CT Dice only; the full metric set is added in the next steps."""
+    """Metrics of one registered pair, all against the ground-truth labels.
+
+    Accuracy: CT Dice and HD95 over the 117 CT labels (official definitions),
+    before and after registration. Regularity: %NDV in the fixed body mask.
+    Preservation: MTV and TLG of the moving scan's lesions after vs. before
+    warping, signed and absolute. TLG uses the raw SUV image, not the network's
+    clipped input; the lesion mask is warped nearest, the PET image linearly,
+    as by the challenge scorer.
+    """
     total_voxel = Functions.transform_unit_flow_to_flow_cuda(
         total_unit_flow.permute(0, 2, 3, 4, 1).clone()
     ).permute(0, 4, 1, 2, 3)
     # the scorer's transformer expects the components in the opposite order
     disp_eval = total_voxel.flip(1)
 
+    # --- CT organ labels: Dice and HD95 ---
     seg_moving = load_label(GT_LABEL_DIR, case_id, "0000", tp_x, device)
     seg_fixed = load_label(GT_LABEL_DIR, case_id, "0000", tp_y, device)
     seg_warped = warp_nearest(seg_moving, disp_eval)
+    moving_i = seg_moving[0, 0].round().long()
     fixed_i = seg_fixed[0, 0].round().long()
+    warped_i = seg_warped[0, 0].round().long()
+
+    fixed_nii = my_data.nib.load(
+        str(GT_LABEL_DIR / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz")
+    )
+    spacing_mm = tuple(float(z) for z in fixed_nii.header.get_zooms()[:3])
+    moving_np = moving_i.cpu().numpy().astype(np.int16)
+    fixed_np = fixed_i.cpu().numpy().astype(np.int16)
+    warped_np = warped_i.cpu().numpy().astype(np.int16)
+
+    # --- deformation regularity ---
+    body_mask = Y[0, 0].detach().cpu().numpy() > 0
+
+    # --- PET lesion preservation ---
+    lesion_moving = (
+        load_label(GT_LABEL_DIR, case_id, "0001", tp_x, device) == 1
+    ).float()
+    lesion_warped = (warp_nearest(lesion_moving, disp_eval) > 0.5).float()
+    pet_path = cfg.data_dir / "imagesTr" / f"PSMARegPSMA_{case_id}_0001_{tp_x}.nii.gz"
+    suv_moving = torch.from_numpy(
+        my_data.nib.load(str(pet_path)).get_fdata().astype(np.float32)
+    )[None, None].to(device)
+    suv_warped = warp_linear(suv_moving, disp_eval)
+    mtv_change = relative_change(lesion_warped.sum(), lesion_moving.sum())
+    tlg_change = relative_change(
+        (suv_warped * lesion_warped).sum(), (suv_moving * lesion_moving).sum()
+    )
+
     return {
-        "dice_ct_before": instance_opt.multilabel_dice(
-            seg_moving[0, 0].round().long(), fixed_i
+        "dice_ct_before": instance_opt.multilabel_dice(moving_i, fixed_i),
+        "dice_ct": instance_opt.multilabel_dice(warped_i, fixed_i),
+        "hd95_before": float(
+            hd95_official.compute_average_ct_label_hd95(
+                fixed_np, moving_np, moving_np, spacing_mm
+            )
         ),
-        "dice_ct": instance_opt.multilabel_dice(
-            seg_warped[0, 0].round().long(), fixed_i
+        "hd95": float(
+            hd95_official.compute_average_ct_label_hd95(
+                fixed_np, moving_np, warped_np, spacing_mm
+            )
         ),
+        "ndv_percent": compute_ndv(total_voxel, body_mask),
+        "lesion_voxels": float(lesion_moving.sum()),
+        "mtv_change": mtv_change,
+        "mtv_bias": abs(mtv_change),
+        "tlg_change": tlg_change,
+        "tlg_bias": abs(tlg_change),
     }
 
 
@@ -348,13 +420,14 @@ def evaluate_run(run_id: str, split: str, device: torch.device) -> None:
     grid = Functions.generate_grid_unit(cfg.img_shape)
     grid_full = torch.from_numpy(grid[None]).to(device).float()
     warp_nearest = SpatialTransformer(cfg.img_shape, mode="nearest").to(device)
+    warp_linear = SpatialTransformer(cfg.img_shape, mode="bilinear").to(device)
 
     rows = []
     for case_id, tp_x, tp_y in tqdm.tqdm(split_pairs(cfg, split), desc=run_id):
         if device.type == "cuda":
             torch.cuda.synchronize(device)
         t_start = time.perf_counter()
-        total_unit_flow, _, _ = register_pair(
+        total_unit_flow, _, Y = register_pair(
             model,
             run,
             cfg,
@@ -365,14 +438,26 @@ def evaluate_run(run_id: str, split: str, device: torch.device) -> None:
             transform_nearest,
             grid_full,
             device,
-            history_csv=OUT_DIR / split / "io_history" / run_id / f"{case_id}_{tp_x}.csv",
+            history_csv=OUT_DIR
+            / split
+            / "io_history"
+            / run_id
+            / f"{case_id}_{tp_x}.csv",
         )
         if device.type == "cuda":
             torch.cuda.synchronize(device)
         runtime_s = time.perf_counter() - t_start
 
         metrics = evaluate_pair(
-            total_unit_flow, cfg, case_id, tp_x, tp_y, warp_nearest, device
+            total_unit_flow,
+            Y,
+            cfg,
+            case_id,
+            tp_x,
+            tp_y,
+            warp_nearest,
+            warp_linear,
+            device,
         )
         rows.append(
             {
@@ -393,7 +478,9 @@ def evaluate_run(run_id: str, split: str, device: torch.device) -> None:
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     df = pd.DataFrame(rows)
     df.to_csv(out_csv, index=False)
-    print(f"[{run_id}] wrote {out_csv}\n{df.drop(columns=['model']).mean(numeric_only=True)}")
+    print(
+        f"[{run_id}] wrote {out_csv}\n{df.drop(columns=['model']).mean(numeric_only=True)}"
+    )
 
 
 def main() -> None:
