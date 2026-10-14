@@ -1,0 +1,23 @@
+560 scans of 358 patients
+
+by split:
+                patients  scans  leak_full_mean  leak_eroded_mean  voxels_retained_mean  bones_retained_mean  leak_full_std  leak_eroded_std  voxels_retained_std  bones_retained_std
+split                                                                                                                                                                                
+single_session       212    212           0.210               0.0                 0.359                0.765          0.011              0.0                0.022               0.073
+test                  28     66           0.217               0.0                 0.346                0.770          0.011              0.0                0.020               0.070
+train                 92    218           0.212               0.0                 0.355                0.777          0.012              0.0                0.022               0.078
+val                   26     64           0.213               0.0                 0.353                0.763          0.012              0.0                0.023               0.063
+
+all scans:
+      leak_full  leak_eroded  voxels_retained  bones_retained
+mean      0.212          0.0            0.355           0.770
+std       0.012          0.0            0.022           0.074
+min       0.164          0.0            0.292           0.471
+max       0.242          0.0            0.474           0.934
+
+by bone group (all scans):
+               n  voxels_retained  vanished
+group                                      
+other       6701            0.390     0.000
+ribs       13376            0.024     0.575
+vertebrae  13933            0.221     0.007
