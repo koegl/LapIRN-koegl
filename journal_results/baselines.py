@@ -10,10 +10,9 @@ channel-first, channel i along array axis i, in full-resolution voxels, as
 (the layout evaluate.py reads).
 
 Tuning: every config of a grid registers all val pairs, evaluate.py scores them,
-and the config is chosen by the same rule as our checkpoints: best accuracy
-(CT Dice + HD95, utils.challenge_selection_score) among configs whose mean
-%NDV is at most cfg.sel_max_ndv_percent. The choice goes to chosen.json; with
-split "test" only the chosen config is registered (evaluate.py runs B3 / B4).
+and the configs are ranked against each other with the challenge's
+significance ranking (ranking.py); the winner goes to chosen.json. With split
+"test" only the chosen config is registered (evaluate.py runs B3 / B4).
 """
 
 import json
@@ -35,7 +34,7 @@ import baseline_ConvexAdam as convexadam  # noqa: E402
 import baseline_NiftyReg as niftyreg  # noqa: E402
 import config  # noqa: E402
 import evaluate  # noqa: E402
-import utils  # noqa: E402
+import ranking  # noqa: E402
 
 BASELINE_DIR = evaluate.BASELINE_DIR
 CT_TEMPLATE = "PSMARegPSMA_{case_id}_0000_{tp}.nii.gz"
@@ -217,44 +216,6 @@ def register_split(method: str, config_name: str, params: Dict, split: str) -> P
     return field_dir
 
 
-def select_config(method: str, results: Dict[str, pd.DataFrame]) -> Dict:
-    """Same rule as our checkpoints: best accuracy among configs within the NDV cap."""
-    cfg = config.TrainingConfig()
-    rows = []
-    for name, df in results.items():
-        dice, hd95, ndv = df["dice_ct"].mean(), df["hd95"].mean(), df["ndv_percent"].mean()
-        accuracy = utils.challenge_selection_score(
-            cfg,
-            # the reference / scale of sel_*_dice_ct are on the dice LOSS
-            dice_ct_loss=1.0 - dice,
-            hd95=hd95,
-            mtv_bias=float("nan"),
-            tlg_bias=float("nan"),
-            ndv_percent=ndv,
-        )["accuracy"]
-        rows.append(
-            {
-                "config": name,
-                "dice_ct": dice,
-                "hd95": hd95,
-                "ndv_percent": ndv,
-                "within_ndv_cap": ndv <= cfg.sel_max_ndv_percent,
-                "accuracy": accuracy,
-            }
-        )
-    table = pd.DataFrame(rows).sort_values("accuracy", ascending=False)
-    eligible = table[table["within_ndv_cap"]]
-    if eligible.empty:
-        raise RuntimeError(
-            f"no {method} config within the NDV cap {cfg.sel_max_ndv_percent}:\n{table}"
-        )
-    return {
-        "config": eligible.iloc[0]["config"],
-        "ndv_cap_percent": cfg.sel_max_ndv_percent,
-        "table": table.to_dict("records"),
-    }
-
-
 def tune(method: str, grid: Dict[str, Dict], split: str) -> None:
     method_dir = BASELINE_DIR / method
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -270,9 +231,10 @@ def tune(method: str, grid: Dict[str, Dict], split: str) -> None:
                 out_dir=method_dir / "eval",
             )
             results[name] = pd.read_csv(csv)
-        chosen = select_config(method, results)
+        selection = ranking.select(results)
+        chosen = {"config": selection["chosen"], "table": selection["table"]}
         (method_dir / "chosen.json").write_text(json.dumps(chosen, indent=2, default=str))
-        print(pd.DataFrame(chosen["table"]).round(5).to_string(index=False))
+        print(pd.DataFrame(chosen["table"]).round(4).to_string(index=False))
         print(f"chosen: {chosen['config']}")
     elif split == "test":
         with open(method_dir / "chosen.json") as f:
