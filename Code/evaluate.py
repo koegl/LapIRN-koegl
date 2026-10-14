@@ -41,6 +41,11 @@ TRAINING_RUNS: Dict[str, str] = {
     "T4": "",  # PET + rigidity
 }
 
+"""
+Command to download latest model
+scp "fryderyk.koegl@hpc-submit02.scidom.de:/lustre/groups/iml/data/PSMAReg/models/psmareg_journal_overjoyed-slug-41355419_stagelvl3_best_accuracy_capped.pth" /home/iml/fryderyk.koegl/data/PSMAReg/models_journal/
+"""
+
 # config fields that differ from TrainingConfig() for a training run (e.g. the
 # architecture); must match the checkpoint
 TRAINING_CFG_OVERRIDES: Dict[str, Dict[str, object]] = {
