@@ -38,3 +38,10 @@ overleaf/main.log
 overleaf/main.synctex.gz
 overleaf/main.aux
 snapshots/*
+
+# tuning outputs
+journal_results/*.log
+journal_results/baselines/**/fields/
+journal_results/baselines/**/work/
+journal_results/baselines/niftyreg/bed_removed/
+evaluation/**/io_history/
