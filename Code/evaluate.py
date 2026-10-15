@@ -35,10 +35,10 @@ from scipy import ndimage
 
 # --- training runs: plan ID -> cluster run name (as in the .pth file names) ---
 TRAINING_RUNS: Dict[str, str] = {
-    "T1": "",  # neither
-    "T2": "overjoyed-slug-41355419",  # PET
-    "T3": "overjoyed-slug-41355436",  # rigidity
-    "T4": "",  # PET + rigidity
+    "T1": "placid-shrew-41437404",  # neither
+    "T2": "",  # PET
+    "T3": "",  # rigidity
+    "T4": "suave-squid-41437449",  # PET + rigidity
 }
 
 """
@@ -147,7 +147,9 @@ EVAL_RUNS: Dict[str, EvalRun] = {
 # precomputed baseline fields, written by journal_results/tune_*.py:
 # <BASELINE_DIR>/<method>/<config>/fields/disp_<case>_<tp moving>_<tp fixed>.nii.gz,
 # the config chosen on val named in <BASELINE_DIR>/<method>/chosen.json
-BASELINE_DIR = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/journal_results/baselines")
+BASELINE_DIR = Path(
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/journal_results/baselines"
+)
 BASELINE_METHODS = ("niftyreg", "convexadam")
 
 # --- what to run (no argparse) ---
@@ -304,7 +306,9 @@ def load_external_unit_flow(
     for c, n in enumerate(reversed(full_shape)):
         unit[:, c] /= (n - 1) / 2.0
     if tuple(shape) != tuple(full_shape):
-        unit = F.interpolate(unit, size=full_shape, mode="trilinear", align_corners=False)
+        unit = F.interpolate(
+            unit, size=full_shape, mode="trilinear", align_corners=False
+        )
     return unit
 
 
@@ -331,7 +335,9 @@ def register_pair(
     Y = torch.cat([pair["y_ct"], pair["y_pet"]], dim=0)[None].to(device).float()
 
     if run.external is not None:
-        path = baseline_field_path(baseline_field_dir(run.external), case_id, tp_x, tp_y)
+        path = baseline_field_path(
+            baseline_field_dir(run.external), case_id, tp_x, tp_y
+        )
         return load_external_unit_flow(path, tuple(cfg.img_shape), device), X, Y
     if model is None and not run.affine:
         return torch.zeros(1, 3, *cfg.img_shape, device=device), X, Y
