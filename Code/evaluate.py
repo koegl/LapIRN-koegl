@@ -63,6 +63,8 @@ class IOSpec:
     # IO weight overrides on top of the frozen IO settings in TrainingConfig,
     # e.g. a single PET term switched off for the leave-one-out runs
     cfg_overrides: Dict[str, object] = field(default_factory=dict)
+    # PET lesion labels IO sees; None = PRED_LABEL_DIR (nnU-Net)
+    pet_label_dir: Optional[Path] = None
 
 
 @dataclass(frozen=True)
@@ -160,8 +162,17 @@ OUT_DIR = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/evaluation")
 # same file names as labelsTr; the only labels IO may see
 PRED_LABEL_DIR = DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr_pred"
 GT_LABEL_DIR = DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr"
+# recall-biased PET lesion labels (journal_results/recall_masks.py)
+RECALL_LABEL_DIR = DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr_pred_recall"
 # a run whose CSV exists is skipped; delete the CSV to rerun it
 SKIP_EXISTING = True
+# where the journal checkpoints are (overrides cfg.model_save_dir)
+MODEL_DIR = DATA_PATH / "PSMAReg/models_journal"
+# IO settings chosen on val (journal_results/tune_io.py), applied to every IO
+# run before its own overrides; None while tuning
+IO_TUNED_PATH: Optional[Path] = Path(
+    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/journal_results/io_tuning/chosen.json"
+)
 
 # --- per-lesion analysis ---
 # a lesion is a 26-connected component of the moving scan's lesion mask
@@ -388,14 +399,22 @@ def register_pair(
 
     if run.io is not None:
         io_cfg = copy.copy(cfg)
-        for key, value in run.io.cfg_overrides.items():
+        overrides = dict(run.io.cfg_overrides)
+        if IO_TUNED_PATH is not None:
+            if not IO_TUNED_PATH.exists():
+                raise FileNotFoundError(f"{IO_TUNED_PATH}: tune IO first (tune_io.py)")
+            with open(IO_TUNED_PATH) as f:
+                overrides = {**json.load(f)["overrides"], **overrides}
+        for key, value in overrides.items():
             if not hasattr(io_cfg, key):
                 raise ValueError(f"unknown config field {key}")
             setattr(io_cfg, key, value)
         # labels stay in the original moving frame; IO warps them with the
         # total field (single interpolation)
         x_lbl_ct = load_label(PRED_LABEL_DIR, case_id, "0000", tp_x, device)
-        x_lbl_pet = load_label(PRED_LABEL_DIR, case_id, "0001", tp_x, device)
+        x_lbl_pet = load_label(
+            run.io.pet_label_dir or PRED_LABEL_DIR, case_id, "0001", tp_x, device
+        )
         y_lbl_ct = load_label(PRED_LABEL_DIR, case_id, "0000", tp_y, device)
         total_unit_flow = instance_opt.run_io(
             Y,
@@ -607,6 +626,7 @@ def evaluate_run(
 
     run = run or EVAL_RUNS[run_id]
     cfg = TrainingConfig()
+    cfg.model_save_dir = MODEL_DIR
     model = None
     if run.network is not None:
         for key, value in TRAINING_CFG_OVERRIDES[run.network].items():
@@ -647,8 +667,7 @@ def evaluate_run(
             transform_nearest,
             grid_full,
             device,
-            history_csv=OUT_DIR
-            / split
+            history_csv=out_csv.parent
             / "io_history"
             / run_id
             / f"{case_id}_{tp_x}.csv",

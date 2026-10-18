@@ -45,3 +45,26 @@ against the official scorer code.
   set and stated in the paper as a resampling effect common to all methods.
 
 Source: `evaluate.py` runs B1, B1-floor.
+
+## IO PET terms work on their mask; predicted lesion labels limit them
+
+**Status:** confirmed on val (38 pairs, 26 patients), T4 + IO (lr 0.05, 20 it),
+scored against ground-truth lesions; p = patient-level one-sided Wilcoxon vs. PET off.
+
+| IO lesion labels | MTV bias | TLG bias | CT Dice |
+|---|---|---|---|
+| PET off | 0.103 | 0.118 | 0.800 |
+| nnU-Net (×1 = ×4) | 0.063 (p 0.35) | 0.050 (p 0.001) | 0.782 |
+| ground truth (×1 = ×4) | 0.035 (p 0.016) | 0.047 (p 0.002) | 0.786 |
+| recall-biased mask (×1 = ×4) | 0.156 | 0.166 | 0.787 |
+
+- PET weight ×1 and ×4 give identical results: the terms are satisfied on the
+  mask IO sees, so the remaining MTV error comes from label errors, not weights.
+- The recall-biased mask (SUV > 3 minus dilated physiological organs, ∪ nnU-Net;
+  challenge winner's approach) makes it worse: preserving false-positive
+  regions shrinks the true lesions (signed MTV −6 %). Its lesion detection is
+  0.89 vs. 0.78 for nnU-Net, but precision 0.18 vs. 0.62.
+- IO tuning (round 2) settles on PET ×0.1; ×0.1 to ×4 are flat.
+
+Source: `journal_results/io_pet_check.py` → `io_pet_check/summary.csv`;
+`journal_results/recall_masks.py` → `recall_masks/summary.csv`.

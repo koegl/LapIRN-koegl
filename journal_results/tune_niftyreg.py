@@ -13,8 +13,8 @@ import baselines
 # sx -5). LNCC is not available on the GPU, so the similarity stays NMI.
 GRID = {
     f"be{be}_sx{-sx:g}": {"f3d_be": be, "f3d_sx": sx}
-    for be in (0.001, 0.005, 0.02)
-    for sx in (-3.0, -5.0)
+    for be in (0.0002, 0.0005, 0.001, 0.005, 0.02)
+    for sx in (-3.0, -5.0, -7.0, -9.0)
 }
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ significance ranking (ranking.py); the winner goes to chosen.json. With split
 """
 
 import json
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -210,6 +211,9 @@ def register_split(method: str, config_name: str, params: Dict, split: str) -> P
         )
         seconds = time.time() - start
         save_field(path, field, nib.load(str(ct_paths(cfg, case_id, tp_x, tp_y)[0])))
+        # intermediate files (control point grid, resampled images): not needed
+        # once the field is written, and several GB per config
+        shutil.rmtree(config_dir / "work" / f"{case_id}_{tp_x}", ignore_errors=True)
         timings.append({"case_id": case_id, "tp_moving": tp_x, "tp_fixed": tp_y, "seconds": seconds})
         pd.DataFrame(timings).to_csv(timings_csv, index=False)
         print(f"[{method}/{config_name}] {i + 1}/{len(pairs)} {case_id} {tp_x}->{tp_y}: {seconds:.0f}s", flush=True)
@@ -222,7 +226,10 @@ def tune(method: str, grid: Dict[str, Dict], split: str) -> None:
     if split == "val":
         results: Dict[str, pd.DataFrame] = {}
         for name, params in grid.items():
-            field_dir = register_split(method, name, params, "val")
+            # once evaluated, the val fields are not needed (they may be deleted)
+            field_dir = method_dir / name / "fields"
+            if not (method_dir / "eval" / "val" / f"{name}.csv").exists():
+                field_dir = register_split(method, name, params, "val")
             csv = evaluate.evaluate_run(
                 name,
                 "val",
