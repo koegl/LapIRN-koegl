@@ -30,21 +30,33 @@ Source: `journal_results/erosion_leakage.py` → `journal_results/erosion_leakag
 
 ## The scorer's warp changes TLG even for the identity transform
 
-**Status:** preliminary — 1 validation pair (case 0071, 01→00), our copy of the
-scorer's transformer (`evaluate.SpatialTransformer`, from voxelmorph). To check
-against the official scorer code.
+**Status:** confirmed — all test pairs with lesions (30 of 38 pairs), our copy
+of the scorer's transformer (`evaluate.SpatialTransformer`, from voxelmorph).
+To check against the official scorer code.
 
 - The transformer normalises voxel positions with (n − 1) but samples with
   `align_corners=False`, so voxel i is read at i·n/(n − 1) − 0.5: a zero field
   shifts the image by up to half a voxel (−0.5 at one end, +0.5 at the other).
-- With an all-zero field, the linearly resampled PET changes TLG by **2.5%**;
-  MTV (nearest-neighbour mask) stays at 0%.
+- With an all-zero field, the linearly resampled PET changes TLG by
+  **2.9% ± 1.2%** (range 1.0–6.9%), always downwards (signed −2.9%: the linear
+  interpolation smooths the lesion peaks); MTV (nearest-neighbour mask) stays
+  at 0%. Val pair 0071 01→00 gave 2.5%.
 - Handling: the "initial" row (B1) is scored without any resampling (MTV / TLG
-  change exactly 0); all other methods keep the scorer's warp. The floor itself
-  is measured by B1-floor (identity through the scorer's warp) on the full test
-  set and stated in the paper as a resampling effect common to all methods.
+  change exactly 0); all other methods keep the scorer's warp. The floor is
+  stated in the paper as a resampling effect common to all methods.
 
-Source: `evaluate.py` runs B1, B1-floor.
+Source: `evaluate.py` runs B1, B1-floor → `evaluation/test/`.
+
+## NiftyReg folds more on test than on val
+
+**Status:** confirmed — val-chosen config be 0.0002, sx −9 (38 val / 38 test pairs).
+
+- %NDV mean 0.016 (val) vs. **0.093** (test); the median is 0 on both.
+- On test, three pairs fold strongly (0.8–1.3%; cases 0338, 0166, 0170).
+- Cause: the ranking picks the least-regularised config on val (the
+  accuracy scores separate configs; NDV only barely). Report as is.
+
+Source: `evaluation/test/B3.csv`, `journal_results/baselines/niftyreg/eval/val/`.
 
 ## IO PET terms work on their mask; predicted lesion labels limit them
 
