@@ -36,7 +36,7 @@ from scipy import ndimage
 # --- training runs: plan ID -> cluster run name (as in the .pth file names) ---
 TRAINING_RUNS: Dict[str, str] = {
     "T1": "placid-shrew-41437404",  # neither
-    "T2": "",  # PET
+    "T2": "shivering-stoat-41526969",  # PET
     "T3": "",  # rigidity
     "T4": "suave-squid-41437449",  # PET + rigidity
 }
