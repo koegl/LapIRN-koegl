@@ -10,5 +10,5 @@ One step at a time: implement → user checks → tick.
 - [x] 6. **Staring + Staring-with-erosion in IO:** available as IO loss options next to Kabsch.
 - [x] 7. **IO tuning on val:** step size, stopping rule, loss weights (predicted labels as inputs); freeze them.
 - [x] 8. **Baselines B1–B4:** initial alignment, affine, NiftyReg, ConvexAdam (tune the last two on val), run on test.
-- [ ] 9. **Statistics:** patient-level paired effects with uncertainty (e.g. patient-cluster bootstrap).
-- [ ] 10. **Dry run:** full pipeline on val with current checkpoints, so final runs only swap in the finished checkpoints.
+- [x] 9. **Statistics:** patient-level paired effects with uncertainty (e.g. patient-cluster bootstrap).
+- [x] 10. **Dry run:** full pipeline on val with current checkpoints, so final runs only swap in the finished checkpoints.
