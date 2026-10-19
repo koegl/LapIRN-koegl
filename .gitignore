@@ -9,7 +9,7 @@ Model/*
 saved/*
 *.nii.gz
 *.npy
-*.png
+# *.png
 *.zip
 totalsegmentator_weights/*
 .claude/._settings.local.json
@@ -47,3 +47,4 @@ journal_results/baselines/niftyreg/bed_removed/
 evaluation/**/io_history/
 journal_results/**/io_history/
 journal_results/**/__pycache__/
+journal_results/paper/cache/
