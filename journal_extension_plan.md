@@ -84,7 +84,7 @@ Evaluation modes: **network** = network output only; **IO** = network + IO. IO s
 | Deformation quality | NDV/folding inside bones, in an outside boundary band, and across the body |
 | Boundary mechanism | Direct stencil leakage; fraction of bones/voxels retained after erosion |
 
-- Tune each method's weight separately; compare alignment vs. distance distortion, with folding alongside.
+- **Weight selection:** per method, a reference weight calibrated so that its initial rigidity loss matches Kabsch at the IO setting (0.25), on a few val pairs (`journal_results/calibrate_rigidity.py`: Kabsch 0.25, Staring 0.66, Staring + erosion 1.03); val sweep over ×{0.1, 0.3, 1, 3, 10} → curve of CT Dice vs. within-bone distance distortion (NDV alongside); chosen weight = largest one within 1 Dice point of R1 on val. Only the chosen weights run on test.
 - BRE only as a secondary endpoint (it closely matches the Kabsch objective).
 - Scope conclusions to the tested resolutions, implementations, and weight ranges.
 

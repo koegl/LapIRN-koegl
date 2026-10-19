@@ -14,7 +14,7 @@ qualitative figure).
 - [ ] 7. **Leave-one-out table/figure:** contribution of each PET term in IO.
 
 ## Experiment 2: rigidity comparison (IO on T2)
-- [ ] 8. **Decide the weight selection:** the challenge ranking never rewards rigidity (tuned weight → 0), so pick per method e.g. the largest weight within a Dice tolerance, or report the whole curve.
+- [ ] 8. **Weight selection (decided: curve + Dice tolerance):** calibrate a reference weight per method (initial rigidity loss = Kabsch at 0.25, few val pairs); val grid ×{0.1, 0.3, 1, 3, 10}; choose the largest weight within 1 Dice point of R1; val curve Dice vs. bone distortion.
 - [ ] 9. **Weight sweeps on val:** R2 Staring, R3 Staring + erosion, R4 Kabsch.
 - [ ] 10. **Test runs:** R1 (= I2), R2–R4 at the chosen weights.
 - [ ] 11. **Rigidity table + figure:** bone/soft Dice and HD95, distance distortion, NDV in bone / band / body, leakage, erosion retention; alignment vs. distortion plot.
