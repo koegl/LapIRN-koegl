@@ -37,7 +37,7 @@ from scipy import ndimage
 TRAINING_RUNS: Dict[str, str] = {
     "T1": "placid-shrew-41437404",  # neither
     "T2": "shivering-stoat-41526969",  # PET
-    "T3": "",  # rigidity
+    "T3": "beautiful-hound-41687182",  # rigidity
     "T4": "suave-squid-41437449",  # PET + rigidity
 }
 
