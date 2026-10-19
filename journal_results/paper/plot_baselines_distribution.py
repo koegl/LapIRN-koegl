@@ -1,12 +1,12 @@
 """Patient-level distributions of the baseline comparison on test -> PDF + LaTeX.
 
-Four panels (CT Dice, HD95, |MTV change|, |TLG change|), one box per method
-with one dot per patient (a patient's pairs averaged first). Initial (B1) is
+Four panels (CT Dice, HD95, |MTV change|, |TLG change|), one violin per method
+(median marked) with one dot per patient (a patient's pairs averaged first). Initial (B1) is
 left out: it is far off the scale of the others and its MTV / TLG change is 0
 by construction (it is in the table).
 
     ../../.venv/bin/python plot_baselines_distribution.py
-        ->  out/figures/baselines_distribution.{pdf,tex}
+        ->  out/figures/baselines_distribution.{pdf,tex}  (vector PDF; LaTeX fonts)
 """
 
 import matplotlib
@@ -21,10 +21,10 @@ from common import BASELINES, UNRANKED  # noqa: E402
 METHODS = [m for m in BASELINES if m not in UNRANKED]
 # column -> (axis label, scale)
 PANELS = {
-    "dice_ct": ("CT Dice (%) ↑", 100.0),
-    "hd95": ("HD95 (mm) ↓", 1.0),
-    "mtv_bias": ("|ΔMTV| (%) ↓", 100.0),
-    "tlg_bias": ("|ΔTLG| (%) ↓", 100.0),
+    "dice_ct": (r"CT Dice (\%) $\uparrow$", 100.0),
+    "hd95": (r"HD95 (mm) $\downarrow$", 1.0),
+    "mtv_bias": (r"$|\Delta\mathrm{MTV}|$ (\%) $\downarrow$", 100.0),
+    "tlg_bias": (r"$|\Delta\mathrm{TLG}|$ (\%) $\downarrow$", 100.0),
 }
 BASELINE_COLOR = "#8c8b86"  # neutral for the baselines
 OURS_COLOR = "#2a78d6"  # one accent for our two rows
@@ -39,7 +39,9 @@ def main() -> None:
     }
     plt.rcParams.update(
         {
-            "font.size": 7,
+            "text.usetex": True,
+            "font.family": "serif",
+            "font.size": 8,
             "axes.edgecolor": MUTED,
             "axes.labelcolor": TEXT,
             "xtick.color": MUTED,
@@ -53,20 +55,13 @@ def main() -> None:
     for ax, (column, (ylabel, scale)) in zip(axes, PANELS.items()):
         data = [patients[m][column].dropna().to_numpy() * scale for m in METHODS]
         colors = [OURS_COLOR if m in ("B5", "B6") else BASELINE_COLOR for m in METHODS]
-        boxes = ax.boxplot(
-            data,
-            widths=0.55,
-            showfliers=False,
-            patch_artist=True,
-            medianprops={"color": TEXT, "linewidth": 1.0},
-            whiskerprops={"color": MUTED, "linewidth": 0.8},
-            capprops={"color": MUTED, "linewidth": 0.8},
-            boxprops={"linewidth": 0.8},
-        )
-        for patch, color in zip(boxes["boxes"], colors):
-            patch.set_facecolor(color)
-            patch.set_alpha(0.35)
-            patch.set_edgecolor(color)
+        parts = ax.violinplot(data, widths=0.75, showextrema=False, showmedians=True)
+        for body, color in zip(parts["bodies"], colors):
+            body.set_facecolor(color)
+            body.set_edgecolor(color)
+            body.set_alpha(0.3)
+        parts["cmedians"].set_color(TEXT)
+        parts["cmedians"].set_linewidth(1.0)
         for i, (values, color) in enumerate(zip(data, colors), start=1):
             x = i + rng.uniform(-0.15, 0.15, len(values))
             ax.scatter(x, values, s=5, color=color, linewidths=0, zorder=3)
@@ -82,12 +77,11 @@ def main() -> None:
     out_dir = common.OUT_DIR / "figures"
     out_dir.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_dir / "baselines_distribution.pdf", bbox_inches="tight")
-    fig.savefig(out_dir / "baselines_distribution.png", dpi=300, bbox_inches="tight")
     n = len(patients["B6"])
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/baselines_distribution.pdf}}
-\caption{{Patient-level results on the test set ({n} patients; a patient's pairs are averaged). Boxes: median and interquartile range, whiskers: 1.5$\times$IQR; each dot is one patient. Initial alignment is omitted (CT Dice 9.5\,\%, HD95 44.4\,mm; MTV/TLG change 0 by construction, Table~\ref{{tab:baselines}}).}}
+\caption{{Patient-level results on the test set ({n} patients; a patient's pairs are averaged). Violins: kernel density over patients, line: median; each dot is one patient. Initial alignment is omitted (CT Dice 9.5\,\%, HD95 44.4\,mm; MTV/TLG change 0 by construction, Table~\ref{{tab:baselines}}).}}
 \label{{fig:baselines_distribution}}
 \end{{figure}}
 """
