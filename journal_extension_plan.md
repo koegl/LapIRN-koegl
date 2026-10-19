@@ -16,7 +16,11 @@
 - Report paired effects and patient-level uncertainty, accounting for multiple pairs/lesions per patient.
 - **Patient-level aggregation:** a patient can contribute several pairs (and many lesions); average them per patient before any test, ranking, or bootstrap.
 - **Tuning (IO weights, NiftyReg, ConvexAdam):** grid search on val, configs ranked with the challenge's significance ranking (below, `journal_results/ranking.py`). Training checkpoints keep accuracy + NDV cap (see Training setup).
-- **Final results (test):** raw metrics with patient-level CIs, plus the challenge's significance ranking over all methods (per metric: pairwise one-sided Wilcoxon on patient-level values, Holm-adjusted, score = (#significantly beaten + 1) / K; components and 0.4/0.4/0.2 geometric mean as above; PET Dice/HD95 omitted, no labels) and 95 % rank intervals from 1,000 patient bootstrap samples.
+- **Final results (test):** mean ± SD over patients per metric. Statistics depend on the question:
+  - *Baseline comparison (exp. 4, complete methods):* the challenge's significance ranking (per metric: pairwise one-sided Wilcoxon on patient-level values, Holm-adjusted, score = (#significantly beaten + 1) / K; 0.4/0.4/0.2 geometric mean; PET Dice/HD95 omitted, no labels) with 95 % rank intervals from 1,000 patient bootstrap samples; Initial is a reference row, not ranked. Marks: Ours + IO vs. each method, two-sided Wilcoxon, Holm within column.
+  - *Ablations, rigidity (exp. 1–2, one factor at a time):* no ranking. Planned contrasts only (e.g. Q1: I2–I4 vs. I1; Q2: I5–I7 vs. I2–I4; R2–R4 vs. R1); effect = paired difference of patient means with 95 % patient-bootstrap CI; Wilcoxon signed-rank, Holm within each table and metric.
+  - *Trade-off (exp. 3):* curve only, no tests.
+  - The ranking remains the tuning rule (IO settings, baseline configs); rigidity weights need their own rule (exp. 2).
 
 ## Training setup
 
