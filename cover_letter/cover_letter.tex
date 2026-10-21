@@ -1,0 +1,53 @@
+\documentclass[11pt,a4paper]{letter}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\newcommand{\paragraph}[1]{\par\medskip\noindent\textbf{#1}\ }
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+\signature{Fryderyk K{\"o}gl}
+\address{Fryderyk K{\"o}gl\\Helmholtz Munich\\Ingolst{\"a}dter Landstra{\ss}e 1\\85764 Neuherberg, Germany}
+\date{\today}
+
+\begin{document}
+\begin{letter}{Editors\\
+Special Issue on Deformable Image Registration\\
+\textit{Journal of Medical Imaging} (SPIE)}
+
+\opening{Dear Editor,}
+
+my coauthors and I wish to submit a new manuscript entitled ``Preserving lesion quantification in longitudinal whole-body PSMA PET/CT registration'' for consideration by the \textit{Journal of Medical Imaging}, special issue on Deformable Image Registration.
+
+We confirm that this work is original and has not been published elsewhere, nor is it currently under consideration for publication elsewhere.
+A preliminary version of the method, developed for the Learn2Reg 2026 PSMAReg challenge, is available as a non-peer-reviewed preprint (arXiv:2610.21451) and is cited in the manuscript.
+The present manuscript is a substantially extended study, and none of its test results appear in the preprint.
+The challenge organisers have indicated that selected methods may later be included in a challenge summary publication; no such publication has been submitted for our method.
+
+PSMA PET/CT is used routinely to stage prostate cancer and to follow patients through therapy.
+Registering a follow-up scan to its baseline makes it possible to compare tumour burden voxel by voxel and to track individual lesions.
+For this, a registration must align the anatomy without itself changing the quantities that are compared over time, such as the metabolic tumour volume (MTV) and total lesion glycolysis (TLG) of lesions.
+Deformable registration is usually judged on alignment alone, yet a deformation that compresses or stretches a lesion alters both quantities, so a change measured after registration can be an artefact of the registration rather than of the disease.
+
+In this paper, we report on a learning-based registration pipeline (the LapIRN network followed by instance optimisation) with losses that preserve the PET volume and uptake of lesions and keep bones rigid, and we study where these losses should act.
+On a held-out patient-level test set of the public PSMAReg data, with tuned NiftyReg and ConvexAdam baselines and patient-level statistics, we find that:
+\begin{itemize}
+  \item our pipeline is significantly more accurate than both baselines, without folding, and the preservation losses reduce the lesion volume and uptake change caused by the registration;
+  \item applying the losses only during instance optimisation is more accurate and preserves about as well as training with them, whereas without instance optimisation, which is about 14 times faster, training with the losses is the only means of preservation;
+  \item the losses act mainly on small and bone-associated lesions, and the rigidity loss only on bone-associated lesions;
+  \item \todo{rigidity-penalty comparison, once the experiments are done.}
+\end{itemize}
+This is significant because registration can only be used for quantitative response assessment if its effect on lesion quantification is measured and controlled, not only its alignment accuracy; our results show how large this effect is and how it can be reduced at a known cost in accuracy.
+
+The paper should be of interest to readers in the areas of deformable image registration, learning-based and optimisation-based registration, and quantitative PET imaging.
+It addresses a central question of the special issue: how constraints on the deformation, learned during training or imposed at test time, affect clinically relevant quantities beyond image alignment.
+
+Please address all correspondence concerning this manuscript to me at \href{mailto:fryderyk.koegl@tum.de}{fryderyk.koegl@tum.de}.
+
+Thank you for your consideration of this manuscript.
+
+\closing{Sincerely,}
+
+\end{letter}
+\end{document}
