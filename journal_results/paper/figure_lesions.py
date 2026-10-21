@@ -6,7 +6,7 @@ Lesions: 26-connected components of the moving scan's ground-truth lesion mask
 left out. Strata: soft tissue / bone-associated (>= 50 % of the voxels on a
 bone label) x small (< 0.5 ml) / medium (< 5 ml) / large.
 
-Rows: median and 90th percentile (upper tail) of the per-lesion |MTV change|.
+Median per-lesion |MTV change| (upper tail in lesions_summary.txt).
 Columns: network output (T1-T4) and network + matched IO (I1-I4); one marker
 per loss set. Error bars: 95 % CI from a patient-cluster bootstrap (patients
 resampled with all their lesions). Signed changes and the lesion counts are
@@ -39,7 +39,7 @@ STRATA = [
     (False, "small"), (False, "medium"), (False, "large"),
     (True, "small"), (True, "medium"), (True, "large"),
 ]
-STATS = {"median": 50, "90th percentile": 90}
+STATS = {"median": 50}
 N_BOOTSTRAP = 1000
 SEED = 0
 TEXT = "#0b0b0b"
@@ -77,7 +77,7 @@ def main() -> None:
             "ytick.color": MUTED,
         }
     )
-    fig, axes = plt.subplots(len(STATS), len(BLOCKS), figsize=(7.0, 4.4), sharex=True, sharey="row")
+    fig, axes = plt.subplots(len(STATS), len(BLOCKS), figsize=(7.0, 2.6), sharex=True, sharey="row", squeeze=False)
     offsets = np.linspace(-0.27, 0.27, len(CONDITIONS))
     x = np.arange(len(STRATA))
     for col, block in enumerate(BLOCKS):
@@ -102,9 +102,9 @@ def main() -> None:
         ax.set_xticks(x)
         ax.set_xticklabels([s for _, s in STRATA])
         for xpos, label in ((1, "soft tissue"), (4, "bone")):
-            ax.text(xpos, -0.16, label, transform=ax.get_xaxis_transform(), ha="center", va="top")
+            ax.text(xpos, -0.13, label, transform=ax.get_xaxis_transform(), ha="center", va="top")
     handles = [Line2D([], [], marker="o", ls="", color=c, markersize=5, label=n) for n, (_, _, c) in CONDITIONS.items()]
-    fig.legend(handles=handles, loc="upper center", ncol=len(handles), frameon=False, bbox_to_anchor=(0.5, 1.04))
+    fig.legend(handles=handles, loc="upper center", ncol=len(handles), frameon=False, bbox_to_anchor=(0.5, 1.08))
     fig.tight_layout()
 
     # numbers for the text: counts and median signed / absolute change
@@ -130,7 +130,7 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/lesions.pdf}}
-\caption{{Per-lesion volume change on the test set ({n_lesions} lesions of {n_patients} patients), by location (soft tissue / bone-associated, $\geq$50\,\% of the lesion on bone) and size (small $<$0.5\,ml, medium $<$5\,ml, large). Top: median, bottom: 90th percentile of $|\Delta\mathrm{{MTV}}|$ per lesion; left: network output, right: with instance optimisation (IO) using the same losses. Error bars: 95\,\% confidence intervals from a patient-cluster bootstrap. Lesions below 5 voxels are excluded.}}
+\caption{{Per-lesion volume change on the test set ({n_lesions} lesions of {n_patients} patients), by location (soft tissue / bone-associated, $\geq$50\,\% of the lesion on bone) and size (small $<$0.5\,ml, medium $<$5\,ml, large). Median $|\Delta\mathrm{{MTV}}|$ per lesion; left: network output, right: with instance optimisation (IO) using the same losses. Error bars: 95\,\% confidence intervals from a patient-cluster bootstrap. Lesions below 5 voxels are excluded.}}
 \label{{fig:lesions}}
 \end{{figure}}
 """

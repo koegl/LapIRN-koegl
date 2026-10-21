@@ -129,3 +129,38 @@ Source: `journal_results/io_pet_check.py` → `io_pet_check/summary.csv`;
 
 Source: `evaluation/test/T1.csv`, `T1-tum.csv`, `T2.csv`;
 `journal_results/paper/table_ablations.py` (paired Wilcoxon, Holm).
+
+## Per-lesion volume change: draft results text
+
+**Status:** draft for the results section — test set, 1,327 lesions (≥ 5 voxels)
+of 26 patients; figure `journal_results/paper/out/figures/lesions.pdf`
+(median |ΔMTV| per lesion, network | network + IO, soft tissue / bone ×
+small / medium / large; patient-cluster bootstrap CIs).
+
+- **Size: the smaller the lesion, the more its volume changes.** E.g. bone
+  lesions with network + IO and no losses typically change by 33 % (small),
+  17 % (medium) and 9 % (large). A small lesion has only a few voxels
+  (< 0.5 ml is fewer than about 20 voxels), so gaining or losing one or two
+  voxels is already a large percentage; a large lesion barely notices one
+  voxel. Small lesions are therefore the hardest case — and where the losses
+  help most (small bone lesions: 33 % → 10 %).
+- **Location, without the losses:** IO increases lesion distortion, most for
+  small bone lesions (median 20 % → 33 %). Bone lesions tend to grow (signed
+  median +3 to +10 %), soft-tissue lesions to shrink (−9 to −13 %).
+- **Rigidity acts only on bone lesions** (as its mechanism predicts): with IO
+  it lowers the change of small / medium / large bone lesions (33 → 20 %,
+  17 → 12 %, 9 → 5 %) but not of soft-tissue lesions (unchanged, 17–22 %).
+- **PET acts in both locations:** e.g. medium soft-tissue lesions 18 → 10 %,
+  small bone lesions 33 → 13 %. Exception: small soft-tissue lesions (n = 41,
+  wide CIs), no clear effect.
+- **Combined (PET + rigidity):** lowest change in bone at every size
+  (10 / 9 / 4 %); the signed change of bone lesions drops to about 0, so the
+  systematic growth disappears.
+- **Network vs. network + IO:** same pattern. With the losses IO does not
+  increase distortion; without them it does, most in bone.
+- **Caveat (methods / caption):** medians of small lesions are quantised
+  (e.g. exactly 10.0 %, 12.5 %, 20.0 %) because they are ratios of small voxel
+  counts.
+
+Source: `journal_results/paper/figure_lesions.py` → `lesions.pdf`,
+`lesions_summary.txt`.
