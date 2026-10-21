@@ -10,8 +10,8 @@ qualitative figure).
 - [x] 3. **IO runs on test:** I1–I3, I5–I7 (I4 done).
 - [x] 3b. **Affine + IO (I8) and choice of "Ours":** I1–I8 on val, ranked → I1; baseline table shows both Ours (I1, val-chosen) and Ours (full) (I4, pre-declared); I8 on test (keep for paper).
 - [ ] 4. **Leave-one-out on test:** L1–L4 (reference I5).
-- [ ] 5. **Q1 table + Q2 figure:** `table_ablations.py` (T1–T4 | I1–I4, marks vs. neither), `figure_q2.py` (trained + IO vs. IO only, Dice vs. |MTV| / |TLG|; effects for the text in `q2_effects.txt`). I8 moved to the baseline table; T1-tum in findings (text only).
-- [ ] 6. **Per-lesion results:** |MTV|/|TLG| by size bin and bone association, signed + upper tail (table or figure).
+- [x] 5. **Q1 table + Q2 figure:** `table_ablations.py` (T1–T4 | I1–I4, marks vs. neither), `figure_q2.py` (trained + IO vs. IO only, Dice vs. |MTV| / |TLG|; effects for the text in `q2_effects.txt`). I8 moved to the baseline table; T1-tum in findings (text only).
+- [x] 6. **Per-lesion results:** |MTV|/|TLG| by size bin and bone association, signed + upper tail (table or figure).
 - [ ] 7. **Leave-one-out table:** `table_loo.py` (I5 vs. L1–L4), run once step 4 is done.
 
 ## Experiment 2: rigidity comparison (IO on T2)
