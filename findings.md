@@ -3,6 +3,41 @@
 Running log of results that matter for the paper. Each entry states its data
 basis; **preliminary** = not yet confirmed on the full dataset.
 
+## Paper story (order of results and discussion)
+
+**Status:** agreed outline; numbers from the test set (28 patients, 38 pairs).
+
+1. **Problem:** follow-up→baseline PSMA PET/CT registration should align the
+   anatomy without changing lesion volume / uptake (MTV / TLG); bones should
+   stay rigid.
+2. **Method:** LapIRN network + instance optimisation (IO) with PET-preservation
+   and bone-rigidity losses. Full method = losses in training and IO (I4),
+   defined in advance. The val selection (challenge ranking over I1–I8) chose
+   I1 (no losses): the ranking is dominated by accuracy, biomarker differences
+   are rarely significant (methods section).
+3. **Q1 — do the losses work?** (`ablations.tex`, network | network + IO):
+   PET and rigidity lower |ΔMTV| / |ΔTLG| significantly in both blocks, at a
+   known accuracy cost (PET about −2 to −3 Dice points, rigidity ≤ 0.5).
+   Early stopping does not replace them (T1-tum, text only; entry below).
+4. **Q2 — where should the losses act?** (`q2.pdf`): losses only in IO (I7)
+   vs. in training + IO (I4): Dice +1.7 points (significant), preservation not
+   significantly worse. If IO is affordable, IO-only placement is enough and
+   more accurate; without IO (14× faster: ~11 s vs. ~157 s per pair), the
+   training losses are the only way to get preservation.
+5. **Leave-one-out** (`loo.tex`): what each PET term contributes in IO.
+6. **Baselines** (`baselines.tex`, distribution plot, qualitative figure):
+   training / IO columns state where the losses act. Every variant of ours is
+   significantly more accurate than NiftyReg / ConvexAdam / Affine, without
+   folding; ranks: IO only (I7) 1, basic IO (I1) and full (I4) 2. Affine + IO
+   (no network) reaches only 52.7 % Dice: the network is essential.
+7. **Rigidity comparison (exp. 2)** and **trade-off (exp. 3)**: follow.
+8. **Discussion:**
+   - losses in IO only vs. in training: use case (time budget) decides;
+   - ranking weakness: methods that barely deform score high on biomarkers
+     (Affine + IO rank 5 with 53 % Dice);
+   - TLG resampling floor; predicted lesion labels limit PET IO;
+   - NiftyReg folding on test; Staring stencil leakage (entries below).
+
 ## Staring stencils leak; erosion leaves most of the skeleton unconstrained
 
 **Status:** confirmed — all 560 labelled challenge scans (358 patients: train,
