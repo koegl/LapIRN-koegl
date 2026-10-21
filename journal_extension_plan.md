@@ -123,8 +123,8 @@ Staring and Staring + erosion must be available in IO.
 | B2 | Affine pre-registration | test |
 | B3 | NiftyReg (settings tuned on val) | test |
 | B4 | ConvexAdam (settings tuned on val) | test |
-| B5 | Full method, network only (the network of B6, reused) | test |
-| B6 | Full method + IO: best of I1–I8 on val by the challenge ranking (`journal_results/select_full_method.py`), reused | test |
+| B5 / B6 | Ours, network / + IO: best of I1–I8 on val by the challenge ranking (`journal_results/select_full_method.py`) = I1, i.e. T1 / I1, reused | test |
+| B7 / B8 | Ours (full), network / + IO: PET + rigidity losses in training and IO, fixed in advance = T4 / I4, reused | test |
 
 ## Supporting / optional work
 

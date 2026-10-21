@@ -8,14 +8,14 @@ qualitative figure).
 - [x] 1. **Networks on test:** T1, T2, T3 (T4 done).
 - [x] 2. **T1-tum:** evaluate T1's `best_tumour` checkpoint on test (downloaded).
 - [x] 3. **IO runs on test:** I1–I3, I5–I7 (I4 done).
-- [ ] 3b. **Affine + IO (I8) and choice of "Ours":** I1–I8 on val, ranked → B6 (`select_full_method.py`); I8 on test.
+- [x] 3b. **Affine + IO (I8) and choice of "Ours":** I1–I8 on val, ranked → I1; baseline table shows both Ours (I1, val-chosen) and Ours (full) (I4, pre-declared); I8 on test (keep for paper).
 - [ ] 4. **Leave-one-out on test:** L1–L4 (reference I5).
 - [ ] 5. **Ablation table:** network (T1–T4, T1-tum) and IO (I1–I7). No ranking: planned contrasts (Q1: I2–I4 vs. I1; Q2: I5–I7 vs. I2–I4), paired difference of patient means with 95 % bootstrap CI, Wilcoxon + Holm within the table.
 - [ ] 6. **Per-lesion results:** |MTV|/|TLG| by size bin and bone association, signed + upper tail (table or figure).
 - [ ] 7. **Leave-one-out table/figure:** contribution of each PET term in IO.
 
 ## Experiment 2: rigidity comparison (IO on T2)
-- [ ] 8. **Weight selection (decided: curve + Dice tolerance):** calibrate a reference weight per method (initial rigidity loss = Kabsch at 0.25, few val pairs); val grid ×{0.1, 0.3, 1, 3, 10}; choose the largest weight within 1 Dice point of R1; val curve Dice vs. bone distortion.
+- [x] 8. **Weight selection (decided: curve + Dice tolerance):** calibrate a reference weight per method (initial rigidity loss = Kabsch at 0.25, few val pairs); val grid ×{0.1, 0.3, 1, 3, 10}; choose the largest weight within 1 Dice point of R1; val curve Dice vs. bone distortion.
 - [ ] 9. **Weight sweeps on val:** R2 Staring, R3 Staring + erosion, R4 Kabsch.
 - [ ] 10. **Test runs:** R1 (= I2), R2–R4 at the chosen weights.
 - [ ] 11. **Rigidity table + figure:** bone/soft Dice and HD95, distance distortion, NDV in bone / band / body, leakage, erosion retention; alignment vs. distortion plot.

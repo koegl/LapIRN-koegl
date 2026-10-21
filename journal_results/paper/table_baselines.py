@@ -1,14 +1,14 @@
 """Baseline comparison table (plan, experiment 4) on test -> LaTeX.
 
 Cells: mean +- SD over patients (a patient's pairs averaged first). Rank: the
-challenge's significance ranking (ranking.py) over B2-B6, with the 95 % rank
+challenge's significance ranking (ranking.py) over B2-B8, with the 95 % rank
 interval over N_BOOTSTRAP patient bootstrap samples in brackets; B1 is a
-reference row. Marks: B6 vs. each other method, two-sided Wilcoxon signed-rank on the
+reference row. Marks: B8 (Ours (full) + IO, our full contribution) vs. each other method, two-sided Wilcoxon signed-rank on the
 patient values, Holm-adjusted over the comparisons of a column, p < 0.05:
-dagger = B6 better, double dagger = B6 worse. %NDV is tested on the
+dagger = B8 better, double dagger = B8 worse. %NDV is tested on the
 threshold-adjusted values (as in the ranking); B1 is not tested on MTV / TLG
 (0 by construction). "> thr." = pairs with %NDV above 0.005 %; runtime per
-pair (B3 / B4: registration incl. their affine step; B2, B5, B6: our affine +
+pair (B3 / B4: registration incl. their affine step; B2, B5-B8: our affine +
 network (+ IO)), not tested.
 
     ../../.venv/bin/python table_baselines.py   ->  out/tables/baselines.tex
@@ -121,7 +121,7 @@ def main() -> None:
     n_pairs = len(pairs[OURS])
     tex = rf"""\begin{{table}}[t]
 \centering
-\caption{{Comparison with baselines on the test set ({n_patients} patients, {n_pairs} follow-up$\rightarrow$baseline pairs). Values are mean$\pm$SD over patients (a patient's pairs are averaged first). Rank: challenge significance ranking, with the 95\,\% interval of the rank over {N_BOOTSTRAP} patient bootstrap samples in brackets, over all methods except Initial, which is a reference (its MTV/TLG change is 0 by construction because nothing is resampled). $^{{\dagger}}$/$^{{\ddagger}}$: Ours + IO is significantly better/worse than this method (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected within each column, $p<0.05$; NDV tested after the 0.005\,\% equivalence threshold). $>$ thr.: pairs with \%NDV above 0.005\,\%. Runtime per pair on one NVIDIA RTX A6000, including the affine step. Bold: best mean among ranked methods.}}
+\caption{{Comparison with baselines on the test set ({n_patients} patients, {n_pairs} follow-up$\rightarrow$baseline pairs). Values are mean$\pm$SD over patients (a patient's pairs are averaged first). Rank: challenge significance ranking, with the 95\,\% interval of the rank over {N_BOOTSTRAP} patient bootstrap samples in brackets, over all methods except Initial, which is a reference (its MTV/TLG change is 0 by construction because nothing is resampled). $^{{\dagger}}$/$^{{\ddagger}}$: Ours (full) + IO is significantly better/worse than this method (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected within each column, $p<0.05$; NDV tested after the 0.005\,\% equivalence threshold). $>$ thr.: pairs with \%NDV above 0.005\,\%. Runtime per pair on one NVIDIA RTX A6000, including the affine step. Ours: the configuration chosen on validation (no PET or rigidity losses); Ours (full): with the PET and rigidity losses in training and IO. Bold: best mean among ranked methods.}}
 \label{{tab:baselines}}
 \scriptsize
 \setlength{{\tabcolsep}}{{2.5pt}}

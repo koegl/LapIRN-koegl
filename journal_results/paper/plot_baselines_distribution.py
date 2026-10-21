@@ -27,7 +27,7 @@ PANELS = {
     "tlg_bias": (r"$|\Delta\mathrm{TLG}|$ (\%) $\downarrow$", 100.0),
 }
 BASELINE_COLOR = "#8c8b86"  # neutral for the baselines
-OURS_COLOR = "#2a78d6"  # one accent for our two rows
+OURS_COLOR = "#2a78d6"  # one accent for our rows
 TEXT = "#0b0b0b"
 MUTED = "#52514e"
 SEED = 0
@@ -49,12 +49,12 @@ def main() -> None:
             "pdf.fonttype": 42,
         }
     )
-    fig, axes = plt.subplots(1, len(PANELS), figsize=(7.0, 2.1))
+    fig, axes = plt.subplots(1, len(PANELS), figsize=(7.0, 2.3))
     rng = np.random.default_rng(SEED)
     labels = [BASELINES[m][0] for m in METHODS]
     for ax, (column, (ylabel, scale)) in zip(axes, PANELS.items()):
         data = [patients[m][column].dropna().to_numpy() * scale for m in METHODS]
-        colors = [OURS_COLOR if m in ("B5", "B6") else BASELINE_COLOR for m in METHODS]
+        colors = [OURS_COLOR if m in common.OURS_IDS else BASELINE_COLOR for m in METHODS]
         parts = ax.violinplot(data, widths=0.75, showextrema=False, showmedians=True)
         for body, color in zip(parts["bodies"], colors):
             body.set_facecolor(color)

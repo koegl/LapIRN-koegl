@@ -22,18 +22,25 @@ BASELINE_DIR = REPO / "journal_results" / "baselines"
 OUT_DIR = Path(__file__).resolve().parent / "out"
 
 # baseline comparison (plan, experiment 4): ID -> (label, evaluation run).
-# B5 / B6 are the runs T4 / I4 of experiment 1.
+# B5 / B6: the val-chosen method (select_full_method.py: I1, no PET / rigidity
+# losses) as network and + IO; B7 / B8: the full method (PET + rigidity losses
+# in training and IO, T4 / I4), fixed in the plan in advance. Runs of exp. 1.
 BASELINES: Dict[str, Tuple[str, str]] = {
     "B1": ("Initial", "B1"),
     "B2": ("Affine", "B2"),
     "B3": ("NiftyReg", "B3"),
     "B4": ("ConvexAdam", "B4"),
-    "B5": ("Ours", "T4"),
-    "B6": ("Ours + IO", "I4"),
+    "B5": ("Ours", "T1"),
+    "B6": ("Ours + IO", "I1"),
+    "B7": ("Ours (full)", "T4"),
+    "B8": ("Ours (full) + IO", "I4"),
 }
 # not ranked: its MTV / TLG change is 0 by construction (nothing resampled)
 UNRANKED = ("B1",)
-OURS = "B6"
+# reference of the significance marks
+OURS = "B8"
+# our rows (a rule above B5 in the table, accent colour in the plot)
+OURS_IDS = ("B5", "B6", "B7", "B8")
 # precomputed fields: their registration time is in the tuning timings, the
 # runtime_s of the evaluation only covers loading the field
 EXTERNAL_TIMINGS = {"B3": "niftyreg", "B4": "convexadam"}

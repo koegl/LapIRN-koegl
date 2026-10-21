@@ -1,7 +1,7 @@
 """Qualitative baseline comparison on one test pair -> PNG + LaTeX.
 
 Columns: fixed scan, then the moving scan as aligned by Initial, NiftyReg,
-ConvexAdam and Ours + IO. Rows:
+ConvexAdam, Ours + IO and Ours (full) + IO. Rows:
     1. CT, coronal slice through the spine, with the fixed scan's organ-label
        boundaries drawn on top (misalignment = image edges off the lines)
     2. PET coronal maximum-intensity projection (SUV), warped lesion mask
@@ -35,12 +35,13 @@ from config import TrainingConfig  # noqa: E402
 # None = automatic choice; else (case_id, tp_moving, tp_fixed)
 CASE: Optional[Tuple[str, str, str]] = None
 MIN_LESIONS = 5
-# column -> (title, evaluation run)
-METHODS: Dict[str, Tuple[str, evaluate.EvalRun]] = {
-    "B1": ("Initial", evaluate.EVAL_RUNS["B1"]),
-    "B3": ("NiftyReg", evaluate.EVAL_RUNS["B3"]),
-    "B4": ("ConvexAdam", evaluate.EVAL_RUNS["B4"]),
-    "B6": ("Ours + IO", evaluate.EVAL_RUNS["I4"]),
+# column -> (title, evaluation run ID); the run ID also keys the field cache
+METHODS: Dict[str, Tuple[str, str]] = {
+    "B1": ("Initial", "B1"),
+    "B3": ("NiftyReg", "B3"),
+    "B4": ("ConvexAdam", "B4"),
+    "B6": ("Ours + IO", "I1"),
+    "B8": ("Ours (full) + IO", "I4"),
 }
 CT_WINDOW = (-400.0, 800.0)  # HU
 SUV_MAX = 8.0
@@ -73,8 +74,9 @@ def disp_fields(case: Tuple[str, str, str], device) -> Dict[str, torch.Tensor]:
     transform_nearest = evaluate.miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
     grid_full = torch.from_numpy(evaluate.Functions.generate_grid_unit(cfg.img_shape)[None]).to(device).float()
     out = {}
-    for m, (_, run) in METHODS.items():
-        cache = CACHE_DIR / f"{case_id}_{tp_x}_{tp_y}_{m}.pt"
+    for m, (_, run_id) in METHODS.items():
+        run = evaluate.EVAL_RUNS[run_id]
+        cache = CACHE_DIR / f"{case_id}_{tp_x}_{tp_y}_{run_id}.pt"
         if cache.exists():
             out[m] = torch.load(cache, map_location=device)
             continue
@@ -131,7 +133,7 @@ def main() -> None:
     }
 
     def warped(volume: np.ndarray, m: str, mode: str) -> np.ndarray:
-        if not METHODS[m][1].warp:  # Initial: not resampled
+        if not evaluate.EVAL_RUNS[METHODS[m][1]].warp:  # Initial: not resampled
             return volume
         src = torch.from_numpy(volume.astype(np.float32))[None, None].to(device)
         return warp[mode](src, fields[m])[0, 0].cpu().numpy()
@@ -147,7 +149,7 @@ def main() -> None:
 
     columns = ["fixed"] + list(METHODS)
     titles = ["Fixed"] + [METHODS[m][0] for m in METHODS]
-    fig, axes = plt.subplots(3, len(columns), figsize=(7.0, 6.4))
+    fig, axes = plt.subplots(3, len(columns), figsize=(8.2, 6.4))
     for j, col in enumerate(columns):
         if col == "fixed":
             ct_img, pet_img, les_img, jac = ct["fixed"], pet["fixed"], lesions["fixed"], None
@@ -194,7 +196,7 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/qualitative.png}}
-\caption{{Test pair (patient {case_id}, follow-up {tp_x} $\rightarrow$ baseline {tp_y}), chosen as the pair with at least {MIN_LESIONS} lesions whose CT Dice for Ours + IO is closest to the median. Top: CT, coronal slice through the spine, with the fixed scan's organ-label boundaries (yellow). Middle: PET maximum-intensity projection (SUV 0--{SUV_MAX:g}) with the warped lesion mask (red); left: fixed scan and its lesions. Bottom: Jacobian determinant on the same slice (folds in black). Initial: the moving scan, not resampled.}}
+\caption{{Test pair (patient {case_id}, follow-up {tp_x} $\rightarrow$ baseline {tp_y}), chosen as the pair with at least {MIN_LESIONS} lesions whose CT Dice for Ours + IO is closest to the median. Ours (full): with the PET and rigidity losses in training and IO. Top: CT, coronal slice through the spine, with the fixed scan's organ-label boundaries (yellow). Middle: PET maximum-intensity projection (SUV 0--{SUV_MAX:g}) with the warped lesion mask (red); left: fixed scan and its lesions. Bottom: Jacobian determinant on the same slice (folds in black). Initial: the moving scan, not resampled.}}
 \label{{fig:qualitative}}
 \end{{figure}}
 """
