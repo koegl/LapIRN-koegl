@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.1.31)  21 OCT 2026 13:48
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.1.31)  21 OCT 2026 13:52
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -395,6 +395,7 @@ Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
 LaTeX Info: Redefining \ref on input line 32.
 LaTeX Info: Redefining \pageref on input line 32.
 LaTeX Info: Redefining \nameref on input line 32.
+ (./main.out) (./main.out)
 \@outlinefile=\write3
 \openout3 = `main.out'.
 
@@ -412,232 +413,42 @@ File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 LaTeX Font Info:    Trying to load font information for U+msb on input line 33.
  (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
-) (./introduction.tex
+) (./introduction.tex [1
 
-LaTeX Warning: Citation `ref_psma_clinical' on page 1 undefined on input line 4.
-
-
-LaTeX Warning: Citation `ref_psmareg_challenge' on page 1 undefined on input line 5.
-
-
-LaTeX Warning: Citation `ref_learn2reg_hansen' on page 1 undefined on input line 9.
-
-
-LaTeX Warning: Citation `ref_learn2reg_alessa' on page 1 undefined on input line 9.
-
-
-LaTeX Warning: Citation `ref_psmaregdata' on page 1 undefined on input line 9.
-
-[1
-
-{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}]
-
-LaTeX Warning: Citation `ref_demons' on page 2 undefined on input line 11.
-
-
-LaTeX Warning: Citation `ref_syn' on page 2 undefined on input line 11.
-
-
-LaTeX Warning: Citation `bspline' on page 2 undefined on input line 11.
-
-
-LaTeX Warning: Citation `ref_voxelmorph_cvpr' on page 2 undefined on input line 12.
-
-
-LaTeX Warning: Citation `ref_svf_voxelmorph' on page 2 undefined on input line 12.
-
-
-LaTeX Warning: Citation `ref_transmorph' on page 2 undefined on input line 12.
-
-
-LaTeX Warning: Citation `ref_lapirn' on page 2 undefined on input line 13.
-
-
-LaTeX Warning: Citation `ref_koegl_arxiv' on page 2 undefined on input line 15.
-
-[2]
-<figures/overview.png, id=19, 2634.09094pt x 1710.39pt>
+{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}] [2]
+<figures/overview.png, id=126, 2634.09094pt x 1710.39pt>
 File: figures/overview.png Graphic file (type png)
 <use figures/overview.png>
 Package pdftex.def Info: figures/overview.png  used on input line 31.
 (pdftex.def)             Requested size: 469.75499pt x 305.01219pt.
-
-
-LaTeX Warning: Reference `sect:objective' on page 3 undefined on input line 38.
-
-
-LaTeX Warning: Reference `sect:objective' on page 3 undefined on input line 38.
-
-) (./methods.tex
-
-LaTeX Warning: Citation `ref_psmareg_challenge' on page 3 undefined on input line 7.
-
-
-LaTeX Warning: Citation `ref_psmaregdata' on page 3 undefined on input line 7.
-
-
-LaTeX Warning: Citation `ref_totalsegmentator' on page 3 undefined on input line 9.
-
-[3 <./figures/overview.png>]
-
-LaTeX Warning: Citation `ref_koegl_arxiv' on page 4 undefined on input line 16.
-
-
-LaTeX Warning: Reference `sect:io' on page 4 undefined on input line 20.
-
-
-LaTeX Warning: Reference `sect:metrics' on page 4 undefined on input line 20.
-
-
-LaTeX Warning: Citation `ref_totalsegmentator' on page 4 undefined on input line 21.
-
-
-LaTeX Warning: Citation `nnunet' on page 4 undefined on input line 22.
-
-
-LaTeX Warning: Citation `rokuss2024fdgpsmahitchhikersguide' on page 4 undefined on input line 22.
-
-[4]
-
-LaTeX Warning: Citation `ref_convexadam' on page 5 undefined on input line 29.
-
-
-LaTeX Warning: Reference `fig:pipeline' on page 5 undefined on input line 35.
-
-
-LaTeX Warning: Citation `ants' on page 5 undefined on input line 39.
-
-
-LaTeX Warning: Citation `ref_lapirn' on page 5 undefined on input line 43.
-
-
-LaTeX Warning: Citation `ref_arsigny' on page 5 undefined on input line 44.
-
-
-LaTeX Warning: Citation `ref_adam' on page 5 undefined on input line 52.
-
-
-LaTeX Warning: Reference `sect:objective' on page 5 undefined on input line 53.
-
-[5]
-
-LaTeX Warning: Reference `sect:experiments' on page 6 undefined on input line 70.
-
-[6]
-
-LaTeX Warning: Citation `ref_kabsch' on page 7 undefined on input line 101.
-
-
-LaTeX Warning: Citation `ref_umeyama' on page 7 undefined on input line 101.
-
-
-LaTeX Warning: Citation `Liu2024' on page 7 undefined on input line 106.
-
-[7]
-
-LaTeX Warning: Reference `tab:weights' on page 8 undefined on input line 109.
-
-
-LaTeX Warning: Reference `sect:tuning' on page 8 undefined on input line 111.
-
-
-LaTeX Warning: Reference `eq:objective' on page 8 undefined on input line 114.
-
-
-LaTeX Warning: Reference `eq:objective' on page 8 undefined on input line 114.
-
-
-LaTeX Warning: Citation `ref_rigidity_3_staring' on page 8 undefined on input line 130.
-
-
-LaTeX Warning: Reference `sect:experiments' on page 8 undefined on input line 134.
-
-
-LaTeX Warning: Citation `ref_adam' on page 8 undefined on input line 139.
-
-[8] [9]
-
-LaTeX Warning: Reference `eq:pet_error' on page 10 undefined on input line 172.
-
-
-LaTeX Warning: Citation `Liu2024' on page 10 undefined on input line 177.
-
-[10]
-
-LaTeX Warning: Citation `ref_wilcoxon' on page 11 undefined on input line 188.
-
-
-LaTeX Warning: Citation `ref_holm' on page 11 undefined on input line 188.
-
-
-LaTeX Warning: Citation `ref_bootstrap' on page 11 undefined on input line 189.
-
-[11]
+) (./methods.tex [3 <./figures/overview.png>] [4] [5] [6] [7] [8] [9] [10] [11]
 LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 202.
  (/usr/share/texlive/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 )
-
-LaTeX Warning: Citation `MODAT2010' on page 12 undefined on input line 204.
-
-
-LaTeX Warning: Citation `modat2014' on page 12 undefined on input line 204.
-
 LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 204.
-(/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1pcr.fd
+ (/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1pcr.fd
 File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
-)
-
-LaTeX Warning: Citation `ref_convexadam' on page 12 undefined on input line 205.
-
-
-LaTeX Warning: Reference `sect:ablations' on page 12 undefined on input line 211.
-
-[12] [13]) (./results.tex
-
-LaTeX Warning: Reference `tab:ablations' on page 14 undefined on input line 8.
-
-(./tables/ablations.tex)
-
-LaTeX Warning: Reference `fig:q2' on page 14 undefined on input line 13.
-
-(./figures/q2.tex
-<figures/q2.pdf, id=94, 430.7292pt x 200.94272pt>
+) [12] [13]) (./results.tex (./tables/ablations.tex) (./figures/q2.tex
+<figures/q2.pdf, id=247, 430.7292pt x 200.94272pt>
 File: figures/q2.pdf Graphic file (type pdf)
 <use figures/q2.pdf>
 Package pdftex.def Info: figures/q2.pdf  used on input line 3.
 (pdftex.def)             Requested size: 469.75499pt x 219.152pt.
 ) [14] (./figures/lesions.tex
-<figures/lesions.pdf, id=101, 502.99919pt x 203.09917pt>
+<figures/lesions.pdf, id=253, 502.99919pt x 203.09917pt>
 File: figures/lesions.pdf Graphic file (type pdf)
 <use figures/lesions.pdf>
 Package pdftex.def Info: figures/lesions.pdf  used on input line 3.
 (pdftex.def)             Requested size: 469.75499pt x 189.686pt.
-) [15 <./figures/q2.pdf>]
-
-LaTeX Warning: Reference `tab:baselines' on page 16 undefined on input line 27.
-
-
-LaTeX Warning: Reference `fig:baselines_distribution' on page 16 undefined on input line 27.
-
-
-LaTeX Warning: Reference `fig:qualitative' on page 16 undefined on input line 27.
-
-(./tables/baselines.tex) (./figures/baselines_distribution.tex
-<figures/baselines_distribution.pdf, id=125, 502.99919pt x 271.7352pt>
+) [15 <./figures/q2.pdf>] (./tables/baselines.tex) (./figures/baselines_distribution.tex
+<figures/baselines_distribution.pdf, id=277, 502.99919pt x 271.7352pt>
 File: figures/baselines_distribution.pdf Graphic file (type pdf)
 <use figures/baselines_distribution.pdf>
 Package pdftex.def Info: figures/baselines_distribution.pdf  used on input line 3.
 (pdftex.def)             Requested size: 469.75499pt x 253.78915pt.
-
-
-LaTeX Warning: Reference `tab:baselines' on page 16 undefined on input line 4.
-
-
-LaTeX Warning: Reference `tab:baselines' on page 16 undefined on input line 4.
-
 ) (./figures/qualitative.tex
-<figures/qualitative.png, id=126, 591.1686pt x 470.4777pt>
+<figures/qualitative.png, id=280, 591.1686pt x 470.4777pt>
 File: figures/qualitative.png Graphic file (type png)
 <use figures/qualitative.png>
 Package pdftex.def Info: figures/qualitative.png  used on input line 3.
@@ -652,42 +463,31 @@ Underfull \hbox (badness 1097) in paragraph at lines 112--116
 \OT1/ptm/m/it/12 Assisted In-ter-ven-tion (MIC-CAI)\OT1/ptm/m/n/12 , \OT1/ptm/m/it/12 Lec-ture Notes in Com-puter Sci-ence \OT1/ptm/b/n/12 4190\OT1/ptm/m/n/12 , 924--931,
  []
 
-[22] [23])
+[22] [23]) (./main.lof [24])
 \tf@lof=\write4
 \openout4 = `main.lof'.
 
+ (./main.lot [25])
 \tf@lot=\write5
 \openout5 = `main.lot'.
 
- [24] (./main.aux)
-
-LaTeX Warning: There were undefined references.
-
-
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-
-
-Package rerunfilecheck Warning: File `main.out' has changed.
-(rerunfilecheck)                Rerun to get outlines right
-(rerunfilecheck)                or use package `bookmark'.
-
-Package rerunfilecheck Info: Checksums for `main.out':
-(rerunfilecheck)             Before: <no file>
-(rerunfilecheck)             After:  79BE8F827093047E07D3A6107B131C28;3450.
+ [26] (./main.aux)
+Package rerunfilecheck Info: File `main.out' has not changed.
+(rerunfilecheck)             Checksum: 79BE8F827093047E07D3A6107B131C28;3450.
  ) 
 Here is how much of TeX's memory you used:
- 11265 strings out of 480247
- 173116 string characters out of 5896151
- 467518 words of memory out of 5000000
- 28896 multiletter control sequences out of 15000+600000
+ 11298 strings out of 480247
+ 173526 string characters out of 5896151
+ 474204 words of memory out of 5000000
+ 28919 multiletter control sequences out of 15000+600000
  496374 words of font info for 83 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 75i,15n,77p,1362b,595s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 75i,15n,77p,1362b,591s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/helvetic/uhvr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (24 pages, 5657239 bytes).
+Output written on main.pdf (26 pages, 5668611 bytes).
 PDF statistics:
- 364 PDF objects out of 1000 (max. 8388607)
- 251 compressed objects within 3 object streams
- 94 named destinations out of 1000 (max. 500000)
- 26 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 594 PDF objects out of 1000 (max. 8388607)
+ 474 compressed objects within 5 object streams
+ 96 named destinations out of 1000 (max. 500000)
+ 202 words of extra memory for PDF output out of 10000 (max. 10000000)
 
