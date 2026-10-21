@@ -1,14 +1,14 @@
 # Fdb version 3
-["bibtex main"] 1792586295 "main.aux" "main.bbl" "main" 1792586434
+["bibtex main"] 1792587798 "main.aux" "main.bbl" "main" 1792587801
   "./spiejour.bst" 1792577442 20948 1346fa42c08ea646c46fa57a4730c641 ""
-  "main.aux" 1792586434 19140 24749caacccc484fd7366a03d80fc311 "pdflatex"
+  "main.aux" 1792587801 19220 8bc72c1bd327fae01b233a7c3b5abac4 "pdflatex"
   "references.bib" 1792583440 37053 83b6f49213e4330b019fc0c4ee6afcbc ""
   (generated)
   "main.bbl"
   "main.blg"
-["pdflatex"] 1792586432 "/home/iml/fryderyk.koegl/code/LapIRN-koegl/overleaf_jmi/main.tex" "main.pdf" "main" 1792586434
+["pdflatex"] 1792587798 "/home/iml/fryderyk.koegl/code/LapIRN-koegl/overleaf_jmi/main.tex" "main.pdf" "main" 1792587801
   "/etc/texmf/web2c/texmf.cnf" 1717060414 475 c0e671620eb5563b2130f56340a5fde8 ""
-  "/home/iml/fryderyk.koegl/code/LapIRN-koegl/overleaf_jmi/main.tex" 1792586431 2685 b0035a7fd988d473c3398202fef8671a ""
+  "/home/iml/fryderyk.koegl/code/LapIRN-koegl/overleaf_jmi/main.tex" 1792587795 3113 e78a695b2d1c635f2bc89c9f88c1d680 ""
   "/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc" 1165713224 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/adobe/courier/pcrr7t.tfm" 1136768653 960 379cc0019370a9e0208a0a3f949f847a ""
@@ -145,12 +145,12 @@
   "figures/qualitative.png" 1792577648 3152724 0b81492f2063e7ee46831bd79e5ce432 ""
   "figures/qualitative.tex" 1792577648 689 f8e22e83081df4a3a050d44e7818d624 ""
   "introduction.tex" 1792577684 3893 5ae88d2a12255847adc4e69c5b6d6ead ""
-  "main.aux" 1792586434 19140 24749caacccc484fd7366a03d80fc311 "pdflatex"
-  "main.bbl" 1792586295 7586 fb9623156386b6f38337bef7cb99f33e "bibtex main"
-  "main.lof" 1792586434 2680 f16f88794567ed7a4dd50019d1cbd745 "pdflatex"
-  "main.lot" 1792586434 2081 236ca41754ca90cda2223364d09d4d38 "pdflatex"
-  "main.out" 1792586434 3450 79be8f827093047e07d3a6107b131c28 "pdflatex"
-  "main.tex" 1792586431 2685 b0035a7fd988d473c3398202fef8671a ""
+  "main.aux" 1792587801 19220 8bc72c1bd327fae01b233a7c3b5abac4 "pdflatex"
+  "main.bbl" 1792587798 7586 fb9623156386b6f38337bef7cb99f33e "bibtex main"
+  "main.lof" 1792587801 2680 f16f88794567ed7a4dd50019d1cbd745 "pdflatex"
+  "main.lot" 1792587801 2081 236ca41754ca90cda2223364d09d4d38 "pdflatex"
+  "main.out" 1792587801 3450 79be8f827093047e07d3a6107b131c28 "pdflatex"
+  "main.tex" 1792587795 3113 e78a695b2d1c635f2bc89c9f88c1d680 ""
   "methods.tex" 1792586414 21700 f3d7d92ea01eb25e884a5a935dfcfeb2 ""
   "results.tex" 1792584804 6949 0966f4efff2fd879cfc1f1134ea09f32 ""
   "spieman.cls" 1792577443 9784 59f7f93a8bcb7eadcdd34f81ab49f3a4 ""
