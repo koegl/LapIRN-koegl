@@ -2,7 +2,7 @@
 
 For each loss set (PET / rigidity / both) two runs on test, both with the same
 IO losses: the network trained with the losses (I2-I4, filled) and the network
-trained without them (I5-I7, hollow); an arrow joins each pair. Reference:
+trained without them (I5-I7, hollow). Reference:
 neither loss (I1, grey). Two panels: |MTV change| and |TLG change| against CT
 Dice; points are patient means with 95 % patient-bootstrap CIs.
 
@@ -113,13 +113,6 @@ def main() -> None:
         ax.y_metric = y_metric
         point(ax, REFERENCE[0], REFERENCE[2], True)
         for trained, io_only, color in PAIRS.values():
-            (x0, _, _), (y0, _, _) = stats[trained][X_METRIC], stats[trained][y_metric]
-            (x1, _, _), (y1, _, _) = stats[io_only][X_METRIC], stats[io_only][y_metric]
-            ax.annotate(
-                "", xy=(x1, y1), xytext=(x0, y0),
-                arrowprops={"arrowstyle": "->", "color": color, "lw": 1.0, "shrinkA": 5, "shrinkB": 5},
-                zorder=3,
-            )
             point(ax, trained, color, True)
             point(ax, io_only, color, False)
         ax.set_xlabel(AXIS_LABELS[X_METRIC])
@@ -150,7 +143,7 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/q2.pdf}}
-\caption{{Losses in training and IO versus only in IO (test set, {n} patients). For each loss set, filled: network trained with the losses, then IO with them; hollow: network trained without them (T1), same IO; arrows go from the former to the latter. Grey: neither loss (I1). Points: patient means with 95\,\% patient-bootstrap confidence intervals.}}
+\caption{{Losses in training and IO versus only in IO (test set, {n} patients). For each loss set, filled: network trained with the losses, then IO with them; hollow: network trained without them (T1), same IO. Grey: neither loss (I1). Points: patient means with 95\,\% patient-bootstrap confidence intervals.}}
 \label{{fig:q2}}
 \end{{figure}}
 """
