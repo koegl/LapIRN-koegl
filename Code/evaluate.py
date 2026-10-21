@@ -120,6 +120,8 @@ EVAL_RUNS: Dict[str, EvalRun] = {
     "I5": EvalRun("T1", IO_PET),
     "I6": EvalRun("T1", IO_RIG),
     "I7": EvalRun("T1", IO_BOTH),
+    # no network: IO straight from the affine prereg (what the network adds)
+    "I8": EvalRun(io=IO_BOTH),
     **{
         run_id: EvalRun("T1", IOSpec(pet=True, rigidity=False, cfg_overrides=terms))
         for run_id, terms in LOO_TERMS.items()
