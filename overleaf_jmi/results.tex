@@ -1,21 +1,45 @@
 \section{Results}
 \label{sect:results}
 
-% Order follows the agreed story (findings.md, "Paper story").
+All results are on the test set (28 patients, 38 pairs); values are mean$\pm$SD over patients, and differences are given in percentage points.
 
 \subsection{Effect of the PET-Preservation and Rigidity Losses}
 \label{sect:res_q1}
-\todo{Q1 text from Table~\ref{tab:ablations}: PET lowers $|\Delta\mathrm{MTV}|$ / $|\Delta\mathrm{TLG}|$ significantly as network output and with IO, at about 2--3 Dice points; rigidity lowers $|\Delta\mathrm{MTV}|$ at $\leq0.5$ Dice points; HD95 follows Dice; NDV below the threshold for every run. Early stopping (one sentence): best-tumour checkpoint costs 3.0 Dice points, $|\Delta\mathrm{MTV}|$ $-0.4$ (n.s.).}
+
+Table~\ref{tab:ablations} shows the four networks trained with neither, the PET-preservation, the rigidity, or both groups of losses, as network output and with IO using the same losses.
+Training with the PET losses lowered the volume change of the lesions from 10.6\,\% to 7.6\,\% and the uptake change from 10.8\,\% to 7.6\,\%, at the cost of 1.9 Dice points.
+IO raised the Dice of every network by 2.8 to 4.4 points and kept the effect of the losses: with the PET losses, $|\Delta\mathrm{MTV}|$ was 6.3\,\% instead of 10.2\,\% and $|\Delta\mathrm{TLG}|$ 7.2\,\% instead of 11.9\,\%, for 2.8 Dice points.
+The rigidity loss alone did not change the Dice of the network and cost 0.5 points with IO, and it lowered $|\Delta\mathrm{MTV}|$ in both cases (network 9.4\,\%, with IO 7.9\,\%).
+Combining both groups preserved about as well as the PET losses alone and was the least accurate variant (72.8\,\% and 75.6\,\% Dice).
+HD95 followed the Dice in every case (network 7.2 to 7.5~mm, with IO 6.8 to 7.2~mm).
+No variant folded: the non-diffeomorphic volume of every pair stayed below the 0.005\,\% threshold of the challenge (at most 0.6~ppm on average).
+
+Selecting the network without the losses at its checkpoint with the best validation tumour preservation, instead of the best accuracy, is no substitute for the losses: it cost 3.0 Dice points while $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ fell by only 0.4 and 0.9 points (not significant).
+
 \input{tables/ablations}
 
 \subsection{Losses in Training or Only in IO}
 \label{sect:res_q2}
-\todo{Q2 text from Fig.~\ref{fig:q2} and q2\_effects.txt: losses only in IO vs.\ in training and IO: Dice +1.2 (PET) and +1.7 (both) points, significant; $|\Delta\mathrm{MTV}|$ +0.5 to +1.3 points, not significant. Without IO, the training losses are the only way to obtain preservation.}
+
+Figure~\ref{fig:q2} compares, for each group of losses, the network trained with the losses (followed by IO with them) with the network trained without them, followed by the same IO.
+Using the losses only in IO was more accurate: Dice increased by 1.2 points [95\,\% CI 0.4, 1.9] for the PET losses and by 1.7 points [1.1, 2.2] for both groups (both significant), and was unchanged for rigidity.
+Preservation was not significantly worse: $|\Delta\mathrm{MTV}|$ increased by 1.3 [0.0, 2.6], 0.5 [0.0, 1.0], and 0.8 [$-1.0$, 2.7] points for PET, rigidity, and both, and $|\Delta\mathrm{TLG}|$ by at most 1.5 points.
+Without IO, in contrast, the training losses are the only means of preservation (Table~\ref{tab:ablations}, left).
+
 \input{figures/q2}
 
 \subsection{Per-Lesion Volume Change}
 \label{sect:res_lesions}
-\todo{Text from findings.md, ``Per-lesion volume change: draft results text''.}
+
+Figure~\ref{fig:lesions} shows the volume change of the 1327 individual lesions (26 patients with lesions).
+Small lesions changed most in every condition: for bone-associated lesions with IO and without the losses, the median change was 33\,\% (small), 17\,\% (medium), and 9\,\% (large).
+A small lesion has fewer than about 20 voxels, so gaining or losing one or two voxels is already a large relative change.
+Without the losses, IO increased the distortion of lesions, most of all of small bone lesions (median from 20\,\% to 33\,\%); bone lesions tended to grow (median signed change $+3$ to $+10$\,\%) and soft-tissue lesions to shrink ($-9$ to $-13$\,\%).
+The rigidity loss acted only on bone-associated lesions, as expected from its construction: with IO, it lowered the median change of small, medium, and large bone lesions from 33\,\% to 20\,\%, 17\,\% to 12\,\%, and 9\,\% to 5\,\%, and left soft-tissue lesions unchanged (17 to 22\,\%).
+The PET losses acted in both locations, for example from 18\,\% to 10\,\% for medium soft-tissue lesions and from 33\,\% to 13\,\% for small bone lesions; only for small soft-tissue lesions, the smallest group (41 lesions), no clear effect was visible.
+With both groups, bone lesions changed least at every size (10\,\%, 9\,\%, and 4\,\%), and their systematic growth disappeared (median signed change about 0).
+The medians of small lesions take only a few distinct values (e.g.\ 10.0\,\%, 12.5\,\%, 20.0\,\%) because they are ratios of small voxel counts.
+
 \input{figures/lesions}
 
 \subsection{Contribution of Each PET Term}
@@ -24,7 +48,20 @@
 
 \subsection{Comparison with Baselines}
 \label{sect:res_baselines}
-\todo{Text from Table~\ref{tab:baselines}, Fig.~\ref{fig:baselines_distribution}, Fig.~\ref{fig:qualitative}: every variant of ours significantly more accurate than NiftyReg, ConvexAdam, and the affine; no folding; ranks; affine + IO reaches 52.7\,\% Dice, so the network is essential; runtimes.}
+
+Table~\ref{tab:baselines} and Fig.~\ref{fig:baselines_distribution} compare our variants with the baselines.
+Every variant of ours was significantly more accurate than NiftyReg (69.4\,\% Dice, 8.6~mm HD95), ConvexAdam (61.7\,\%, 9.2~mm), and the affine pre-registration (46.4\,\%, 13.9~mm), and none of them folded.
+NiftyReg, tuned on the validation set where it rarely folded, exceeded the folding threshold on 21\,\% of the test pairs (mean 1170~ppm, driven by three pairs with 0.8 to 1.3\,\%).
+IO directly after the affine pre-registration reached only 52.7\,\% Dice: within the same iteration budget, IO cannot replace the network.
+Its MTV and TLG change was the lowest of all methods (3.4\,\%), because the deformation it adds to the affine is small.
+
+Among our variants, IO without the PET and rigidity losses was the most accurate (79.2\,\% Dice), and our full method, with the losses in training and IO, preserved best ($|\Delta\mathrm{MTV}|$ 6.2\,\%, significantly lower than without the losses).
+The variant with the losses only in IO ranked first (77.3\,\% Dice, 7.0\,\% $|\Delta\mathrm{MTV}|$), followed by the full method and the variant without the losses; their rank intervals overlap (1--5).
+The ranking was decided mainly by accuracy: after correction for multiple comparisons, few differences in preservation were significant (on $|\Delta\mathrm{MTV}|$, each variant with the losses outperformed one other method and IO after the affine two; on $|\Delta\mathrm{TLG}|$, only IO after the affine outperformed others), and none in folding.
+The network alone needs 11~s per pair, as fast as ConvexAdam and ten times faster than NiftyReg (108~s); IO adds about 2.5~minutes.
+Figure~\ref{fig:qualitative} shows a test pair.
+\todo{Describe the qualitative example once the case is fixed (CASE in figure\_qualitative.py).}
+
 \input{tables/baselines}
 \input{figures/baselines_distribution}
 \input{figures/qualitative}

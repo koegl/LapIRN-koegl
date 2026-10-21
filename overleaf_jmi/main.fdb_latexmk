@@ -1,12 +1,12 @@
 # Fdb version 3
-["bibtex main"] 1792583563 "main.aux" "main.bbl" "main" 1792583566
+["bibtex main"] 1792585015 "main.aux" "main.bbl" "main" 1792585018
   "./spiejour.bst" 1792577442 20948 1346fa42c08ea646c46fa57a4730c641 ""
-  "main.aux" 1792583566 19031 758138a0ff20d0ef20407a3a9b16e0b0 "pdflatex"
+  "main.aux" 1792585018 19031 dfd6b168d276153369c4c3ad2d330f6c "pdflatex"
   "references.bib" 1792583440 37053 83b6f49213e4330b019fc0c4ee6afcbc ""
   (generated)
   "main.bbl"
   "main.blg"
-["pdflatex"] 1792583563 "/home/iml/fryderyk.koegl/code/LapIRN-koegl/overleaf_jmi/main.tex" "main.pdf" "main" 1792583566
+["pdflatex"] 1792585015 "/home/iml/fryderyk.koegl/code/LapIRN-koegl/overleaf_jmi/main.tex" "main.pdf" "main" 1792585018
   "/etc/texmf/web2c/texmf.cnf" 1717060414 475 c0e671620eb5563b2130f56340a5fde8 ""
   "/home/iml/fryderyk.koegl/code/LapIRN-koegl/overleaf_jmi/main.tex" 1792577684 2557 956ae3dfa6efa68eeb5d020b0b8aaf8f ""
   "/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc" 1165713224 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
@@ -145,14 +145,14 @@
   "figures/qualitative.png" 1792577648 3152724 0b81492f2063e7ee46831bd79e5ce432 ""
   "figures/qualitative.tex" 1792577648 689 f8e22e83081df4a3a050d44e7818d624 ""
   "introduction.tex" 1792577684 3893 5ae88d2a12255847adc4e69c5b6d6ead ""
-  "main.aux" 1792583566 19031 758138a0ff20d0ef20407a3a9b16e0b0 "pdflatex"
-  "main.bbl" 1792583563 7586 fb9623156386b6f38337bef7cb99f33e "bibtex main"
-  "main.lof" 1792583566 2680 7cadc4752e737aa9bb12479cc213e843 "pdflatex"
-  "main.lot" 1792583566 2081 aa55758a0ce5612f328691b6d6d24035 "pdflatex"
-  "main.out" 1792583566 3450 79be8f827093047e07d3a6107b131c28 "pdflatex"
+  "main.aux" 1792585018 19031 dfd6b168d276153369c4c3ad2d330f6c "pdflatex"
+  "main.bbl" 1792585015 7586 fb9623156386b6f38337bef7cb99f33e "bibtex main"
+  "main.lof" 1792585018 2680 d816c78f2556d6664b14b07ce48efd30 "pdflatex"
+  "main.lot" 1792585018 2081 9d1b2815b32bef80f087a0c8b2afc618 "pdflatex"
+  "main.out" 1792585018 3450 79be8f827093047e07d3a6107b131c28 "pdflatex"
   "main.tex" 1792577684 2557 956ae3dfa6efa68eeb5d020b0b8aaf8f ""
   "methods.tex" 1792583281 21419 8525e38bb591cd0c6ae2ade9ff7980c7 ""
-  "results.tex" 1792577789 2424 83b8baf4cfe074f26b8c8b7a3ff63c00 ""
+  "results.tex" 1792584804 6949 0966f4efff2fd879cfc1f1134ea09f32 ""
   "spieman.cls" 1792577443 9784 59f7f93a8bcb7eadcdd34f81ab49f3a4 ""
   "tables/ablations.tex" 1792577648 1543 f382922f586b68943828dc2cfeeaaee9 ""
   "tables/baselines.tex" 1792577648 3217 3647fb420361b4665992ce8c32a0b4b3 ""
