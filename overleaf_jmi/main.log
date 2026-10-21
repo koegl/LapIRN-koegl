@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.1.31)  21 OCT 2026 15:15
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.1.31)  21 OCT 2026 15:17
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -463,36 +463,36 @@ Underfull \hbox (badness 5504) in paragraph at lines 78--82
 []\OT1/ptm/m/n/12 Fryderyk K[]ogl, Anna Re-i-th-meir, Daniel M. Lang ...Julia A. Schn-abel, ``PET
  []
 
-
+[25]
 Underfull \hbox (badness 1097) in paragraph at lines 112--116
 \OT1/ptm/m/it/12 Assisted In-ter-ven-tion (MIC-CAI)\OT1/ptm/m/n/12 , \OT1/ptm/m/it/12 Lec-ture Notes in Com-puter Sci-ence \OT1/ptm/b/n/12 4190\OT1/ptm/m/n/12 , 924--931,
  []
 
-[25] [26]) (./main.lof [27])
+[26]) (./main.lof [27] [28])
 \tf@lof=\write4
 \openout4 = `main.lof'.
 
- (./main.lot [28])
+ (./main.lot [29])
 \tf@lot=\write5
 \openout5 = `main.lot'.
 
- [29] (./main.aux)
+ [30] (./main.aux)
 Package rerunfilecheck Info: File `main.out' has not changed.
 (rerunfilecheck)             Checksum: 79BE8F827093047E07D3A6107B131C28;3450.
  ) 
 Here is how much of TeX's memory you used:
- 11302 strings out of 480247
- 173552 string characters out of 5896151
+ 11304 strings out of 480247
+ 173567 string characters out of 5896151
  473877 words of memory out of 5000000
- 28920 multiletter control sequences out of 15000+600000
+ 28921 multiletter control sequences out of 15000+600000
  496374 words of font info for 83 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  75i,15n,77p,1362b,591s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/helvetic/uhvr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (29 pages, 5674592 bytes).
+Output written on main.pdf (30 pages, 5675803 bytes).
 PDF statistics:
- 613 PDF objects out of 1000 (max. 8388607)
- 490 compressed objects within 5 object streams
- 99 named destinations out of 1000 (max. 500000)
+ 617 PDF objects out of 1000 (max. 8388607)
+ 493 compressed objects within 5 object streams
+ 100 named destinations out of 1000 (max. 500000)
  202 words of extra memory for PDF output out of 10000 (max. 10000000)
 
