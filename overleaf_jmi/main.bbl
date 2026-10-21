@@ -1,0 +1,160 @@
+\begin{thebibliography}{10}
+
+\bibitem{ref_psma_clinical}
+Wolfgang~P. Fendler, Matthias Eiber, Mohsen Beheshti \ldots Ken Herrmann,
+  ``{68Ga-PSMA PET/CT}: Joint {EANM} and {SNMMI} procedure guideline for
+  prostate cancer imaging: version 1.0,'' {\em European Journal of Nuclear
+  Medicine and Molecular Imaging} {\bf 44}, 1014--1024  (2017).
+
+\bibitem{ref_psmareg_challenge}
+{Learn2Reg Consortium}, ``{Learn2Reg 2026 -- PSMAReg}: Registration of
+  pre-therapy and follow-up whole-body {PSMA} {PET/CT} scans.'' Codabench
+  challenge  (2026).
+\newblock \url{https://www.codabench.org/competitions/15724/}.
+
+\bibitem{ref_learn2reg_hansen}
+Lasse Hansen, Wiebke Heyer, Christoph Großbröhmer \ldots Mattias~P. Heinrich,
+  ``Learn2reg 2024: New benchmark datasets driving progress on new
+  challenges,'' {\em Machine Learning for Biomedical Imaging} {\bf 3}, 775--791
+   (2025).
+
+\bibitem{ref_learn2reg_alessa}
+Alessa Hering, Lasse Hansen, Tony C.~W. Mok \ldots Mattias~P. Heinrich,
+  ``Learn2reg: Comprehensive multi-task medical image registration challenge,
+  dataset and evaluation in the era of deep learning,'' {\em IEEE Transactions
+  on Medical Imaging} {\bf 42}(3), 697--712  (2023).
+
+\bibitem{ref_psmaregdata}
+Katharina Jeblick, Stefan~O. Sch{\"o}nberg, and others, ``A whole-body
+  {PSMA-PET/CT} dataset with manually annotated tumor lesions
+  ({PSMA-PET-CT-Lesions}).'' The Cancer Imaging Archive  (2024).
+\newblock Version 1.
+
+\bibitem{ref_demons}
+Tom Vercauteren, Xavier Pennec, Aymeric Perchant \ldots Nicholas Ayache,
+  ``Diffeomorphic demons: Efficient non-parametric image registration,'' {\em
+  NeuroImage} {\bf 45}(1, Supplement 1), S61--S72  (2009).
+
+\bibitem{ref_syn}
+B.B. Avants, C.L. Epstein, M.~Grossman \ldots J.C. Gee, ``Symmetric
+  diffeomorphic image registration with cross-correlation: Evaluating automated
+  labeling of elderly and neurodegenerative brain,'' {\em Medical Image
+  Analysis} {\bf 12}(1), 26--41  (2008).
+\newblock Special Issue on The Third International Workshop on Biomedical Image
+  Registration - WBIR 2006.
+
+\bibitem{bspline}
+D.~Rueckert, L.I. Sonoda, C.~Hayes \ldots D.J. Hawkes, ``Nonrigid registration
+  using free-form deformations: application to breast mr images,'' {\em IEEE
+  Transactions on Medical Imaging} {\bf 18}(8), 712--721  (1999).
+
+\bibitem{ref_voxelmorph_cvpr}
+Guha Balakrishnan, Amy Zhao, Mert~R. Sabuncu \ldots Adrian~V. Dalca, ``An
+  unsupervised learning model for deformable medical image registration,'' in
+  {\em Proceedings of the IEEE Conference on Computer Vision and Pattern
+  Recognition (CVPR)},   (2018).
+
+\bibitem{ref_svf_voxelmorph}
+Adrian~V. Dalca, Guha Balakrishnan, John Guttag \ldots Mert~R. Sabuncu,
+  ``Unsupervised learning for fast probabilistic diffeomorphic registration,''
+  in {\em Medical Image Computing and Computer Assisted Intervention -- MICCAI
+  2018},  Alejandro~F. Frangi, Julia~A. Schnabel, Christos Davatzikos \ldots
+  Gabor Fichtinger, Eds., 729--738, Springer International Publishing, (Cham)
+  (2018).
+
+\bibitem{ref_transmorph}
+Junyu Chen, Eric~C. Frey, Yufan He \ldots Yong Du, ``Transmorph: Transformer
+  for unsupervised medical image registration,'' {\em Medical Image Analysis}
+  {\bf 82}, 102615  (2022).
+
+\bibitem{ref_lapirn}
+Tony C.~W. Mok and Albert C.~S. Chung, ``Large deformation diffeomorphic image
+  registration with laplacian pyramid networks,'' in {\em Medical Image
+  Computing and Computer Assisted Intervention -- MICCAI 2020},  Anne~L.
+  Martel, Purang Abolmaesumi, Danail Stoyanov \ldots Leo Joskowicz, Eds.,
+  211--221, Springer International Publishing, (Cham)  (2020).
+
+\bibitem{ref_koegl_arxiv}
+Fryderyk K{\"o}gl, Anna Reithmeir, Daniel~M. Lang \ldots Julia~A. Schnabel,
+  ``{PET} quantification-preserving registration for longitudinal whole-body
+  {PSMA} {PET/CT},''  (2026).
+\newblock arXiv:2610.21451.
+
+\bibitem{ref_totalsegmentator}
+Jakob Wasserthal, Hanns-Christian Breit, Manfred~T. Meyer \ldots Martin
+  Segeroth, ``Totalsegmentator: Robust segmentation of 104 anatomic structures
+  in {CT} images,'' {\em Radiology: Artificial Intelligence} {\bf 5}(5),
+  e230024  (2023).
+
+\bibitem{nnunet}
+Fabian Isensee, Paul~F. Jaeger, Simon A.~A. Kohl \ldots Klaus~H. Maier-Hein,
+  ``nnu-net: a self-configuring method for deep learning-based biomedical image
+  segmentation,'' {\em Nature Methods} {\bf 18}, 203--211  (2021).
+
+\bibitem{ref_convexadam}
+Hanna Siebert, Lasse Hansen, and Mattias~P. Heinrich, ``Fast 3d registration
+  with accurate optimisation and little learning for learn2reg 2021,'' in
+  {\em Biomedical Image Registration, Domain Generalisation and
+  Out-of-Distribution Analysis},  Marc Aubreville, David Zimmerer, and Mattias
+  Heinrich, Eds., 174--179, Springer International Publishing, (Cham)  (2022).
+
+\bibitem{ants}
+Brian~B. Avants, Nicholas~J. Tustison, Gang Song \ldots James~C. Gee, ``A
+  reproducible evaluation of ants similarity metric performance in brain image
+  registration,'' {\em NeuroImage} {\bf 54}(3), 2033--2044  (2011).
+
+\bibitem{ref_arsigny}
+Vincent Arsigny, Olivier Commowick, Xavier Pennec \ldots Nicholas Ayache, ``A
+  log-{E}uclidean framework for statistics on diffeomorphisms,'' in {\em
+  Medical Image Computing and Computer-Assisted Intervention (MICCAI)},  {\em
+  Lecture Notes in Computer Science} {\bf 4190}, 924--931, Springer  (2006).
+
+\bibitem{ref_adam}
+Diederik~P. Kingma and Jimmy Ba, ``Adam: A method for stochastic
+  optimization,'' in {\em International Conference on Learning Representations
+  (ICLR)},   (2015).
+
+\bibitem{ref_kabsch}
+Wolfgang Kabsch, ``A solution for the best rotation to relate two sets of
+  vectors,'' {\em Foundations of Crystallography} {\bf 32}(5), 922--923
+  (1976).
+
+\bibitem{ref_umeyama}
+S.~Umeyama, ``Least-squares estimation of transformation parameters between two
+  point patterns,'' {\em IEEE Transactions on Pattern Analysis and Machine
+  Intelligence} {\bf 13}(4), 376--380  (1991).
+
+\bibitem{Liu2024}
+Yihao Liu, Junyu Chen, Shuwen Wei \ldots Jerry Prince, ``On finite difference
+  jacobian computation in deformable image  registration,'' {\em
+  International Journal of Computer Vision} {\bf 132}, 3678--3688  (2024).
+
+\bibitem{ref_rigidity_3_staring}
+Marius Staring, Stefan Klein, and Josien P.~W. Pluim, ``A rigidity penalty term
+  for nonrigid registration,'' {\em Medical Physics} {\bf 34}(11), 4098--4108
+  (2007).
+
+\bibitem{ref_wilcoxon}
+Frank Wilcoxon, ``Individual comparisons by ranking methods,'' {\em Biometrics
+  Bulletin} {\bf 1}(6), 80--83  (1945).
+
+\bibitem{ref_holm}
+Sture Holm, ``A simple sequentially rejective multiple test procedure,'' {\em
+  Scandinavian Journal of Statistics} {\bf 6}(2), 65--70  (1979).
+
+\bibitem{ref_bootstrap}
+Bradley Efron and Robert~J. Tibshirani, {\em An Introduction to the Bootstrap},
+  Chapman \& Hall, New York  (1993).
+
+\bibitem{MODAT2010}
+Marc Modat, Gerard~R. Ridgway, Zeike~A. Taylor \ldots Sébastien Ourselin,
+  ``Fast free-form deformation using graphics processing units,'' {\em Computer
+  Methods and Programs in Biomedicine} {\bf 98}(3), 278--284  (2010).
+\newblock HP-MICCAI 2008.
+
+\bibitem{modat2014}
+Marc Modat, David~M. Cash, Pankaj Daga \ldots S{\'e}bastien Ourselin, ``{Global
+  image registration using a symmetric block-matching approach},'' {\em Journal
+  of Medical Imaging} {\bf 1}(2), 024003  (2014).
+
+\end{thebibliography}

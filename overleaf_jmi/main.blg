@@ -1,0 +1,51 @@
+This is BibTeX, Version 0.99d (TeX Live 2022/dev/Debian)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: main.aux
+The style file: spiejour.bst
+Database file #1: references.bib
+Repeated entry---line 454 of file references.bib
+ : @inproceedings{ref_voxelmorph_cvpr
+ :                                   ,
+I'm skipping whatever remains of this entry
+You've used 28 entries,
+            2159 wiz_defined-function locations,
+            721 strings with 12863 characters,
+and the built_in function-call counts, 11579 in all, are:
+= -- 1197
+> -- 764
+< -- 200
++ -- 270
+- -- 242
+* -- 735
+:= -- 1637
+add.period$ -- 33
+call.type$ -- 28
+change.case$ -- 27
+chr.to.int$ -- 0
+cite$ -- 28
+duplicate$ -- 426
+empty$ -- 794
+format.name$ -- 242
+if$ -- 2961
+int.to.chr$ -- 0
+int.to.str$ -- 28
+missing$ -- 26
+newline$ -- 92
+num.names$ -- 34
+pop$ -- 71
+preamble$ -- 1
+purify$ -- 0
+quote$ -- 0
+skip$ -- 490
+stack$ -- 0
+substring$ -- 614
+swap$ -- 265
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 0
+warning$ -- 0
+while$ -- 81
+width$ -- 30
+write$ -- 263
+(There was 1 error message)

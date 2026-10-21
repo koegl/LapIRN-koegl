@@ -1,0 +1,220 @@
+\section{Methods}
+\label{sect:methods}
+
+\subsection{Data and Split}
+\label{sect:data}
+
+We used the training set of the PSMAReg challenge~\cite{ref_psmareg_challenge,ref_psmaregdata}, a longitudinal whole-body PSMA PET/CT cohort.
+Each scan consists of a CT and a PET image (in SUV), resampled to $2.7344\times2.7344\times3.27$~mm and cropped to $192\times192\times288$ voxels.
+For every scan, the challenge provides 117 CT organ labels (the TotalSegmentator~\cite{ref_totalsegmentator} classes) and a PSMA lesion mask.
+Following the challenge, a follow-up scan is always the moving image and the corresponding baseline scan the fixed image.
+
+We split the 146 labelled patients with at least two scans at the patient level into training, validation, and test sets, aiming at 70/15/15\,\% of the registration pairs and balancing the sets for tumour burden and for bone- versus soft-tissue lesion location.
+Training uses all pairs of later onto earlier examinations of a patient; validation and testing use only follow-up-to-baseline pairs, as in the challenge.
+This gave 92/26/28 patients and 178/38/38 pairs.
+The split was built once with a fixed seed and frozen before any experiment of this study; all choices of settings, checkpoints, and methods were made on the validation set, and the test set was used only for the final evaluation.
+All patients were part of the challenge training data used to develop the earlier version of the method~\cite{ref_koegl_arxiv}; the test patients were not used for any decision in the present study.
+
+\paragraph{Labels used by the method and for evaluation.}
+Instance optimisation (Sec.~\ref{sect:io}) needs organ and lesion labels of the test scans.
+To keep evaluation independent of the inputs, IO uses only predicted labels: organ labels predicted by TotalSegmentator~\cite{ref_totalsegmentator} on the CT, and lesion masks predicted by an nnU-Net~\cite{nnunet} trained on the training patients only.
+\todo{nnU-Net details: input channels, configuration, folds; lesion Dice on the validation set (about 0.55).}
+The provided labels are used only for evaluation (Sec.~\ref{sect:metrics}).
+
+\paragraph{Preprocessing.}
+For the network and IO, CT was clipped to $[-1000,1500]$~HU and PET to $[0,20]$~SUV, and both were rescaled to $[0,1]$.
+As in the ConvexAdam baseline of the challenge~\cite{ref_convexadam}, the patient bed was removed from the CT.
+All PET quantities in the evaluation are computed on the original SUV images.
+
+\subsection{Registration Pipeline}
+\label{sect:pipeline}
+
+The pipeline (Fig.~\ref{fig:pipeline}) has three stages, all estimated from the moving scan $(C_m, P_m)$ and the fixed scan $(C_f, P_f)$, where $C$ denotes CT and $P$ PET.
+We denote the affine transform by $\varphi_{\mathrm{aff}}$, the network deformation by $\varphi_\theta$, and their composition, which maps the original moving scan to the fixed scan, by $\varphi$.
+
+\paragraph{Affine pre-registration.}
+ANTs~\cite{ants} estimates an affine transform from the two CTs, using body masks, a $[-1000,1000]$~HU window, half-resolution images, and Mattes mutual information.
+It is converted to a dense displacement field.
+
+\paragraph{Deformable network.}
+We use LapIRN~\cite{ref_lapirn} with three pyramid levels at quarter, half, and full resolution.
+Each level predicts a stationary velocity field that is added to the upsampled velocity of the coarser level and integrated by scaling and squaring~\cite{ref_arsigny} into $\varphi_\theta$.
+Each level receives four channels: the fixed CT and PET and the affinely aligned moving CT and PET.
+The levels are trained one after the other; a finer level is initialised from the coarser one, which is first kept frozen and then trained jointly.
+\todo{Architecture: number of residual blocks and expansion of the final runs; confirm start channels.}
+
+\paragraph{Instance optimisation.}
+\label{sect:io}
+At test time, the deformation of each pair is refined by optimising a residual stationary velocity field, initialised at zero and integrated by scaling and squaring (seven steps), on top of the total transformation $\varphi$.
+The residual is optimised at full resolution with Adam~\cite{ref_adam} (learning rate $0.0125$, 40 iterations).
+The objective is the same as in training (Sec.~\ref{sect:objective}), with the predicted labels in place of ground-truth labels.
+Of the 40 iterates, we return the one with the lowest objective, in which the interpolated (soft) MTV and TLG terms are replaced by their nearest-neighbour (hard) values, i.e.\ by how the evaluation counts them; this selection uses only predicted labels.
+
+\subsection{Registration Objective}
+\label{sect:objective}
+
+Network training and IO minimise a weighted sum of three groups of terms:
+\begin{equation}
+  \begin{aligned}
+  \mathcal{L} = {} &
+  \underbrace{\lambda_{\mathrm{NCC}}\mathcal{L}_{\mathrm{NCC}} + \lambda_{\mathrm{DSC}}\mathcal{L}_{\mathrm{DSC}}}_{\text{alignment}}
+  + \underbrace{\lambda_{\mathrm{MTV}}\mathcal{L}_{\mathrm{MTV}} + \lambda_{\overline{J}}\mathcal{L}_{\overline{J}} + \lambda_{J}\mathcal{L}_{J} + \lambda_{\mathrm{TLG}}\mathcal{L}_{\mathrm{TLG}}}_{\text{PET preservation}} \\
+  & + \underbrace{\lambda_{\mathrm{rig}}\mathcal{L}_{\mathrm{rig}} + \lambda_{\mathrm{smooth}}\mathcal{L}_{\mathrm{smooth}} + \lambda_{\mathrm{NDV}}\mathcal{L}_{\mathrm{NDV}}}_{\text{regularisation}} .
+  \end{aligned}
+  \label{eq:objective}
+\end{equation}
+All terms are evaluated on the total transformation $\varphi$.
+The PET-preservation terms and the rigidity term are the subject of this study; they can be switched on in network training, in IO, or in both (Sec.~\ref{sect:experiments}).
+The two coarse network levels never use them, because lesions and thin bones span only a few voxels at these resolutions.
+
+\paragraph{Alignment.}
+$\mathcal{L}_{\mathrm{NCC}}$ is the negative local normalised cross-correlation of the CTs, summed over one to three scales depending on the pyramid level.
+PET is not used for similarity, because uptake changes between examinations with disease and therapy and a PET similarity would reward matching these changes.
+$\mathcal{L}_{\mathrm{DSC}}$ is a soft Dice loss on the CT organ labels.
+
+\paragraph{PET preservation.}
+Let $M$ be the lesion mask of the moving scan and $\widetilde M$, $\widetilde P$ the linearly warped mask and PET.
+Nearest-neighbour warping, as used in the evaluation, is piecewise constant in the displacement and gives no useful gradient; linear warping gives a soft lesion boundary instead.
+The volume and uptake terms penalise the relative change caused by warping,
+\begin{equation}
+  \mathcal{L}_{\mathrm{MTV}} = \left(\frac{\left|\sum_x \widetilde M(x) - \sum_x M(x)\right|}{\sum_x M(x) + \epsilon}\right)^{2},
+  \qquad
+  \mathcal{L}_{\mathrm{TLG}} = \frac{\left|\sum_x \widetilde P(x)\widetilde M(x) - \sum_x P_m(x) M(x)\right|}{\sum_x P_m(x) M(x) + \epsilon},
+  \label{eq:mtv_tlg}
+\end{equation}
+with $\epsilon=10^{-5}$.
+Two further terms act on the Jacobian determinant $\det J_\varphi$ inside the warped lesion region $W$ in the fixed frame:
+\begin{equation}
+  \mathcal{L}_{\overline{J}} = \left(\frac{1}{|W|}\sum_{x\in W}\det J_\varphi(x) - 1\right)^{2},
+  \qquad
+  \mathcal{L}_{J} = \frac{1}{|W|}\sum_{x\in W}\bigl(\det J_\varphi(x) - 1\bigr)^{2}.
+  \label{eq:jac_terms}
+\end{equation}
+$\mathcal{L}_{\overline{J}}$ constrains the net volume change of all lesions, and $\mathcal{L}_{J}$ additionally prevents compression in one part of a lesion from being compensated by expansion in another.
+\todo{Confirm: in training, $W$ is the linearly warped mask for $\mathcal{L}_{\overline{J}}$ and the nearest-neighbour warped mask for $\mathcal{L}_{J}$, as in IO.}
+
+\paragraph{Bone rigidity.}
+Many PSMA lesions lie in bone, which moves rigidly between examinations.
+For each of the 61 skeletal labels of the fixed scan (in IO: the predicted labels), we fit a rigid transformation to the displacement of the structure in closed form~\cite{ref_kabsch,ref_umeyama} and penalise the mean squared residual of its voxels; $\mathcal{L}_{\mathrm{rig}}$ is the mean over structures with at least 50 voxels.
+Each bone is fitted independently, so neighbouring bones may move relative to each other, and the term involves no finite differences, so it does not constrain the tissue around a bone.
+
+\paragraph{Regularisation.}
+$\mathcal{L}_{\mathrm{smooth}}$ is the mean squared spatial gradient of the displacement.
+$\mathcal{L}_{\mathrm{NDV}}$ is a differentiable version of the challenge's non-diffeomorphic volume, which splits every voxel into tetrahedra and accumulates the negative part of their Jacobian determinants~\cite{Liu2024}.
+
+\paragraph{Weights.}
+\todo{Table of $\lambda$ for training (full-resolution level) and IO. Training: $\lambda_{\mathrm{NCC}}=5$, $\lambda_{\mathrm{DSC}}=3/4/5$ per level, $\lambda_{\mathrm{smooth}}=10$, $\lambda_{\mathrm{NDV}}=10^4$, $\lambda_{\mathrm{MTV}}=5$, $\lambda_{\overline{J}}=0.125$, $\lambda_{J}=1.25$, $\lambda_{\mathrm{TLG}}=1.25$, $\lambda_{\mathrm{rig}}$ = ? IO (tuned, Sec.~\ref{sect:tuning}): $\lambda_{\mathrm{NCC}}=5$, $\lambda_{\mathrm{DSC}}=5$, $\lambda_{\mathrm{NDV}}=10$, $\lambda_{\mathrm{smooth}}=0$, $\lambda_{\mathrm{MTV}}=4\cdot10^4$, $\lambda_{\overline{J}}=10^3$, $\lambda_{J}=4$, $\lambda_{\mathrm{TLG}}=16$, $\lambda_{\mathrm{rig}}=0.25$. Confirm all training values against the final runs.}
+
+\subsection{Rigidity Penalties Compared}
+\label{sect:rigidity_methods}
+
+Besides the per-bone rigid fit, we evaluate the rigidity penalty of Staring et al.~\cite{ref_rigidity_3_staring}, which requires the Jacobian $J$ inside a bone to be a rotation: $\det J = 1$, $J^{\top}J = I$, and vanishing second derivatives of the deformation.
+It is computed with finite differences, whose stencil reads the 6 face and 12 edge neighbours of a voxel.
+At a bone boundary, part of the stencil lies outside the bone, so the penalty also acts on the surrounding soft tissue or on a neighbouring bone.
+A common remedy is to erode the bone mask so that the stencil stays inside; we erode each bone by exactly this 18-neighbour footprint, which removes the leakage completely.
+The three variants (Staring, Staring with erosion, per-bone rigid fit) are compared in IO (Sec.~\ref{sect:experiments}).
+
+\subsection{Training}
+\label{sect:training}
+
+Each level was trained with Adam~\cite{ref_adam}, a batch size of one, a linear learning-rate warm-up over five epochs, and a cosine decay to 10\,\% of the initial rate.
+\todo{Learning rates and number of steps per level for the final runs; gradient accumulation; mixed precision; training time; GPU.}
+The augmentations mimic longitudinal variability: left--right flipping ($p=0.5$), CT intensity shifts of $\pm0.02$ in the normalised window (about $\pm50$~HU), CT scaling between 0.9 and 1.1, PET scaling between 0.85 and 1.15, and field-of-view mismatch by cropping up to 40 axial slices from both scans and up to 10 further slices from each scan separately.
+The two coarse levels are shared by all models; the variants of this study differ only in the losses of the full-resolution level.
+Checkpoints were selected on the validation set: the coarse levels by CT Dice, the full-resolution level by the best accuracy (CT Dice and HD95) among checkpoints whose validation folding stays below $1.4\cdot10^{-4}\,\%$ non-diffeomorphic volume.
+We did not select on MTV or TLG, so that the PET losses are not credited with effects of the checkpoint choice.
+
+\section{Experiments}
+\label{sect:experiments}
+
+\subsection{Evaluation Metrics}
+\label{sect:metrics}
+
+All metrics are computed with the provided labels of the test scans, after warping the moving scan with the scorer of the challenge.
+
+\paragraph{Alignment.}
+CT Dice and the 95th percentile of the Hausdorff distance (HD95), averaged over the 117 organ labels.
+
+\paragraph{PET preservation.}
+As in the challenge, PET (SUV) is warped linearly and the lesion mask by nearest neighbour.
+MTV is the volume of the lesion mask and TLG the sum of SUV over it times the voxel volume; both are measured on the moving scan before and after warping.
+The error of $Q\in\{\mathrm{MTV},\mathrm{TLG}\}$ is the absolute relative change,
+\begin{equation}
+  |\Delta Q| = \frac{|Q_{\mathrm{after}} - Q_{\mathrm{before}}|}{\max(Q_{\mathrm{before}},10^{-6})}.
+  \label{eq:pet_error}
+\end{equation}
+This measures what the registration does to the same scan; it does not assume that disease is unchanged between examinations.
+Because PET and mask are warped separately, the scorer changes TLG even for the identity transformation: on the test pairs with lesions, an all-zero displacement changes TLG by $2.9\pm1.2\,\%$ (MTV: $0\,\%$).
+This resampling floor applies to every warped method; we therefore report the unregistered scans (``Initial'') without resampling.
+
+\paragraph{Per-lesion change.}
+The aggregate errors of Eq.~\eqref{eq:pet_error} can hide large changes of individual lesions that cancel.
+We therefore also split the moving lesion mask into 26-connected components and compute $|\Delta\mathrm{MTV}|$ for each.
+Lesions are grouped by size (small $<0.5$~ml, medium $<5$~ml, large) and location (bone-associated if at least half of the lesion lies on a skeletal label); lesions with fewer than five voxels are excluded.
+
+\paragraph{Deformation quality.}
+Percentage of non-diffeomorphic volume (NDV) inside the body, as defined by the challenge~\cite{Liu2024}.
+
+\paragraph{Bone metrics.}
+For the rigidity comparison, we additionally compute Dice and HD95 separately over bones and soft-tissue organs; the distortion of within-bone distances, i.e.\ the mean relative change of the physical distance between randomly sampled pairs of interior points (eroded mask) of the same bone, separately for short (5--15~mm) and long ($\geq15$~mm) distances; NDV inside bones and in a three-voxel band around them; and, as a secondary measure, the residual of a rigid fit to each bone's displacement (bone rigidity error).
+We also measure the fraction of stencil reads that leave the bone of the centre voxel (stencil leakage) and the fraction of bone voxels and of bones that remain after erosion.
+
+\subsection{Statistical Analysis}
+\label{sect:statistics}
+
+A patient may contribute several pairs and many lesions.
+We therefore average every metric over the pairs of a patient first and use patients as the unit of all tests, rankings, and confidence intervals (28 test patients).
+Paired differences between two methods are tested with the two-sided Wilcoxon signed-rank test~\cite{ref_wilcoxon} on patient values and corrected for multiple comparisons with Holm's method~\cite{ref_holm} within each table and metric; we call a difference significant if the corrected $p<0.05$.
+Confidence intervals are 95\,\% percentile intervals over patient bootstrap samples~\cite{ref_bootstrap}; for per-lesion statistics, patients are resampled together with all their lesions (cluster bootstrap).
+
+For the comparison with baselines, we additionally rank all methods with the significance-based ranking of the challenge: per metric, every pair of methods is compared with a one-sided Wilcoxon test (Holm-corrected), and a method scores (number of methods it significantly outperforms $+1$)/$K$ for $K$ methods.
+Scores are averaged into accuracy (CT Dice, HD95), PET preservation ($|\Delta\mathrm{MTV}|$, $|\Delta\mathrm{TLG}|$), and regularity (NDV, after subtracting a practical-equivalence threshold of 0.005\,\% per pair), and combined into $100\cdot\mathrm{acc}^{0.4}\,\mathrm{PET}^{0.4}\,\mathrm{reg}^{0.2}$.
+PET Dice and HD95, which the challenge also uses, are omitted because no lesion labels exist for the fixed follow-up correspondence.
+\todo{Check this reason; the challenge computes PET Dice between warped and fixed lesion masks.}
+The stability of the ranks is shown by 95\,\% rank intervals over 1000 patient bootstrap samples.
+
+\subsection{Tuning and Model Selection}
+\label{sect:tuning}
+
+All tuning used the validation set and the challenge ranking above as the selection rule: the candidate settings of one grid are ranked against each other, and the top-ranked one is kept.
+\begin{itemize}
+  \item \textbf{IO:} on the network trained with both losses, step-wise: first learning rate $\times$ iterations ($\{0.0125,0.025,0.05,0.1\}\times\{10,20,40\}$), then a common scale of the four PET weights ($\times\{0,0.1,0.25,0.5,1,2,4\}$ of the training-derived values).
+  The ranking does not reward rigidity (its cost in Dice is significant, while folding stays below the threshold for every weight), so it would set $\lambda_{\mathrm{rig}}$ to zero; we fixed $\lambda_{\mathrm{rig}}=0.25$ instead, which costs 0.3 Dice points on validation.
+  \item \textbf{NiftyReg}~\cite{MODAT2010,modat2014}: \texttt{reg\_aladin} followed by \texttt{reg\_f3d} on the GPU with normalised mutual information (local NCC is not available on the GPU), over the bending-energy weights $\{0.0002, 0.0005, 0.001, 0.005, 0.02\}$ and final control-point spacings of $\{3, 5, 7, 9\}$ voxels; chosen: $0.0002$ and 9 voxels.
+  \item \textbf{ConvexAdam}~\cite{ref_convexadam}: after the same ANTs affine as our method, over the regularisation weight $\lambda\in\{0.1,0.25,0.5,1.25,2,4\}$; chosen: 0.1.
+\end{itemize}
+Several choices ended at the edge of their grid; extending the grids changed the validation scores only marginally.
+
+\paragraph{Choice of the full method.}
+Before the experiments, we defined our full method as the network trained with both losses followed by IO with both losses.
+To check this choice, we also ranked all variants of Sec.~\ref{sect:ablations} on the validation set.
+This ranking favoured the variant without any of the losses, because accuracy differences between variants are significant while differences in MTV and TLG rarely are.
+We therefore report both in the comparison with baselines, together with the variant that uses the losses only in IO.
+
+\subsection{Experiments}
+\label{sect:ablations}
+
+\paragraph{Effect of the losses.}
+Four networks were trained with the same alignment and regularisation terms and with neither, the PET-preservation, the rigidity, or both groups of losses.
+Each is evaluated as network output and with IO using the same losses as in its training.
+As a reference for early stopping, the network without the losses is also evaluated at the checkpoint with the best validation tumour preservation.
+
+\paragraph{Losses in training or only in IO.}
+The network trained without the losses is combined with IO using PET preservation, rigidity, or both, and compared with the networks trained with these losses (and IO with the same losses).
+To measure what the network contributes, IO with both losses is also run directly after the affine pre-registration.
+
+\paragraph{Contribution of each PET term.}
+On the network trained without the losses, IO with all four PET terms is compared with IO in which one term at a time is switched off.
+
+\paragraph{Comparison with baselines.}
+Initial alignment, the affine pre-registration, NiftyReg, ConvexAdam, IO after the affine, and our variants are compared on the test set.
+Runtimes are per pair on one NVIDIA RTX A6000 GPU and include the affine step.
+
+\paragraph{Rigidity penalties.}
+On the network trained with the PET losses, IO with the PET terms is combined with no rigidity, Staring, Staring with erosion, or the per-bone rigid fit.
+Because the penalties have different units, a reference weight is first calibrated for each so that its initial value on five validation pairs equals that of the rigid fit at $\lambda_{\mathrm{rig}}=0.25$ (Staring 0.66, Staring with erosion 1.03).
+Each method is then evaluated on the validation set at $\{0.1,0.3,1,3,10\}$ times its reference weight, giving a curve of CT Dice against within-bone distance distortion.
+For the test set, we choose for each method the largest weight whose validation Dice is within one Dice point of the variant without rigidity.
+
+\paragraph{Accuracy--preservation trade-off.}
+On the network trained without the losses, IO with the PET terms (without rigidity) is run with all four PET weights scaled by $\{0,0.01,0.03,0.1,0.3,1\}$ relative to the training-derived values; $\times0.1$ is the setting chosen by the IO tuning.

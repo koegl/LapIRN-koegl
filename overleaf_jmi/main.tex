@@ -1,0 +1,72 @@
+\documentclass[12pt]{spieman}  % 12pt font required by SPIE
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{setspace}
+\usepackage{tocloft}
+\usepackage{lineno}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\linenumbers
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+% ---------------------------------------------------------------
+% Drafting helpers -- REMOVE BEFORE SUBMISSION
+% ---------------------------------------------------------------
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+\title{Preserving lesion quantification in longitudinal whole-body PSMA PET/CT registration}
+
+\author[a,b,*]{Fryderyk K{\"o}gl}
+\author[b,c]{Anna Reithmeir}
+\author[b,c]{Daniel M. Lang}
+\author[b,c]{Emily Chan}
+\author[b,c]{Rickmer Braren}
+\author[c]{Julia A. Schnabel}
+\affil[a]{\todo{affiliations}}
+\affil[b]{\todo{affiliations}}
+\affil[c]{\todo{affiliations}}
+
+\renewcommand{\cftdotsep}{\cftnodots}
+\cftpagenumbersoff{figure}
+\cftpagenumbersoff{table}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\textbf{Purpose:} \todo{One or two sentences: longitudinal PSMA PET/CT registration should align anatomy without altering lesion volume and uptake.}
+
+\textbf{Approach:} \todo{LapIRN + instance optimisation with PET-preservation and bone-rigidity losses; patient-level split; comparison with NiftyReg and ConvexAdam; ablations of where the losses act.}
+
+\textbf{Results:} \todo{Main numbers after all experiments are in: accuracy vs.\ baselines, MTV/TLG change with and without the losses, IO-only placement, per-lesion effect for small bone lesions.}
+
+\textbf{Conclusions:} \todo{One or two sentences.}
+\end{abstract}
+
+\keywords{deformable image registration, PSMA PET/CT, longitudinal imaging, biomarker preservation, instance optimization}
+
+{\noindent \footnotesize\textbf{*}Fryderyk K{\"o}gl, \linkable{fryderyk.koegl@tum.de}}
+
+\begin{spacing}{2}
+
+\input{introduction}
+\input{methods}
+\input{results}
+\input{discussion}
+
+\subsection*{Disclosures}
+The authors declare that there are no financial interests, commercial affiliations, or other potential conflicts of interest that could have influenced the objectivity of this research or the writing of this paper.
+
+\subsection*{Code, Data, and Materials Availability}
+\todo{Data: PSMAReg challenge dataset (access conditions); code repository link.}
+
+\subsection*{Acknowledgments}
+\todo{Funding. Disclose the use of large language models and other AI tools (SPIE requirement).}
+
+\bibliography{references}
+\bibliographystyle{spiejour}
+
+\listoffigures
+\listoftables
+
+\end{spacing}
+\end{document}

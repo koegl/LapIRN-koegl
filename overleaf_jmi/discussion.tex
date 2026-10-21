@@ -1,0 +1,18 @@
+\section{Discussion}
+\label{sect:discussion}
+
+\todo{Write after all results are in. Points (findings.md):
+\begin{itemize}
+  \item Main answer: the losses preserve lesion volume and uptake at a known accuracy cost; IO-only placement is as preserving and more accurate; without IO (about 14 times faster), training with the losses is the only way to preserve.
+  \item Where the losses act: small and bone-associated lesions; rigidity only on bone lesions.
+  \item The challenge ranking is dominated by accuracy: biomarker differences rarely reach significance, and methods that barely deform score well on preservation (affine + IO). This also explains the validation choice of the variant without losses.
+  \item TLG resampling floor of the scorer (2.9\,\% for the identity).
+  \item PET losses in IO are limited by predicted lesion masks: with ground-truth masks the MTV change drops further (validation); a recall-biased mask made it worse.
+  \item NiftyReg folds on a few test pairs although its validation folding was low.
+  \item Rigidity: stencil leakage of finite-difference penalties at bone boundaries; erosion removes most of the skeleton at this resolution.
+  \item Limitations: one cohort, low resolution, predicted labels, all patients seen during the development of the earlier version.
+\end{itemize}}
+
+\section{Conclusion}
+\label{sect:conclusion}
+\todo{Two or three sentences.}

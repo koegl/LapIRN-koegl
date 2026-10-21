@@ -1,0 +1,39 @@
+\section{Introduction}
+\label{sect:intro}
+
+Prostate-specific membrane antigen (PSMA) PET/CT is now routinely used for staging prostate cancer, for planning and following radioligand therapy, and for assessing response~\cite{ref_psma_clinical}.
+Patients therefore accumulate a baseline examination and one or more follow-up examinations, and registering each follow-up to its baseline makes it possible to compare tumour burden voxel by voxel, to track individual lesions, and to accumulate dose~\cite{ref_psmareg_challenge}.
+For these uses, a registration must do two things at once: it has to align the anatomy, and it must not itself change the PET-derived quantities that are compared across time points.
+Two such quantities are the metabolic tumour volume (MTV) and the total lesion glycolysis (TLG).
+A deformation that compresses or stretches a lesion changes both, so a change measured after registration can be an artefact of the registration rather than of the disease.
+The Learn2Reg 2026 PSMAReg challenge~\cite{ref_learn2reg_hansen,ref_learn2reg_alessa,ref_psmaregdata} formalises this setting: each follow-up scan is warped to its baseline by a dense displacement field, which is scored on organ overlap, boundary distance, folding, and the change of MTV and TLG caused by the warp.
+
+Classical registration solves an optimisation problem per image pair~\cite{ref_demons,ref_syn,bspline}; this is accurate but slow for whole-body scans.
+Learning-based registration replaces the per-pair optimisation with one forward pass of a trained network~\cite{ref_voxelmorph_cvpr,ref_svf_voxelmorph,ref_transmorph}, and instance optimisation (IO) can refine the network output per pair at test time.
+The coarse-to-fine Laplacian pyramid network LapIRN~\cite{ref_lapirn} recovers the large deformations between whole-body scans while keeping the transformation smooth and invertible.
+
+In a challenge submission~\cite{ref_koegl_arxiv}, we adapted LapIRN to PSMA PET/CT and added losses that preserve the PET biomarkers of lesions and keep bones rigid.
+That submission was developed and evaluated within the challenge protocol.
+Here, we study these losses in a controlled setting: a new patient-level split with a held-out test set, retrained networks, tuned baselines, and statistics at the patient level.
+We ask two questions:
+\begin{enumerate}
+  \item Do the PET-preservation and bone-rigidity losses improve the complete registration pipeline, and what do they cost in alignment accuracy?
+  \item Do the losses have to be part of network training, or is it sufficient to use them in instance optimisation?
+\end{enumerate}
+\todo{Contribution list once all results are in, e.g.:
+(i) a held-out evaluation of PET-preserving and rigidity losses for whole-body PSMA PET/CT registration, against tuned NiftyReg and ConvexAdam;
+(ii) the finding that applying the losses only in IO is as preserving and more accurate than training with them, while training with them is the only option without IO;
+(iii) a per-lesion analysis showing where the losses act (small, bone-associated lesions);
+(iv) a comparison of existing rigidity penalties in low-resolution whole-body CT, including stencil leakage at bone boundaries.}
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=\linewidth]{figures/overview.png}
+\end{center}
+\caption{\label{fig:pipeline}
+Registration pipeline.
+The follow-up (moving) and baseline (fixed) PET/CT scans are aligned by an affine pre-registration, then by the LapIRN network, which predicts a dense deformation.
+Instance optimisation (IO) refines this deformation per pair before the moving scan is resampled into the fixed frame.
+Network training and IO use the same groups of loss terms: alignment, PET preservation, and deformation regularisation (Sec.~\ref{sect:objective}).
+\todo{Update the figure if the rigidity term or the IO-only variant should appear.}}
+\end{figure}

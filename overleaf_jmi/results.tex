@@ -1,0 +1,38 @@
+\section{Results}
+\label{sect:results}
+
+% Order follows the agreed story (findings.md, "Paper story").
+
+\subsection{Effect of the PET-Preservation and Rigidity Losses}
+\label{sect:res_q1}
+\todo{Q1 text from Table~\ref{tab:ablations}: PET lowers $|\Delta\mathrm{MTV}|$ / $|\Delta\mathrm{TLG}|$ significantly as network output and with IO, at about 2--3 Dice points; rigidity lowers $|\Delta\mathrm{MTV}|$ at $\leq0.5$ Dice points; HD95 follows Dice; NDV below the threshold for every run. Early stopping (one sentence): best-tumour checkpoint costs 3.0 Dice points, $|\Delta\mathrm{MTV}|$ $-0.4$ (n.s.).}
+\input{tables/ablations}
+
+\subsection{Losses in Training or Only in IO}
+\label{sect:res_q2}
+\todo{Q2 text from Fig.~\ref{fig:q2} and q2\_effects.txt: losses only in IO vs.\ in training and IO: Dice +1.2 (PET) and +1.7 (both) points, significant; $|\Delta\mathrm{MTV}|$ +0.5 to +1.3 points, not significant. Without IO, the training losses are the only way to obtain preservation.}
+\input{figures/q2}
+
+\subsection{Per-Lesion Volume Change}
+\label{sect:res_lesions}
+\todo{Text from findings.md, ``Per-lesion volume change: draft results text''.}
+\input{figures/lesions}
+
+\subsection{Contribution of Each PET Term}
+\label{sect:res_loo}
+\todo{Leave-one-out table (tables/loo.tex) once L1--L4 have run.}
+
+\subsection{Comparison with Baselines}
+\label{sect:res_baselines}
+\todo{Text from Table~\ref{tab:baselines}, Fig.~\ref{fig:baselines_distribution}, Fig.~\ref{fig:qualitative}: every variant of ours significantly more accurate than NiftyReg, ConvexAdam, and the affine; no folding; ranks; affine + IO reaches 52.7\,\% Dice, so the network is essential; runtimes.}
+\input{tables/baselines}
+\input{figures/baselines_distribution}
+\input{figures/qualitative}
+
+\subsection{Rigidity Penalties}
+\label{sect:res_rigidity}
+\todo{After the validation sweeps and test runs: curve of Dice vs.\ distance distortion (validation), test table with bone/soft-tissue alignment, distance distortion, NDV in bone and boundary band, stencil leakage, erosion retention. Leakage on all 560 scans: 21.2\,\% of stencil reads leave the bone; erosion keeps 35.5\,\% of bone voxels and removes 23\,\% of bones (ribs: 2.4\,\% kept, 58\,\% removed).}
+
+\subsection{Accuracy--Preservation Trade-off}
+\label{sect:res_tradeoff}
+\todo{Trade-off curve (PET weight $\times\{0,0.01,0.03,0.1,0.3,1\}$) once the runs are done; mark the tuned operating point.}
