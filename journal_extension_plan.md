@@ -68,6 +68,7 @@ Evaluation modes: **network** = network output only; **IO** = network + IO. IO s
 | I5 | T1 | PET | test |
 | I6 | T1 | rigidity | test |
 | I7 | T1 | PET + rigidity | test |
+| I8 | none (affine only) | PET + rigidity | test |
 | L1–L4 | T1 | PET without MTV / MTV-avg / TLG / tumour Jacobian (one each); reference I5 | test |
 
 4 trainings, 15 IO runs. Q1: I1–I4. Q2: I5–I7 vs. I2–I4. Rigidity here is the per-label Kabsch term.
@@ -122,8 +123,8 @@ Staring and Staring + erosion must be available in IO.
 | B2 | Affine pre-registration | test |
 | B3 | NiftyReg (settings tuned on val) | test |
 | B4 | ConvexAdam (settings tuned on val) | test |
-| B5 | Full method, network only (= T4, reused) | test |
-| B6 | Full method + IO (= I4, reused) | test |
+| B5 | Full method, network only (the network of B6, reused) | test |
+| B6 | Full method + IO: best of I1–I8 on val by the challenge ranking (`journal_results/select_full_method.py`), reused | test |
 
 ## Supporting / optional work
 

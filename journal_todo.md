@@ -8,6 +8,7 @@ qualitative figure).
 - [x] 1. **Networks on test:** T1, T2, T3 (T4 done).
 - [x] 2. **T1-tum:** evaluate T1's `best_tumour` checkpoint on test (downloaded).
 - [ ] 3. **IO runs on test:** I1–I3, I5–I7 (I4 done).
+- [ ] 3b. **Affine + IO (I8) and choice of "Ours":** I1–I8 on val, ranked → B6 (`select_full_method.py`); I8 on test.
 - [ ] 4. **Leave-one-out on test:** L1–L4 (reference I5).
 - [ ] 5. **Ablation table:** network (T1–T4, T1-tum) and IO (I1–I7). No ranking: planned contrasts (Q1: I2–I4 vs. I1; Q2: I5–I7 vs. I2–I4), paired difference of patient means with 95 % bootstrap CI, Wilcoxon + Holm within the table.
 - [ ] 6. **Per-lesion results:** |MTV|/|TLG| by size bin and bone association, signed + upper tail (table or figure).
