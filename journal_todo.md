@@ -26,7 +26,7 @@ qualitative figure).
 - [ ] 14. **Trade-off figure:** Dice vs. |MTV|/|TLG|, NDV alongside, operating point marked.
 
 ## Paper
-- [ ] 15. **Methods:** evaluation protocol (patient-level aggregation, significance ranking, bootstrap), baselines + tuning grids, IO settings (rigidity fixed at 0.25), checkpoint selection, predicted-label provenance, patient exposure disclosure.
+- [x] 15. **Methods:** evaluation protocol (patient-level aggregation, significance ranking, bootstrap), baselines + tuning grids, IO settings (rigidity fixed at 0.25), checkpoint selection, predicted-label provenance, patient exposure disclosure.
 - [ ] 16. **Results:** experiments 1–4 text, replacing the placeholder tables/figures.
 - [ ] 17. **Discussion / limitations:** TLG resampling floor, predicted-label limit of PET IO, NiftyReg folding, ranking dominated by accuracy, Staring leakage.
 - [ ] 18. **Supplement:** final-checkpoint results, component scores, signed MTV/TLG, IO tuning tables.

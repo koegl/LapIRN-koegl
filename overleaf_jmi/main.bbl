@@ -91,6 +91,11 @@ Fabian Isensee, Paul~F. Jaeger, Simon A.~A. Kohl \ldots Klaus~H. Maier-Hein,
   ``nnu-net: a self-configuring method for deep learning-based biomedical image
   segmentation,'' {\em Nature Methods} {\bf 18}, 203--211  (2021).
 
+\bibitem{rokuss2024fdgpsmahitchhikersguide}
+Maximilian Rokuss, Balint Kovacs, Yannick Kirchhoff \ldots Fabian Isensee,
+  ``From fdg to psma: A hitchhiker's guide to multitracer, multicenter lesion
+  segmentation in pet/ct imaging,'' {\em ArXiv}   (2024).
+
 \bibitem{ref_convexadam}
 Hanna Siebert, Lasse Hansen, and Mattias~P. Heinrich, ``Fast 3d registration
   with accurate optimisation and little learning for learn2reg 2021,'' in

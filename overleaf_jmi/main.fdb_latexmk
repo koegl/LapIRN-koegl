@@ -1,12 +1,12 @@
 # Fdb version 3
-["bibtex main"] 1792582121 "main.aux" "main.bbl" "main" 1792582121
+["bibtex main"] 1792583338 "main.aux" "main.bbl" "main" 1792583338
   "./spiejour.bst" 1792577442 20948 1346fa42c08ea646c46fa57a4730c641 ""
-  "main.aux" 1792582121 18336 daa4212fcc7907dcee41b5be5a04babe "pdflatex"
+  "main.aux" 1792583338 19030 d6b6535f917cf4156d828f93759637b4 "pdflatex"
   "references.bib" 1792577658 37442 7c22b7144d00f672a0bdfa6ab99eef65 ""
   (generated)
   "main.bbl"
   "main.blg"
-["pdflatex"] 1792582118 "/home/iml/fryderyk.koegl/code/LapIRN-koegl/overleaf_jmi/main.tex" "main.pdf" "main" 1792582118
+["pdflatex"] 1792583335 "/home/iml/fryderyk.koegl/code/LapIRN-koegl/overleaf_jmi/main.tex" "main.pdf" "main" 1792583335
   "/etc/texmf/web2c/texmf.cnf" 1717060414 475 c0e671620eb5563b2130f56340a5fde8 ""
   "/home/iml/fryderyk.koegl/code/LapIRN-koegl/overleaf_jmi/main.tex" 1792577684 2557 956ae3dfa6efa68eeb5d020b0b8aaf8f ""
   "/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc" 1165713224 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
@@ -145,11 +145,11 @@
   "figures/qualitative.png" 1792577648 3152724 0b81492f2063e7ee46831bd79e5ce432 ""
   "figures/qualitative.tex" 1792577648 689 f8e22e83081df4a3a050d44e7818d624 ""
   "introduction.tex" 1792577684 3893 5ae88d2a12255847adc4e69c5b6d6ead ""
-  "main.aux" 1792582118 32 3985256e7290058c681f74d7a3565a19 "pdflatex"
-  "main.bbl" 1792582118 7330 4eb585d382de1009d3a09469a1701c5a "bibtex main"
+  "main.aux" 1792583335 32 3985256e7290058c681f74d7a3565a19 "pdflatex"
+  "main.bbl" 1792583335 7586 fb9623156386b6f38337bef7cb99f33e "bibtex main"
   "main.out" 0 -1 0 "pdflatex"
   "main.tex" 1792577684 2557 956ae3dfa6efa68eeb5d020b0b8aaf8f ""
-  "methods.tex" 1792577816 20181 f000937eab02fafa371472da00c87977 ""
+  "methods.tex" 1792583281 21419 8525e38bb591cd0c6ae2ade9ff7980c7 ""
   "results.tex" 1792577789 2424 83b8baf4cfe074f26b8c8b7a3ff63c00 ""
   "spieman.cls" 1792577443 9784 59f7f93a8bcb7eadcdd34f81ab49f3a4 ""
   "tables/ablations.tex" 1792577648 1543 f382922f586b68943828dc2cfeeaaee9 ""
