@@ -71,18 +71,18 @@ def main() -> None:
         best[column] = {m for m, v in values.items() if v == target}
 
     header = (
-        ["Method", r"Rank $\downarrow$"]
+        ["Method", "Training", "IO", r"Rank $\downarrow$"]
         + [COLUMNS[c][0] for c in COLUMNS]
         + [r"$>$ thr. (\%)", "Runtime (s)"]
     )
     rows: List[str] = []
-    for m, (label, _) in BASELINES.items():
+    for m, method in BASELINES.items():
         if m in UNRANKED:
             rank_cell = "--"
         else:
             lo, hi = (int(intervals.loc[m, k]) for k in ("rank_2.5", "rank_97.5"))
             rank_cell = f"{int(ranked.loc[m, 'rank'])} [{lo}--{hi}]"
-        cells = [label, rank_cell]
+        cells = [method.label, method.training, method.io, rank_cell]
         for column, (_, _, scale, decimals, _) in COLUMNS.items():
             values = patients[m][column].dropna() * scale
             mean = fmt(values.mean(), decimals)
@@ -102,17 +102,18 @@ def main() -> None:
     n_pairs = len(pairs[OURS])
     tex = rf"""\begin{{table}}[t]
 \centering
-\caption{{Comparison with baselines on the test set ({n_patients} patients, {n_pairs} follow-up$\rightarrow$baseline pairs). Values are mean$\pm$SD over patients (a patient's pairs are averaged first). Rank: challenge significance ranking, with the 95\,\% interval of the rank over {N_BOOTSTRAP} patient bootstrap samples in brackets, over all methods except Initial, which is a reference (its MTV/TLG change is 0 by construction because nothing is resampled). $^{{\dagger}}$/$^{{\ddagger}}$: Ours (full) + IO is significantly better/worse than this method (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected within each column, $p<0.05$; NDV tested after the 0.005\,\% equivalence threshold). $>$ thr.: pairs with \%NDV above 0.005\,\%. Runtime per pair on one NVIDIA RTX A6000, including the affine step. Affine + IO: our instance optimisation directly after the affine pre-registration, without the network. Ours: the configuration chosen on validation (no PET or rigidity losses); Ours (full): with the PET and rigidity losses in training and IO. Bold: best mean among ranked methods.}}
+\caption{{Comparison with baselines on the test set ({n_patients} patients, {n_pairs} follow-up$\rightarrow$baseline pairs). Values are mean$\pm$SD over patients (a patient's pairs are averaged first). Rank: challenge significance ranking, with the 95\,\% interval of the rank over {N_BOOTSTRAP} patient bootstrap samples in brackets, over all methods except Initial, which is a reference (its MTV/TLG change is 0 by construction because nothing is resampled). Training / IO: PET and rigidity losses (PET + rig.) used in training and in instance optimisation (IO); IO ``--'': no IO, ``basic'': IO with the similarity and regularisation terms only. $^{{\dagger}}$/$^{{\ddagger}}$: Ours + IO with PET + rig. in training and IO (our full method) is significantly better/worse than this method (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected within each column, $p<0.05$; NDV tested after the 0.005\,\% equivalence threshold). $>$ thr.: pairs with \%NDV above 0.005\,\%. Runtime per pair on one NVIDIA RTX A6000, including the affine step. Affine + IO: our instance optimisation directly after the affine pre-registration, without the network. Bold: best mean among ranked methods.}}
 \label{{tab:baselines}}
 \scriptsize
 \setlength{{\tabcolsep}}{{2.5pt}}
-\begin{{tabular}}{{l{"c" * (len(header) - 1)}}}
+\resizebox{{\textwidth}}{{!}}{{%
+\begin{{tabular}}{{lll{"c" * (len(header) - 3)}}}
 \toprule
 {" & ".join(header)} \\
 \midrule
 {chr(10).join(rows)}
 \bottomrule
-\end{{tabular}}
+\end{{tabular}}}}
 \end{{table}}
 """
     out = common.OUT_DIR / "tables" / "baselines.tex"

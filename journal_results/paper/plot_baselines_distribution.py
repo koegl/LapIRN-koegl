@@ -49,29 +49,39 @@ def main() -> None:
             "pdf.fonttype": 42,
         }
     )
-    fig, axes = plt.subplots(1, len(PANELS), figsize=(7.0, 2.3))
+    # methods on the y axis (first method on top), one panel per metric
+    fig, axes = plt.subplots(1, len(PANELS), figsize=(7.0, 3.8), sharey=True)
     rng = np.random.default_rng(SEED)
-    labels = [BASELINES[m][0] for m in METHODS]
-    for ax, (column, (ylabel, scale)) in zip(axes, PANELS.items()):
+    labels = [BASELINES[m].short for m in METHODS]
+    positions = np.arange(len(METHODS), 0, -1)
+    for ax, (column, (xlabel, scale)) in zip(axes, PANELS.items()):
         data = [patients[m][column].dropna().to_numpy() * scale for m in METHODS]
         colors = [OURS_COLOR if m in common.OURS_IDS else BASELINE_COLOR for m in METHODS]
-        parts = ax.violinplot(data, widths=0.75, showextrema=False, showmedians=True)
+        parts = ax.violinplot(
+            data, positions=positions, orientation="horizontal", widths=0.8,
+            showextrema=False, showmedians=True,
+        )
         for body, color in zip(parts["bodies"], colors):
             body.set_facecolor(color)
             body.set_edgecolor(color)
             body.set_alpha(0.3)
         parts["cmedians"].set_color(TEXT)
         parts["cmedians"].set_linewidth(1.0)
-        for i, (values, color) in enumerate(zip(data, colors), start=1):
-            x = i + rng.uniform(-0.15, 0.15, len(values))
-            ax.scatter(x, values, s=5, color=color, linewidths=0, zorder=3)
-        ax.set_ylabel(ylabel)
-        ax.set_xticks(range(1, len(METHODS) + 1))
-        ax.set_xticklabels(labels, rotation=45, ha="right")
-        ax.grid(axis="y", color="#e4e3df", linewidth=0.5)
+        for pos, values, color in zip(positions, data, colors):
+            y = pos + rng.uniform(-0.15, 0.15, len(values))
+            ax.scatter(values, y, s=4, color=color, linewidths=0, zorder=3)
+        ax.set_xlabel(xlabel)
+        ax.grid(axis="x", color="#e4e3df", linewidth=0.5)
         ax.set_axisbelow(True)
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
+    axes[0].set_yticks(positions)
+    axes[0].set_yticklabels(labels)
+    axes[0].tick_params(axis="y", length=0)
+    # separate the baselines from ours
+    n_ours = sum(m in common.OURS_IDS for m in METHODS)
+    for ax in axes:
+        ax.axhline(n_ours + 0.5, color=MUTED, linewidth=0.5)
     fig.tight_layout(w_pad=1.2)
 
     out_dir = common.OUT_DIR / "figures"
@@ -81,7 +91,7 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/baselines_distribution.pdf}}
-\caption{{Patient-level results on the test set ({n} patients; a patient's pairs are averaged). Violins: kernel density over patients, line: median; each dot is one patient. Initial alignment is omitted (CT Dice 9.5\,\%, HD95 44.4\,mm; MTV/TLG change 0 by construction, Table~\ref{{tab:baselines}}).}}
+\caption{{Patient-level results on the test set ({n} patients; a patient's pairs are averaged). Violins: kernel density over patients, line: median; each dot is one patient. In brackets: where the PET and rigidity losses (PET + rig.) act; basic: IO with the similarity and regularisation terms only; both: training and IO. Initial alignment is omitted (CT Dice 9.5\,\%, HD95 44.4\,mm; MTV/TLG change 0 by construction, Table~\ref{{tab:baselines}}).}}
 \label{{fig:baselines_distribution}}
 \end{{figure}}
 """

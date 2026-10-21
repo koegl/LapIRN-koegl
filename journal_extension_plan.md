@@ -125,6 +125,8 @@ Staring and Staring + erosion must be available in IO.
 | B4 | ConvexAdam (settings tuned on val) | test |
 | B5 / B6 | Ours, network / + IO: best of I1–I8 on val by the challenge ranking (`journal_results/select_full_method.py`) = I1, i.e. T1 / I1, reused | test |
 | B7 / B8 | Ours (full), network / + IO: PET + rigidity losses in training and IO, fixed in advance = T4 / I4, reused | test |
+| B9 | Affine + IO (PET + rig.), no network (= I8, reused) | test |
+| B10 | Ours + IO with PET + rig. only in IO (= I7, reused; the Q2 variant) | test |
 
 ## Supporting / optional work
 
