@@ -145,6 +145,10 @@ The two coarse levels are shared by all models; the variants of this study diffe
 Checkpoints were selected on the validation set: the coarse levels by CT Dice, the full-resolution level by the best accuracy (CT Dice and HD95) among checkpoints whose validation folding stays below $1.4\cdot10^{-4}\,\%$ non-diffeomorphic volume.
 We did not select on MTV or TLG, so that the PET losses are not credited with effects of the checkpoint choice.
 
+\paragraph{Use of AI tools.}
+Parts of the code for training, evaluation, statistical analysis, and figure generation were written with the help of an AI coding assistant.
+All generated code was reviewed and tested by the authors, who are responsible for the analyses and results.
+
 \section{Experiments}
 \label{sect:experiments}
 

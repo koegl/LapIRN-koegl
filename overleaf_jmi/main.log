@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.1.31)  21 OCT 2026 14:16
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.1.31)  21 OCT 2026 14:40
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -422,72 +422,72 @@ File: figures/overview.png Graphic file (type png)
 Package pdftex.def Info: figures/overview.png  used on input line 31.
 (pdftex.def)             Requested size: 469.75499pt x 305.01219pt.
 ) (./methods.tex [3 <./figures/overview.png>] [4] [5] [6] [7] [8] [9] [10] [11]
-LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 202.
+LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 206.
  (/usr/share/texlive/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 )
-LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 204.
+LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 208.
  (/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1pcr.fd
 File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
 ) [12] [13]) (./results.tex [14] (./tables/ablations.tex) [15] (./figures/q2.tex
-<figures/q2.pdf, id=262, 430.7292pt x 200.94272pt>
+<figures/q2.pdf, id=258, 430.7292pt x 200.94272pt>
 File: figures/q2.pdf Graphic file (type pdf)
 <use figures/q2.pdf>
 Package pdftex.def Info: figures/q2.pdf  used on input line 3.
 (pdftex.def)             Requested size: 469.75499pt x 219.152pt.
 ) [16 <./figures/q2.pdf>] (./figures/lesions.tex
-<figures/lesions.pdf, id=280, 502.99919pt x 203.09917pt>
+<figures/lesions.pdf, id=279, 502.99919pt x 203.09917pt>
 File: figures/lesions.pdf Graphic file (type pdf)
 <use figures/lesions.pdf>
 Package pdftex.def Info: figures/lesions.pdf  used on input line 3.
 (pdftex.def)             Requested size: 469.75499pt x 189.686pt.
-) [17 <./figures/lesions.pdf>] (./tables/baselines.tex) (./figures/baselines_distribution.tex
-<figures/baselines_distribution.pdf, id=310, 502.99919pt x 271.7352pt>
+) [17] [18 <./figures/lesions.pdf>] (./tables/baselines.tex) (./figures/baselines_distribution.tex
+<figures/baselines_distribution.pdf, id=314, 502.99919pt x 271.7352pt>
 File: figures/baselines_distribution.pdf Graphic file (type pdf)
 <use figures/baselines_distribution.pdf>
 Package pdftex.def Info: figures/baselines_distribution.pdf  used on input line 3.
 (pdftex.def)             Requested size: 469.75499pt x 253.78915pt.
 ) (./figures/qualitative.tex
-<figures/qualitative.png, id=313, 591.1686pt x 470.4777pt>
+<figures/qualitative.png, id=317, 591.1686pt x 470.4777pt>
 File: figures/qualitative.png Graphic file (type png)
 <use figures/qualitative.png>
 Package pdftex.def Info: figures/qualitative.png  used on input line 3.
 (pdftex.def)             Requested size: 469.75499pt x 373.8557pt.
-)) (./discussion.tex [18] [19]) [20 <./figures/baselines_distribution.pdf>] [21 <./figures/qualitative.png>] (./main.bbl [22] [23]
+)) (./discussion.tex [19] [20 <./figures/baselines_distribution.pdf>] [21 <./figures/qualitative.png>]) (./main.bbl [22] [23]
 Underfull \hbox (badness 5504) in paragraph at lines 78--82
 []\OT1/ptm/m/n/12 Fryderyk K[]ogl, Anna Re-i-th-meir, Daniel M. Lang ...Julia A. Schn-abel, ``PET
  []
 
-
+[24]
 Underfull \hbox (badness 1097) in paragraph at lines 112--116
 \OT1/ptm/m/it/12 Assisted In-ter-ven-tion (MIC-CAI)\OT1/ptm/m/n/12 , \OT1/ptm/m/it/12 Lec-ture Notes in Com-puter Sci-ence \OT1/ptm/b/n/12 4190\OT1/ptm/m/n/12 , 924--931,
  []
 
-[24] [25]) (./main.lof [26])
+[25]) [26] (./main.lof [27])
 \tf@lof=\write4
 \openout4 = `main.lof'.
 
- (./main.lot [27])
+ (./main.lot [28])
 \tf@lot=\write5
 \openout5 = `main.lot'.
 
- [28] (./main.aux)
+ [29] (./main.aux)
 Package rerunfilecheck Info: File `main.out' has not changed.
 (rerunfilecheck)             Checksum: 79BE8F827093047E07D3A6107B131C28;3450.
  ) 
 Here is how much of TeX's memory you used:
- 11300 strings out of 480247
- 173540 string characters out of 5896151
- 474204 words of memory out of 5000000
+ 11301 strings out of 480247
+ 173547 string characters out of 5896151
+ 473206 words of memory out of 5000000
  28919 multiletter control sequences out of 15000+600000
  496374 words of font info for 83 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 75i,15n,77p,1362b,591s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 75i,15n,77p,1362b,590s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/helvetic/uhvr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (28 pages, 5673047 bytes).
+Output written on main.pdf (29 pages, 5673935 bytes).
 PDF statistics:
- 605 PDF objects out of 1000 (max. 8388607)
- 483 compressed objects within 5 object streams
- 98 named destinations out of 1000 (max. 500000)
+ 610 PDF objects out of 1000 (max. 8388607)
+ 487 compressed objects within 5 object streams
+ 99 named destinations out of 1000 (max. 500000)
  202 words of extra memory for PDF output out of 10000 (max. 10000000)
 
