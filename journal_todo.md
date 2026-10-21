@@ -21,8 +21,8 @@ qualitative figure).
 - [ ] 11. **Rigidity table + figure:** bone/soft Dice and HD95, distance distortion, NDV in bone / band / body, leakage, erosion retention; alignment vs. distortion plot.
 
 ## Experiment 3: accuracy–preservation trade-off (IO on T1)
-- [ ] 12. **Revise the W grid** around the tuned PET weight (×0.1–×4 is flat), e.g. ×{0, 0.01, 0.03, 0.1, 0.3, 1} of the current value.
-- [ ] 13. **W runs:** val (operating point) and test (curve).
+- [x] 12. **W grid (decided):** T1 + PET IO, × {0, 0.01, 0.03, 0.1, 0.3, 1} of the config PET weights; × 0 = I1, × 0.1 = I5 (tuned operating point, no val runs); new: W0.01, W0.03, W0.3, W1 (evaluate.py).
+- [ ] 13. **W runs on test:** queued in tmux `tradeoff_test` (after step 4, before step 9).
 - [ ] 14. **Trade-off figure:** Dice vs. |MTV|/|TLG|, NDV alongside, operating point marked.
 
 ## Paper

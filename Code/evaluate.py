@@ -104,6 +104,9 @@ RIGIDITY_METHODS: Dict[str, str] = {
     "R4": "kabsch",
 }
 
+PET_IO_WEIGHTS = ("w_io_mtv", "w_io_mtv_avg", "w_io_tlg", "w_io_jacobian_tumor")
+W_SCALES = (0.01, 0.03, 0.3, 1.0)
+
 # --- evaluation runs: plan ID -> what to run ---
 # W* (PET-weight sweep) is added once the IO settings are frozen; B*
 # (baselines) are not networks.
@@ -122,6 +125,21 @@ EVAL_RUNS: Dict[str, EvalRun] = {
     "I7": EvalRun("T1", IO_BOTH),
     # no network: IO straight from the affine prereg (what the network adds)
     "I8": EvalRun(io=IO_BOTH),
+    # trade-off (experiment 3): T1 + PET IO, the PET weights scaled together
+    # relative to the TrainingConfig values (x0 = I1, x0.1 = tuned = I5)
+    **{
+        f"W{scale:g}": EvalRun(
+            "T1",
+            IOSpec(
+                pet=True,
+                rigidity=False,
+                cfg_overrides={
+                    w: getattr(TrainingConfig(), w) * scale for w in PET_IO_WEIGHTS
+                },
+            ),
+        )
+        for scale in W_SCALES
+    },
     **{
         run_id: EvalRun("T1", IOSpec(pet=True, rigidity=False, cfg_overrides=terms))
         for run_id, terms in LOO_TERMS.items()

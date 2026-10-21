@@ -109,7 +109,7 @@ Staring and Staring + erosion must be available in IO.
 
 | ID | IO losses | Eval |
 |---|---|---|
-| W1–Wn | T1 + PET IO at weight × {0, 0.25, 0.5, 1, 2, 4} of the current setting (× 0 = I1, × 1 = I5, reused) | val (operating point) and test (curve) |
+| W0.01, W0.03, W0.3, W1 | T1 + PET IO (no rigidity) with the PET weights × {0.01, 0.03, 0.3, 1} of the config values; × 0 = I1 and × 0.1 (tuned operating point, chosen on val by the IO tuning) = I5, reused | test (curve) |
 
 ### 4. Baseline comparison (network and IO)
 
