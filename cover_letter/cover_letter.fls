@@ -385,9 +385,6 @@ INPUT /usr/share/texlive/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
 INPUT /usr/share/texlive/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
 INPUT /usr/share/texlive/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
 INPUT /usr/share/texlive/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
-INPUT ./cover_letter.aux
-INPUT cover_letter.aux
-INPUT cover_letter.aux
 OUTPUT cover_letter.aux
 INPUT /usr/share/texlive/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 INPUT /usr/share/texlive/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
@@ -430,16 +427,6 @@ INPUT /usr/share/texlive/texmf-dist/tex/generic/gettitlestring/gettitlestring.st
 INPUT /usr/share/texlive/texmf-dist/tex/generic/gettitlestring/gettitlestring.sty
 INPUT /usr/share/texlive/texmf-dist/tex/latex/kvoptions/kvoptions.sty
 INPUT /usr/share/texlive/texmf-dist/tex/generic/ltxcmds/ltxcmds.sty
-INPUT ./cover_letter.out
-INPUT cover_letter.out
-INPUT ./cover_letter.out
-INPUT cover_letter.out
-INPUT ./cover_letter.out
-INPUT cover_letter.out
-INPUT ./cover_letter.out
-INPUT cover_letter.out
-INPUT ./cover_letter.out
-INPUT ./cover_letter.out
 OUTPUT cover_letter.out
 OUTPUT cover_letter.pdf
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr8.tfm

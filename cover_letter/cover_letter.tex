@@ -25,12 +25,8 @@ A preliminary version of the method, developed for the Learn2Reg 2026 PSMAReg ch
 The present manuscript is a substantially extended study, and none of its test results appear in the preprint.
 The challenge organisers have indicated that selected methods may later be included in a challenge summary publication; no such publication has been submitted for our method.
 
-PSMA PET/CT is used routinely to stage prostate cancer and to follow patients through therapy.
-Registering a follow-up scan to its baseline makes it possible to compare tumour burden voxel by voxel and to track individual lesions.
-For this, a registration must align the anatomy without itself changing the quantities that are compared over time, such as the metabolic tumour volume (MTV) and total lesion glycolysis (TLG) of lesions.
-Deformable registration is usually judged on alignment alone, yet a deformation that compresses or stretches a lesion alters both quantities, so a change measured after registration can be an artefact of the registration rather than of the disease.
-
-In this paper, we report on a learning-based registration pipeline (the LapIRN network followed by instance optimisation) with losses that preserve the PET volume and uptake of lesions and keep bones rigid, and we study where these losses should act.
+In this paper, we report on registering follow-up to baseline PSMA PET/CT scans without changing the lesion quantities compared over time, the metabolic tumour volume (MTV) and total lesion glycolysis (TLG): a deformation that compresses or stretches a lesion alters both, so a measured change can be an artefact of the registration rather than of the disease.
+We use a learning-based pipeline (the LapIRN network followed by instance optimisation) with losses that preserve the PET volume and uptake of lesions and keep bones rigid, and we study where these losses should act.
 On a held-out patient-level test set of the public PSMAReg data, with tuned NiftyReg and ConvexAdam baselines and patient-level statistics, we find that:
 \begin{itemize}
   \item our pipeline is significantly more accurate than both baselines, without folding, and the preservation losses reduce the lesion volume and uptake change caused by the registration;
