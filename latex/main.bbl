@@ -1,0 +1,130 @@
+\begin{thebibliography}{10}
+\providecommand{\url}[1]{\texttt{#1}}
+\providecommand{\urlprefix}{URL }
+\providecommand{\doi}[1]{https://doi.org/#1}
+
+\bibitem{ref_syn}
+Avants, B., Epstein, C., Grossman, M., Gee, J.: Symmetric diffeomorphic image
+  registration with cross-correlation: Evaluating automated labeling of elderly
+  and neurodegenerative brain. Medical Image Analysis  \textbf{12}(1),  26--41
+  (2008). \doi{https://doi.org/10.1016/j.media.2007.06.004},
+  \url{https://www.sciencedirect.com/science/article/pii/S1361841507000606},
+  special Issue on The Third International Workshop on Biomedical Image
+  Registration – WBIR 2006
+
+\bibitem{ref_voxelmorph_cvpr}
+Balakrishnan, G., Zhao, A., Sabuncu, M.R., Guttag, J., Dalca, A.V.: An
+  unsupervised learning model for deformable medical image registration. In:
+  Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition
+  (CVPR) (June 2018)
+
+\bibitem{ref_transmorph}
+Chen, J., Frey, E.C., He, Y., Segars, W.P., Li, Y., Du, Y.: Transmorph:
+  Transformer for unsupervised medical image registration. Medical Image
+  Analysis  \textbf{82},  102615 (2022).
+  \doi{https://doi.org/10.1016/j.media.2022.102615},
+  \url{https://www.sciencedirect.com/science/article/pii/S1361841522002432}
+
+\bibitem{ref_svf_voxelmorph}
+Dalca, A.V., Balakrishnan, G., Guttag, J., Sabuncu, M.R.: Unsupervised learning
+  for fast probabilistic diffeomorphic registration. In: Frangi, A.F.,
+  Schnabel, J.A., Davatzikos, C., Alberola-L{\'o}pez, C., Fichtinger, G. (eds.)
+  Medical Image Computing and Computer Assisted Intervention -- MICCAI 2018.
+  pp. 729--738. Springer International Publishing, Cham (2018)
+
+\bibitem{ref_psma_clinical}
+Fendler, W.P., Eiber, M., Beheshti, M., Bomanji, J., Ceci, F., Cho, S., Giesel,
+  F., Haberkorn, U., Hope, T.A., Kopka, K., Krause, B.J., Mottaghy, F.M.,
+  Sch{\"o}der, H., Sunderland, J., Wan, S., Wester, H.J., Fanti, S., Herrmann,
+  K.: {68Ga-PSMA PET/CT}: Joint {EANM} and {SNMMI} procedure guideline for
+  prostate cancer imaging: version 1.0. European Journal of Nuclear Medicine
+  and Molecular Imaging  \textbf{44}(6),  1014--1024 (Jun 2017).
+  \doi{10.1007/s00259-017-3670-z},
+  \url{https://doi.org/10.1007/s00259-017-3670-z}
+
+\bibitem{ref_learn2reg_hansen}
+Hansen, L., Heyer, W., Großbröhmer, C., Madesta, F., Sentker, T., Jiazheng,
+  W., Zhang, Y., Zhang, H., Liu, M., Wang, J., Zhu, X., Li, Y., Wang, L.,
+  Morozov, D., Haouchine, N., Honkamaa, J., Marttinen, P., Zhou, Y., Tan, Z.,
+  Wang, Z., Wang, Y., Zhou, H., Hu, S., Zhang, Y., Tao, Q., Förner, L.,
+  Wendler, T., Jian, B., Wachinger, C., Kim, J., Ruan, D., Wodzinski, M.,
+  Müller, H., Mok, T.C., Jia, X., Duan, J., Brudfors, M., Ahmadi, S.A., Zhu,
+  Y., Hsu, W., Kapur, T., Wells, W.M., Golby, A., Carass, A., Bai, H., Liu, Y.,
+  Paul-Gilloteaux, P., Lindblad, J., Sladoje, N., Walter, A., Chen, J., Dorent,
+  R., Hering, A., Heinrich, M.P.: Learn2reg 2024: New benchmark datasets
+  driving progress on new challenges. Machine Learning for Biomedical Imaging
+  \textbf{3},  775--791 (2025).
+  \doi{https://doi.org/10.59275/j.melba.2025-gc8c},
+  \url{https://melba-journal.org/2025:034}
+
+\bibitem{ref_learn2reg_alessa}
+Hering, A., Hansen, L., Mok, T.C.W., Chung, A.C.S., Siebert, H., Häger, S.,
+  Lange, A., Kuckertz, S., Heldmann, S., Shao, W., Vesal, S., Rusu, M., Sonn,
+  G., Estienne, T., Vakalopoulou, M., Han, L., Huang, Y., Yap, P.T., Brudfors,
+  M., Balbastre, Y., Joutard, S., Modat, M., Lifshitz, G., Raviv, D., Lv, J.,
+  Li, Q., Jaouen, V., Visvikis, D., Fourcade, C., Rubeaux, M., Pan, W., Xu, Z.,
+  Jian, B., De~Benetti, F., Wodzinski, M., Gunnarsson, N., Sjölund, J.,
+  Grzech, D., Qiu, H., Li, Z., Thorley, A., Duan, J., Großbröhmer, C.,
+  Hoopes, A., Reinertsen, I., Xiao, Y., Landman, B., Huo, Y., Murphy, K.,
+  Lessmann, N., van Ginneken, B., Dalca, A.V., Heinrich, M.P.: Learn2reg:
+  Comprehensive multi-task medical image registration challenge, dataset and
+  evaluation in the era of deep learning. IEEE Transactions on Medical Imaging
+  \textbf{42}(3),  697--712 (2023). \doi{10.1109/TMI.2022.3213983}
+
+\bibitem{ref_psmaregdata}
+Jeblick, K., Sch{\"o}nberg, S.O., et~al.: A whole-body {PSMA-PET/CT} dataset
+  with manually annotated tumor lesions ({PSMA-PET-CT-Lesions}). The Cancer
+  Imaging Archive (2024). \doi{10.7937/r7ep-3x37}, version 1
+
+\bibitem{ref_psmareg_challenge}
+{Learn2Reg Consortium}: {Learn2Reg 2026 -- PSMAReg}: Registration of
+  pre-therapy and follow-up whole-body {PSMA} {PET/CT} scans. Codabench
+  challenge (2026), \url{https://www.codabench.org/competitions/15724/},
+  \url{https://www.codabench.org/competitions/15724/}
+
+\bibitem{ref_rigidity_1_loeckx}
+Loeckx, D., Maes, F., Vandermeulen, D., Suetens, P.: Nonrigid image
+  registration using free-form deformations with a local rigidity constraint.
+  In: Barillot, C., Haynor, D.R., Hellier, P. (eds.) Medical Image Computing
+  and Computer-Assisted Intervention -- MICCAI 2004. pp. 639--646. Springer
+  Berlin Heidelberg, Berlin, Heidelberg (2004)
+
+\bibitem{ref_rigidity_4_staring_modersitzki}
+Modersitzki, J.: Flirt with rigidity---image registration with a local
+  non-rigidity penalty. International Journal of Computer Vision
+  \textbf{76}(2),  153--163 (Feb 2008). \doi{10.1007/s11263-007-0079-3},
+  \url{https://doi.org/10.1007/s11263-007-0079-3}
+
+\bibitem{ref_lapirn}
+Mok, T.C.W., Chung, A.C.S.: Large deformation diffeomorphic image registration
+  with laplacian pyramid networks. In: Martel, A.L., Abolmaesumi, P., Stoyanov,
+  D., Mateus, D., Zuluaga, M.A., Zhou, S.K., Racoceanu, D., Joskowicz, L.
+  (eds.) Medical Image Computing and Computer Assisted Intervention -- MICCAI
+  2020. pp. 211--221. Springer International Publishing, Cham (2020)
+
+\bibitem{ref_rigidity_2_ruan}
+Ruan, D., Fessler, J.A., Roberson, M., Balter, J., Kessler, M.: {Nonrigid
+  registration using regularization that accommodates local tissue rigidity}.
+  In: Reinhardt, J.M., Pluim, J.P.W. (eds.) Medical Imaging 2006: Image
+  Processing. vol.~6144, p. 614412. International Society for Optics and
+  Photonics, SPIE (2006). \doi{10.1117/12.653870},
+  \url{https://doi.org/10.1117/12.653870}
+
+\bibitem{bspline}
+Rueckert, D., Sonoda, L., Hayes, C., Hill, D., Leach, M., Hawkes, D.: Nonrigid
+  registration using free-form deformations: application to breast mr images.
+  IEEE Transactions on Medical Imaging  \textbf{18}(8),  712--721 (1999).
+  \doi{10.1109/42.796284}
+
+\bibitem{ref_rigidity_3_staring}
+Staring, M., Klein, S., Pluim, J.P.W.: A rigidity penalty term for nonrigid
+  registration. Medical Physics  \textbf{34}(11),  4098--4108 (2007).
+  \doi{https://doi.org/10.1118/1.2776236},
+  \url{https://aapm.onlinelibrary.wiley.com/doi/abs/10.1118/1.2776236}
+
+\bibitem{ref_demons}
+Vercauteren, T., Pennec, X., Perchant, A., Ayache, N.: Diffeomorphic demons:
+  Efficient non-parametric image registration. NeuroImage  \textbf{45}(1,
+  Supplement 1),  S61--S72 (2009). \doi{10.1016/j.neuroimage.2008.10.040}
+
+\end{thebibliography}
