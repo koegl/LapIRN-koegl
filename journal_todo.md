@@ -10,9 +10,9 @@ qualitative figure).
 - [x] 3. **IO runs on test:** I1–I3, I5–I7 (I4 done).
 - [x] 3b. **Affine + IO (I8) and choice of "Ours":** I1–I8 on val, ranked → I1; baseline table shows both Ours (I1, val-chosen) and Ours (full) (I4, pre-declared); I8 on test (keep for paper).
 - [ ] 4. **Leave-one-out on test:** L1–L4 (reference I5).
-- [ ] 5. **Ablation table:** network (T1–T4, T1-tum) and IO (I1–I7). No ranking: planned contrasts (Q1: I2–I4 vs. I1; Q2: I5–I7 vs. I2–I4), paired difference of patient means with 95 % bootstrap CI, Wilcoxon + Holm within the table.
+- [ ] 5. **Q1 table + Q2 figure:** `table_ablations.py` (T1–T4 | I1–I4, marks vs. neither), `figure_q2.py` (trained + IO vs. IO only, Dice vs. |MTV| / |TLG|; effects for the text in `q2_effects.txt`). I8 moved to the baseline table; T1-tum in findings (text only).
 - [ ] 6. **Per-lesion results:** |MTV|/|TLG| by size bin and bone association, signed + upper tail (table or figure).
-- [ ] 7. **Leave-one-out table/figure:** contribution of each PET term in IO.
+- [ ] 7. **Leave-one-out table:** `table_loo.py` (I5 vs. L1–L4), run once step 4 is done.
 
 ## Experiment 2: rigidity comparison (IO on T2)
 - [x] 8. **Weight selection (decided: curve + Dice tolerance):** calibrate a reference weight per method (initial rigidity loss = Kabsch at 0.25, few val pairs); val grid ×{0.1, 0.3, 1, 3, 10}; choose the largest weight within 1 Dice point of R1; val curve Dice vs. bone distortion.

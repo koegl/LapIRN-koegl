@@ -80,3 +80,17 @@ scored against ground-truth lesions; p = patient-level one-sided Wilcoxon vs. PE
 
 Source: `journal_results/io_pet_check.py` → `io_pet_check/summary.csv`;
 `journal_results/recall_masks.py` → `recall_masks/summary.csv`.
+
+## Early stopping on tumour preservation does not replace the PET losses
+
+**Status:** confirmed — test set (28 patients, 38 pairs); text only, no table.
+
+- T1-tum (T1, checkpoint selected on tumour preservation instead of accuracy)
+  vs. T1: CT Dice −3.0 points (significant), |ΔMTV| −0.4 and |ΔTLG| −0.9
+  points (both not significant).
+- For comparison, training with the PET losses (T2 vs. T1): Dice −1.9,
+  |ΔMTV| −3.0 points (both significant).
+- So stopping early costs more accuracy and buys almost no preservation.
+
+Source: `evaluation/test/T1.csv`, `T1-tum.csv`, `T2.csv`;
+`journal_results/paper/table_ablations.py` (paired Wilcoxon, Holm).

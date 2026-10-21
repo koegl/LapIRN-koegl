@@ -30,6 +30,8 @@ BASELINES: Dict[str, Tuple[str, str]] = {
     "B2": ("Affine", "B2"),
     "B3": ("NiftyReg", "B3"),
     "B4": ("ConvexAdam", "B4"),
+    # IO straight after the affine prereg, no network (what the network adds)
+    "B9": ("Affine + IO", "I8"),
     "B5": ("Ours", "T1"),
     "B6": ("Ours + IO", "I1"),
     "B7": ("Ours (full)", "T4"),
@@ -45,9 +47,24 @@ OURS_IDS = ("B5", "B6", "B7", "B8")
 # runtime_s of the evaluation only covers loading the field
 EXTERNAL_TIMINGS = {"B3": "niftyreg", "B4": "convexadam"}
 
+# column -> (header, higher is better, scale, decimals, test column)
+METRIC_COLUMNS: Dict[str, tuple] = {
+    "dice_ct": (r"Dice (\%) $\uparrow$", True, 100.0, 1, "dice_ct"),
+    "hd95": (r"HD95 (mm) $\downarrow$", False, 1.0, 2, "hd95"),
+    "mtv_bias": (r"$|\Delta\mathrm{MTV}|$ (\%) $\downarrow$", False, 100.0, 1, "mtv_bias"),
+    "tlg_bias": (r"$|\Delta\mathrm{TLG}|$ (\%) $\downarrow$", False, 100.0, 1, "tlg_bias"),
+    # %NDV shown in ppm (1 % = 1e4 ppm)
+    "ndv_percent": (r"NDV (ppm) $\downarrow$", False, 1e4, None, "ndv_adjusted"),
+}
+
+
+def load_run(run_id: str) -> pd.DataFrame:
+    """Per-pair test CSV of an evaluation run (evaluate.py run ID)."""
+    return pd.read_csv(EVAL_DIR / f"{run_id}.csv", dtype={"case_id": str})
+
 
 def load_pairs(method_id: str) -> pd.DataFrame:
-    return pd.read_csv(EVAL_DIR / f"{BASELINES[method_id][1]}.csv", dtype={"case_id": str})
+    return load_run(BASELINES[method_id][1])
 
 
 def patient_means(df: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
@@ -75,3 +92,21 @@ def holm(p: Dict[str, float]) -> Dict[str, float]:
     names = list(p)
     adjusted = ranking.holm(np.array([p[n] for n in names]))
     return dict(zip(names, adjusted))
+
+
+def fmt(value: float, decimals: Optional[int]) -> str:
+    """Fixed decimals, or (None, for NDV in ppm) three significant digits
+    without an exponent."""
+    if decimals is not None:
+        return f"{value:.{decimals}f}"
+    if value == 0:
+        return "0"
+    return f"{float(f'{value:.3g}'):g}" if abs(value) >= 1 else f"{value:.2g}"
+
+
+def two_sided(a: pd.Series, b: pd.Series, higher: bool) -> Tuple[float, bool]:
+    """Two-sided paired Wilcoxon p of a vs. b (patient values), from the two
+    one-sided tests, and whether a is the better one."""
+    p_a = ranking.one_sided_p(a, b, higher)
+    p_b = ranking.one_sided_p(b, a, higher)
+    return min(1.0, 2 * min(p_a, p_b)), p_a < p_b
