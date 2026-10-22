@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.1.31)  22 OCT 2026 12:19
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.1.31)  22 OCT 2026 13:11
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -534,46 +534,46 @@ Package pdftex.def Info: figures/lesions.pdf  used on input line 3.
 ) (./tables/loo.tex) [19 <./figures/lesions.pdf>] [20] (./tables/baselines.tex)
 
 (./figures/baselines_distribution.tex
-<figures/baselines_distribution.pdf, id=333, 502.99919pt x 271.7352pt>
+<figures/baselines_distribution.pdf, id=335, 502.99919pt x 271.7352pt>
 File: figures/baselines_distribution.pdf Graphic file (type pdf)
 <use figures/baselines_distribution.pdf>
 Package pdftex.def Info: figures/baselines_distribution.pdf  used on input line
  3.
 (pdftex.def)             Requested size: 469.75499pt x 253.78915pt.
 ) (./figures/qualitative.tex
-<figures/qualitative.png, id=336, 591.1686pt x 470.4777pt>
+<figures/qualitative.png, id=338, 479.8728pt x 399.894pt>
 File: figures/qualitative.png Graphic file (type png)
 <use figures/qualitative.png>
 Package pdftex.def Info: figures/qualitative.png  used on input line 3.
-(pdftex.def)             Requested size: 469.75499pt x 373.8557pt.
-)
+(pdftex.def)             Requested size: 469.75499pt x 391.4846pt.
+) [21]
 (./figures/tradeoff.tex
-<figures/tradeoff.pdf, id=337, 460.253pt x 186.48872pt>
+<figures/tradeoff.pdf, id=343, 460.253pt x 186.48872pt>
 File: figures/tradeoff.pdf Graphic file (type pdf)
 <use figures/tradeoff.pdf>
 Package pdftex.def Info: figures/tradeoff.pdf  used on input line 3.
 (pdftex.def)             Requested size: 469.75499pt x 190.33833pt.
-) [21] [22 <./figures/baselines_distribution.pdf>]
-[23 <./figures/qualitative.png>] (./figures/detection.tex
-<figures/detection.pdf, id=398, 472.78049pt x 317.44197pt>
+) [22 <./figures/baselines_distribution.pdf>] [23 <./figures/qualitative.png>] 
+(./figures/detection.tex
+<figures/detection.pdf, id=399, 472.78049pt x 317.44197pt>
 File: figures/detection.pdf Graphic file (type pdf)
 <use figures/detection.pdf>
 Package pdftex.def Info: figures/detection.pdf  used on input line 3.
 (pdftex.def)             Requested size: 469.75499pt x 315.42616pt.
-)) (./discussion.tex
-[24 <./figures/tradeoff.pdf>] [25 <./figures/detection.pdf>] [26]
+)) (./discussion.tex [24 <./figures/tradeoff.pdf>] [25 <./figures/detection.pdf
+>] [26] [27]
 Overfull \hbox (2.69249pt too wide) in paragraph at lines 41--46
  \OT1/ptm/b/n/12 Reg-is-tra-tion lim-ited by seg-men-ta-tion.[] \OT1/ptm/m/n/12
  Both the ac-cu-racy and the preser-va-tion of IO are bounded
  []
 
-[27] [28])
+[28]) [29]
 Overfull \hbox (5.35316pt too wide) in paragraph at lines 64--68
 \OT1/ptm/m/n/12 lenge,[] which is adapted from the PSMA-PET-CT-Lesions dataset 
 in The Can-cer Imag-ing Archive[]
  []
 
-[29] (./main.bbl [30] [31]
+[30] (./main.bbl [31]
 Underfull \hbox (badness 5504) in paragraph at lines 78--82
 []\OT1/ptm/m/n/12 Fryderyk K[]ogl, Anna Re-i-th-meir, Daniel M. Lang ...Julia A
 . Schn-abel, ``PET
@@ -586,7 +586,7 @@ Underfull \hbox (badness 1097) in paragraph at lines 112--116
  , 924--931,
  []
 
-[33]) (./main.lof [34] [35] [36])
+[33] [34]) (./main.lof [35] [36])
 \tf@lof=\write4
 \openout4 = `main.lof'.
 
@@ -601,11 +601,11 @@ Package rerunfilecheck Info: File `main.out' has not changed.
 Here is how much of TeX's memory you used:
  11350 strings out of 480247
  174293 string characters out of 5896151
- 476828 words of memory out of 5000000
+ 477170 words of memory out of 5000000
  28947 multiletter control sequences out of 15000+600000
  496374 words of font info for 83 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 75i,15n,77p,1306b,597s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 75i,15n,77p,1306b,598s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texliv
 e/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texm
 f-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist
@@ -625,10 +625,10 @@ rw/courier/ucrr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/helvetic/u
 hvr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr
 /share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/
 texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (38 pages, 5739802 bytes).
+Output written on main.pdf (38 pages, 5194336 bytes).
 PDF statistics:
- 771 PDF objects out of 1000 (max. 8388607)
- 618 compressed objects within 7 object streams
+ 780 PDF objects out of 1000 (max. 8388607)
+ 627 compressed objects within 7 object streams
  112 named destinations out of 1000 (max. 500000)
  220 words of extra memory for PDF output out of 10000 (max. 10000000)
 

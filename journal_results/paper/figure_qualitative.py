@@ -1,23 +1,26 @@
-"""Qualitative baseline comparison on one test pair -> PNG + LaTeX.
+"""Qualitative example: one test pair registered by our method -> PNG + LaTeX.
 
-Columns: fixed scan, then the moving scan as aligned by Initial, NiftyReg,
-ConvexAdam, Ours + IO and Ours (full) + IO. Rows:
-    1. CT, coronal slice through the spine, with the fixed scan's organ-label
-       boundaries drawn on top (misalignment = image edges off the lines)
-    2. PET coronal maximum-intensity projection (SUV), warped lesion mask
-       outlined (fixed column: the fixed scan and its lesions)
-    3. Jacobian determinant of the transform on the same slice (folds black)
+The pair (CASE) has a large change in tumour volume between the scans. Panels,
+one coronal slice index (fixed frame; the moving scan shown at the same index
+of its own frame):
+    row 1: fixed (CT with PET), moving (CT with PET), CT overlay of fixed and
+           moving, CT overlay of fixed and warped moving (fixed green, other
+           magenta: grey where they agree)
+    row 2: label residual (fixed minus moving / warped moving label ID, black
+           where they agree); Jacobian determinant of the transform; warped
+           moving (CT with PET)
+Ground-truth lesion masks are drawn as red contours on the CT + PET panels.
+The slice maximises the smaller of the fixed and warped lesion voxel counts on
+it, so lesions are visible in both.
 
-The pair (CASE) defaults to the test pair with >= MIN_LESIONS lesions whose
-Ours + IO CT Dice is closest to the median: representative, not cherry-picked.
-Fields are cached in cache/ (Ours + IO reruns IO, ~3 min on the GPU).
+The field is cached in cache/ per run ID. Runs with IO take ~3 min on the GPU;
+set CUDA_VISIBLE_DEVICES= to compute on the CPU while the GPU is busy.
 
-    ../../.venv/bin/python figure_qualitative.py
-        ->  out/figures/qualitative.{png,tex}
+    ../../.venv/bin/python figure_qualitative.py  ->  out/figures/qualitative.{png,tex}
 """
 
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Tuple
 
 import matplotlib
 
@@ -30,34 +33,34 @@ import torch  # noqa: E402
 import common  # noqa: E402
 import evaluate  # noqa: E402
 import jacobian  # noqa: E402
+import synthetic  # noqa: E402
 from config import TrainingConfig  # noqa: E402
 
-# None = automatic choice; else (case_id, tp_moving, tp_fixed)
-CASE: Optional[Tuple[str, str, str]] = None
-MIN_LESIONS = 5
-# column -> (title, evaluation run ID); the run ID also keys the field cache
-METHODS: Dict[str, Tuple[str, str]] = {
-    "B1": ("Initial", "B1"),
-    "B3": ("NiftyReg", "B3"),
-    "B4": ("ConvexAdam", "B4"),
-    "B6": ("Ours + IO", "I1"),
-    "B8": ("Ours (full) + IO", "I4"),
-}
+# (case_id, tp_moving, tp_fixed): tumour volume 2400 -> 24191 voxels (x10)
+CASE: Tuple[str, str, str] = ("0146", "01", "00")
+# evaluation run of the method shown: T4 = network trained with PET + rigidity
+# losses (no IO); I4 = the same followed by IO with both losses (full method)
+RUN = "I4"
+RUN_LABEL = {"T4": "our network (PET and rigidity losses in training, no IO)",
+             "I4": "our full method (PET and rigidity losses in training and IO)"}
 CT_WINDOW = (-400.0, 800.0)  # HU
-SUV_MAX = 8.0
+SUV_RANGE = (0.0, 8.0)  # PET, magma, no threshold
+PET_ALPHA = 0.35
+LESION_COLOR = "#e8000b"
+# label residual: shade per label group (bone full, organ medium, muscle dark)
+MUSCLE_LABELS = tuple(range(80, 90))  # gluteus, autochthon, iliopsoas
+GROUP_SHADE = np.full(118, 0.6)  # organs (incl. vessels)
+SACRUM = 25  # bone, but not in the rigidity label set
+GROUP_SHADE[list(synthetic.BONE_LABEL_VALUES) + [SACRUM]] = 1.0
+GROUP_SHADE[list(MUSCLE_LABELS)] = 0.35
 JAC_RANGE = (0.0, 2.0)
-SPINE_LABELS = tuple(range(26, 51))  # TotalSegmentator vertebrae (incl. sacrum)
-LABEL_LINE = "#eda100"
-LESION_LINE = "#e34948"
 CACHE_DIR = Path(__file__).resolve().parent / "cache"
+if not torch.cuda.is_available():
+    # the model code calls .cuda() directly; without a GPU, keep everything on
+    # the CPU (only used here, to avoid competing with GPU jobs)
+    torch.nn.Module.cuda = lambda self, *args, **kwargs: self
+    torch.Tensor.cuda = lambda self, *args, **kwargs: self
 DATA_DIR = evaluate.DATA_PATH / "PSMAReg/PSMAReg_dataset"
-
-
-def choose_case() -> Tuple[str, str, str]:
-    df = common.load_pairs("B6")
-    df = df[df["n_lesions"] >= MIN_LESIONS]
-    row = df.loc[(df["dice_ct"] - df["dice_ct"].median()).abs().idxmin()]
-    return row["case_id"], f"{int(row['tp_moving']):02d}", f"{int(row['tp_fixed']):02d}"
 
 
 def load(directory: str, case_id: str, channel: str, tp: str) -> np.ndarray:
@@ -65,143 +68,140 @@ def load(directory: str, case_id: str, channel: str, tp: str) -> np.ndarray:
     return np.asarray(nib.load(str(path)).dataobj, dtype=np.float32)
 
 
-def disp_fields(case: Tuple[str, str, str], device) -> Dict[str, torch.Tensor]:
-    """method -> scorer-convention voxel displacement (1, 3, H, W, D)."""
-    case_id, tp_x, tp_y = case
+def disp_field(device) -> torch.Tensor:
+    """Scorer-convention voxel displacement (1, 3, H, W, D) of RUN on CASE."""
+    case_id, tp_x, tp_y = CASE
+    cache = CACHE_DIR / f"{case_id}_{tp_x}_{tp_y}_{RUN}.pt"
+    if cache.exists():
+        return torch.load(cache, map_location=device)
     cfg = TrainingConfig()
     cfg.model_save_dir = evaluate.MODEL_DIR
+    run = evaluate.EVAL_RUNS[RUN]
     transform = evaluate.miccai2020_model_stage.SpatialTransform_unit().to(device)
     transform_nearest = evaluate.miccai2020_model_stage.SpatialTransformNearest_unit().to(device)
     grid_full = torch.from_numpy(evaluate.Functions.generate_grid_unit(cfg.img_shape)[None]).to(device).float()
-    out = {}
-    for m, (_, run_id) in METHODS.items():
-        run = evaluate.EVAL_RUNS[run_id]
-        cache = CACHE_DIR / f"{case_id}_{tp_x}_{tp_y}_{run_id}.pt"
-        if cache.exists():
-            out[m] = torch.load(cache, map_location=device)
-            continue
-        model = None
-        if run.network is not None:
-            model = evaluate.create_model(cfg, evaluate.model_path_for(cfg, run), device)
-        unit, _, _ = evaluate.register_pair(
-            model, run, cfg, case_id, tp_x, tp_y, transform, transform_nearest,
-            grid_full, device, history_csv=CACHE_DIR / f"io_history_{case_id}_{tp_x}.csv",
-        )
-        voxel = evaluate.Functions.transform_unit_flow_to_flow_cuda(
-            unit.permute(0, 2, 3, 4, 1).clone()
-        ).permute(0, 4, 1, 2, 3)
-        out[m] = voxel.flip(1).detach()  # as in evaluate.evaluate_pair
-        CACHE_DIR.mkdir(exist_ok=True)
-        torch.save(out[m], cache)
-    return out
-
-
-def coronal(volume: np.ndarray, y: Optional[int] = None) -> np.ndarray:
-    """(R, A, S) volume -> coronal image, superior up, patient right on the
-    left (radiological); y = None -> maximum-intensity projection."""
-    return display(volume.max(axis=1) if y is None else volume[:, y, :])
+    model = evaluate.create_model(cfg, evaluate.model_path_for(cfg, run), device)
+    unit, _, _ = evaluate.register_pair(
+        model, run, cfg, case_id, tp_x, tp_y, transform, transform_nearest,
+        grid_full, device, history_csv=CACHE_DIR / f"io_history_{case_id}_{tp_x}.csv",
+    )
+    voxel = evaluate.Functions.transform_unit_flow_to_flow_cuda(
+        unit.permute(0, 2, 3, 4, 1).clone()
+    ).permute(0, 4, 1, 2, 3)
+    field = voxel.flip(1).detach()  # as in evaluate.evaluate_pair
+    CACHE_DIR.mkdir(exist_ok=True)
+    torch.save(field, cache)
+    return field
 
 
 def display(plane: np.ndarray) -> np.ndarray:
-    """(R, S) plane -> image rows S (superior up), columns R reversed."""
+    """(R, S) plane -> image rows S (superior up), patient right on the left."""
     return plane.T[::-1, ::-1]
 
 
-def boundaries(labels: np.ndarray) -> np.ndarray:
-    edge = np.zeros(labels.shape, bool)
-    edge[:-1] |= labels[:-1] != labels[1:]
-    edge[:, :-1] |= labels[:, :-1] != labels[:, 1:]
-    return edge & (labels > 0)
+def ct_gray(ct: np.ndarray) -> np.ndarray:
+    return np.clip((ct - CT_WINDOW[0]) / (CT_WINDOW[1] - CT_WINDOW[0]), 0, 1)
 
 
 def main() -> None:
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    case = CASE or choose_case()
-    case_id, tp_x, tp_y = case
-    print(f"pair {case_id} {tp_x}->{tp_y}")
-    fields = disp_fields(case, device)
+    case_id, tp_x, tp_y = CASE
+    field = disp_field(device)
+    shape = tuple(field.shape[2:])
+    warpers = {m: evaluate.SpatialTransformer(shape, mode=m).to(device) for m in ("bilinear", "nearest")}
 
-    ct = {"moving": load("imagesTr", case_id, "0000", tp_x), "fixed": load("imagesTr", case_id, "0000", tp_y)}
-    pet = {"moving": load("imagesTr", case_id, "0001", tp_x), "fixed": load("imagesTr", case_id, "0001", tp_y)}
-    lesions = {"moving": load("labelsTr", case_id, "0001", tp_x) == 1, "fixed": load("labelsTr", case_id, "0001", tp_y) == 1}
-    fixed_labels = load("labelsTr", case_id, "0000", tp_y).round().astype(np.int16)
-
-    shape = tuple(ct["fixed"].shape)
-    warp = {
-        "bilinear": evaluate.SpatialTransformer(shape, mode="bilinear").to(device),
-        "nearest": evaluate.SpatialTransformer(shape, mode="nearest").to(device),
-    }
-
-    def warped(volume: np.ndarray, m: str, mode: str) -> np.ndarray:
-        if not evaluate.EVAL_RUNS[METHODS[m][1]].warp:  # Initial: not resampled
-            return volume
+    def warp(volume: np.ndarray, mode: str) -> np.ndarray:
         src = torch.from_numpy(volume.astype(np.float32))[None, None].to(device)
-        return warp[mode](src, fields[m])[0, 0].cpu().numpy()
+        with torch.no_grad():
+            return warpers[mode](src, field)[0, 0].cpu().numpy()
 
-    # coronal slice through the fixed spine; crop to the body
-    y = int(np.round(np.nonzero(np.isin(fixed_labels, SPINE_LABELS))[1].mean()))
-    body = coronal(ct["fixed"] > -500.0, None)
+    ct = {"fixed": load("imagesTr", case_id, "0000", tp_y), "moving": load("imagesTr", case_id, "0000", tp_x)}
+    pet = {"fixed": load("imagesTr", case_id, "0001", tp_y), "moving": load("imagesTr", case_id, "0001", tp_x)}
+    organs = {"fixed": load("labelsTr", case_id, "0000", tp_y).round(), "moving": load("labelsTr", case_id, "0000", tp_x).round()}
+    lesions = {"fixed": load("labelsTr", case_id, "0001", tp_y) == 1, "moving": load("labelsTr", case_id, "0001", tp_x) == 1}
+    ct["warped"] = warp(ct["moving"], "bilinear")
+    pet["warped"] = warp(pet["moving"], "bilinear")
+    organs["warped"] = warp(organs["moving"], "nearest").round()
+    lesions["warped"] = warp(lesions["moving"].astype(np.float32), "nearest") > 0.5
+    with torch.no_grad():
+        det, _ = jacobian.jacobian_matrix(field.permute(0, 2, 3, 4, 1))
+    jac = det[0, 0].cpu().numpy()
+
+    per_slice = np.minimum(lesions["fixed"].sum(axis=(0, 2)), lesions["warped"].sum(axis=(0, 2)))
+    y = int(np.argmax(per_slice))
+    planes = {name: {k: display(v[:, y, :]) for k, v in d.items()}
+              for name, d in (("ct", ct), ("pet", pet), ("organs", organs), ("lesions", lesions))}
+    jac_plane = display(jac[:, y, :])
+    body = planes["ct"]["fixed"] > -500
     rows_any, cols_any = np.nonzero(body.any(axis=1))[0], np.nonzero(body.any(axis=0))[0]
     crop = (slice(rows_any[0], rows_any[-1] + 1), slice(cols_any[0], cols_any[-1] + 1))
     zooms = nib.load(str(DATA_DIR / "imagesTr" / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz")).header.get_zooms()
     aspect = float(zooms[2] / zooms[0])
-    fixed_edges = display(boundaries(fixed_labels[:, y, :]))[crop]
 
-    columns = ["fixed"] + list(METHODS)
-    titles = ["Fixed"] + [METHODS[m][0] for m in METHODS]
-    fig, axes = plt.subplots(3, len(columns), figsize=(8.2, 6.4))
-    for j, col in enumerate(columns):
-        if col == "fixed":
-            ct_img, pet_img, les_img, jac = ct["fixed"], pet["fixed"], lesions["fixed"], None
-        else:
-            ct_img = warped(ct["moving"], col, "bilinear")
-            pet_img = warped(pet["moving"], col, "bilinear")
-            les_img = warped(lesions["moving"].astype(np.float32), col, "nearest") > 0.5
-            det, _ = jacobian.jacobian_matrix(fields[col].permute(0, 2, 3, 4, 1))
-            jac = det[0, 0].cpu().numpy()
+    plt.rcParams.update({"text.usetex": True, "font.family": "serif", "font.size": 8})
+    fig, axes = plt.subplots(2, 4, figsize=(6.5, 5.4))
 
-        ax = axes[0, j]
-        ax.imshow(coronal(ct_img, y)[crop], cmap="gray", vmin=CT_WINDOW[0], vmax=CT_WINDOW[1], aspect=aspect)
-        overlay = np.ma.masked_where(~fixed_edges, fixed_edges)
-        ax.imshow(overlay, cmap=matplotlib.colors.ListedColormap([LABEL_LINE]), aspect=aspect, alpha=0.8, interpolation="nearest")
-        ax.set_title(titles[j], fontsize=8)
+    def show_ct_pet(ax, key):
+        ax.imshow(planes["ct"][key][crop], cmap="gray", vmin=CT_WINDOW[0], vmax=CT_WINDOW[1], aspect=aspect)
+        suv = planes["pet"][key][crop]
+        ax.imshow(suv, cmap="magma", vmin=SUV_RANGE[0], vmax=SUV_RANGE[1], alpha=PET_ALPHA, aspect=aspect)
+        ax.contour(planes["lesions"][key][crop].astype(float), levels=[0.5], colors=LESION_COLOR, linewidths=0.5)
 
-        ax = axes[1, j]
-        ax.imshow(coronal(pet_img)[crop], cmap="gray_r", vmin=0, vmax=SUV_MAX, aspect=aspect)
-        ax.contour(coronal(les_img.astype(np.float32))[crop], levels=[0.5], colors=LESION_LINE, linewidths=0.6)
+    def show_overlay(ax, other):
+        f, o = ct_gray(planes["ct"]["fixed"][crop]), ct_gray(planes["ct"][other][crop])
+        ax.imshow(np.stack([o, f, o], axis=-1), aspect=aspect)  # fixed green, other magenta
 
-        ax = axes[2, j]
-        if jac is None:
-            ax.axis("off")
-            continue
-        image = ax.imshow(coronal(jac, y)[crop], cmap="RdBu_r", vmin=JAC_RANGE[0], vmax=JAC_RANGE[1], aspect=aspect)
-        folds = coronal(jac, y)[crop] <= 0
-        ax.imshow(np.ma.masked_where(~folds, folds), cmap=matplotlib.colors.ListedColormap(["black"]), aspect=aspect, interpolation="nearest")
-        print(f"{col}: folding voxels on slice {int(folds.sum())}, in volume {int((jac <= 0).sum())}")
+    def show_labels(ax, other) -> float:
+        """Label residual: sign of fixed minus other organ label ID, coloured as
+        the CT overlay (green: fixed label higher, magenta: other label higher),
+        black where the labels agree. The shade gives the group of the higher
+        label: bone (full), organ (medium), muscle (dark)."""
+        a, b = planes["organs"]["fixed"][crop].astype(int), planes["organs"][other][crop].astype(int)
+        diff = a - b
+        rgb = np.zeros(a.shape + (3,))
+        for mask, label, color in ((diff > 0, a, (0.0, 1.0, 0.0)), (diff < 0, b, (1.0, 0.0, 1.0))):
+            rgb[mask] = np.array(color) * GROUP_SHADE[label[mask]][:, None]
+        ax.imshow(rgb, aspect=aspect, interpolation="nearest")
+        labelled = (a > 0) | (b > 0)
+        return 100 * ((diff != 0) & labelled).sum() / max(labelled.sum(), 1)
 
-    for ax in axes.flat:
-        ax.set_xticks([])
-        ax.set_yticks([])
-    for i, label in enumerate(["CT", "PET MIP", r"$\det J$"]):
-        axes[i, 0].set_ylabel(label, fontsize=8)
-    cax = axes[2, 0].inset_axes([0.45, 0.1, 0.1, 0.8])
+    show_ct_pet(axes[0, 0], "fixed")
+    show_ct_pet(axes[0, 1], "moving")
+    show_overlay(axes[0, 2], "moving")
+    show_overlay(axes[0, 3], "warped")
+    res_before = show_labels(axes[1, 0], "moving")
+    res_after = show_labels(axes[1, 1], "warped")
+    image = axes[1, 2].imshow(jac_plane[crop], cmap="RdBu_r", vmin=JAC_RANGE[0], vmax=JAC_RANGE[1], aspect=aspect)
+    show_ct_pet(axes[1, 3], "warped")
+
+    titles = [
+        ["Fixed (baseline)", "Moving (follow-up)", "Fixed / moving", "Fixed / warped"],
+        ["Label residual: before reg.", "Label residual: after reg.", r"$\det J$", "Warped moving"],
+    ]
+    for i in range(2):
+        for j in range(4):
+            axes[i, j].set_title(f"({'abcdefgh'[4 * i + j]}) {titles[i][j]}", fontsize=8)
+            axes[i, j].set_xticks([])
+            axes[i, j].set_yticks([])
+    cax = axes[1, 2].inset_axes([1.02, 0.25, 0.05, 0.5])
     fig.colorbar(image, cax=cax, ticks=[0, 1, 2])
-    cax.tick_params(labelsize=7)
-    cax.set_title(r"$\det J$", fontsize=7)
-    fig.tight_layout(pad=0.3, w_pad=0.2, h_pad=0.4)
+    cax.tick_params(labelsize=6)
+    fig.tight_layout(pad=0.3, w_pad=0.6, h_pad=0.6)
 
     out_dir = common.OUT_DIR / "figures"
     out_dir.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_dir / "qualitative.png", dpi=300, bbox_inches="tight")
+    print(f"run {RUN}, slice y={y} (lesion voxels on slice: fixed {lesions['fixed'][:, y].sum()}, "
+          f"warped {lesions['warped'][:, y].sum()}); labels differ on slice {res_before:.1f} % -> {res_after:.1f} %; "
+          f"det J <= 0 voxels {(jac <= 0).sum()}")
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/qualitative.png}}
-\caption{{Test pair (patient {case_id}, follow-up {tp_x} $\rightarrow$ baseline {tp_y}), chosen as the pair with at least {MIN_LESIONS} lesions whose CT Dice for Ours + IO is closest to the median. Ours (full): with the PET and rigidity losses in training and IO. Top: CT, coronal slice through the spine, with the fixed scan's organ-label boundaries (yellow). Middle: PET maximum-intensity projection (SUV 0--{SUV_MAX:g}) with the warped lesion mask (red); left: fixed scan and its lesions. Bottom: Jacobian determinant on the same slice (folds in black). Initial: the moving scan, not resampled.}}
+\caption{{Test pair with a large change in tumour volume (patient {case_id}; lesion volume {lesions['fixed'].sum()} voxels at baseline, {lesions['moving'].sum()} at follow-up), registered by {RUN_LABEL[RUN]}; one coronal slice. (a)~Fixed and (b)~moving CT with PET (SUV {SUV_RANGE[0]:g}--{SUV_RANGE[1]:g}, {100 * PET_ALPHA:.0f}\,\% opacity) and ground-truth lesion contours (red). (c,~d)~CT of the fixed scan (green) overlaid with the moving~(c) and the warped moving scan~(d) (magenta), grey where they agree. (e,~f)~Label residual before~(e) and after~(f) registration: voxels whose organ label differs between the fixed and the moving or warped moving scan (green: higher label ID in the fixed scan, e.g.\ labelled only there; magenta: higher in the moving scan; black: agreement; bright, medium, and dark shades: bones, organs, and muscles). (g)~Jacobian determinant of the transformation. (h)~Warped moving CT with PET and warped lesion contours.}}
 \label{{fig:qualitative}}
 \end{{figure}}
 """
     (out_dir / "qualitative.tex").write_text(tex)
-    print(tex)
 
 
 if __name__ == "__main__":

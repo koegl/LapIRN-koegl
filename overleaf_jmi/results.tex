@@ -65,8 +65,10 @@ Among our variants, IO without the PET and rigidity losses was the most accurate
 The variant with the losses only in IO ranked first (77.3\,\% Dice, 7.0\,\% $|\Delta\mathrm{MTV}|$), followed by the full method and the variant without the losses; their rank intervals overlap (1--5).
 The ranking was decided mainly by accuracy: after correction for multiple comparisons, few differences in preservation were significant (on $|\Delta\mathrm{MTV}|$, each variant with the losses outperformed one other method and IO after the affine two; on $|\Delta\mathrm{TLG}|$, only IO after the affine outperformed others), and none in folding.
 The network alone needs 11~s per pair, as fast as ConvexAdam and ten times faster than NiftyReg (108~s); IO adds about 2.5~minutes.
-Figure~\ref{fig:qualitative} shows a test pair.
-\todo{Describe the qualitative example once the case is fixed (CASE in figure\_qualitative.py).}
+Figure~\ref{fig:qualitative} shows a test pair whose lesion volume grew tenfold between baseline and follow-up (from 2400 to 24\,191 voxels).
+The scans were initially far apart (CT Dice 3.5\,\%); our full method aligned them to 81.0\,\% Dice (NiftyReg 69.5\,\%, ConvexAdam 65.6\,\%), while the volume and uptake of the 163 follow-up lesions changed by only $-0.1\,\%$ and $+0.9\,\%$ and no voxel folded.
+Before registration, the CT overlay (Fig.~\ref{fig:qualitative}c) and the label residual (e) show misalignment across the whole trunk; after registration (d, f), the residual is reduced to thin bands at organ boundaries.
+\todo{Once the figure with IO is final: where the label residual remains, what $\det J$ shows.}
 
 \input{tables/baselines}
 \input{figures/baselines_distribution}
