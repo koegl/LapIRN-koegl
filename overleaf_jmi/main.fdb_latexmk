@@ -1,12 +1,12 @@
 # Fdb version 3
-["bibtex main"] 1792667330 "main.aux" "main.bbl" "main" 1792667333
+["bibtex main"] 1792667628 "main.aux" "main.bbl" "main" 1792667631
   "./spiejour.bst" 1792577442 20948 1346fa42c08ea646c46fa57a4730c641 ""
-  "main.aux" 1792667333 24717 f3f1fd6cd1482d42313d167386454f72 "pdflatex"
+  "main.aux" 1792667631 25435 2e15881e91b0cfef541a6d4ad63f0213 "pdflatex"
   "references.bib" 1792583440 37053 83b6f49213e4330b019fc0c4ee6afcbc ""
   (generated)
   "main.bbl"
   "main.blg"
-["pdflatex"] 1792667330 "/home/iml/fryderyk.koegl/code/LapIRN-koegl/overleaf_jmi/main.tex" "main.pdf" "main" 1792667333
+["pdflatex"] 1792667628 "/home/iml/fryderyk.koegl/code/LapIRN-koegl/overleaf_jmi/main.tex" "main.pdf" "main" 1792667631
   "/etc/texmf/web2c/texmf.cnf" 1717060414 475 c0e671620eb5563b2130f56340a5fde8 ""
   "/home/iml/fryderyk.koegl/code/LapIRN-koegl/overleaf_jmi/main.tex" 1792664392 5306 6e269faf469a61b4a1cbb628c1cd0cdc ""
   "/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc" 1165713224 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
@@ -147,19 +147,19 @@
   "figures/overview.png" 1792577648 1301356 cbb8044026157b26006b8b0e09f7c516 ""
   "figures/q2.pdf" 1792577648 30473 4bb2791b78c08dfc7fa8875741db43a9 ""
   "figures/q2.tex" 1792577648 417 16a8539e312f97c667c333b6a7a5a87c ""
-  "figures/qualitative.png" 1792577648 3152724 0b81492f2063e7ee46831bd79e5ce432 ""
-  "figures/qualitative.tex" 1792577648 689 f8e22e83081df4a3a050d44e7818d624 ""
+  "figures/qualitative.png" 1792667624 1951571 99003cd564b627122c4f51092b686ab9 ""
+  "figures/qualitative.tex" 1792667624 953 70375cbece7d28dc89694a9ec61ff988 ""
   "figures/tradeoff.pdf" 1792656071 40852 a2b3f5cf891e2b573423494625bcd2de ""
   "figures/tradeoff.tex" 1792656071 853 ac222e6fe09fece76935d324e126c5d4 ""
   "introduction.tex" 1792664375 4126 26a6c518eb947c869aa3ef4dcdf282a4 ""
-  "main.aux" 1792667333 24717 f3f1fd6cd1482d42313d167386454f72 "pdflatex"
-  "main.bbl" 1792667330 7586 fb9623156386b6f38337bef7cb99f33e "bibtex main"
-  "main.lof" 1792667333 4319 34e7f51685e195d8aa80e4e6864ef1b1 "pdflatex"
-  "main.lot" 1792667333 2506 7c5aa8613cb2e14bcecf5a0ada5bf63f "pdflatex"
-  "main.out" 1792667333 3652 aff2500b1eba8d0104cda22ed62da807 "pdflatex"
+  "main.aux" 1792667631 25435 2e15881e91b0cfef541a6d4ad63f0213 "pdflatex"
+  "main.bbl" 1792667628 7586 fb9623156386b6f38337bef7cb99f33e "bibtex main"
+  "main.lof" 1792667631 4762 ea67c1b3f4e53a106b79ec965b666ef9 "pdflatex"
+  "main.lot" 1792667631 2506 7c5aa8613cb2e14bcecf5a0ada5bf63f "pdflatex"
+  "main.out" 1792667631 3652 aff2500b1eba8d0104cda22ed62da807 "pdflatex"
   "main.tex" 1792664392 5306 6e269faf469a61b4a1cbb628c1cd0cdc ""
   "methods.tex" 1792661778 22893 54ac4fb9afb2476ca439d1a855a98f0d ""
-  "results.tex" 1792667273 10103 8bc9eab214718d885f9e0b59b505a972 ""
+  "results.tex" 1792667459 10307 9cc4aa7a061fad693ac59926d1a03254 ""
   "spieman.cls" 1792577443 9784 59f7f93a8bcb7eadcdd34f81ab49f3a4 ""
   "tables/ablations.tex" 1792577648 1543 f382922f586b68943828dc2cfeeaaee9 ""
   "tables/baselines.tex" 1792577648 3217 3647fb420361b4665992ce8c32a0b4b3 ""

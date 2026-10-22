@@ -152,18 +152,20 @@ def main() -> None:
         ax.imshow(np.stack([o, f, o], axis=-1), aspect=aspect)  # fixed green, other magenta
 
     def show_labels(ax, other) -> float:
-        """Label residual: sign of fixed minus other organ label ID, coloured as
-        the CT overlay (green: fixed label higher, magenta: other label higher),
-        black where the labels agree. The shade gives the group of the higher
+        """Label residual, coloured as the CT overlay: green where the fixed
+        scan's organ label is not matched by the other scan (unlabelled there
+        or a different organ), magenta where only the other scan is labelled;
+        black where the labels agree. The shade gives the group of the shown
         label: bone (full), organ (medium), muscle (dark)."""
         a, b = planes["organs"]["fixed"][crop].astype(int), planes["organs"][other][crop].astype(int)
-        diff = a - b
+        fixed_unmatched = (a > 0) & (a != b)
+        other_only = (a == 0) & (b > 0)
         rgb = np.zeros(a.shape + (3,))
-        for mask, label, color in ((diff > 0, a, (0.0, 1.0, 0.0)), (diff < 0, b, (1.0, 0.0, 1.0))):
+        for mask, label, color in ((fixed_unmatched, a, (0.0, 1.0, 0.0)), (other_only, b, (1.0, 0.0, 1.0))):
             rgb[mask] = np.array(color) * GROUP_SHADE[label[mask]][:, None]
         ax.imshow(rgb, aspect=aspect, interpolation="nearest")
         labelled = (a > 0) | (b > 0)
-        return 100 * ((diff != 0) & labelled).sum() / max(labelled.sum(), 1)
+        return 100 * (fixed_unmatched | other_only).sum() / max(labelled.sum(), 1)
 
     show_ct_pet(axes[0, 0], "fixed")
     show_ct_pet(axes[0, 1], "moving")
@@ -197,7 +199,7 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/qualitative.png}}
-\caption{{Test pair with a large change in tumour volume (patient {case_id}; lesion volume {lesions['fixed'].sum()} voxels at baseline, {lesions['moving'].sum()} at follow-up), registered by {RUN_LABEL[RUN]}; one coronal slice. (a)~Fixed and (b)~moving CT with PET (SUV {SUV_RANGE[0]:g}--{SUV_RANGE[1]:g}, {100 * PET_ALPHA:.0f}\,\% opacity) and ground-truth lesion contours (red). (c,~d)~CT of the fixed scan (green) overlaid with the moving~(c) and the warped moving scan~(d) (magenta), grey where they agree. (e,~f)~Label residual before~(e) and after~(f) registration: voxels whose organ label differs between the fixed and the moving or warped moving scan (green: higher label ID in the fixed scan, e.g.\ labelled only there; magenta: higher in the moving scan; black: agreement; bright, medium, and dark shades: bones, organs, and muscles). (g)~Jacobian determinant of the transformation. (h)~Warped moving CT with PET and warped lesion contours.}}
+\caption{{Test pair with a large change in tumour volume (patient {case_id}; lesion volume {lesions['fixed'].sum()} voxels at baseline, {lesions['moving'].sum()} at follow-up), registered by {RUN_LABEL[RUN]}; one coronal slice. (a)~Fixed and (b)~moving CT with PET (SUV {SUV_RANGE[0]:g}--{SUV_RANGE[1]:g}, {100 * PET_ALPHA:.0f}\,\% opacity) and ground-truth lesion contours (red). (c,~d)~CT of the fixed scan (green) overlaid with the moving scan (magenta) before~(c) and after~(d) registration; grey where they agree. (e,~f)~Organ labels that differ before~(e) and after~(f) registration: green where the fixed scan has a label that the moving scan lacks there, magenta where only the moving scan is labelled; bright, medium, and dark shades for bones, organs, and muscles. (g)~Jacobian determinant of the transformation. (h)~Warped moving CT with PET and warped lesion contours.}}
 \label{{fig:qualitative}}
 \end{{figure}}
 """
