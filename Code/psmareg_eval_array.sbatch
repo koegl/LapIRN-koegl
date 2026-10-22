@@ -6,7 +6,10 @@
 # snapshot on the cluster and passes CODE_DIR, RUN_IDS (comma-separated, one per
 # array index) and SPLIT:
 #
-#   bash Code/submit_eval_array.sh test W0 W0.0001 G1
+#   bash Code/submit_eval_array.sh iml test W0 W0.0001 G1
+#
+# The header requests the general pool; the submit script switches to the IML
+# reservation (at most 2 tasks at once) with the iml target.
 #
 # Data: a self-contained copy of the evaluation split (images, GT and predicted
 # labels, janus's affine cache, journal checkpoints, split file, tuned IO
