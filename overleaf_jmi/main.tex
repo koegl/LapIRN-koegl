@@ -37,13 +37,13 @@
 \maketitle
 
 \begin{abstract}
-\textbf{Purpose:} \todo{One or two sentences: longitudinal PSMA PET/CT registration should align anatomy without altering lesion volume and uptake.}
+\textbf{Purpose:} Registering follow-up to baseline PSMA PET/CT scans enables voxel-wise comparison of tumour burden, but the deformation can itself change the metabolic tumour volume (MTV) and total lesion glycolysis (TLG) of lesions. We study losses that preserve these biomarkers and keep bones rigid, and whether they belong in network training or in instance optimisation (IO).
 
-\textbf{Approach:} \todo{LapIRN + instance optimisation with PET-preservation and bone-rigidity losses; patient-level split; comparison with NiftyReg and ConvexAdam; ablations of where the losses act.}
+\textbf{Approach:} We trained LapIRN networks with and without PET-preservation and bone-rigidity losses on the Learn2Reg 2026 PSMAReg data, applied the losses in training, IO, or both, and compared against tuned NiftyReg and ConvexAdam on 28 held-out patients, with patient-level statistics and a per-lesion analysis. \todo{Rigidity penalties compared.}
 
-\textbf{Results:} \todo{Main numbers after all experiments are in: accuracy vs.\ baselines, MTV/TLG change with and without the losses, IO-only placement, per-lesion effect for small bone lesions.}
+\textbf{Results:} All our variants were more accurate than NiftyReg and ConvexAdam (CT Dice 75.6--79.2\,\% vs.\ 69.4\,\% and 61.7\,\%) without folding. With IO, the PET losses lowered the MTV change from 10.2\,\% to 6.3\,\% and the TLG change from 11.9\,\% to 7.2\,\% at a cost of 2.8 Dice points. Applying the losses only in IO was 1.7 Dice points more accurate than also training with them, with similar preservation. IO removed almost all volume change of its predicted lesion masks; the remaining change stemmed mainly from missed lesions. \todo{Rigidity result.}
 
-\textbf{Conclusions:} \todo{One or two sentences.}
+\textbf{Conclusions:} When IO is affordable, biomarker-preserving losses are best applied there, on a network trained for accuracy; otherwise, they should be part of training. Further preservation requires better lesion segmentation rather than stronger loss weights.
 \end{abstract}
 
 \keywords{deformable image registration, PSMA PET/CT, longitudinal imaging, biomarker preservation, instance optimization}

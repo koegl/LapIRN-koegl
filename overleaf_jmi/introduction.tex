@@ -20,11 +20,13 @@ We ask two questions:
   \item Do the PET-preservation and bone-rigidity losses improve the complete registration pipeline, and what do they cost in alignment accuracy?
   \item Do the losses have to be part of network training, or is it sufficient to use them in instance optimisation?
 \end{enumerate}
-\todo{Contribution list once all results are in, e.g.:
-(i) a held-out evaluation of PET-preserving and rigidity losses for whole-body PSMA PET/CT registration, against tuned NiftyReg and ConvexAdam;
-(ii) the finding that applying the losses only in IO is as preserving and more accurate than training with them, while training with them is the only option without IO;
-(iii) a per-lesion analysis showing where the losses act (small, bone-associated lesions);
-(iv) a comparison of existing rigidity penalties in low-resolution whole-body CT, including stencil leakage at bone boundaries.}
+Our contributions are:
+\begin{itemize}
+  \item a held-out, patient-level evaluation of PET-preservation and bone-rigidity losses for whole-body PSMA PET/CT registration, against tuned NiftyReg and ConvexAdam;
+  \item a comparison of where the losses act, showing that applying them only in IO preserves as well as training with them and is more accurate, while training with them is the only option without IO;
+  \item a per-lesion analysis of which lesions registration deforms, and an analysis showing that preservation in IO is limited by the lesions that the predicted masks miss, not by the loss weights;
+  \item a comparison of rigidity penalties for low-resolution whole-body CT, including stencil leakage of finite-difference penalties at bone boundaries. \todo{Check against the rigidity results.}
+\end{itemize}
 
 \begin{figure}
 \begin{center}
