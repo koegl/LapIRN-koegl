@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.1.31)  22 OCT 2026 13:22
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.1.31)  22 OCT 2026 17:55
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -416,105 +416,100 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 ) (./introduction.tex [1
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}] [2]
-LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 25.
+<figures/overview.png, id=148, 2634.09094pt x 1710.39pt>
+File: figures/overview.png Graphic file (type png)
+<use figures/overview.png>
+Package pdftex.def Info: figures/overview.png  used on input line 30.
+(pdftex.def)             Requested size: 469.75499pt x 305.01219pt.
+) (./methods.tex [3] [4 <./figures/overview.png>] [5] [6] [7] [8] [9] [10] [11] [12]
+LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 206.
  (/usr/share/texlive/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 )
-<figures/overview.png, id=130, 2634.09094pt x 1710.39pt>
-File: figures/overview.png Graphic file (type png)
-<use figures/overview.png>
-Package pdftex.def Info: figures/overview.png  used on input line 33.
-(pdftex.def)             Requested size: 469.75499pt x 305.01219pt.
-) (./methods.tex [3] [4 <./figures/overview.png>] [5] [6] [7] [8] [9] [10] [11] [12]
 LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 208.
  (/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1pcr.fd
 File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
 ) [13] [14]
-Overfull \hbox (94.14pt too wide) in paragraph at lines 245--248
+Overfull \hbox (94.14pt too wide) in paragraph at lines 244--247
 \OT1/ptm/m/n/12 terms (with-out rigid-ity) is run with all four PET weights scaled by $\OMS/cmsy/m/n/12 f\OT1/cmr/m/n/12 0\OML/cmm/m/it/12 ; \OT1/cmr/m/n/12 10[]\OML/cmm/m/it/12 ; \OT1/cmr/m/n/12 3 \OMS/cmsy/m/n/12 ^^A \OT1/cmr/m/n/12 10[]\OML/cmm/m/it/12 ; \OT1/cmr/m/n/12 0\OML/cmm/m/it/12 :\OT1/cmr/m/n/12 001\OML/cmm/m/it/12 ; \OT1/cmr/m/n/12 0\OML/cmm/m/it/12 :\OT1/cmr/m/n/12 003\OML/cmm/m/it/12 ; \OT1/cmr/m/n/12 0\OML/cmm/m/it/12 :\OT1/cmr/m/n/12 01\OML/cmm/m/it/12 ; \OT1/cmr/m/n/12 0\OML/cmm/m/it/12 :\OT1/cmr/m/n/12 03\OML/cmm/m/it/12 ; \OT1/cmr/m/n/12 0\OML/cmm/m/it/12 :\OT1/cmr/m/n/12 1\OML/cmm/m/it/12 ; \OT1/cmr/m/n/12 0\OML/cmm/m/it/12 :\OT1/cmr/m/n/12 3\OML/cmm/m/it/12 ; \OT1/cmr/m/n/12 1\OMS/cmsy/m/n/12 g$
  []
 
-[15]) (./results.tex [16] (./tables/ablations.tex) (./figures/q2.tex
-<figures/q2.pdf, id=266, 416.2752pt x 186.48872pt>
+) (./results.tex [15] [16] (./tables/ablations.tex) (./figures/q2.tex
+<figures/q2.pdf, id=284, 416.2752pt x 186.48872pt>
 File: figures/q2.pdf Graphic file (type pdf)
 <use figures/q2.pdf>
 Package pdftex.def Info: figures/q2.pdf  used on input line 3.
 (pdftex.def)             Requested size: 469.75499pt x 210.45947pt.
-) [17] [18 <./figures/q2.pdf>] (./figures/lesions.tex
-<figures/lesions.pdf, id=293, 488.5452pt x 188.64516pt>
+) [17] (./figures/lesions.tex
+<figures/lesions.pdf, id=296, 488.5452pt x 188.64516pt>
 File: figures/lesions.pdf Graphic file (type pdf)
 <use figures/lesions.pdf>
 Package pdftex.def Info: figures/lesions.pdf  used on input line 3.
 (pdftex.def)             Requested size: 469.75499pt x 181.39377pt.
-) (./tables/loo.tex) [19 <./figures/lesions.pdf>] [20] (./tables/baselines.tex) (./figures/baselines_distribution.tex
-<figures/baselines_distribution.pdf, id=335, 488.5452pt x 257.2812pt>
+) [18 <./figures/q2.pdf>] (./tables/loo.tex) [19 <./figures/lesions.pdf>] [20] (./tables/baselines.tex) (./figures/baselines_distribution.tex
+<figures/baselines_distribution.pdf, id=353, 488.5452pt x 257.2812pt>
 File: figures/baselines_distribution.pdf Graphic file (type pdf)
 <use figures/baselines_distribution.pdf>
 Package pdftex.def Info: figures/baselines_distribution.pdf  used on input line 3.
 (pdftex.def)             Requested size: 469.75499pt x 247.39151pt.
 ) (./figures/qualitative.tex
-<figures/qualitative.png, id=338, 469.755pt x 446.6286pt>
+<figures/qualitative.png, id=356, 469.755pt x 446.6286pt>
 File: figures/qualitative.png Graphic file (type png)
 <use figures/qualitative.png>
 Package pdftex.def Info: figures/qualitative.png  used on input line 3.
 (pdftex.def)             Requested size: 469.75499pt x 446.6275pt.
 ) [21] (./figures/tradeoff.tex
-<figures/tradeoff.pdf, id=343, 445.79898pt x 172.03471pt>
+<figures/tradeoff.pdf, id=361, 445.79898pt x 172.03471pt>
 File: figures/tradeoff.pdf Graphic file (type pdf)
 <use figures/tradeoff.pdf>
 Package pdftex.def Info: figures/tradeoff.pdf  used on input line 3.
 (pdftex.def)             Requested size: 469.75499pt x 181.2849pt.
 ) [22 <./figures/baselines_distribution.pdf>] [23 <./figures/qualitative.png>] (./figures/detection.tex
-<figures/detection.pdf, id=399, 458.3265pt x 302.98795pt>
+<figures/detection.pdf, id=417, 458.3265pt x 302.98795pt>
 File: figures/detection.pdf Graphic file (type pdf)
 <use figures/detection.pdf>
 Package pdftex.def Info: figures/detection.pdf  used on input line 3.
 (pdftex.def)             Requested size: 469.75499pt x 310.55077pt.
-)) (./discussion.tex [24 <./figures/tradeoff.pdf>] [25 <./figures/detection.pdf>] [26] [27]
-Overfull \hbox (2.69249pt too wide) in paragraph at lines 41--46
- \OT1/ptm/b/n/12 Reg-is-tra-tion lim-ited by seg-men-ta-tion.[] \OT1/ptm/m/n/12 Both the ac-cu-racy and the preser-va-tion of IO are bounded
- []
-
-[28]) [29]
+)) (./discussion.tex [24 <./figures/tradeoff.pdf>] [25 <./figures/detection.pdf>] [26] [27] [28]) [29]
 Overfull \hbox (5.35316pt too wide) in paragraph at lines 64--68
 \OT1/ptm/m/n/12 lenge,[] which is adapted from the PSMA-PET-CT-Lesions dataset in The Can-cer Imag-ing Archive[]
  []
 
-[30] (./main.bbl [31]
+[30] (./main.bbl [31] [32]
 Underfull \hbox (badness 5504) in paragraph at lines 78--82
 []\OT1/ptm/m/n/12 Fryderyk K[]ogl, Anna Re-i-th-meir, Daniel M. Lang ...Julia A. Schn-abel, ``PET
  []
 
-[32]
+[33]
 Underfull \hbox (badness 1097) in paragraph at lines 112--116
 \OT1/ptm/m/it/12 Assisted In-ter-ven-tion (MIC-CAI)\OT1/ptm/m/n/12 , \OT1/ptm/m/it/12 Lec-ture Notes in Com-puter Sci-ence \OT1/ptm/b/n/12 4190\OT1/ptm/m/n/12 , 924--931,
  []
 
-[33] [34]) (./main.lof [35] [36])
+[34]) (./main.lof [35] [36] [37])
 \tf@lof=\write4
 \openout4 = `main.lof'.
 
- (./main.lot [37])
+ (./main.lot [38])
 \tf@lot=\write5
 \openout5 = `main.lot'.
 
- [38] (./main.aux)
+ [39] (./main.aux)
 Package rerunfilecheck Info: File `main.out' has not changed.
-(rerunfilecheck)             Checksum: AFF2500B1EBA8D0104CDA22ED62DA807;3652.
+(rerunfilecheck)             Checksum: CBC747266F953BA942B4487312AA85C7;4545.
  ) 
 Here is how much of TeX's memory you used:
- 11351 strings out of 480247
- 174459 string characters out of 5896151
- 477100 words of memory out of 5000000
- 28947 multiletter control sequences out of 15000+600000
+ 11360 strings out of 480247
+ 174604 string characters out of 5896151
+ 477102 words of memory out of 5000000
+ 28952 multiletter control sequences out of 15000+600000
  496374 words of font info for 83 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 75i,15n,77p,1362b,598s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 75i,15n,77p,1362b,597s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/helvetic/uhvr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (38 pages, 6022136 bytes).
+Output written on main.pdf (39 pages, 6024284 bytes).
 PDF statistics:
- 778 PDF objects out of 1000 (max. 8388607)
- 625 compressed objects within 7 object streams
- 112 named destinations out of 1000 (max. 500000)
- 220 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 801 PDF objects out of 1000 (max. 8388607)
+ 647 compressed objects within 7 object streams
+ 116 named destinations out of 1000 (max. 500000)
+ 260 words of extra memory for PDF output out of 10000 (max. 10000000)
 
