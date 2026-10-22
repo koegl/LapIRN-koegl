@@ -11,7 +11,7 @@ The residual PET change was concentrated in lesions that the predicted masks use
 Which placement to choose depends on the time budget and on the availability of predicted organ and lesion masks for IO.
 If IO is affordable, about 2.5 minutes per pair on our GPU, the network can be trained for accuracy alone and the losses applied during refinement.
 Compared with training and IO with the losses, this gained 1.7 Dice points, while we did not detect a difference in preservation.
-Without IO, the network alone registers a pair in 11~s, and training with the losses is then the only way to preserve lesions; selecting the checkpoint of the network without the losses for tumour preservation instead cost more accuracy and preserved hardly better.
+Without IO, the network alone registers a pair in 11~s, and training with the losses reduced registration-induced change to lesion volume and uptake.
 The training losses are therefore not superseded by IO, but they serve a different setting, e.g.\ fast registration of many follow-up examinations.
 
 One possible explanation for the IO-only result is how each stage locates lesions.
