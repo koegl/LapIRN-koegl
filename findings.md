@@ -18,7 +18,8 @@ basis; **preliminary** = not yet confirmed on the full dataset.
 3. **Q1 — do the losses work?** (`ablations.tex`, network | network + IO):
    PET and rigidity lower |ΔMTV| / |ΔTLG| significantly in both blocks, at a
    known accuracy cost (PET about −2 to −3 Dice points, rigidity ≤ 0.5).
-   Early stopping does not replace them (T1-tum, text only; entry below).
+   Early stopping was tested as a possible alternative (T1-tum; entry below),
+   but is not part of the present manuscript story without the training curves.
 4. **Q2 — where should the losses act?** (`q2.pdf`): losses only in IO (I7)
    vs. in training + IO (I4): Dice +1.7 points (significant), preservation not
    significantly worse. If IO is affordable, IO-only placement is enough and
@@ -116,9 +117,11 @@ scored against ground-truth lesions; p = patient-level one-sided Wilcoxon vs. PE
 Source: `journal_results/io_pet_check.py` → `io_pet_check/summary.csv`;
 `journal_results/recall_masks.py` → `recall_masks/summary.csv`.
 
-## [x] Early stopping on tumour preservation does not replace the PET losses
+## [ ] Early stopping on tumour preservation does not replace the PET losses
 
-**Status:** confirmed — test set (28 patients, 38 pairs); text only, no table.
+**Status:** confirmed — test set (28 patients, 38 pairs); currently omitted from
+the manuscript. Reconsider only if the training curves are shown to explain why
+early stopping was tested.
 
 - T1-tum (T1, checkpoint selected on tumour preservation instead of accuracy)
   vs. T1: CT Dice −3.0 points (significant), |ΔMTV| −0.4 and |ΔTLG| −0.9
