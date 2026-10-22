@@ -1,3 +1,4 @@
+import os
 import socket
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -5,7 +6,10 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 
 COMPUTER_NAME = socket.gethostname()
 
-if COMPUTER_NAME == "janus":
+if "PSMAREG_DATA_PATH" in os.environ:
+    # e.g. a self-contained copy of the test set for evaluation jobs
+    DATA_PATH = Path(os.environ["PSMAREG_DATA_PATH"])
+elif COMPUTER_NAME == "janus":
     DATA_PATH = Path("/home/iml/fryderyk.koegl/data")
 else:
     DATA_PATH = Path("/lustre/groups/iml/data")

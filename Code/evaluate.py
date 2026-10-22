@@ -125,6 +125,22 @@ EVAL_RUNS: Dict[str, EvalRun] = {
     "I7": EvalRun("T1", IO_BOTH),
     # no network: IO straight from the affine prereg (what the network adds)
     "I8": EvalRun(io=IO_BOTH),
+    # PET IO with the ground-truth lesion masks instead of the predicted ones
+    # (organ labels stay predicted): is PET IO limited by the masks? G1 = I5
+    # with GT masks (tuned weights), G2 = W1 with GT masks
+    "G1": EvalRun(
+        "T1",
+        IOSpec(pet=True, rigidity=False, pet_label_dir=DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr"),
+    ),
+    "G2": EvalRun(
+        "T1",
+        IOSpec(
+            pet=True,
+            rigidity=False,
+            pet_label_dir=DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr",
+            cfg_overrides={w: getattr(TrainingConfig(), w) for w in PET_IO_WEIGHTS},
+        ),
+    ),
     # trade-off (experiment 3): T1 + PET IO, the PET weights scaled together
     # relative to the TrainingConfig values (x0 = I1, x0.1 = tuned = I5)
     **{
