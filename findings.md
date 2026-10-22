@@ -3,7 +3,7 @@
 Running log of results that matter for the paper. Each entry states its data
 basis; **preliminary** = not yet confirmed on the full dataset.
 
-## Paper story (order of results and discussion)
+## [ ] Paper story (order of results and discussion)
 
 **Status:** agreed outline; numbers from the test set (28 patients, 38 pairs).
 
@@ -38,7 +38,7 @@ basis; **preliminary** = not yet confirmed on the full dataset.
    - TLG resampling floor; predicted lesion labels limit PET IO;
    - NiftyReg folding on test; Staring stencil leakage (entries below).
 
-## Staring stencils leak; erosion leaves most of the skeleton unconstrained
+## [ ] Staring stencils leak; erosion leaves most of the skeleton unconstrained
 
 **Status:** confirmed — all 560 labelled challenge scans (358 patients: train,
 val, test and single-session), ground-truth CT labels. Identical across splits.
@@ -63,7 +63,7 @@ val, test and single-session), ground-truth CT labels. Identical across splits.
 Source: `journal_results/erosion_leakage.py` → `journal_results/erosion_leakage/`
 (`per_scan.csv`, `per_bone.csv`, `summary.txt`).
 
-## The scorer's warp changes TLG even for the identity transform
+## [x] The scorer's warp changes TLG even for the identity transform
 
 **Status:** confirmed — all test pairs with lesions (30 of 38 pairs), our copy
 of the scorer's transformer (`evaluate.SpatialTransformer`, from voxelmorph).
@@ -82,7 +82,7 @@ To check against the official scorer code.
 
 Source: `evaluate.py` runs B1, B1-floor → `evaluation/test/`.
 
-## NiftyReg folds more on test than on val
+## [x] NiftyReg folds more on test than on val
 
 **Status:** confirmed — val-chosen config be 0.0002, sx −9 (38 val / 38 test pairs).
 
@@ -93,7 +93,7 @@ Source: `evaluate.py` runs B1, B1-floor → `evaluation/test/`.
 
 Source: `evaluation/test/B3.csv`, `journal_results/baselines/niftyreg/eval/val/`.
 
-## IO PET terms work on their mask; predicted lesion labels limit them
+## [ ] IO PET terms work on their mask; predicted lesion labels limit them
 
 **Status:** confirmed on val (38 pairs, 26 patients), T4 + IO (lr 0.05, 20 it),
 scored against ground-truth lesions; p = patient-level one-sided Wilcoxon vs. PET off.
@@ -116,7 +116,7 @@ scored against ground-truth lesions; p = patient-level one-sided Wilcoxon vs. PE
 Source: `journal_results/io_pet_check.py` → `io_pet_check/summary.csv`;
 `journal_results/recall_masks.py` → `recall_masks/summary.csv`.
 
-## Early stopping on tumour preservation does not replace the PET losses
+## [x] Early stopping on tumour preservation does not replace the PET losses
 
 **Status:** confirmed — test set (28 patients, 38 pairs); text only, no table.
 
@@ -130,7 +130,7 @@ Source: `journal_results/io_pet_check.py` → `io_pet_check/summary.csv`;
 Source: `evaluation/test/T1.csv`, `T1-tum.csv`, `T2.csv`;
 `journal_results/paper/table_ablations.py` (paired Wilcoxon, Holm).
 
-## Per-lesion volume change: draft results text
+## [x] Per-lesion volume change: draft results text
 
 **Status:** draft for the results section — test set, 1,327 lesions (≥ 5 voxels)
 of 26 patients; figure `journal_results/paper/out/figures/lesions.pdf`
@@ -165,7 +165,7 @@ small / medium / large; patient-cluster bootstrap CIs).
 Source: `journal_results/paper/figure_lesions.py` → `lesions.pdf`,
 `lesions_summary.txt`.
 
-## PET IO is limited by missed lesions (test, T1 + PET IO)
+## [x] PET IO is limited by missed lesions (test, T1 + PET IO)
 - On its own (predicted) masks PET IO removes almost all volume change (8.1 -> 1.0 %); on GT lesions only 10.6 -> 7.6 %. Higher PET weights (x0.1 -> x1) change nothing.
 - GT lesions grouped by nnU-Net coverage: missed 214 (6 % of volume), partly < 50 % 155 (6 %), covered 1066 (88 %).
 - PET IO lowers only covered lesions (7.8 -> 4.9 % MTV, 7.9 -> 5.1 % TLG); missed / partly unchanged (14.9 -> 15.7 %, 11.3 -> 11.5 %).
