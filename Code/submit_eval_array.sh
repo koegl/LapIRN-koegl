@@ -17,7 +17,8 @@ case "$TARGET" in
     general) QUEUE_ARGS=""; THROTTLE="" ;;
     *) usage ;;
 esac
-RUN_IDS=$(IFS=,; echo "$*")
+# "+" separates the runs: commas would split the --export list
+RUN_IDS=$(IFS=+; echo "$*")
 N=$#
 
 HOST="${HOST:-fryderyk.koegl@hpc-submit02.scidom.de}"
