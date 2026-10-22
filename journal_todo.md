@@ -12,7 +12,7 @@ qualitative figure).
 - [ ] 4. **Leave-one-out on test:** L1–L4 (reference I5).
 - [x] 5. **Q1 table + Q2 figure:** `table_ablations.py` (T1–T4 | I1–I4, marks vs. neither), `figure_q2.py` (trained + IO vs. IO only, Dice vs. |MTV| / |TLG|; effects for the text in `q2_effects.txt`). I8 moved to the baseline table; T1-tum in findings (text only).
 - [x] 6. **Per-lesion results:** |MTV|/|TLG| by size bin and bone association, signed + upper tail (table or figure).
-- [ ] 7. **Leave-one-out table:** `table_loo.py` (I5 vs. L1–L4), run once step 4 is done.
+- [ ] 7. **Leave-one-out table:** `table_loo.py` (I5 vs. L1–L4), run once step 4 is done and describe results in the paper.
 
 ## Experiment 2: rigidity comparison (IO on T2)
 - [x] 8. **Weight selection (decided: curve + Dice tolerance):** calibrate a reference weight per method (initial rigidity loss = Kabsch at 0.25, few val pairs); val grid ×{0.1, 0.3, 1, 3, 10}; choose the largest weight within 1 Dice point of R1; val curve Dice vs. bone distortion.
@@ -24,6 +24,8 @@ qualitative figure).
 - [x] 12. **W grid (decided):** T1 + PET IO, × {0, 0.01, 0.03, 0.1, 0.3, 1} of the config PET weights; × 0 = I1, × 0.1 = I5 (tuned operating point, no val runs); new: W0.01, W0.03, W0.3, W1 (evaluate.py).
 - [ ] 13. **W runs on test:** queued in tmux `tradeoff_test` (after step 4, before step 9).
 - [ ] 14. **Trade-off figure:** Dice vs. |MTV|/|TLG|, NDV alongside, operating point marked.
+- [ ] 14.1. detected vs missed lesion analysis
+- [ ] 14.2. Descibre results in the paper
 
 ## Paper
 - [x] 15. **Methods:** evaluation protocol (patient-level aggregation, significance ranking, bootstrap), baselines + tuning grids, IO settings (rigidity fixed at 0.25), checkpoint selection, predicted-label provenance, patient exposure disclosure.
