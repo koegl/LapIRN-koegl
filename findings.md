@@ -170,6 +170,7 @@ Source: `journal_results/paper/figure_lesions.py` → `lesions.pdf`,
 - GT lesions grouped by nnU-Net coverage: missed 214 (6 % of volume), partly < 50 % 155 (6 %), covered 1066 (88 %).
 - PET IO lowers only covered lesions (7.8 -> 4.9 % MTV, 7.9 -> 5.1 % TLG); missed / partly unchanged (14.9 -> 15.7 %, 11.3 -> 11.5 %).
 - Contribution to the evaluation metric after PET IO: missed 4.8 of 7.6 (MTV), 5.7 of 8.7 (TLG); covered 2.6 / 3.2.
+- Why missed lesions weigh so much (I5, 26 patients, thirds by total lesion volume): low third has 45 % of its volume missed (mid 18 %, high 6 %) and gives 70 % of the missed contribution; Spearman(volume, missed contribution) = -0.32, p = 0.11 (descriptive).
 - IO without PET losses worsens covered lesions (7.4 -> 7.8 % MTV, 6.9 -> 7.9 % TLG) and overall TLG (10.8 -> 11.9 %); overall MTV slightly down (10.6 -> 10.2 %).
 - Open: covered lesions still contribute 2.6 of 7.6 points although IO sees them -> test with IO on GT lesion masks (G1, G2).
 - Scripts: paper/figure_detection.py (in results), table_detection_groups.py / table_detection_contributions.py (tables, possibly dropped).

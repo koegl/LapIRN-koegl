@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.1.31)  22 OCT 2026 11:51
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=pdflatex 2026.1.31)  22 OCT 2026 12:11
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -561,40 +561,46 @@ File: figures/detection.pdf Graphic file (type pdf)
 Package pdftex.def Info: figures/detection.pdf  used on input line 3.
 (pdftex.def)             Requested size: 469.75499pt x 315.42616pt.
 )) (./discussion.tex
-[23 <./figures/tradeoff.pdf>] [24 <./figures/detection.pdf>])
+[23 <./figures/tradeoff.pdf>] [24 <./figures/detection.pdf>] [25]
+Overfull \hbox (2.69249pt too wide) in paragraph at lines 41--46
+ \OT1/ptm/b/n/12 Reg-is-tra-tion lim-ited by seg-men-ta-tion.[] \OT1/ptm/m/n/12
+ Both the ac-cu-racy and the preser-va-tion of IO are bounded
+ []
+
+[26] [27])
 Overfull \hbox (5.35316pt too wide) in paragraph at lines 64--68
 \OT1/ptm/m/n/12 lenge,[] which is adapted from the PSMA-PET-CT-Lesions dataset 
 in The Can-cer Imag-ing Archive[]
  []
 
-[25] (./main.bbl [26] [27]
+[28] (./main.bbl [29] [30]
 Underfull \hbox (badness 5504) in paragraph at lines 78--82
 []\OT1/ptm/m/n/12 Fryderyk K[]ogl, Anna Re-i-th-meir, Daniel M. Lang ...Julia A
 . Schn-abel, ``PET
  []
 
-[28]
+[31]
 Underfull \hbox (badness 1097) in paragraph at lines 112--116
 \OT1/ptm/m/it/12 Assisted In-ter-ven-tion (MIC-CAI)\OT1/ptm/m/n/12 , \OT1/ptm/m
 /it/12 Lec-ture Notes in Com-puter Sci-ence \OT1/ptm/b/n/12 4190\OT1/ptm/m/n/12
  , 924--931,
  []
 
-[29]) (./main.lof [30] [31])
+[32]) (./main.lof [33] [34] [35])
 \tf@lof=\write4
 \openout4 = `main.lof'.
 
- (./main.lot [32])
+ (./main.lot [36])
 \tf@lot=\write5
 \openout5 = `main.lot'.
 
- [33] (./main.aux)
+ [37] (./main.aux)
 Package rerunfilecheck Info: File `main.out' has not changed.
 (rerunfilecheck)             Checksum: AFF2500B1EBA8D0104CDA22ED62DA807;3652.
  ) 
 Here is how much of TeX's memory you used:
- 11345 strings out of 480247
- 174258 string characters out of 5896151
+ 11349 strings out of 480247
+ 174286 string characters out of 5896151
  476827 words of memory out of 5000000
  28947 multiletter control sequences out of 15000+600000
  496374 words of font info for 83 fonts, out of 8000000 for 9000
@@ -619,10 +625,10 @@ rw/courier/ucrr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/helvetic/u
 hvr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr
 /share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/
 texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (33 pages, 5731291 bytes).
+Output written on main.pdf (37 pages, 5738561 bytes).
 PDF statistics:
- 745 PDF objects out of 1000 (max. 8388607)
- 598 compressed objects within 6 object streams
- 107 named destinations out of 1000 (max. 500000)
+ 767 PDF objects out of 1000 (max. 8388607)
+ 615 compressed objects within 7 object streams
+ 111 named destinations out of 1000 (max. 500000)
  220 words of extra memory for PDF output out of 10000 (max. 10000000)
 

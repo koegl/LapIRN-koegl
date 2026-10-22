@@ -137,12 +137,21 @@
 \newlabel{fig:tradeoff}{{6}{23}{Effect of the PET loss weight in IO (test set): network trained without PET losses (T1) followed by IO with all PET weights scaled by the given factor (0: PET losses off; 1: the PET weights of network training). Each metric on the predicted labels that IO optimises (orange; organs: TotalSegmentator, lesions: nnU-Net) and on the ground-truth labels used for evaluation (blue). Dice over all 28 patients, lesion volume and uptake change over the 26 patients with lesions in both label sets. Solid: after IO; dashed: network output before IO, the same for every factor. Outlined point and dotted line: operating point tuned on the validation set. Points: patient means; bands: 95\,\% patient-bootstrap confidence intervals}{figure.6}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {5}Discussion}{23}{section.5}\protected@file@percent }
 \newlabel{sect:discussion}{{5}{23}{Discussion}{section.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{Losses in training or only in IO.}{23}{section.5}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Lesion volume and uptake change of ground-truth lesions, grouped by how much of each lesion the predicted lesion mask seen by IO covers: missed (214 lesions, 6\,\% of volume), partly covered (155 lesions, 6\,\% of volume), covered (1066 lesions, 88\,\% of volume). Test set; network trained without PET losses, IO with the PET weights scaled by the given factor. Left: change within each group (per scan, the change of the summed volume or uptake of the group's lesions; mean over the patients with lesions in the group). Right: contribution of each group to the evaluation metric (the change per scan if only the group's lesions changed; mean over patients); black: the evaluation metric, below the stacked total because changes of different lesions in a scan partly cancel.}}{24}{figure.7}\protected@file@percent }
 \newlabel{fig:detection}{{7}{24}{Lesion volume and uptake change of ground-truth lesions, grouped by how much of each lesion the predicted lesion mask seen by IO covers: missed (214 lesions, 6\,\% of volume), partly covered (155 lesions, 6\,\% of volume), covered (1066 lesions, 88\,\% of volume). Test set; network trained without PET losses, IO with the PET weights scaled by the given factor. Left: change within each group (per scan, the change of the summed volume or uptake of the group's lesions; mean over the patients with lesions in the group). Right: contribution of each group to the evaluation metric (the change per scan if only the group's lesions changed; mean over patients); black: the evaluation metric, below the stacked total because changes of different lesions in a scan partly cancel}{figure.7}{}}
+\@writefile{toc}{\contentsline {paragraph}{What limits preservation in IO.}{24}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Which PET terms matter.}{25}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Which lesions are affected.}{25}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Evaluation and ranking.}{26}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Registration limited by segmentation.}{26}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Baselines.}{27}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Rigidity penalties.}{27}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Limitations.}{27}{section.5}\protected@file@percent }
 \citation{ref_learn2reg_alessa,ref_learn2reg_hansen}
 \citation{ref_psmaregdata}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusion}{25}{section.6}\protected@file@percent }
-\newlabel{sect:conclusion}{{6}{25}{Conclusion}{section.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusion}{28}{section.6}\protected@file@percent }
+\newlabel{sect:conclusion}{{6}{28}{Conclusion}{section.6}{}}
 \bibdata{references}
 \bibcite{ref_psma_clinical}{1}
 \bibcite{ref_psmareg_challenge}{2}
@@ -174,4 +183,4 @@
 \bibcite{MODAT2010}{28}
 \bibcite{modat2014}{29}
 \bibstyle{spiejour}
-\gdef \@abspage@last{33}
+\gdef \@abspage@last{37}
