@@ -20,9 +20,9 @@ REFERENCE = ("I5", "All PET terms")
 # run -> label (the term that is switched off)
 RUNS: Dict[str, str] = {
     "L1": r"without $\mathcal{L}_{\mathrm{MTV}}$",
-    "L2": r"without $\mathcal{L}_{\mathrm{MTV\text{-}avg}}$",
+    "L2": r"without $\mathcal{L}_{\overline{J}}$",
     "L3": r"without $\mathcal{L}_{\mathrm{TLG}}$",
-    "L4": r"without $\mathcal{L}_{\mathrm{jac}}$",
+    "L4": r"without $\mathcal{L}_{J}$",
 }
 METRICS = ("dice_ct", "mtv_bias", "tlg_bias")
 

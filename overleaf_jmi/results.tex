@@ -44,7 +44,11 @@ The medians of small lesions take only a few distinct values (e.g.\ 10.0\,\%, 12
 
 \subsection{Contribution of Each PET Term}
 \label{sect:res_loo}
-\todo{Text for the leave-one-out table.}
+Table~\ref{tab:loo} switches off one PET term at a time in IO on the network trained without the losses.
+The two Jacobian terms carried the volume preservation: without $\mathcal{L}_{\overline{J}}$, $|\Delta\mathrm{MTV}|$ increased from 7.6\,\% to 8.3\,\%, and without $\mathcal{L}_{J}$ to 7.8\,\% (both significant).
+The volume term $\mathcal{L}_{\mathrm{MTV}}$ mainly cost accuracy: without it, Dice increased by 1.3 points (from 77.5\,\% to 78.8\,\%, significant), while $|\Delta\mathrm{MTV}|$ increased only from 7.6\,\% to 8.0\,\% and $|\Delta\mathrm{TLG}|$ decreased from 8.7\,\% to 8.2\,\% (neither significant).
+Switching off $\mathcal{L}_{\mathrm{TLG}}$ changed no metric significantly ($|\Delta\mathrm{TLG}|$ 9.1\,\%, $|\Delta\mathrm{MTV}|$ 7.2\,\%).
+No single term changed $|\Delta\mathrm{TLG}|$ significantly, and all changes of $|\Delta\mathrm{MTV}|$ were below one percentage point.
 
 \input{tables/loo}
 
