@@ -74,6 +74,23 @@ Figure~\ref{fig:qualitative} shows a test pair.
 
 \subsection{Accuracy--Preservation Trade-off}
 \label{sect:res_tradeoff}
-\todo{Text for the trade-off.}
+\todo{Text for the trade-off once the runs at $\times\{0,10^{-4},3\cdot10^{-4},0.001,0.003\}$ and with ground-truth lesion masks are done.}
 
 \input{figures/tradeoff}
+
+\subsection{Missed and Detected Lesions}
+\label{sect:res_detection}
+
+Figure~\ref{fig:detection} groups the ground-truth lesions by how much of each the predicted lesion mask covers: 214 lesions were missed (6\,\% of the lesion volume), 155 partly covered (6\,\%), and 1066 covered (88\,\%).
+
+PET IO reduced the change only of covered lesions, from 7.8\,\% to 4.9\,\% for $|\Delta\mathrm{MTV}|$ and from 7.9\,\% to 5.1\,\% for $|\Delta\mathrm{TLG}|$ (IO without and with the PET losses at the tuned weights).
+Missed and partly covered lesions changed as much with the PET losses as without them (missed: 14.9\,\% and 15.7\,\%; partly covered: 11.3\,\% and 11.5\,\%), since IO does not see them.
+After PET IO, missed lesions therefore contributed most of the remaining change: 4.8 of 7.6 points of $|\Delta\mathrm{MTV}|$ and 5.7 of 8.7 points of $|\Delta\mathrm{TLG}|$, although they make up only 6\,\% of the lesion volume.
+Covered lesions contributed 2.6 and 3.2 points.
+Scaling the PET weights from $\times0.1$ to $\times1$ changed none of these values by more than 0.2 points.
+
+Without the PET losses, IO increased the change of covered lesions over the network output, from 7.4\,\% to 7.8\,\% ($|\Delta\mathrm{MTV}|$) and from 6.9\,\% to 7.9\,\% ($|\Delta\mathrm{TLG}|$), and the overall $|\Delta\mathrm{TLG}|$ from 10.8\,\% to 11.9\,\%; the overall $|\Delta\mathrm{MTV}|$ fell slightly, from 10.6\,\% to 10.2\,\%, because missed and partly covered lesions changed less.
+This agrees with the per-lesion analysis (Sec.~\ref{sect:res_lesions}), in which IO without the losses increased the volume change of lesions.
+\todo{Covered lesions still contribute 2.6 points of $|\Delta\mathrm{MTV}|$ after PET IO, although IO sees them: add the result of IO with ground-truth lesion masks, which tests whether this part is due to the inaccuracy of the predicted masks.}
+
+\input{figures/detection}

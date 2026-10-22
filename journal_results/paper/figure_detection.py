@@ -84,10 +84,12 @@ def main() -> None:
         ax_w.set_ylabel(ylabel)
 
         bottom = np.zeros(len(runs))
-        for g, (_, color) in GROUP_STYLE.items():
+        for i, (g, (_, color)) in enumerate(GROUP_STYLE.items()):
             values = np.array(contribution[m, g])
-            # 2 px surface gap between stacked segments
-            ax_c.bar(x, values, bottom=bottom, width=0.6, color=color, edgecolor="white", linewidth=1.0, zorder=3)
+            ax_c.bar(x, values, bottom=bottom, width=0.6, color=color, linewidth=0, zorder=3)
+            if i > 0:
+                # white gap between stacked segments only (not at the baseline)
+                ax_c.hlines(bottom, x - 0.3, x + 0.3, color="white", linewidth=1.0, zorder=4)
             bottom += values
         ax_c.scatter(
             x, [total[m, r] for r in runs], marker="_", s=260, color=TEXT, linewidths=1.6, zorder=5

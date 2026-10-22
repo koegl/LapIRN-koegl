@@ -242,4 +242,11 @@ Each method is then evaluated on the validation set at $\{0.1,0.3,1,3,10\}$ time
 For the test set, we choose for each method the largest weight whose validation Dice is within one Dice point of the variant without rigidity.
 
 \paragraph{Accuracy--preservation trade-off.}
-On the network trained without the losses, IO with the PET terms (without rigidity) is run with all four PET weights scaled by $\{0,0.01,0.03,0.1,0.3,1\}$ relative to the training-derived values; $\times0.1$ is the setting chosen by the IO tuning.
+On the network trained without the losses, IO with the PET terms (without rigidity) is run with all four PET weights scaled by $\{0,10^{-4},3\cdot10^{-4},0.001,0.003,0.01,0.03,0.1,0.3,1\}$ relative to the training-derived values; $\times0.1$ is the setting chosen by the IO tuning.
+Besides the evaluation on the ground-truth labels, we compute CT Dice, $|\Delta\mathrm{MTV}|$, and $|\Delta\mathrm{TLG}|$ on the predicted labels that IO optimises, with the same definitions.
+To separate the effect of the predicted lesion masks from that of the optimisation, IO is also run with the ground-truth lesion masks instead of the predicted ones (organ labels remain predicted), at the tuned and at the full PET weights.
+
+\paragraph{Missed and detected lesions.}
+Each ground-truth lesion of the moving scan is assigned to a group by the fraction of its voxels covered by the predicted lesion mask: missed (0\,\%), partly covered ($<50\,\%$), or covered ($\geq50\,\%$).
+For each group, we report two quantities, both computed per scan as in Eq.~\eqref{eq:pet_error} and averaged over patients: the change within the group, using only the group's lesions, and the contribution of the group to the evaluation metric, i.e.\ the change if only the group's lesions changed and all other lesions kept their volume and uptake.
+Since changes of different lesions in a scan partly cancel, the contributions add up to slightly more than the evaluation metric.
