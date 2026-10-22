@@ -105,7 +105,7 @@ RIGIDITY_METHODS: Dict[str, str] = {
 }
 
 PET_IO_WEIGHTS = ("w_io_mtv", "w_io_mtv_avg", "w_io_tlg", "w_io_jacobian_tumor")
-W_SCALES = (0.01, 0.03, 0.3, 1.0)
+W_SCALES = (0.0, 0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.3, 1.0)
 
 # --- evaluation runs: plan ID -> what to run ---
 # W* (PET-weight sweep) is added once the IO settings are frozen; B*

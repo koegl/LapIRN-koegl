@@ -1,0 +1,19 @@
+\begin{table}[t]
+\centering
+\caption{Contribution of each PET term in IO (test set, 28 patients): network trained without PET losses (T1), IO with all PET terms or with one term removed. Mean$\pm$SD over patients. $^{\dagger}$/$^{\ddagger}$: significantly better/worse than with all terms (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected within each column, $p<0.05$).}
+\label{tab:loo}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lccc}
+\toprule
+IO PET terms & Dice (\%) $\uparrow$ & $|\Delta\mathrm{MTV}|$ (\%) $\downarrow$ & $|\Delta\mathrm{TLG}|$ (\%) $\downarrow$ \\
+\midrule
+All PET terms & 77.5$\pm$4.5 & 7.6$\pm$10.0 & 8.7$\pm$11.1 \\
+\midrule
+without $\mathcal{L}_{\mathrm{MTV}}$ & 78.8$\pm$4.3$^{\dagger}$ & 8.0$\pm$9.8 & 8.2$\pm$11.0 \\
+without $\mathcal{L}_{\mathrm{MTV\text{-}avg}}$ & 77.6$\pm$4.6 & 8.3$\pm$9.9$^{\ddagger}$ & 8.9$\pm$11.2 \\
+without $\mathcal{L}_{\mathrm{TLG}}$ & 77.5$\pm$4.5 & 7.2$\pm$10.1 & 9.1$\pm$10.8 \\
+without $\mathcal{L}_{\mathrm{jac}}$ & 77.6$\pm$4.5$^{\dagger}$ & 7.8$\pm$9.9$^{\ddagger}$ & 9.1$\pm$10.9 \\
+\bottomrule
+\end{tabular}
+\end{table}
