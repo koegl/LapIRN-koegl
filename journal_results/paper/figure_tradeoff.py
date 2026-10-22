@@ -178,7 +178,7 @@ def main() -> None:
 
     out_dir = common.OUT_DIR / "figures"
     out_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_dir / "tradeoff.pdf", bbox_inches="tight")
+    fig.savefig(out_dir / "tradeoff.pdf", bbox_inches="tight", pad_inches=0)
     n_dice = next(iter(dice.values()))["case_id"].nunique()
     n_masks = first["case_id"].nunique()
     tex = rf"""\begin{{figure}}[t]

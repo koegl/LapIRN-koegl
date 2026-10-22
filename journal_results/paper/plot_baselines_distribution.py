@@ -86,7 +86,7 @@ def main() -> None:
 
     out_dir = common.OUT_DIR / "figures"
     out_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_dir / "baselines_distribution.pdf", bbox_inches="tight")
+    fig.savefig(out_dir / "baselines_distribution.pdf", bbox_inches="tight", pad_inches=0)
     n = len(patients["B6"])
     tex = rf"""\begin{{figure}}[t]
 \centering

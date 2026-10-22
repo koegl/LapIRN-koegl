@@ -54,6 +54,8 @@ SACRUM = 25  # bone, but not in the rigidity label set
 GROUP_SHADE[list(synthetic.BONE_LABEL_VALUES) + [SACRUM]] = 1.0
 GROUP_SHADE[list(MUSCLE_LABELS)] = 0.35
 JAC_RANGE = (0.0, 2.0)
+FIG_WIDTH = 6.5  # in, text width
+GAP_W, GAP_H, TITLE_H = 0.05, 0.05, 0.18  # in
 CACHE_DIR = Path(__file__).resolve().parent / "cache"
 if not torch.cuda.is_available():
     # the model code calls .cuda() directly; without a GPU, keep everything on
@@ -139,7 +141,13 @@ def main() -> None:
     aspect = float(zooms[2] / zooms[0])
 
     plt.rcParams.update({"text.usetex": True, "font.family": "serif", "font.size": 8})
-    fig, axes = plt.subplots(2, 4, figsize=(6.5, 5.4))
+    # size the figure to the panels: full text width, minimal gaps
+    panel_w = (FIG_WIDTH - 3 * GAP_W) / 4
+    panel_h = panel_w * (crop[0].stop - crop[0].start) * aspect / (crop[1].stop - crop[1].start)
+    fig_h = 2 * panel_h + 2 * TITLE_H + GAP_H
+    fig, axes = plt.subplots(2, 4, figsize=(FIG_WIDTH, fig_h))
+    fig.subplots_adjust(left=0, right=1, bottom=0, top=1 - TITLE_H / fig_h,
+                        wspace=GAP_W / panel_w, hspace=(TITLE_H + GAP_H) / panel_h)
 
     def show_ct_pet(ax, key):
         ax.imshow(planes["ct"][key][crop], cmap="gray", vmin=CT_WINDOW[0], vmax=CT_WINDOW[1], aspect=aspect)
@@ -178,21 +186,21 @@ def main() -> None:
 
     titles = [
         ["Fixed (baseline)", "Moving (follow-up)", "Fixed / moving", "Fixed / warped"],
-        ["Label residual: before reg.", "Label residual: after reg.", r"$\det J$", "Warped moving"],
+        ["Label residual before", "Label residual after", r"$\det J$", "Warped moving"],
     ]
     for i in range(2):
         for j in range(4):
             axes[i, j].set_title(f"({'abcdefgh'[4 * i + j]}) {titles[i][j]}", fontsize=8)
             axes[i, j].set_xticks([])
             axes[i, j].set_yticks([])
-    cax = axes[1, 2].inset_axes([1.02, 0.25, 0.05, 0.5])
-    fig.colorbar(image, cax=cax, ticks=[0, 1, 2])
-    cax.tick_params(labelsize=6)
-    fig.tight_layout(pad=0.3, w_pad=0.6, h_pad=0.6)
+    # colour bar inside the det J panel, at the bottom
+    cax = axes[1, 2].inset_axes([0.15, 0.04, 0.7, 0.025])
+    fig.colorbar(image, cax=cax, ticks=[0, 1, 2], orientation="horizontal")
+    cax.tick_params(labelsize=6, pad=1, length=2)
 
     out_dir = common.OUT_DIR / "figures"
     out_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_dir / "qualitative.png", dpi=300, bbox_inches="tight")
+    fig.savefig(out_dir / "qualitative.png", dpi=300, bbox_inches="tight", pad_inches=0)
     print(f"run {RUN}, slice y={y} (lesion voxels on slice: fixed {lesions['fixed'][:, y].sum()}, "
           f"warped {lesions['warped'][:, y].sum()}); labels differ on slice {res_before:.1f} % -> {res_after:.1f} %; "
           f"det J <= 0 voxels {(jac <= 0).sum()}")

@@ -123,7 +123,7 @@ def main() -> None:
 
     out_dir = common.OUT_DIR / "figures"
     out_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_dir / "lesions.pdf", bbox_inches="tight")
+    fig.savefig(out_dir / "lesions.pdf", bbox_inches="tight", pad_inches=0)
     (out_dir / "lesions_summary.txt").write_text("\n".join(lines) + "\n")
     n_lesions = len(lesions["T1"])
     n_patients = lesions["T1"]["case_id"].nunique()

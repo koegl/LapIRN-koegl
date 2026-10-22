@@ -136,7 +136,7 @@ def main() -> None:
 
     out_dir = common.OUT_DIR / "figures"
     out_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_dir / "q2.pdf", bbox_inches="tight")
+    fig.savefig(out_dir / "q2.pdf", bbox_inches="tight", pad_inches=0)
     text = effects(patients)
     (out_dir / "q2_effects.txt").write_text(text + "\n")
     n = len(patients[REFERENCE[0]])

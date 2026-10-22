@@ -115,7 +115,7 @@ def main() -> None:
 
     out_dir = common.OUT_DIR / "figures"
     out_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_dir / "detection.pdf", bbox_inches="tight")
+    fig.savefig(out_dir / "detection.pdf", bbox_inches="tight", pad_inches=0)
     shares = detection.shares()
     tex = rf"""\begin{{figure}}[t]
 \centering
