@@ -4,7 +4,8 @@ T1 + PET IO (no rigidity) with all PET IO weights scaled together
 (x 0 = W0: PET terms on with weight 0, same optimisation as I1 but logging the
 predicted-mask values; x 0.1 = I5 = tuned operating point; W* = the others).
 Three panels against the scale (equally spaced = log, x 0 set apart):
-- CT Dice (all pairs)
+- CT Dice on the predicted organ labels (hard_dice_ct of the IO history,
+  same definition as the evaluation) and on the ground-truth labels (all pairs)
 - |MTV change| and |TLG change| on the predicted lesion masks that IO
   optimises (orange; hard_mtv / hard_tlg of the IO history at the returned
   step) and on the ground-truth masks of the evaluation (blue), on the pairs
@@ -39,7 +40,7 @@ KEY = ["case_id", "tp_moving"]
 N_BOOTSTRAP = 2000
 SEED = 0
 # categorical slots 1-2 of the reference palette: mask type; Dice neutral
-COLORS = {"gt": "#2a78d6", "pred": "#eb6834", "dice": "#52514e"}
+COLORS = {"gt": "#2a78d6", "pred": "#eb6834"}
 TEXT = "#0b0b0b"
 MUTED = "#52514e"
 GAP = 1.5  # x distance between x 0 and the smallest non-zero scale
@@ -65,26 +66,27 @@ def history(run: str) -> Optional[pd.DataFrame]:
             "case_id": case_id, "tp_moving": int(tp),
             "pred_mtv_0": h["hard_mtv"].iloc[0], "pred_mtv_1": best["hard_mtv"],
             "pred_tlg_0": h["hard_tlg"].iloc[0], "pred_tlg_1": best["hard_tlg"],
+            "pred_dice_0": h["hard_dice_ct"].iloc[0], "pred_dice_1": best["hard_dice_ct"],
         })
     return pd.DataFrame(rows)
 
 
 def load() -> Tuple[Dict[float, pd.DataFrame], Dict[float, pd.DataFrame]]:
     """Per available scale: all pairs (Dice) and pairs with lesions in both masks."""
-    network = common.load_run(NETWORK_RUN)[KEY + ["mtv_bias", "tlg_bias"]].rename(
-        columns={"mtv_bias": "gt_mtv_0", "tlg_bias": "gt_tlg_0"}
+    network = common.load_run(NETWORK_RUN)[KEY + ["dice_ct", "mtv_bias", "tlg_bias"]].rename(
+        columns={"dice_ct": "gt_dice_0", "mtv_bias": "gt_mtv_0", "tlg_bias": "gt_tlg_0"}
     )
     dice, masks = {}, {}
     for scale, run in RUNS.items():
         hist = history(run)
         if not (common.EVAL_DIR / f"{run}.csv").exists() or hist is None:
             continue
-        df = common.load_run(run)
-        dice[scale] = df
-        gt = df[KEY + ["mtv_bias", "tlg_bias"]].rename(
-            columns={"mtv_bias": "gt_mtv_1", "tlg_bias": "gt_tlg_1"}
+        gt = common.load_run(run)[KEY + ["dice_ct", "mtv_bias", "tlg_bias"]].rename(
+            columns={"dice_ct": "gt_dice_1", "mtv_bias": "gt_mtv_1", "tlg_bias": "gt_tlg_1"}
         )
-        masks[scale] = network.merge(gt, on=KEY).merge(hist.astype({"case_id": str}), on=KEY).dropna()
+        df = network.merge(gt, on=KEY).merge(hist.astype({"case_id": str}), on=KEY)
+        dice[scale] = df.dropna(subset=["gt_dice_0", "gt_dice_1", "pred_dice_0", "pred_dice_1"])
+        masks[scale] = df.dropna(subset=[f"{k}_{m}_{t}" for k in ("gt", "pred") for m in ("mtv", "tlg") for t in (0, 1)])
     return dice, masks
 
 
@@ -133,10 +135,12 @@ def main() -> None:
         """Before IO (network output): dashed, the same for every scale."""
         ax.axhline(value, color=color, linewidth=1.0, linestyle=(0, (4, 2)), zorder=1)
 
-    x, stats = series(dice, "dice_ct")
-    curve(axes[0], x, stats, COLORS["dice"])
-    network_dice = common.load_run(NETWORK_RUN).groupby("case_id")["dice_ct"].mean().mean() * 100
-    network_line(axes[0], network_dice, COLORS["dice"])
+    first_dice = next(iter(dice.values()))
+    for kind in ("gt", "pred"):
+        before = (first_dice.groupby("case_id")[f"{kind}_dice_0"].mean() * 100).mean()
+        network_line(axes[0], before, COLORS[kind])
+        x, stats = series(dice, f"{kind}_dice_1")
+        curve(axes[0], x, stats, COLORS[kind])
     axes[0].set_title(r"CT Dice (\%) $\uparrow$", fontsize=8, color=TEXT)
 
     first = next(iter(masks.values()))
@@ -162,7 +166,7 @@ def main() -> None:
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
     handles, names = [], []
-    for kind, mask in (("gt", "ground-truth masks"), ("pred", "predicted masks (seen by IO)")):
+    for kind, mask in (("gt", "ground-truth labels"), ("pred", "predicted labels (seen by IO)")):
         handles += [
             plt.Line2D([], [], color=COLORS[kind], linewidth=1.0, linestyle=(0, (4, 2))),
             plt.Line2D([], [], color=COLORS[kind], linewidth=1.5, marker="o", markersize=3),
@@ -180,7 +184,7 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/tradeoff.pdf}}
-\caption{{Effect of the PET loss weight in IO (test set): network trained without PET losses (T1) followed by IO with all PET weights scaled by the given factor (0: PET losses off; 1: the PET weights of network training). Dice over all {n_dice} patients; lesion volume and uptake change on the predicted lesion masks that IO optimises (orange) and on the ground-truth masks used for evaluation (blue), over the {n_masks} patients with lesions in both. Solid: after IO; dashed: network output before IO, the same for every factor. Outlined point and dotted line: operating point tuned on the validation set. Points: patient means; bands: 95\,\% patient-bootstrap confidence intervals.}}
+\caption{{Effect of the PET loss weight in IO (test set): network trained without PET losses (T1) followed by IO with all PET weights scaled by the given factor (0: PET losses off; 1: the PET weights of network training). Each metric on the predicted labels that IO optimises (orange; organs: TotalSegmentator, lesions: nnU-Net) and on the ground-truth labels used for evaluation (blue). Dice over all {n_dice} patients, lesion volume and uptake change over the {n_masks} patients with lesions in both label sets. Solid: after IO; dashed: network output before IO, the same for every factor. Outlined point and dotted line: operating point tuned on the validation set. Points: patient means; bands: 95\,\% patient-bootstrap confidence intervals.}}
 \label{{fig:tradeoff}}
 \end{{figure}}
 """
@@ -188,8 +192,8 @@ def main() -> None:
     for s in RUNS:
         if s in masks:
             p = masks[s].groupby("case_id").mean(numeric_only=True) * 100
-            d = dice[s].groupby("case_id")["dice_ct"].mean().mean() * 100
-            print(f"x{label(s):7s} dice {d:.1f}  mtv pred {p.pred_mtv_1.mean():.1f} gt {p.gt_mtv_1.mean():.1f}"
+            d = dice[s].groupby("case_id").mean(numeric_only=True) * 100
+            print(f"x{label(s):7s} dice pred {d.pred_dice_1.mean():.1f} gt {d.gt_dice_1.mean():.1f}  mtv pred {p.pred_mtv_1.mean():.1f} gt {p.gt_mtv_1.mean():.1f}"
                   f"  tlg pred {p.pred_tlg_1.mean():.1f} gt {p.gt_tlg_1.mean():.1f}")
 
 
