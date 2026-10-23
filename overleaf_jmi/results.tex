@@ -78,7 +78,7 @@ Figure~\ref{fig:qualitative} shows a test pair whose lesion volume grew tenfold 
 The scans were initially far apart (CT Dice 3.5\,\%); our full method aligned them to 81.0\,\% Dice (NiftyReg 69.5\,\%, ConvexAdam 65.6\,\%), while the volume and uptake of the 163 follow-up lesions changed by only $-0.1\,\%$ and $+0.9\,\%$; NDV remained below the challenge threshold.
 Before registration, the CT overlay (Fig.~\ref{fig:qualitative}c) and the label residual (e) show misalignment across the whole trunk; after registration (d, f), the residual is reduced to thin bands at organ boundaries.
 The remaining residual lies mostly at organ boundaries and in the lumbar vertebrae (f), and the lesions keep their shape after warping (h).
-The Jacobian determinant (g) shows fine-grained local expansion and compression throughout the body, which IO adds to the smooth network field because it has no smoothness term ($\lambda_{\mathrm{smooth}}=0$).
+The Jacobian determinant (g) shows fine-grained changes in the local volume scale of the sampling transform throughout the body, which IO adds to the smooth network field because it has no smoothness term ($\lambda_{\mathrm{smooth}}=0$).
 
 \input{tables/baselines}
 \input{figures/baselines_distribution}

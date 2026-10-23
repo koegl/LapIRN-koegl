@@ -50,7 +50,8 @@ This measures change induced by registration, not change in disease burden betwe
 \label{sect:pipeline}
 
 The pipeline (Fig.~\ref{fig:pipeline}) has three stages, all estimated from the moving scan $(C_m, P_m)$ and the fixed scan $(C_f, P_f)$, where $C$ denotes CT and $P$ PET.
-We denote the affine transform by $\varphi_{\mathrm{aff}}$, the network deformation by $\varphi_\theta$, and their composition, which maps the original moving scan to the fixed scan, by $\varphi$.
+We denote the affine sampling transform by $\varphi_{\mathrm{aff}}$, the network sampling transform by $\varphi_\theta$, and their composition by $\varphi$.
+For each location $x$ on the fixed grid, $\varphi(x)$ gives the location sampled in the original moving scan: the warped image is $\widetilde C_m(x)=C_m(\varphi(x))$, and the same convention applies to PET and labels.
 
 \paragraph{Affine pre-registration.}
 ANTs~\cite{ants} estimates an affine transform from the two CTs, using body masks, a $[-1000,1000]$~HU window, half-resolution images, and Mattes mutual information.
@@ -103,15 +104,17 @@ The volume and uptake terms penalise the relative change defined above, using th
   \label{eq:mtv_tlg}
 \end{equation}
 with $\epsilon=10^{-5}$.
-Two further terms act on the Jacobian determinant $\det J_\varphi$ inside the warped lesion region $W$ in the fixed frame:
+Two further terms act on $\det J_\varphi(x)$, the local volume scale of the total affine-plus-deformable sampling transform, computed by central differences on the fixed voxel grid.
+A determinant of one preserves local volume; values above and below one correspond to expansion and contraction, respectively, of the sampled region in the moving scan (the opposite change in the displayed warped lesion).
+Let $W_s$ and $W_h$ be the linearly and nearest-neighbour warped moving lesion masks, respectively, on that grid. Then
 \begin{equation}
-  \mathcal{L}_{\overline{J}} = \left(\frac{1}{|W|}\sum_{x\in W}\det J_\varphi(x) - 1\right)^{2},
+  \mathcal{L}_{\overline{J}} = \left(\frac{\sum_x W_s(x)\det J_\varphi(x)}{\sum_x W_s(x)+\epsilon} - 1\right)^{2},
   \qquad
-  \mathcal{L}_{J} = \frac{1}{|W|}\sum_{x\in W}\bigl(\det J_\varphi(x) - 1\bigr)^{2}.
+  \mathcal{L}_{J} = \frac{\sum_x W_h(x)\bigl(\det J_\varphi(x) - 1\bigr)^{2}}{\sum_x W_h(x)+\epsilon}.
   \label{eq:jac_terms}
 \end{equation}
-$\mathcal{L}_{\overline{J}}$ constrains the net volume change of all lesions, and $\mathcal{L}_{J}$ additionally prevents compression in one part of a lesion from being compensated by expansion in another.
-For $\mathcal{L}_{\overline{J}}$, $W$ is the linearly warped mask (without gradient through the mask), for $\mathcal{L}_{J}$ the nearest-neighbour warped mask.
+$\mathcal{L}_{\overline{J}}$ constrains the mean volume scale over all lesions, but allows expansion in one region to cancel contraction in another; $\mathcal{L}_{J}$ penalises these local changes separately.
+The mask $W_s$ is held fixed when differentiating $\mathcal{L}_{\overline{J}}$, and the hard mask $W_h$ is not differentiable with respect to displacement; both losses differentiate through the determinant.
 
 \paragraph{Bone rigidity.}
 Many PSMA lesions lie in bone, which moves rigidly between examinations.
