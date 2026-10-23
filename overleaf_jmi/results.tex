@@ -64,7 +64,7 @@ No single term changed $|\Delta\mathrm{TLG}|$ significantly, and all changes of 
 \subsection{Comparison with Baselines}
 \label{sect:res_baselines}
 
-To place these operating points in context, we compare our variants with established registration methods in Table~\ref{tab:baselines} and Fig.~\ref{fig:baselines_distribution}.
+To place the alignment--preservation trade-off among our variants in context, we compare them with CT-only registration baselines and with IO applied directly after affine pre-registration (Table~\ref{tab:baselines}, Fig.~\ref{fig:baselines_distribution}).
 Every variant of ours had higher mean CT Dice and lower mean HD95 than NiftyReg (69.4\,\% Dice, 8.6~mm HD95), ConvexAdam (61.7\,\%, 9.2~mm), and the affine pre-registration (46.4\,\%, 13.9~mm), and stayed below the folding threshold on every test pair.
 NiftyReg, tuned on the validation set, exceeded the threshold on 5 of 38 validation pairs and 8 of 38 test pairs (21\,\%); its test-set NDV averaged 1170~ppm over patients, driven by three pairs with 0.8 to 1.3\,\% NDV.
 IO directly after the affine pre-registration reached only 52.7\,\% Dice: within the same iteration budget, IO cannot replace the network.

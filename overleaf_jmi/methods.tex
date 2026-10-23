@@ -223,7 +223,7 @@ All tuning used the validation set and the challenge ranking above as the select
   \item \textbf{IO:} on the network trained with both losses, step-wise: first learning rate $\times$ iterations ($\{0.0125,0.025,0.05,0.1\}\times\{10,20,40\}$), then a common scale of the four PET weights ($\times\{0,0.1,0.25,0.5,1,2,4\}$ of the training-derived values).
   The ranking does not reward rigidity (its cost in Dice is significant, while folding stays below the threshold for every weight), so it would set $\lambda_{\mathrm{rig}}$ to zero; we fixed $\lambda_{\mathrm{rig}}=0.25$ instead, which costs 0.3 Dice points on validation.
   \item \textbf{NiftyReg}~\cite{MODAT2010,modat2014}: \texttt{reg\_aladin} followed by \texttt{reg\_f3d} on the GPU with normalised mutual information (local NCC is not available on the GPU), over the bending-energy weights $\{0.0002, 0.0005, 0.001, 0.005, 0.02\}$ and final control-point spacings of $\{3, 5, 7, 9\}$ voxels; chosen: $0.0002$ and 9 voxels.
-  \item \textbf{ConvexAdam}~\cite{ref_convexadam}: after the same ANTs affine as our method, over the regularisation weight $\lambda\in\{0.1,0.25,0.5,1.25,2,4\}$; chosen: 0.1.
+  \item \textbf{ConvexAdam}~\cite{ref_convexadam}: after its own ANTs affine registration with a $[-300,300]$~HU CT window, over the regularisation weight $\lambda\in\{0.1,0.25,0.5,1.25,2,4\}$; chosen: 0.1.
 \end{itemize}
 Several choices ended at the edge of their grid; extending the grids changed the validation scores only marginally.
 
@@ -249,6 +249,10 @@ On the network trained without the losses, IO with all four PET terms is compare
 
 \paragraph{Comparison with baselines.}
 Initial alignment, the affine pre-registration, NiftyReg, ConvexAdam, IO after the affine, and our variants are compared on the test set.
+All registrations use the same follow-up-to-baseline pairs and are scored with the same provided organ and lesion labels and original-SUV PET images.
+NiftyReg and ConvexAdam use CT alone for registration, with no organ or lesion labels; both remove the patient bed, but each uses its own affine step and CT preprocessing (NiftyReg: \texttt{reg\_aladin} on bed-removed CT; ConvexAdam: ANTs with a $[-300,300]$~HU window).
+Our method uses CT and PET, the affine pre-registration described above, provided labels in network training, and predicted labels during IO.
+The NiftyReg and ConvexAdam settings were selected on the validation pairs by the same adapted challenge ranking used for our IO settings, with candidates ranked within each method's grid.
 Runtimes are per pair on one NVIDIA RTX A6000 GPU and include the affine step.
 
 \paragraph{Rigidity penalties.}

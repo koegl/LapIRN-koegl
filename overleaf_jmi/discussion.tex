@@ -47,7 +47,7 @@ The rigidity loss acted only on bone-associated lesions, as intended, and the PE
 The significance-based ranking of the challenge was decided mainly by accuracy: differences in alignment between methods are consistent across patients and reach significance, whereas differences in MTV and TLG vary strongly between patients and rarely do.
 On the validation set, the ranking consequently chose our variant without any of the losses.
 The ranking also rewards methods that hardly deform: IO directly after the affine pre-registration had the lowest MTV and TLG change of all methods and ranked fifth with 52.7\,\% Dice, above our network without IO with 74.8\,\%.
-Preservation metrics should therefore be read together with accuracy, not on their own.
+Preservation metrics should therefore be read together with anatomical alignment; neither higher CT Dice nor lower MTV/TLG change alone establishes which registration is more useful for a clinical task.
 A further effect of the scorer is that warping the PET image changes TLG even for the identity transformation (2.9\,\% on average); this floor applies equally to all methods but limits how small a TLG change can be reported.
 Per-lesion changes, which do not cancel between lesions, would complement the aggregate metrics.
 
