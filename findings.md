@@ -30,8 +30,9 @@ basis; **preliminary** = not yet confirmed on the full dataset.
 5. **Leave-one-out** (`loo.tex`): what each PET term contributes in IO.
 6. **Baselines** (`baselines.tex`, distribution plot, qualitative figure):
    training / IO columns state where the losses act. Every variant of ours is
-   significantly more accurate than NiftyReg / ConvexAdam / Affine, without
-   folding; ranks: IO only (I7) 1, basic IO (I1) and full (I4) 2. Affine + IO
+   significantly more accurate than NiftyReg / ConvexAdam / Affine, with NDV
+   below the 0.005 % threshold on every test pair; ranks: IO only (I7) 1,
+   basic IO (I1) and full (I4) 2. Affine + IO
    (no network) reaches only 52.7 % Dice: the network is essential.
 7. **Rigidity comparison (exp. 2)** and **trade-off (exp. 3)**: follow.
 8. **Discussion:**
@@ -89,8 +90,8 @@ Source: `evaluate.py` runs B1, B1-floor → `evaluation/test/`.
 
 **Status:** confirmed — val-chosen config be 0.0002, sx −9 (38 val / 38 test pairs).
 
-- %NDV mean 0.016 (val) vs. **0.093** (test); the median is 0 on both.
-- On test, three pairs fold strongly (0.8–1.3%; cases 0338, 0166, 0170).
+- %NDV mean over pairs 0.016 (val) vs. **0.093** (test); the median is 0 on both.
+- NDV exceeds the 0.005 % threshold on 5/38 validation pairs and 8/38 test pairs (21 %); three test pairs have 0.8–1.3 % (cases 0338, 0166, 0170).
 - Cause: the ranking picks the least-regularised config on val (the
   accuracy scores separate configs; NDV only barely). Report as is.
 

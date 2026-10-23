@@ -58,9 +58,9 @@ Outside this setting, label overlap and the change of MTV and TLG are proxies: w
 Future work should therefore evaluate registration on such tasks and clinical endpoints rather than optimise further for segmentation-based metrics.
 
 The baseline comparison also illustrates the role of deformation regularity.
-NiftyReg, tuned on the validation set where it rarely folded, exceeded the folding threshold on 21\,\% of the test pairs, with three pairs above 0.8\,\%.
+NiftyReg exceeded the folding threshold on 5 of 38 validation pairs and 8 of 38 test pairs (21\,\%), with three test pairs above 0.8\,\% NDV.
 The ranking selected its least-regularised setting because accuracy separated the settings more than folding; a setting chosen on the validation set did not transfer to new patients.
-Our networks with and without IO stayed below the threshold on every pair.
+Our network and IO variants stayed below the 0.005\,\% NDV threshold on every test pair.
 
 \subsection{Bone Rigidity}
 \todo{After the rigidity experiments: stencil leakage of finite-difference penalties at bone boundaries (21\,\% of stencil reads leave the bone), erosion removes most of the skeleton at this resolution (35.5\,\% of bone voxels kept, ribs 2.4\,\%), per-bone rigid fit avoids both; results of the comparison.}
