@@ -205,5 +205,7 @@ Source: `evaluation/test/W*.csv`, `G1.csv`, `G2.csv`; `journal_results/paper/fig
 **Status:** 15 runs done (`journal_results/rigidity_sweep/curve.csv`); chosen = largest weight within 1 Dice point of R1 (76.7 %).
 
 - Staring: chosen x1 (0.659); costs bone alignment (bone Dice 77.3 -> 75.8; x10: 74.0), soft-tissue Dice unchanged; short-distance distortion 0.106 -> 0.073.
-- Staring + erosion and Kabsch: within 1 Dice point up to x10 (grid edge) -> grid extended by x30, x100 (4 cluster runs).
+- Staring + erosion and Kabsch: within 1 Dice point up to x10 -> grid extended by x30, x100, capped at x100. Final choice: Staring x1, Staring + erosion x100, Kabsch x100.
+- Staring + erosion never costs Dice (76.8 at x100, even slightly up): erosion leaves 65 % of bone voxels / almost all ribs unconstrained, so the penalty barely restricts the deformation. Caveat: distance distortion is measured on eroded interior points, exactly where eroded Staring acts (favours it).
+- Kabsch reaches the tolerance at x30-x100 (75.7-75.8 vs threshold 75.65); best long-distance distortion (0.024 at x100 vs 0.034 erosion, 0.037 Staring x1).
 - At x10: Staring + erosion distortion 0.062 / 0.036, Kabsch 0.063 / 0.028 (short / long), bone Dice 77.0 / 76.0.

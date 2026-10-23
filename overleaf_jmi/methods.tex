@@ -181,7 +181,7 @@ Lesions are grouped by size (small $<0.5$~ml, medium $<5$~ml, large) and locatio
 Percentage of non-diffeomorphic volume (NDV) inside the body, as defined by the challenge~\cite{Liu2024}.
 
 \paragraph{Bone metrics.}
-For the rigidity comparison, we additionally compute Dice and HD95 separately over bones and soft-tissue organs; the distortion of within-bone distances, i.e.\ the mean relative change of the physical distance between randomly sampled pairs of interior points (eroded mask) of the same bone, separately for short (5--15~mm) and long ($\geq15$~mm) distances; NDV inside bones and in a three-voxel band around them; and, as a secondary measure, the residual of a rigid fit to each bone's displacement (bone rigidity error).
+For the rigidity comparison, we additionally compute Dice and HD95 separately over bones and soft-tissue organs; the distortion of within-bone distances, i.e.\ the mean relative change of the physical distance between randomly sampled pairs of interior points (eroded mask) of the same bone, separately for short (5--15~mm) and long ($\geq15$~mm) distances (short distances reflect local compression or bending, long ones the deformation of a bone as a whole; below 5~mm, i.e.\ about two voxels, the relative change is dominated by interpolation and discretisation); NDV inside bones and in a three-voxel band around them; and, as a secondary measure, the residual of a rigid fit to each bone's displacement (bone rigidity error).
 We also measure the fraction of stencil reads that leave the bone of the centre voxel (stencil leakage) and the fraction of bone voxels and of bones that remain after erosion.
 
 \subsection{Statistical Analysis}
@@ -239,6 +239,7 @@ On the network trained with the PET losses, IO with the PET terms is combined wi
 Because the penalties have different units, a reference weight is first calibrated for each so that its initial value on five validation pairs equals that of the rigid fit at $\lambda_{\mathrm{rig}}=0.25$ (Staring 0.66, Staring with erosion 1.03).
 Each method is then evaluated on the validation set at $\{0.1,0.3,1,3,10\}$ times its reference weight, giving a curve of CT Dice against within-bone distance distortion.
 For the test set, we choose for each method the largest weight whose validation Dice is within one Dice point of the variant without rigidity.
+Where the largest weight still met this criterion (Staring with erosion and the rigid fit), we extended the grid by $\times30$ and $\times100$ and capped it there.
 
 \paragraph{Accuracy--preservation trade-off.}
 On the network trained without the losses, IO with the PET terms (without rigidity) is run with all four PET weights scaled by $\{0,10^{-4},3\cdot10^{-4},0.001,0.003,0.01,0.03,0.1,0.3,1\}$ relative to the training-derived values; $\times0.1$ is the setting chosen by the IO tuning.

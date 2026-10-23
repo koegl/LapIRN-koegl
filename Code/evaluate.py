@@ -103,6 +103,14 @@ RIGIDITY_METHODS: Dict[str, str] = {
     "R3": "staring_eroded",
     "R4": "kabsch",
 }
+# test weights chosen on val (journal_results/rigidity_sweep/chosen.json): the
+# largest weight within 1 Dice point of R1, grid x0.1-x100 of the calibrated
+# reference weight; R3 and R4 stay within the tolerance up to x100
+RIGIDITY_WEIGHTS: Dict[str, float] = {
+    "R2": 0.6588260058946706,  # Staring x1
+    "R3": 103.19728792937212,  # Staring + erosion x100
+    "R4": 25.0,  # Kabsch x100
+}
 
 PET_IO_WEIGHTS = ("w_io_mtv", "w_io_mtv_avg", "w_io_tlg", "w_io_jacobian_tumor")
 W_SCALES = (0.0, 0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.3, 1.0)
@@ -167,7 +175,10 @@ EVAL_RUNS: Dict[str, EvalRun] = {
             IOSpec(
                 pet=True,
                 rigidity=True,
-                cfg_overrides={"io_rigidity_method": method},
+                cfg_overrides={
+                    "io_rigidity_method": method,
+                    "w_io_bone_rigidity": RIGIDITY_WEIGHTS[run_id],
+                },
             ),
         )
         for run_id, method in RIGIDITY_METHODS.items()

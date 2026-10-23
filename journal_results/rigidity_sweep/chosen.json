@@ -8,11 +8,11 @@
     },
     "R3": {
       "method": "staring_eroded",
-      "weight": 10.319728792937212
+      "weight": 103.19728792937212
     },
     "R4": {
       "method": "kabsch",
-      "weight": 2.5
+      "weight": 25.0
     }
   }
 }
