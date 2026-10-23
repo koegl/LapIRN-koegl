@@ -48,3 +48,10 @@ evaluation/**/io_history/
 journal_results/**/io_history/
 journal_results/**/__pycache__/
 journal_results/paper/cache/
+overleaf_jmi/main.lot
+overleaf_jmi/main.log
+overleaf_jmi/main.lof
+overleaf_jmi/main.fdb_latexmk
+overleaf_jmi/main.fdb_latexmk
+overleaf_jmi/main.aux
+overleaf_jmi/main.synctex.gz
