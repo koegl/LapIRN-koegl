@@ -4,13 +4,14 @@
 The central trade-off is between anatomical alignment and registration-induced change to lesion measurements.
 PET-preservation losses reduced volume and uptake change at a cost of about two to three Dice points, while the rigidity loss reduced volume change at a smaller alignment cost.
 When IO was used, applying the losses only during refinement improved alignment over using them in both training and IO.
-We did not detect a difference in preservation between these placements.
+The preservation differences were not statistically significant, but their confidence intervals do not establish that the placements are equivalent.
 The residual PET change was concentrated in lesions that the predicted masks used by IO missed, showing that the choice of loss placement is only part of the preservation problem.
 
 \subsection{Choosing Where to Apply the Losses}
 Which placement to choose depends on the time budget and on the availability of predicted organ and lesion masks for IO.
 If IO is affordable, about 2.5 minutes per pair on our GPU, the network can be trained for accuracy alone and the losses applied during refinement.
-Compared with training and IO with the losses, this gained 1.7 Dice points, while we did not detect a difference in preservation.
+Compared with training and IO with both loss groups, this gained 1.7 Dice points.
+The paired intervals still allow worse MTV or TLG preservation with IO-only placement, so the result supports an accuracy gain but leaves the preservation trade-off uncertain.
 Without IO, the network alone registers a pair in 11~s, and training with the losses reduced registration-induced change to lesion volume and uptake.
 The training losses are therefore not superseded by IO, but they serve a different setting, e.g.\ fast registration of many follow-up examinations.
 
@@ -69,7 +70,7 @@ We studied one network architecture, and we measured the change caused by regist
 \label{sect:conclusion}
 
 Lesion-preserving losses reduce the change of PET measurements caused by deformable registration of longitudinal whole-body PSMA PET/CT, at a cost in anatomical alignment.
-When instance optimisation and predicted lesion masks are available, applying the losses only during refinement yielded higher alignment accuracy than using them in training as well.
-We detected no difference in preservation between these placements.
+When per-pair instance optimisation is feasible and predicted lesion masks can be obtained, applying the losses only during refinement yielded higher alignment accuracy than using them in training as well.
+The present test set did not resolve whether PET preservation differs between these placements.
 Without instance optimisation, the training losses reduced the change in lesion measurements.
 The remaining error was largest for lesions missed by the predicted masks used in instance optimisation, indicating that mask coverage limits the benefit of stronger preservation constraints.

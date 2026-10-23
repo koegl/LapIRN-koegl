@@ -26,9 +26,12 @@ The losses therefore change the accuracy--preservation balance; the next questio
 \label{sect:res_q2}
 
 To test whether the losses need to act during training, Fig.~\ref{fig:q2} compares networks trained with each loss group against the network trained without them, followed by IO with the same losses in each comparison.
-Using the losses only in IO was more accurate: Dice increased by 1.2 points [95\,\% CI 0.4, 1.9] for the PET losses and by 1.7 points [1.1, 2.2] for both groups (both significant), and was unchanged for rigidity.
-Preservation was not significantly worse: $|\Delta\mathrm{MTV}|$ increased by 1.3 [0.0, 2.6], 0.5 [0.0, 1.0], and 0.8 [$-1.0$, 2.7] points for PET, rigidity, and both, and $|\Delta\mathrm{TLG}|$ by at most 1.5 points.
-Without IO, in contrast, the training losses are the only means of preservation (Table~\ref{tab:ablations}, left).
+With both loss groups, applying them only in IO increased Dice by 1.7 points (95\,\% CI 1.1 to 2.2) compared with using them in training and IO.
+The paired differences (IO only minus training and IO) were $+0.8$ points in $|\Delta\mathrm{MTV}|$ (95\,\% CI $-1.0$ to 2.7) and $+0.2$ points in $|\Delta\mathrm{TLG}|$ ($-1.9$ to 2.4).
+With PET losses alone, the Dice gain was 1.2 points (0.4 to 1.9), while $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ increased by 1.3 (0.0 to 2.6) and 1.5 ($-0.1$ to 3.0) points.
+With rigidity alone, the paired differences were 0.0 ($-0.1$ to 0.1) Dice points, $+0.5$ (0.0 to 1.0) MTV points, and $+0.2$ ($-0.4$ to 0.8) TLG points.
+None of the preservation differences was significant after Holm correction; the intervals do not establish equivalent preservation.
+Without IO, training with the losses reduced registration-induced PET changes in the network-only variants tested (Table~\ref{tab:ablations}, left).
 
 \input{figures/q2}
 
