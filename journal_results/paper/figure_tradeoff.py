@@ -34,6 +34,9 @@ RUNS = {
     0.01: "W0.01", 0.03: "W0.03", 0.1: "I5", 0.3: "W0.3", 1.0: "W1",
 }
 OPERATING_POINT = 0.1
+# IO with ground-truth lesion masks instead of predicted ones (scale -> run)
+GT_MASK_RUNS = {0.1: "G1", 1.0: "G2"}
+GT_MASK_COLOR = "#0b0b0b"
 NETWORK_RUN = "T1"
 HISTORY_DIR = common.EVAL_DIR / "io_history"
 KEY = ["case_id", "tp_moving"]
@@ -156,6 +159,19 @@ def main() -> None:
         ax.set_title(title, fontsize=8, color=TEXT)
         ax.set_ylim(bottom=0)
 
+    # IO with ground-truth lesion masks: evaluated on the ground-truth labels,
+    # Dice over all pairs, MTV / TLG over the same pairs as the curves
+    mask_pairs = first[KEY]
+    for scale, run in GT_MASK_RUNS.items():
+        df = common.load_run(run)
+        for ax, column, pairs in (
+            (axes[0], "dice_ct", None), (axes[1], "mtv_bias", mask_pairs), (axes[2], "tlg_bias", mask_pairs)
+        ):
+            sub = df if pairs is None else df.merge(pairs, on=KEY)
+            mean, lo, hi = mean_ci(sub.groupby("case_id")[column].mean() * 100, rng)
+            ax.errorbar(xpos[scale], mean, yerr=[[mean - lo], [hi - mean]], fmt="D", markersize=4,
+                        color=GT_MASK_COLOR, elinewidth=0.8, capsize=0, zorder=6)
+
     ticks = [0.0] + nonzero
     for ax in axes:
         ax.axvline(xpos[OPERATING_POINT], color="#c9c8c3", linewidth=0.8, linestyle=":", zorder=1)
@@ -172,7 +188,9 @@ def main() -> None:
             plt.Line2D([], [], color=COLORS[kind], linewidth=1.5, marker="o", markersize=3),
         ]
         names += [f"{mask}, network output", f"{mask}, after IO"]
-    fig.legend(handles, names, loc="upper center", ncol=2, frameon=False, bbox_to_anchor=(0.5, 1.16), handlelength=2.5)
+    handles.append(plt.Line2D([], [], color=GT_MASK_COLOR, marker="D", markersize=4, linestyle=""))
+    names.append("IO with ground-truth\nlesion masks")
+    fig.legend(handles, names, loc="upper center", ncol=3, frameon=False, bbox_to_anchor=(0.5, 1.16), handlelength=2.5, fontsize=7)
     fig.tight_layout(w_pad=1.0, rect=(0, 0.06, 1, 1))
     fig.supxlabel(r"PET IO weight scale", fontsize=8, color=TEXT, y=0.0)
 
@@ -184,7 +202,7 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/tradeoff.pdf}}
-\caption{{Effect of the PET loss weight in IO (test set): network trained without PET losses (T1) followed by IO with all PET weights scaled by the given factor (0: PET losses off; 1: the PET weights of network training). Each metric on the predicted labels that IO optimises (orange; organs: TotalSegmentator, lesions: nnU-Net) and on the ground-truth labels used for evaluation (blue). Dice over all {n_dice} patients, lesion volume and uptake change over the {n_masks} patients with lesions in both label sets. Solid: after IO; dashed: network output before IO, the same for every factor. Outlined point and dotted line: operating point tuned on the validation set. Points: patient means; bands: 95\,\% patient-bootstrap confidence intervals.}}
+\caption{{Effect of the PET loss weight in IO (test set): network trained without PET losses (T1) followed by IO with all PET weights scaled by the given factor (0: PET losses off; 1: the PET weights of network training). Each metric on the predicted labels that IO optimises (orange; organs: TotalSegmentator, lesions: nnU-Net) and on the ground-truth labels used for evaluation (blue). Dice over all {n_dice} patients, lesion volume and uptake change over the {n_masks} patients with lesions in both label sets. Solid: after IO; dashed: network output before IO, the same for every factor. Outlined point and dotted line: operating point tuned on the validation set. Black diamonds: IO with the ground-truth instead of the predicted lesion masks (at $\times0.1$ and $\times1$), evaluated on the ground-truth labels. Points: patient means; bands: 95\,\% patient-bootstrap confidence intervals.}}
 \label{{fig:tradeoff}}
 \end{{figure}}
 """

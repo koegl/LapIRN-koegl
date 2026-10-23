@@ -27,7 +27,11 @@ The remaining change on the ground-truth lesions is therefore not a matter of th
 Their weight comes from patients with little tumour volume: the metric is relative per scan and averaged over patients, and in the third of patients with the smallest lesion volume, missed lesions made up 45\,\% of the volume (18\,\% and 6\,\% in the other thirds) and caused 70\,\% of the missed-lesion contribution.
 Detecting more lesions at the price of precision is no remedy: on the validation set, IO with a recall-oriented mask (SUV threshold minus physiological organs, combined with nnU-Net), which detected more lesions but had a precision of 0.18, preserved worse than without the PET losses, because preserving the false-positive regions came at the expense of the true lesions.
 Better lesion segmentation, rather than a different loss weighting, is therefore the most promising way to improve preservation in IO.
-\todo{Add the runs with ground-truth lesion masks: how much of the remaining change disappears, including the part of covered lesions (inaccurate extent of detected lesions).}
+IO with the ground-truth lesion masks supports this: it lowered the volume change of the ground-truth lesions from 7.6\,\% to 2.1\,\% and the uptake change from 8.7\,\% to 3.2\,\%, close to the resampling floor, and was slightly more accurate; the contributions of both missed and detected lesions shrank.
+
+Because IO meets its objective on the predicted masks already at small weights, the PET weight mainly trades accuracy.
+A factor of $10^{-4}$ of the training-derived weights gave most of the preservation for 0.1 Dice points, whereas the factor chosen by the tuning on the validation set ($\times0.1$) cost 1.6 points more for 0.4 points less volume change; the tuning grid contained no factor between 0 and $\times0.1$.
+Even with the ground-truth masks, a ten times larger weight did not improve preservation.
 
 In IO, the two Jacobian terms carried the volume preservation, whereas the volume term $\mathcal{L}_{\mathrm{MTV}}$ cost 1.3 Dice points and contributed no significant preservation, and the uptake term $\mathcal{L}_{\mathrm{TLG}}$ had no significant effect.
 A smaller set of terms would likely suffice; we kept all four because they were chosen before the test set was evaluated, and all effects of single terms were below one percentage point.

@@ -21,10 +21,12 @@ basis; **preliminary** = not yet confirmed on the full dataset.
    Early stopping was tested as a possible alternative (T1-tum; entry below),
    but is not part of the present manuscript story without the training curves.
 4. **Q2 — where should the losses act?** (`q2.pdf`): losses only in IO (I7)
-   vs. in training + IO (I4): Dice +1.7 points (significant), preservation not
-   significantly worse. If IO is affordable, IO-only placement is enough and
-   more accurate; without IO (14× faster: ~11 s vs. ~157 s per pair), the
-   training losses are the only way to get preservation.
+   vs. in training + IO (I4): Dice +1.7 points (significant). The paired
+   preservation differences were not significant, but equivalence was not
+   established (MTV +0.8 points, 95% CI −1.0 to 2.7; TLG +0.2,
+   −1.9 to 2.4). IO-only placement is more accurate when per-pair refinement
+   is feasible; without IO (14× faster: ~11 s vs. ~157 s per pair), training
+   losses reduce the registration-induced PET changes.
 5. **Leave-one-out** (`loo.tex`): what each PET term contributes in IO.
 6. **Baselines** (`baselines.tex`, distribution plot, qualitative figure):
    training / IO columns state where the losses act. Every variant of ours is
@@ -177,3 +179,31 @@ Source: `journal_results/paper/figure_lesions.py` → `lesions.pdf`,
 - IO without PET losses worsens covered lesions (7.4 -> 7.8 % MTV, 6.9 -> 7.9 % TLG) and overall TLG (10.8 -> 11.9 %); overall MTV slightly down (10.6 -> 10.2 %).
 - Open: covered lesions still contribute 2.6 of 7.6 points although IO sees them -> test with IO on GT lesion masks (G1, G2).
 - Scripts: paper/figure_detection.py (in results), table_detection_groups.py / table_detection_contributions.py (tables, possibly dropped).
+
+## [ ] PET IO weights: tiny weights suffice; with GT masks IO preserves almost fully (test, T1 + PET IO)
+
+**Status:** confirmed — test set (28 patients, 38 pairs); W0–W1 and G1/G2 partly on the cluster (W0 matches I1: means equal to 0.1 points).
+
+| PET scale | Dice GT | MTV pred → GT | TLG pred → GT |
+|---|---|---|---|
+| 0 | 79.2 | 8.6 → 10.2 | 7.5 → 11.8 |
+| 0.0001 | 79.1 | 2.2 → 8.0 | 3.2 → 8.9 |
+| 0.001 | 78.7 | 1.5 → 7.9 | 3.1 → 8.7 |
+| 0.1 (tuned) | 77.5 | 1.0 → 7.6 | 3.3 → 8.7 |
+| 1 | 77.5 | 1.0 → 7.5 | 3.3 → 8.6 |
+| G1: GT lesion masks, x0.1 | 78.1 | → 2.1 | → 3.2 |
+| G2: GT lesion masks, x1 | 77.7 | → 2.1 | → 3.2 |
+
+- Already x0.0001 gives most of the preservation (GT MTV 10.2 -> 8.0) for 0.1 Dice points; the tuned x0.1 costs 1.7 Dice for 0.4 points more. The val tuning chose a weight that is too high (report honestly).
+- With GT lesion masks (G1), GT MTV drops to 2.1 % (vs 7.6 %), TLG to 3.2 % (near the 2.9 % resampling floor), and Dice is higher (78.1 vs 77.5): the predicted masks, not the optimisation, limit PET IO. x1 (G2) gives the same: higher weights do not help even with correct masks.
+- Coverage breakdown (contribution to MTV / TLG): I5 missed 4.8/5.7, partly 1.2/0.9, covered 2.6/3.2; G1 missed 1.5/2.2, partly 1.3/1.0, covered 1.2/1.8. Mask inaccuracy explains most of both the missed and the covered part, not all.
+
+Source: `evaluation/test/W*.csv`, `G1.csv`, `G2.csv`; `journal_results/paper/figure_tradeoff.py`, `detection.py`.
+
+## [ ] Rigidity weight sweep (val, T2 + PET IO)
+
+**Status:** 15 runs done (`journal_results/rigidity_sweep/curve.csv`); chosen = largest weight within 1 Dice point of R1 (76.7 %).
+
+- Staring: chosen x1 (0.659); costs bone alignment (bone Dice 77.3 -> 75.8; x10: 74.0), soft-tissue Dice unchanged; short-distance distortion 0.106 -> 0.073.
+- Staring + erosion and Kabsch: within 1 Dice point up to x10 (grid edge) -> grid extended by x30, x100 (4 cluster runs).
+- At x10: Staring + erosion distortion 0.062 / 0.036, Kabsch 0.063 / 0.028 (short / long), bone Dice 77.0 / 76.0.
