@@ -1,0 +1,34 @@
+\begin{table}[t]
+\centering
+\caption{IO tuning on the validation set (network trained with the PET and rigidity losses). Stage 1: learning rate / iterations; stage 2: common scale of the four PET weights relative to the training-derived values. Candidates of a stage are ranked against each other with the significance-based ranking of the challenge (final score $100\cdot\mathrm{acc}^{0.4}\,\mathrm{PET}^{0.4}\,\mathrm{reg}^{0.2}$); chosen setting in bold. Metrics: patient means. The rigidity weight was fixed at 0.25 (Sec.~\ref{sect:tuning}).}
+\label{tab:io_tuning}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccccccccc}
+\toprule
+Candidate & Rank & Score & Acc. & PET & Reg. & Dice (\%) & HD95 (mm) & $|\Delta\mathrm{MTV}|$ (\%) & $|\Delta\mathrm{TLG}|$ (\%) \\
+\midrule
+\multicolumn{10}{l}{\textit{Learning rate and iterations}} \\
+\textbf{0.0125 / 40} & 1 & 25.3 & 0.33 & 0.33 & 0.08 & 76.2 & 6.82 & 5.1 & 3.7 \\
+0.025 / 40 & 2 & 25.1 & 0.38 & 0.29 & 0.08 & 77.0 & 6.83 & 4.1 & 4.7 \\
+0.05 / 20 & 3 & 24.6 & 0.50 & 0.21 & 0.08 & 77.3 & 6.75 & 6.1 & 4.6 \\
+0.025 / 20 & 4 & 23.9 & 0.33 & 0.29 & 0.08 & 76.3 & 6.86 & 4.0 & 4.7 \\
+0.05 / 40 & 5 & 23.1 & 0.71 & 0.12 & 0.08 & 78.1 & 6.71 & 10.0 & 6.8 \\
+0.1 / 40 & 6 & 21.7 & 0.92 & 0.08 & 0.08 & 78.7 & 6.55 & 12.2 & 8.6 \\
+0.1 / 20 & 7 & 20.9 & 0.83 & 0.08 & 0.08 & 78.4 & 6.61 & 13.0 & 8.4 \\
+0.1 / 10 & 8 & 17.6 & 0.54 & 0.08 & 0.08 & 77.4 & 6.74 & 10.4 & 6.6 \\
+0.05 / 10 & 9 & 17.1 & 0.25 & 0.17 & 0.08 & 76.1 & 6.91 & 5.5 & 4.8 \\
+0.0125 / 20 & 9 & 17.1 & 0.17 & 0.25 & 0.08 & 75.1 & 7.16 & 3.9 & 4.8 \\
+0.025 / 10 & 9 & 17.1 & 0.17 & 0.25 & 0.08 & 74.9 & 7.19 & 3.5 & 5.1 \\
+0.0125 / 10 & 12 & 12.0 & 0.08 & 0.21 & 0.08 & 74.0 & 7.26 & 3.9 & 5.4 \\
+\midrule
+\multicolumn{10}{l}{\textit{PET weight scale (at the chosen learning rate and iterations)}} \\
+\textbf{$\times$0.1} & 1 & 34.4 & 0.86 & 0.21 & 0.14 & 76.4 & 6.85 & 3.6 & 4.6 \\
+$\times$0 & 2 & 31.1 & 1.00 & 0.14 & 0.14 & 78.0 & 6.67 & 8.0 & 8.9 \\
+$\times$0.25 & 3 & 26.1 & 0.43 & 0.21 & 0.14 & 76.3 & 6.87 & 3.6 & 4.5 \\
+$\times$0.5 & 4 & 24.2 & 0.36 & 0.21 & 0.14 & 76.2 & 6.87 & 3.6 & 4.5 \\
+$\times$1 & 5 & 22.2 & 0.29 & 0.21 & 0.14 & 76.1 & 6.88 & 3.6 & 4.4 \\
+$\times$2 & 6 & 19.8 & 0.21 & 0.21 & 0.14 & 76.1 & 6.88 & 3.7 & 4.4 \\
+$\times$4 & 7 & 16.8 & 0.14 & 0.21 & 0.14 & 76.1 & 6.88 & 3.8 & 4.5 \\
+\bottomrule
+\end{tabular}}
+\end{table}

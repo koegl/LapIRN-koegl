@@ -150,12 +150,28 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Interpreting the Evaluation}{31}{subsection.5.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Bone Rigidity}{32}{subsection.5.4}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Limitations}{32}{subsection.5.5}\protected@file@percent }
-\citation{ref_learn2reg_alessa,ref_learn2reg_hansen}
-\citation{ref_psmaregdata}
 \@writefile{toc}{\contentsline {section}{\numberline {6}Conclusion}{33}{section.6}\protected@file@percent }
 \newlabel{sect:conclusion}{{6}{33}{Conclusion}{section.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Appendix A: Tuning of Instance Optimisation}{33}{section.7}\protected@file@percent }
+\newlabel{sect:app_io_tuning}{{7}{33}{Appendix A: Tuning of Instance Optimisation}{section.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Appendix B: Signed Change of Lesion Volume and Uptake}{33}{section.8}\protected@file@percent }
+\newlabel{sect:app_signed}{{8}{33}{Appendix B: Signed Change of Lesion Volume and Uptake}{section.8}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {9}Appendix C: Missed and Detected Lesions}{33}{section.9}\protected@file@percent }
+\newlabel{sect:app_detection}{{9}{33}{Appendix C: Missed and Detected Lesions}{section.9}{}}
+\citation{ref_learn2reg_alessa,ref_learn2reg_hansen}
+\citation{ref_psmaregdata}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces IO tuning on the validation set (network trained with the PET and rigidity losses). Stage 1: learning rate / iterations; stage 2: common scale of the four PET weights relative to the training-derived values. Candidates of a stage are ranked against each other with the significance-based ranking of the challenge (final score $100\cdot \mathrm  {acc}^{0.4}\,\mathrm  {PET}^{0.4}\,\mathrm  {reg}^{0.2}$); chosen setting in bold. Metrics: patient means. The rigidity weight was fixed at 0.25 (Sec.\nobreakspace  {}\ref  {sect:tuning}).}}{34}{table.6}\protected@file@percent }
+\newlabel{tab:io_tuning}{{6}{34}{IO tuning on the validation set (network trained with the PET and rigidity losses). Stage 1: learning rate / iterations; stage 2: common scale of the four PET weights relative to the training-derived values. Candidates of a stage are ranked against each other with the significance-based ranking of the challenge (final score $100\cdot \mathrm {acc}^{0.4}\,\mathrm {PET}^{0.4}\,\mathrm {reg}^{0.2}$); chosen setting in bold. Metrics: patient means. The rigidity weight was fixed at 0.25 (Sec.~\ref {sect:tuning})}{table.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {10}Appendix D: Rigidity Penalties}{34}{section.10}\protected@file@percent }
+\newlabel{sect:app_rigidity}{{10}{34}{Appendix D: Rigidity Penalties}{section.10}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Signed change of lesion volume and uptake caused by registration (test set, 26 patients with lesions): positive values mean that the warped lesions are larger or take up more. Methods as in Table\nobreakspace  {}\ref  {tab:baselines} (Training / IO: losses used; PET + rig.: PET-preservation and rigidity losses). Mean$\pm $SD and median over patients.}}{35}{table.7}\protected@file@percent }
+\newlabel{tab:signed}{{7}{35}{Signed change of lesion volume and uptake caused by registration (test set, 26 patients with lesions): positive values mean that the warped lesions are larger or take up more. Methods as in Table~\ref {tab:baselines} (Training / IO: losses used; PET + rig.: PET-preservation and rigidity losses). Mean$\pm $SD and median over patients}{table.7}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Volume and uptake change of ground-truth lesions, grouped by how much of each lesion the predicted lesion mask seen by IO covers (test set; network trained without PET losses, IO with the PET weights scaled by the given factor). Per scan, the change of the summed volume or uptake of the group's lesions relative to the unwarped moving scan, in \%; mean over the patients with lesions in the group.}}{35}{table.8}\protected@file@percent }
+\newlabel{tab:detection_groups}{{8}{35}{Volume and uptake change of ground-truth lesions, grouped by how much of each lesion the predicted lesion mask seen by IO covers (test set; network trained without PET losses, IO with the PET weights scaled by the given factor). Per scan, the change of the summed volume or uptake of the group's lesions relative to the unwarped moving scan, in \%; mean over the patients with lesions in the group}{table.8}{}}
 \bibdata{references}
 \bibcite{ref_psma_clinical}{1}
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Contribution of ground-truth lesions, grouped by how much of each lesion the predicted lesion mask seen by IO covers, to the volume and uptake change of the evaluation (test set; network trained without PET losses, IO with the PET weights scaled by the given factor). Contribution of a group: the change per scan if only the group's lesions changed and all other lesions kept their volume and uptake, in \%; mean over patients. All: the evaluation metric. Since changes of different lesions in a scan partly cancel, the contributions add up to slightly more.}}{36}{table.9}\protected@file@percent }
+\newlabel{tab:detection_contributions}{{9}{36}{Contribution of ground-truth lesions, grouped by how much of each lesion the predicted lesion mask seen by IO covers, to the volume and uptake change of the evaluation (test set; network trained without PET losses, IO with the PET weights scaled by the given factor). Contribution of a group: the change per scan if only the group's lesions changed and all other lesions kept their volume and uptake, in \%; mean over patients. All: the evaluation metric. Since changes of different lesions in a scan partly cancel, the contributions add up to slightly more}{table.9}{}}
 \bibcite{ref_psmareg_challenge}{2}
 \bibcite{ref_learn2reg_hansen}{3}
 \bibcite{ref_learn2reg_alessa}{4}
@@ -185,4 +201,4 @@
 \bibcite{MODAT2010}{28}
 \bibcite{modat2014}{29}
 \bibstyle{spiejour}
-\gdef \@abspage@last{45}
+\gdef \@abspage@last{48}

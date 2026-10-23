@@ -41,7 +41,7 @@ qualitative figure).
 - [x] 15. **Methods:** evaluation protocol (patient-level aggregation, significance ranking, bootstrap), baselines + tuning grids, IO settings (rigidity fixed at 0.25), checkpoint selection, predicted-label provenance, patient exposure disclosure.
 - [ ] 16. **Results:** done: Q1, Q2, per-lesion, leave-one-out, baselines, qualitative (0146, full method), trade-off, detected vs. missed. Open: rigidity (11.1).
 - [ ] 17. **Discussion / conclusion:** written (user restructured into subsections); open: rigidity subsection.
-- [ ] 18. **Supplement:** IO tuning tables, detection tables, final-checkpoint results, component scores, signed MTV/TLG; full rigidity table once 10 is in.
+- [ ] 18. **Appendix** (in `main.tex` after the conclusion, as in JMI papers; `appendix.tex`): A IO tuning (`table_io_tuning.py`), B signed MTV/TLG (`table_signed.py`), C detection tables; open: D full rigidity table once 10 is in.
 - [ ] 21. **Abstract and contribution list:** written (abstract 235 / 250 words); open: rigidity sentence in approach / results, check contribution 4.
 - [ ] 22. **Pipeline figure:** decide whether `figures/overview.png` needs the rigidity term / IO-only variant (and whether it has a white border).
 - [ ] 23. **Front matter:** funding of E.C. (acknowledgments `\todo`); agree the author order (L. Förner 5th) with all authors.
