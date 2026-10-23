@@ -22,6 +22,7 @@ Organ labels are predicted from the CT by TotalSegmentator~\cite{ref_totalsegmen
 Lesion masks are predicted from PET/CT by an nnU-Net~\cite{nnunet} set up as the winning autoPET~III solution~\cite{rokuss2024fdgpsmahitchhikersguide}: a residual-encoder U-Net (ResEnc-L) with $192^3$ patches, initialised from their pretrained weights, with an auxiliary organ-segmentation head and misalignment augmentation.
 It was trained with patient-grouped five-fold cross-validation on all 494 scans of the non-test patients, including patients with a single examination.
 Validation scans are segmented by the fold model that did not see the patient, and test scans by the ensemble of the five fold models.
+For validation, this prevents registration and IO tuning from relying on lesion predictions made by a model trained on the same patient.
 The predicted lesion masks reach a mean Dice of 0.56 on the validation scans and 0.51 on the test scans (medians 0.69 and 0.67).
 
 \paragraph{Preprocessing.}
@@ -225,7 +226,7 @@ To check this choice, we also ranked all variants of Sec.~\ref{sect:ablations} o
 This ranking favoured the variant without any of the losses, because accuracy differences between variants are significant while differences in MTV and TLG rarely are.
 We therefore report both in the comparison with baselines, together with the variant that uses the losses only in IO.
 
-\subsection{Experiments}
+\subsection{Comparisons}
 \label{sect:ablations}
 
 \paragraph{Effect of the losses.}
@@ -255,7 +256,7 @@ On the network trained without the losses, IO with the PET terms (without rigidi
 Besides the evaluation on the ground-truth labels, we compute CT Dice, $|\Delta\mathrm{MTV}|$, and $|\Delta\mathrm{TLG}|$ on the predicted labels that IO optimises, with the same definitions.
 To separate the effect of the predicted lesion masks from that of the optimisation, IO is also run with the ground-truth lesion masks instead of the predicted ones (organ labels remain predicted), at the tuned and at the full PET weights.
 
-\paragraph{Missed and detected lesions.}
+\paragraph{Lesion coverage in predicted masks.}
 Each ground-truth lesion of the moving scan is assigned to a group by the fraction of its voxels covered by the predicted lesion mask: missed (0\,\%), partly covered ($<50\,\%$), or covered ($\geq50\,\%$).
 For each group, we report two quantities, both computed per scan as in Eq.~\eqref{eq:pet_error} and averaged over patients: the change within the group, using only the group's lesions, and the contribution of the group to the evaluation metric, i.e.\ the change if only the group's lesions changed and all other lesions kept their volume and uptake.
 Since changes of different lesions in a scan partly cancel, the contributions add up to slightly more than the evaluation metric.

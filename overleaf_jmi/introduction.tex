@@ -14,7 +14,8 @@ Classical registration solves an optimisation problem per image pair~\cite{ref_d
 Learning-based registration replaces the per-pair optimisation with one forward pass of a trained network~\cite{ref_voxelmorph_cvpr,ref_svf_voxelmorph,ref_transmorph}, and instance optimisation (IO) can refine the network output per pair at test time.
 The coarse-to-fine Laplacian pyramid network LapIRN~\cite{ref_lapirn} recovers the large deformations between whole-body scans while keeping the transformation smooth and invertible.
 With a network and optional IO, preservation constraints can act during training, during per-pair refinement, or at both stages; the choice affects both registration quality and runtime.
-In the label-guided IO studied here, refinement also requires organ and lesion masks for the scans being registered, which must be predicted when manual labels are unavailable.
+The label-guided IO studied here uses predicted organ and lesion masks for each pair; we evaluate its output against the provided labels.
+Its PET-preservation losses act on the predicted lesion mask, so a lesion absent from that mask receives no direct preservation constraint.
 
 Our earlier Learn2Reg submission introduced the affine--LapIRN--IO pipeline with PET-preservation and per-bone rigidity losses and evaluated its selected configurations on challenge validation cases using surrogate labels~\cite{ref_koegl_arxiv}.
 In this extension, we retrain on a new patient-level split of the released labelled cohort, reserve 28 patients for final evaluation, and add controlled loss-placement comparisons, tuned baselines, patient-level statistics, and per-lesion analyses.
