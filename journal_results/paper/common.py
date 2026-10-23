@@ -21,6 +21,7 @@ EVAL_DIR = REPO / "evaluation" / "test"
 BASELINE_DIR = REPO / "journal_results" / "baselines"
 OUT_DIR = Path(__file__).resolve().parent / "out"
 
+
 # baseline comparison (plan, experiment 4). training / io: the PET and
 # rigidity losses used in training and in IO ("--" in the IO column = no IO;
 # "basic" = IO with similarity and regularisation terms only); short: x label
@@ -65,8 +66,20 @@ EXTERNAL_TIMINGS = {"B3": "niftyreg", "B4": "convexadam"}
 METRIC_COLUMNS: Dict[str, tuple] = {
     "dice_ct": (r"Dice (\%) $\uparrow$", True, 100.0, 1, "dice_ct"),
     "hd95": (r"HD95 (mm) $\downarrow$", False, 1.0, 2, "hd95"),
-    "mtv_bias": (r"$|\Delta\mathrm{MTV}|$ (\%) $\downarrow$", False, 100.0, 1, "mtv_bias"),
-    "tlg_bias": (r"$|\Delta\mathrm{TLG}|$ (\%) $\downarrow$", False, 100.0, 1, "tlg_bias"),
+    "mtv_bias": (
+        r"$|\Delta\mathrm{MTV}|$ (\%) $\downarrow$",
+        False,
+        100.0,
+        1,
+        "mtv_bias",
+    ),
+    "tlg_bias": (
+        r"$|\Delta\mathrm{TLG}|$ (\%) $\downarrow$",
+        False,
+        100.0,
+        1,
+        "tlg_bias",
+    ),
     # %NDV shown in ppm (1 % = 1e4 ppm)
     "ndv_percent": (r"NDV (ppm) $\downarrow$", False, 1e4, None, "ndv_adjusted"),
 }
@@ -84,7 +97,9 @@ def load_pairs(method_id: str) -> pd.DataFrame:
 def patient_means(df: pd.DataFrame, columns: List[str]) -> pd.DataFrame:
     """One row per patient: mean over the patient's pairs (NaNs skipped)."""
     df = df.assign(
-        ndv_adjusted=(df["ndv_percent"] - ranking.NDV_EQUIVALENCE_PERCENT).clip(lower=0.0)
+        ndv_adjusted=(df["ndv_percent"] - ranking.NDV_EQUIVALENCE_PERCENT).clip(
+            lower=0.0
+        )
     )
     return df.groupby("case_id")[columns].mean()
 
@@ -97,8 +112,12 @@ def runtimes(method_id: str) -> Optional[pd.Series]:
         method = EXTERNAL_TIMINGS[method_id]
         import json
 
-        config = json.loads((BASELINE_DIR / method / "chosen.json").read_text())["config"]
-        return pd.read_csv(BASELINE_DIR / method / config / "timings_test.csv")["seconds"]
+        config = json.loads((BASELINE_DIR / method / "chosen.json").read_text())[
+            "config"
+        ]
+        return pd.read_csv(BASELINE_DIR / method / config / "timings_test.csv")[
+            "seconds"
+        ]
     return load_pairs(method_id)["runtime_s"]
 
 
@@ -124,3 +143,31 @@ def two_sided(a: pd.Series, b: pd.Series, higher: bool) -> Tuple[float, bool]:
     p_a = ranking.one_sided_p(a, b, higher)
     p_b = ranking.one_sided_p(b, a, higher)
     return min(1.0, 2 * min(p_a, p_b)), p_a < p_b
+
+
+def table_preview(tex_path: Path) -> Path:
+    """Compile a table's LaTeX into a standalone PDF next to it (for viewing in
+    the repo; the manuscript inputs the .tex)."""
+    import shutil
+    import subprocess
+    import tempfile
+
+    tex_path = Path(tex_path)
+    doc = (
+        "\\documentclass[12pt]{article}\n"
+        "\\usepackage{booktabs,graphicx,amsmath,amssymb}\n"
+        "\\usepackage[margin=1in,letterpaper]{geometry}\n"
+        "\\pagestyle{empty}\n\\begin{document}\n"
+        f"\\input{{{tex_path.resolve()}}}\n\\end{{document}}\n"
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        (Path(tmp) / "preview.tex").write_text(doc)
+        subprocess.run(
+            ["pdflatex", "-interaction=nonstopmode", "preview.tex"],
+            cwd=tmp,
+            stdout=subprocess.DEVNULL,
+            check=False,
+        )
+        pdf = tex_path.with_suffix(".pdf")
+        shutil.copy(Path(tmp) / "preview.pdf", pdf)
+    return pdf
