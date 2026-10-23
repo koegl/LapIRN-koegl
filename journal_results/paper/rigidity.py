@@ -15,7 +15,7 @@ import pandas as pd
 
 import common
 
-SOURCE = "val_old"
+SOURCE = "test"
 RUNS: Dict[str, str] = {
     "R1": "No rigidity",
     "R2": r"Staring ($\times$1)",
