@@ -1,0 +1,18 @@
+{
+  "dice_tolerance": 0.01,
+  "reference_dice": 0.7665174040399602,
+  "chosen": {
+    "R2": {
+      "method": "staring",
+      "weight": 0.6588260058946706
+    },
+    "R3": {
+      "method": "staring_eroded",
+      "weight": 10.319728792937212
+    },
+    "R4": {
+      "method": "kabsch",
+      "weight": 2.5
+    }
+  }
+}
