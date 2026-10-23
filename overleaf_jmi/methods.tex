@@ -29,6 +29,22 @@ For the network and IO, CT was clipped to $[-1000,1500]$~HU and PET to $[0,20]$~
 As in the ConvexAdam baseline of the challenge~\cite{ref_convexadam}, the patient bed was removed from the CT.
 All PET quantities in the evaluation are computed on the original SUV images.
 
+\paragraph{PET measures.}
+The PSMAReg challenge uses metabolic tumour volume (MTV) and total lesion glycolysis (TLG) to measure how registration changes the moving scan's lesion volume and uptake~\cite{ref_psmareg_challenge}.
+For a PET image $P$ in SUV, binary lesion mask $M$, and voxel volume $v$, they are
+\begin{equation}
+  \mathrm{MTV}(M) = v\sum_x M(x), \qquad
+  \mathrm{TLG}(P,M) = v\sum_x P(x)M(x).
+  \label{eq:pet_measures}
+\end{equation}
+Both quantities are computed on the same moving scan before and after warping it to the fixed frame; the challenge scorer warps PET linearly and the lesion mask by nearest neighbour.
+The reported preservation error for $Q\in\{\mathrm{MTV},\mathrm{TLG}\}$ is its absolute relative change,
+\begin{equation}
+  |\Delta Q| = \frac{|Q_{\mathrm{after}} - Q_{\mathrm{before}}|}{\max(Q_{\mathrm{before}},10^{-6})}.
+  \label{eq:pet_error}
+\end{equation}
+This measures change induced by registration, not change in disease burden between examinations.
+
 \subsection{Registration Pipeline}
 \label{sect:pipeline}
 
@@ -75,10 +91,10 @@ $\mathcal{L}_{\mathrm{NCC}}$ is the negative local normalised cross-correlation 
 PET is not used for similarity, because uptake changes between examinations with disease and therapy and a PET similarity would reward matching these changes.
 $\mathcal{L}_{\mathrm{DSC}}$ is a soft Dice loss on the CT organ labels.
 
-\paragraph{PET preservation.}
-Let $M$ be the lesion mask of the moving scan and $\widetilde M$, $\widetilde P$ the linearly warped mask and PET.
+\paragraph{PET-preservation.}
+For the differentiable loss terms, let $M$ be the moving lesion mask and $\widetilde M$, $\widetilde P$ the linearly warped mask and PET.
 Nearest-neighbour warping, as used in the evaluation, is piecewise constant in the displacement and gives no useful gradient; linear warping gives a soft lesion boundary instead.
-The volume and uptake terms penalise the relative change caused by warping,
+The volume and uptake terms penalise the relative change defined above, using the soft mask,
 \begin{equation}
   \mathcal{L}_{\mathrm{MTV}} = \left(\frac{\left|\sum_x \widetilde M(x) - \sum_x M(x)\right|}{\sum_x M(x) + \epsilon}\right)^{2},
   \qquad
@@ -160,15 +176,8 @@ All metrics are computed with the provided labels of the test scans, after warpi
 \paragraph{Alignment.}
 CT Dice and the 95th percentile of the Hausdorff distance (HD95), averaged over the 117 organ labels.
 
-\paragraph{PET preservation.}
-As in the challenge, PET (SUV) is warped linearly and the lesion mask by nearest neighbour.
-MTV is the volume of the lesion mask and TLG the sum of SUV over it times the voxel volume; both are measured on the moving scan before and after warping.
-The error of $Q\in\{\mathrm{MTV},\mathrm{TLG}\}$ is the absolute relative change,
-\begin{equation}
-  |\Delta Q| = \frac{|Q_{\mathrm{after}} - Q_{\mathrm{before}}|}{\max(Q_{\mathrm{before}},10^{-6})}.
-  \label{eq:pet_error}
-\end{equation}
-This measures what the registration does to the same scan; it does not assume that disease is unchanged between examinations.
+\paragraph{PET-preservation metrics.}
+We compute $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ as defined in Eq.~\eqref{eq:pet_error}, using the provided moving-scan lesion masks and the challenge scorer.
 Because PET and mask are warped separately, the scorer changes TLG even for the identity transformation: on the test pairs with lesions, an all-zero displacement changes TLG by $2.9\pm1.2\,\%$ (MTV: $0\,\%$).
 This resampling floor applies to every warped method; we therefore report the unregistered scans (``Initial'') without resampling.
 
