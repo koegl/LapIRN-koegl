@@ -15,6 +15,7 @@ In IO, the PET-preservation and bone-rigidity losses are enabled or disabled to 
 Training with the PET losses lowered the volume change of the lesions from 10.6\,\% to 7.6\,\% and the uptake change from 10.8\,\% to 7.6\,\%, at the cost of 1.9 Dice points.
 IO raised the Dice of every network by 2.8 to 4.4 points and kept the effect of the losses: with the PET losses, $|\Delta\mathrm{MTV}|$ was 6.3\,\% instead of 10.2\,\% and $|\Delta\mathrm{TLG}|$ 7.2\,\% instead of 11.9\,\%, for 2.8 Dice points.
 The rigidity loss alone did not change the Dice of the network and cost 0.5 points with IO, and it lowered $|\Delta\mathrm{MTV}|$ in both cases (network 9.4\,\%, with IO 7.9\,\%).
+It significantly lowered $|\Delta\mathrm{TLG}|$ for the network output (10.8\,\% to 9.5\,\%), but its reduction with IO (11.9\,\% to 10.1\,\%) was not significant (Holm-adjusted $p=0.29$).
 Combining both groups changed the mean PET metrics little relative to the PET losses alone and was the least accurate variant (72.8\,\% and 75.6\,\% Dice).
 HD95 followed the Dice in every case (network 7.2 to 7.5~mm, with IO 6.8 to 7.2~mm).
 The non-diffeomorphic volume (NDV) of every pair stayed below the challenge's 0.005\,\% threshold (50~ppm); variant means were at most 0.6~ppm.
@@ -64,13 +65,13 @@ No single term changed $|\Delta\mathrm{TLG}|$ significantly, and all changes of 
 \label{sect:res_baselines}
 
 To place these operating points in context, we compare our variants with established registration methods in Table~\ref{tab:baselines} and Fig.~\ref{fig:baselines_distribution}.
-Every variant of ours was significantly more accurate than NiftyReg (69.4\,\% Dice, 8.6~mm HD95), ConvexAdam (61.7\,\%, 9.2~mm), and the affine pre-registration (46.4\,\%, 13.9~mm), and stayed below the folding threshold on every test pair.
+Every variant of ours had higher mean CT Dice and lower mean HD95 than NiftyReg (69.4\,\% Dice, 8.6~mm HD95), ConvexAdam (61.7\,\%, 9.2~mm), and the affine pre-registration (46.4\,\%, 13.9~mm), and stayed below the folding threshold on every test pair.
 NiftyReg, tuned on the validation set, exceeded the threshold on 5 of 38 validation pairs and 8 of 38 test pairs (21\,\%); its test-set NDV averaged 1170~ppm over patients, driven by three pairs with 0.8 to 1.3\,\% NDV.
 IO directly after the affine pre-registration reached only 52.7\,\% Dice: within the same iteration budget, IO cannot replace the network.
 Its MTV and TLG change was the lowest of all methods (3.4\,\%), because the deformation it adds to the affine is small.
 
 Among our variants, IO without the PET and rigidity losses was the most accurate (79.2\,\% Dice), and our full method, with the losses in training and IO, preserved best ($|\Delta\mathrm{MTV}|$ 6.2\,\%, significantly lower than without the losses).
-The variant with the losses only in IO ranked first (77.3\,\% Dice, 7.0\,\% $|\Delta\mathrm{MTV}|$), followed by the full method and the variant without the losses; their rank intervals overlap (1--5).
+By the composite score, the variant with the losses only in IO ranked first (77.3\,\% Dice, 7.0\,\% $|\Delta\mathrm{MTV}|$), while the full method and basic IO tied for second; all three had bootstrap rank intervals of 1--5, so this rank order is descriptive.
 The ranking was decided mainly by accuracy: after correction for multiple comparisons, few differences in preservation were significant (on $|\Delta\mathrm{MTV}|$, each variant with the losses outperformed one other method and IO after the affine two; on $|\Delta\mathrm{TLG}|$, only IO after the affine outperformed others), and none in folding.
 The network alone needs 11~s per pair, as fast as ConvexAdam and ten times faster than NiftyReg (108~s); IO adds about 2.5~minutes.
 Figure~\ref{fig:qualitative} shows a test pair whose lesion volume grew tenfold between baseline and follow-up (from 2400 to 24\,191 voxels).

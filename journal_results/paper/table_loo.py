@@ -55,9 +55,10 @@ def main() -> None:
             rows.append(r"\midrule")
 
     n = len(patients[REFERENCE[0]])
+    n_pet = patients[REFERENCE[0]]["mtv_bias"].notna().sum()
     tex = rf"""\begin{{table}}[t]
 \centering
-\caption{{Contribution of each PET term in IO (test set, {n} patients): network trained without PET losses (T1), IO with all PET terms or with one term removed. Mean$\pm$SD over patients. $^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than with all terms (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected within each column, $p<0.05$).}}
+\caption{{Contribution of each PET term in IO (test set; CT Dice: {n} patients, PET: {n_pet} patients): network trained without PET losses (T1), IO with all PET terms or with one term removed. Mean$\pm$SD over patients. $^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than with all terms (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over four comparisons within each column, $p<0.05$).}}
 \label{{tab:loo}}
 \scriptsize
 \setlength{{\tabcolsep}}{{3pt}}

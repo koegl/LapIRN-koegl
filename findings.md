@@ -16,8 +16,10 @@ basis; **preliminary** = not yet confirmed on the full dataset.
    I1 (no losses): the ranking is dominated by accuracy, biomarker differences
    are rarely significant (methods section).
 3. **Q1 — do the losses work?** (`ablations.tex`, network | network + IO):
-   PET and rigidity lower |ΔMTV| / |ΔTLG| significantly in both blocks, at a
-   known accuracy cost (PET about −2 to −3 Dice points, rigidity ≤ 0.5).
+   PET lowers both |ΔMTV| and |ΔTLG| significantly in both blocks. Rigidity
+   lowers |ΔMTV| in both blocks and |ΔTLG| for network output, but its TLG
+   reduction with IO is not significant (10.1 % vs. 11.9 %, Holm-adjusted
+   p = 0.29). PET costs about 2–3 Dice points; rigidity costs at most 0.5.
    Early stopping was tested as a possible alternative (T1-tum; entry below),
    but is not part of the present manuscript story without the training curves.
 4. **Q2 — where should the losses act?** (`q2.pdf`): losses only in IO (I7)
@@ -29,8 +31,8 @@ basis; **preliminary** = not yet confirmed on the full dataset.
    losses reduce the registration-induced PET changes.
 5. **Leave-one-out** (`loo.tex`): what each PET term contributes in IO.
 6. **Baselines** (`baselines.tex`, distribution plot, qualitative figure):
-   training / IO columns state where the losses act. Every variant of ours is
-   significantly more accurate than NiftyReg / ConvexAdam / Affine, with NDV
+   training / IO columns state where the losses act. Every variant of ours has
+   higher mean Dice and lower mean HD95 than NiftyReg / ConvexAdam / Affine, with NDV
    below the 0.005 % threshold on every test pair; ranks: IO only (I7) 1,
    basic IO (I1) and full (I4) 2. Affine + IO
    (no network) reaches only 52.7 % Dice: the network is essential.

@@ -62,9 +62,11 @@ def main() -> None:
     rows = [f"{name} & " + " & ".join(c) + r" \\" for name, c in cells.items()]
     n = len(patients[CONDITIONS[reference][0]])
     n_pairs = len(common.load_run(CONDITIONS[reference][0]))
+    n_pet = patients[CONDITIONS[reference][0]]["mtv_bias"].notna().sum()
+    n_pet_pairs = common.load_run(CONDITIONS[reference][0])["mtv_bias"].notna().sum()
     tex = rf"""\begin{{table}}[t]
 \centering
-\caption{{Effect of the PET and rigidity losses on the test set ({n} patients, {n_pairs} pairs). Each network is trained with the given losses and evaluated as is (left) and with instance optimisation (IO) using the same losses (right). Mean$\pm$SD over patients. $^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than ``Neither'' in the same block (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected within each column, $p<0.05$).}}
+\caption{{Effect of the PET and rigidity losses on the test set (CT Dice: {n} patients, {n_pairs} pairs; PET: {n_pet} patients, {n_pet_pairs} pairs). Each network is trained with the given losses and evaluated as is (left) and with instance optimisation (IO) using the same losses (right). Mean$\pm$SD over patients. $^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than ``Neither'' in the same block (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over three comparisons within each column, $p<0.05$).}}
 \label{{tab:ablations}}
 \scriptsize
 \setlength{{\tabcolsep}}{{3pt}}

@@ -140,10 +140,11 @@ def main() -> None:
     text = effects(patients)
     (out_dir / "q2_effects.txt").write_text(text + "\n")
     n = len(patients[REFERENCE[0]])
+    n_pet = patients[REFERENCE[0]]["mtv_bias"].notna().sum()
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/q2.pdf}}
-\caption{{Losses in training and IO versus only in IO (test set, {n} patients). For each loss set, filled: network trained with the losses, then IO with them; hollow: network trained without them (T1), same IO. Grey: neither loss (I1). Points: patient means with 95\,\% patient-bootstrap confidence intervals.}}
+\caption{{Losses in training and IO versus only in IO (test set; CT Dice: {n} patients, PET: {n_pet} patients). For each loss set, filled: network trained with the losses, then IO with them; hollow: network trained without them (T1), same IO. Grey: neither loss (I1). Points: patient means with 95\,\% patient-bootstrap confidence intervals for each method; confidence intervals for paired differences are reported in the text.}}
 \label{{fig:q2}}
 \end{{figure}}
 """

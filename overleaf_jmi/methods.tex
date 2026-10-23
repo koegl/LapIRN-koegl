@@ -202,11 +202,14 @@ We also measure the fraction of stencil reads that leave the bone of the centre 
 \label{sect:statistics}
 
 A patient may contribute several pairs and many lesions.
-We therefore average every metric over the pairs of a patient first and use patients as the unit of all tests, rankings, and confidence intervals (28 test patients).
-Paired differences between two methods are tested with the two-sided Wilcoxon signed-rank test~\cite{ref_wilcoxon} on patient values and corrected for multiple comparisons with Holm's method~\cite{ref_holm} within each table and metric; we call a difference significant if the corrected $p<0.05$.
-Confidence intervals are 95\,\% percentile intervals over patient bootstrap samples~\cite{ref_bootstrap}; for per-lesion statistics, patients are resampled together with all their lesions (cluster bootstrap).
+We average each metric over a patient's eligible pairs before analysis: CT Dice, HD95, and NDV comparisons include 28 test patients, whereas MTV and TLG comparisons include the 26 patients with moving-scan lesions.
+Paired comparisons use only patients with values for both methods and a two-sided Wilcoxon signed-rank test~\cite{ref_wilcoxon}; the implementation doubles the smaller one-sided $p$-value, drops zero paired differences, assigns average ranks to tied nonzero magnitudes, and returns $p=1$ when all differences are zero.
+Holm correction~\cite{ref_holm} is applied separately per metric to three comparisons against ``Neither'' in each ablation block, three IO-only versus training-plus-IO comparisons, four leave-one-out comparisons, and comparisons of the full method against the other baseline-table methods (nine for CT, HD95, and NDV; eight for MTV and TLG, because ``Initial'' has zero PET change by construction).
+We call a difference significant if its adjusted $p<0.05$.
+Confidence intervals are 95\,\% percentile patient-bootstrap intervals~\cite{ref_bootstrap}: scan-level plots show intervals for method means, whereas intervals stated for IO-only minus training-plus-IO are for paired patient-mean differences.
+For per-lesion medians, patients are resampled together with all their lesions (cluster bootstrap).
 
-For the comparison with baselines, we additionally rank all methods with the significance-based ranking of the challenge: per metric, every pair of methods is compared with a one-sided Wilcoxon test (Holm-corrected), and a method scores (number of methods it significantly outperforms $+1$)/$K$ for $K$ methods.
+For the comparison with baselines, we additionally rank the nine resampled methods with the significance-based ranking of the challenge: per metric, all 72 directed method pairs are compared with one-sided Wilcoxon tests and Holm correction, and a method scores (number of methods it significantly outperforms $+1$)/$K$ for $K$ methods.
 Scores are averaged into accuracy (CT Dice, HD95), PET preservation ($|\Delta\mathrm{MTV}|$, $|\Delta\mathrm{TLG}|$), and regularity (NDV, after subtracting a practical-equivalence threshold of 0.005\,\% per pair), and combined into $100\cdot\mathrm{acc}^{0.4}\,\mathrm{PET}^{0.4}\,\mathrm{reg}^{0.2}$.
 The challenge additionally scores Dice and HD95 of organs with physiological PET uptake, for which no labels are available to us; we omit them.
 Dice or HD95 of lesions would not be meaningful either, because lesions appear, disappear, and change between examinations.
