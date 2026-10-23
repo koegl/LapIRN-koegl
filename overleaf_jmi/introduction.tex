@@ -16,9 +16,10 @@ The coarse-to-fine Laplacian pyramid network LapIRN~\cite{ref_lapirn} recovers t
 With a network and optional IO, preservation constraints can act during training, during per-pair refinement, or at both stages; the choice affects both registration quality and runtime.
 In the label-guided IO studied here, refinement also requires organ and lesion masks for the scans being registered, which must be predicted when manual labels are unavailable.
 
-In a challenge submission~\cite{ref_koegl_arxiv}, we adapted LapIRN to PSMA PET/CT and added losses that preserve the PET biomarkers of lesions and keep bones rigid.
-That submission was developed and evaluated within the challenge protocol.
-Here, we examine the alignment--preservation trade-off on a new patient-level split, with retrained networks, tuned baselines, a test set held out for this study, and patient-level statistics.
+Our earlier Learn2Reg submission introduced the affine--LapIRN--IO pipeline with PET-preservation and per-bone rigidity losses and evaluated its selected configurations on challenge validation cases using surrogate labels~\cite{ref_koegl_arxiv}.
+In this extension, we retrain on a new patient-level split of the released labelled cohort, reserve 28 patients for final evaluation, and add controlled loss-placement comparisons, tuned baselines, patient-level statistics, and per-lesion analyses.
+These 28 patients were among the challenge data available during development of the earlier method, so the split provides a holdout for the present analyses rather than an independent external cohort.
+
 First, we ask whether the PET-preservation and bone-rigidity losses reduce registration-induced change and what alignment accuracy they cost, both with and without IO.
 We then ask whether applying the losses only during IO can recover the preservation obtained by also using them in training, and compare that choice with the faster network-only setting.
 Finally, we analyse changes to individual lesions and the coverage of the predicted lesion masks used by IO to understand what limits preservation.
