@@ -87,6 +87,16 @@ The Jacobian determinant (g) shows fine-grained local expansion and compression 
 We compare rigidity penalties by how well they preserve within-bone distances without sacrificing anatomical alignment or deforming tissue near bone boundaries.
 \todo{After the validation sweeps and test runs: curve of Dice vs.\ distance distortion (validation), test table with bone/soft-tissue alignment, distance distortion, NDV in bone and boundary band, stencil leakage, erosion retention. Leakage on all 560 scans: 21.2\,\% of stencil reads leave the bone; erosion keeps 35.5\,\% of bone voxels and removes 23\,\% of bones (ribs: 2.4\,\% kept, 58\,\% removed).}
 
+\input{figures/rigidity}
+\todo{Figure~\ref{fig:rigidity}: wait for the final validation sweep (whole-bone distance distortion), then rerun \texttt{figure\_rigidity.py} (reads \texttt{rigidity\_sweep/curve.csv}); currently the first sweep with the interior-only distortion.}
+
+\input{tables/rigidity}
+\todo{Table~\ref{tab:rigidity}: wait for the final results and switch to the test runs R1--R4 (\texttt{rigidity.SOURCE = "test"}), then rerun \texttt{table\_rigidity.py}; currently a draft on the validation set with the old interior-only distortion and without the Staring energy.}
+
+\input{figures/rigidity_preservation}
+\todo{Figure~\ref{fig:rigidity_preservation}: once the final validation sweep is synced, set \texttt{SWEEP\_DIR} to \texttt{rigidity\_sweep} and \texttt{REFERENCE\_CSV} to \texttt{evaluation/val/I2.csv} in \texttt{figure\_rigidity\_preservation.py} and rerun; currently the first sweep.}
+
+
 \subsection{Accuracy--Preservation Trade-off}
 \label{sect:res_tradeoff}
 We vary the PET-loss weights in IO to show how alignment and lesion preservation change together and whether stronger weights resolve the residual error.

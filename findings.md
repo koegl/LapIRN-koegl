@@ -180,7 +180,7 @@ Source: `journal_results/paper/figure_lesions.py` → `lesions.pdf`,
 - Open: covered lesions still contribute 2.6 of 7.6 points although IO sees them -> test with IO on GT lesion masks (G1, G2).
 - Scripts: paper/figure_detection.py (in results), table_detection_groups.py / table_detection_contributions.py (tables, possibly dropped).
 
-## [ ] PET IO weights: tiny weights suffice; with GT masks IO preserves almost fully (test, T1 + PET IO)
+## [x] PET IO weights: tiny weights suffice; with GT masks IO preserves almost fully (test, T1 + PET IO)
 
 **Status:** confirmed — test set (28 patients, 38 pairs); W0–W1 and G1/G2 partly on the cluster (W0 matches I1: means equal to 0.1 points).
 
@@ -202,10 +202,11 @@ Source: `evaluation/test/W*.csv`, `G1.csv`, `G2.csv`; `journal_results/paper/fig
 
 ## [ ] Rigidity weight sweep (val, T2 + PET IO)
 
-**Status:** 15 runs done (`journal_results/rigidity_sweep/curve.csv`); chosen = largest weight within 1 Dice point of R1 (76.7 %).
+**Status:** first sweep done (19 runs, `rigidity_sweep_interior_metric/`); rerun with whole-bone metrics queued. Chosen = largest weight within 1 Dice point of R1 (76.7 %), grid x0.1-x100.
 
-- Staring: chosen x1 (0.659); costs bone alignment (bone Dice 77.3 -> 75.8; x10: 74.0), soft-tissue Dice unchanged; short-distance distortion 0.106 -> 0.073.
-- Staring + erosion and Kabsch: within 1 Dice point up to x10 -> grid extended by x30, x100, capped at x100. Final choice: Staring x1, Staring + erosion x100, Kabsch x100.
-- Staring + erosion never costs Dice (76.8 at x100, even slightly up): erosion leaves 65 % of bone voxels / almost all ribs unconstrained, so the penalty barely restricts the deformation. Caveat: distance distortion is measured on eroded interior points, exactly where eroded Staring acts (favours it).
-- Kabsch reaches the tolerance at x30-x100 (75.7-75.8 vs threshold 75.65); best long-distance distortion (0.024 at x100 vs 0.034 erosion, 0.037 Staring x1).
-- At x10: Staring + erosion distortion 0.062 / 0.036, Kabsch 0.063 / 0.028 (short / long), bone Dice 77.0 / 76.0.
+- Chosen: Staring x1 (0.659), Staring + erosion x100 (103.2), Kabsch x100 (25). Erosion and Kabsch stayed within the tolerance up to x10 -> grid extended by x30, x100, capped there.
+- Staring costs bone alignment (bone Dice 77.3 -> 75.8 at x1, 74.0 at x10), soft-tissue Dice unchanged.
+- Staring + erosion never costs Dice (76.8 at x100): erosion leaves 65 % of bone voxels / almost all ribs unconstrained.
+- **Metric bias found:** the distance distortion was measured on eroded interiors only, exactly where eroded Staring acts -> favoured it. Fixed: distortion now on whole bones for every method (`bone_metrics.py`); added `staring_energy_bone` (Staring penalty on the whole bone; + properness / orthonormality / affinity terms). Sweep and test runs rerun on the cluster.
+- Cross-evaluation draft (old val, at chosen weights, % of no rigidity): each penalty wins on its own measure (Staring: det/ortho 60 %; Kabsch: rigid-fit residual 66 %); on distance distortion Kabsch is best (short 50 %, long 53 %); bone Dice cost: Kabsch -2.4, Staring -1.6, erosion -0.4 points.
+- Preservation (old val, at chosen weights): MTV 5.5 % (none) / 4.6 (Staring) / 3.8 (erosion) / 4.1 (Kabsch); erosion vs. R1 n.s. (p_holm 0.16); erosion vs. Staring and vs. Kabsch p_holm 0.043 (Holm over 3 pairs) -> borderline, decide on test. TLG: nothing significant. Possible reason: the properness term (det J = 1) penalises local volume change, at x100 in bone interiors where most PSMA lesions are.

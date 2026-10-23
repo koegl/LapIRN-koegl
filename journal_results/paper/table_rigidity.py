@@ -6,10 +6,14 @@ Columns: alignment (CT, bone, soft-tissue Dice), rigidity measured three ways
 deviation of det J from 1 and of J from orthonormality, the measures the
 Staring penalty optimises; distance distortion, optimised by neither), NDV in
 bone, and preservation. Mean +- SD over patients; marks vs. R1 (two-sided
-Wilcoxon on patient values, Holm over the three penalties per column).
+Wilcoxon on patient values, Holm over the three penalties per column). The
+pairwise tests between the penalties (Holm over the three pairs per column),
+for the text, go to out/tables/rigidity_pairwise.txt.
 
     ../../.venv/bin/python table_rigidity.py  ->  out/tables/rigidity.tex
 """
+
+import itertools
 
 import common
 import rigidity
@@ -94,7 +98,35 @@ Rigidity penalty & {header} \\
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "rigidity.tex").write_text(tex)
     common.table_preview(out_dir / "rigidity.tex")
+    pairwise_text = pairwise(patients, columns)
+    (out_dir / "rigidity_pairwise.txt").write_text(pairwise_text + "\n")
     print(body)
+    print(pairwise_text)
+
+
+def pairwise(patients, columns) -> str:
+    """Pairwise tests between the three penalties, for the text: mean
+    difference (a - b, display units) and two-sided Wilcoxon p, Holm over the
+    three pairs per column."""
+    pairs = list(itertools.combinations(list(RUNS)[1:], 2))
+    lines = []
+    for column in columns:
+        _, higher, scale, decimals = MEASURES[column]
+        if patients["R1"][column].isna().all():
+            continue
+        p, diff = {}, {}
+        for a, b in pairs:
+            key = f"{a} vs {b}"
+            p[key], _ = two_sided(patients[a][column], patients[b][column], higher)
+            diff[key] = ((patients[a][column] - patients[b][column]) * scale).mean()
+        adjusted = common.holm(p)
+        for key in p:
+            star = " *" if adjusted[key] < 0.05 else ""
+            lines.append(
+                f"{column:22s} {key}: diff {diff[key]:+.{decimals + 1}f}"
+                f"  p {p[key]:.3g}  p_holm {adjusted[key]:.3g}{star}"
+            )
+    return "\n".join(lines)
 
 
 if __name__ == "__main__":
