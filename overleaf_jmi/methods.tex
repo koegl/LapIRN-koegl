@@ -173,6 +173,7 @@ All generated code was reviewed and tested by the authors, who are responsible f
 \label{sect:metrics}
 
 All metrics are computed with the provided labels of the test scans, after warping the moving scan with the scorer of the challenge.
+Of the 28 test patients (38 pairs), 26 patients (30 pairs) have lesions in the moving scan and contribute to the PET metrics.
 
 \paragraph{Alignment.}
 CT Dice and the 95th percentile of the Hausdorff distance (HD95), averaged over the 117 organ labels.
@@ -185,7 +186,10 @@ This resampling floor applies to every warped method; we therefore report the un
 \paragraph{Per-lesion change.}
 The aggregate errors of Eq.~\eqref{eq:pet_error} can hide large changes of individual lesions that cancel.
 We therefore also split the moving lesion mask into 26-connected components and compute $|\Delta\mathrm{MTV}|$ for each.
-Lesions are grouped by size (small $<0.5$~ml, medium $<5$~ml, large) and location (bone-associated if at least half of the lesion lies on a skeletal label); lesions with fewer than five voxels are excluded.
+The 30 pairs with lesions contain 1435 components.
+For the per-lesion size and location analysis, we exclude 108 components smaller than five voxels: a one-voxel difference changes their volume by at least 25\,\%, making their relative changes highly quantised.
+This leaves 1327 lesions, grouped by size (small $<0.5$~ml, medium $<5$~ml, large) and location (bone-associated if at least half of the lesion lies on a skeletal label).
+Scan-level PET metrics and the lesion-coverage analysis retain all 1435 components so that the coverage decomposition includes the full evaluated lesion volume.
 
 \paragraph{Deformation quality.}
 Percentage of non-diffeomorphic volume (NDV) inside the body, as defined by the challenge~\cite{Liu2024}.

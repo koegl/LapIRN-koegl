@@ -39,7 +39,7 @@ Without IO, training with the losses reduced registration-induced PET changes in
 \subsection{Per-Lesion Volume Change}
 \label{sect:res_lesions}
 
-To reveal changes hidden by scan-level aggregation, Fig.~\ref{fig:lesions} shows the volume change of 1327 individual lesions (26 patients with lesions).
+To reveal changes hidden by scan-level aggregation, Fig.~\ref{fig:lesions} shows the volume change of 1327 lesions from 26 patients, after excluding 108 components smaller than five voxels.
 Small lesions changed most in every condition: for bone-associated lesions with IO and without the losses, the median change was 33\,\% (small), 17\,\% (medium), and 9\,\% (large).
 A small lesion has fewer than about 20 voxels, so gaining or losing one or two voxels is already a large relative change.
 Without the losses, IO increased the distortion of lesions, most of all of small bone lesions (median from 20\,\% to 33\,\%); bone lesions tended to grow (median signed change $+3$ to $+10$\,\%) and soft-tissue lesions to shrink ($-9$ to $-13$\,\%).
@@ -116,7 +116,7 @@ At $\times1$, preservation was unchanged (2.1\,\% MTV, 3.2\,\% TLG; 77.7\,\% Dic
 \subsection{Lesion Coverage in Predicted Masks}
 \label{sect:res_detection}
 
-To locate the remaining registration-induced change, we group provided lesions by how much of each lesion overlaps the mask used by IO (Fig.~\ref{fig:detection}): 214 had no overlap (missed; 6\,\% of lesion volume), 155 had less than 50\,\% overlap (partly covered; 6\,\%), and 1066 had at least 50\,\% overlap (covered; 88\,\%).
+To locate the remaining registration-induced change, we group all 1435 provided lesions, including the 108 smaller than five voxels, by how much each overlaps the mask used by IO (Fig.~\ref{fig:detection}): 214 had no overlap (missed; 6\,\% of lesion volume), 155 had less than 50\,\% overlap (partly covered; 6\,\%), and 1066 had at least 50\,\% overlap (covered; 88\,\%).
 
 PET IO reduced the change only of covered lesions, from 7.8\,\% to 4.9\,\% for $|\Delta\mathrm{MTV}|$ and from 7.9\,\% to 5.1\,\% for $|\Delta\mathrm{TLG}|$ (IO without and with the PET losses at the tuned weights).
 Missed and partly covered lesions changed as much with the PET losses as without them (missed: 14.9\,\% and 15.7\,\%; partly covered: 11.3\,\% and 11.5\,\%).

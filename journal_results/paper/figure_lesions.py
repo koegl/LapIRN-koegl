@@ -126,11 +126,12 @@ def main() -> None:
     fig.savefig(out_dir / "lesions.pdf", bbox_inches="tight", pad_inches=0)
     (out_dir / "lesions_summary.txt").write_text("\n".join(lines) + "\n")
     n_lesions = len(lesions["T1"])
+    n_excluded = len(pd.read_csv(common.EVAL_DIR / "T1_lesions.csv")) - n_lesions
     n_patients = lesions["T1"]["case_id"].nunique()
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/lesions.pdf}}
-\caption{{Per-lesion volume change on the test set ({n_lesions} lesions of {n_patients} patients), by location (soft tissue / bone-associated, $\geq$50\,\% of the lesion on bone) and size (small $<$0.5\,ml, medium $<$5\,ml, large). Median $|\Delta\mathrm{{MTV}}|$ per lesion; left: network output, right: with instance optimisation (IO) using the same losses. Error bars: 95\,\% confidence intervals from a patient-cluster bootstrap. Lesions below 5 voxels are excluded.}}
+\caption{{Per-lesion volume change on the test set ({n_lesions} lesions of {n_patients} patients after excluding {n_excluded} components smaller than five voxels), by location (soft tissue / bone-associated, $\geq$50\,\% of the lesion on bone) and size (small $<$0.5\,ml, medium $<$5\,ml, large). Median $|\Delta\mathrm{{MTV}}|$ per lesion; left: network output, right: with instance optimisation (IO) using the same losses. Error bars: 95\,\% confidence intervals from a patient-cluster bootstrap.}}
 \label{{fig:lesions}}
 \end{{figure}}
 """
