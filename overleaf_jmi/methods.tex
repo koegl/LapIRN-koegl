@@ -38,7 +38,7 @@ For a PET image $P$ in SUV, binary lesion mask $M$, and voxel volume $v$, they a
   \mathrm{TLG}(P,M) = v\sum_x P(x)M(x).
   \label{eq:pet_measures}
 \end{equation}
-Both quantities are computed on the same moving scan before and after warping it to the fixed frame; the challenge scorer warps PET linearly and the lesion mask by nearest neighbour.
+Both quantities are computed on the same moving scan before and after warping it to the fixed frame; as in the challenge scorer, both PET and the lesion mask are warped by nearest-neighbour interpolation.
 The reported preservation error for $Q\in\{\mathrm{MTV},\mathrm{TLG}\}$ is its absolute relative change,
 \begin{equation}
   |\Delta Q| = \frac{|Q_{\mathrm{after}} - Q_{\mathrm{before}}|}{\max(Q_{\mathrm{before}},10^{-6})}.
@@ -207,7 +207,7 @@ We also measure the fraction of stencil reads that leave the bone of the centre 
 A patient may contribute several pairs and many lesions.
 We average each metric over a patient's eligible pairs before analysis: CT Dice, HD95, and NDV comparisons include 28 test patients, whereas MTV and TLG comparisons include the 26 patients with moving-scan lesions.
 Paired comparisons use only patients with values for both methods and a two-sided Wilcoxon signed-rank test~\cite{ref_wilcoxon}; the implementation doubles the smaller one-sided $p$-value, drops zero paired differences, assigns average ranks to tied nonzero magnitudes, and returns $p=1$ when all differences are zero.
-Holm correction~\cite{ref_holm} is applied separately per metric to three comparisons against ``Neither'' in each ablation block, three IO-only versus training-plus-IO comparisons, four leave-one-out comparisons, and comparisons of the full method against the other baseline-table methods (nine for CT, HD95, and NDV; eight for MTV and TLG, because ``Initial'' has zero PET change by construction).
+Holm correction~\cite{ref_holm} is applied separately per metric to three comparisons against ``None'' (no losses) in each ablation block, three IO-only versus training-plus-IO comparisons, four leave-one-out comparisons, and comparisons of the full method against the other baseline-table methods (nine for CT, HD95, and NDV; eight for MTV and TLG, because ``Initial'' has zero PET change by construction).
 We call a difference significant if its adjusted $p<0.05$.
 Confidence intervals are 95\,\% percentile patient-bootstrap intervals~\cite{ref_bootstrap}: scan-level plots show intervals for method means, whereas intervals stated for IO-only minus training-plus-IO are for paired patient-mean differences.
 For per-lesion medians, patients are resampled together with all their lesions (cluster bootstrap).

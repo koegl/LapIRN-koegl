@@ -35,8 +35,9 @@ Because IO meets its objective on the predicted masks already at small weights, 
 A factor of $10^{-4}$ of the training-derived weights gave most of the preservation for 0.1 Dice points, whereas the factor chosen by the tuning on the validation set ($\times0.1$) cost 1.6 points more for 0.4 points less volume change; the tuning grid contained no factor between 0 and $\times0.1$.
 Even with the ground-truth masks, a ten times larger weight did not improve preservation.
 
-In IO, the two Jacobian terms carried the volume preservation, whereas the volume term $\mathcal{L}_{\mathrm{MTV}}$ cost 1.3 Dice points and contributed no significant preservation, and the uptake term $\mathcal{L}_{\mathrm{TLG}}$ had no significant effect.
-A smaller set of terms would likely suffice; we kept all four because they were chosen before the test set was evaluated, and all effects of single terms were below one percentage point.
+In IO, the Jacobian terms carried the preservation, whereas removing the volume term $\mathcal{L}_{\mathrm{MTV}}$ or the uptake term $\mathcal{L}_{\mathrm{TLG}}$ improved $|\Delta\mathrm{TLG}|$ by 1.1 and 2.0 points, respectively, and removing $\mathcal{L}_{\mathrm{MTV}}$ also gained 0.6 Dice points.
+Both terms act on the soft, linearly warped mask, whose change differs from the nearest-neighbour change that is evaluated; a surrogate closer to the evaluated quantity, or the Jacobian terms alone, would likely preserve more.
+We kept all four terms because they were chosen before the test set was evaluated.
 
 Aggregate MTV and TLG changes hide how individual lesions are deformed.
 Small lesions changed most in every condition, partly because a change of one or two voxels is already a large relative change.

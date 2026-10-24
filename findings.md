@@ -30,6 +30,13 @@ basis; **preliminary** = not yet confirmed on the full dataset.
    is feasible; without IO (14× faster: ~11 s vs. ~157 s per pair), training
    losses reduce the registration-induced PET changes.
 5. **Leave-one-out** (`loo.tex`): what each PET term contributes in IO.
+   - Official scorer (test, I5 = T1 + PET IO): the direct volume / uptake terms
+     are counterproductive. Removing L_TLG improves |ΔTLG| 11.8 → 9.8 %; removing
+     L_MTV improves |ΔTLG| 11.8 → 10.7 % and Dice 78.6 → 79.3 % (all significant).
+     The Jacobian terms carry the preservation (without L_J̄: |ΔMTV| 9.3 → 10.4 %,
+     |ΔTLG| 11.8 → 13.5 %). Likely cause: L_MTV / L_TLG act on the soft, linearly
+     warped mask and PET, the scorer warps both nearest. Candidate for the
+     abstract / cover letter (placement to decide).
 6. **Baselines** (`baselines.tex`, distribution plot, qualitative figure):
    training / IO columns state where the losses act. Every variant of ours has
    higher mean Dice and lower mean HD95 than NiftyReg / ConvexAdam / Affine, with NDV

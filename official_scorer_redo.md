@@ -35,9 +35,9 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
   - [x] TLG figure (appendix B, same script)
   - [x] text
   - [ ] outlook: P1 / P2 numbers
-- [ ] Leave-one-out
-  - [ ] table (`table_loo.py`)
-  - [ ] text
+- [x] Leave-one-out
+  - [x] table (`table_loo.py`)
+  - [x] text
 - [ ] Comparison with baselines
   - [ ] table (`table_baselines.py`; "Ours" = I7)
   - [ ] distribution figure (`plot_baselines_distribution.py`)

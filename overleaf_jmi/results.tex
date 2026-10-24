@@ -58,10 +58,12 @@ The medians of small lesions take only a few distinct values (e.g.\ 12.5\,\%, 14
 \subsection{Contribution of Each PET Term}
 \label{sect:res_loo}
 To identify which constraints account for preservation in IO, we remove one PET term at a time from IO on the network trained without the losses (Table~\ref{tab:loo}).
-The two Jacobian terms carried the volume preservation: without $\mathcal{L}_{\overline{J}}$, $|\Delta\mathrm{MTV}|$ increased from 7.6\,\% to 8.3\,\%, and without $\mathcal{L}_{J}$ to 7.8\,\% (both significant).
-The volume term $\mathcal{L}_{\mathrm{MTV}}$ mainly cost accuracy: without it, Dice increased by 1.3 points (from 77.5\,\% to 78.8\,\%, significant), while $|\Delta\mathrm{MTV}|$ increased only from 7.6\,\% to 8.0\,\% and $|\Delta\mathrm{TLG}|$ decreased from 8.7\,\% to 8.2\,\% (neither significant).
-Switching off $\mathcal{L}_{\mathrm{TLG}}$ changed no metric significantly ($|\Delta\mathrm{TLG}|$ 9.1\,\%, $|\Delta\mathrm{MTV}|$ 7.2\,\%).
-No single term changed $|\Delta\mathrm{TLG}|$ significantly, and all changes of $|\Delta\mathrm{MTV}|$ were below one percentage point.
+The mean-Jacobian term $\mathcal{L}_{\overline{J}}$ carried the preservation: without it, $|\Delta\mathrm{MTV}|$ increased from 9.3\,\% to 10.4\,\% and $|\Delta\mathrm{TLG}|$ from 11.8\,\% to 13.5\,\% (both significant).
+Without the voxel-wise term $\mathcal{L}_{J}$, $|\Delta\mathrm{TLG}|$ increased to 12.3\,\% (significant), whereas $|\Delta\mathrm{MTV}|$ was unchanged (9.3\,\%).
+The volume and uptake terms worked against preservation.
+Without $\mathcal{L}_{\mathrm{MTV}}$, Dice increased from 78.6\,\% to 79.3\,\% and $|\Delta\mathrm{TLG}|$ decreased to 10.7\,\% (both significant; $|\Delta\mathrm{MTV}|$ 8.6\,\%, not significant).
+Without $\mathcal{L}_{\mathrm{TLG}}$, $|\Delta\mathrm{TLG}|$ decreased to 9.8\,\% (significant), while Dice (78.7\,\%) and $|\Delta\mathrm{MTV}|$ (8.6\,\%) did not change significantly.
+Both terms measure the change on the linearly warped, soft mask and PET (Eq.~\ref{eq:mtv_tlg}), whereas the evaluation warps both by nearest neighbour; lowering the soft change therefore need not lower the evaluated one.
 
 \input{tables/loo}
 
