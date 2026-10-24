@@ -9,33 +9,33 @@ We then examine individual lesions and PET loss terms, compare with baseline met
 \subsection{Effect of the PET-Preservation and Rigidity Losses}
 \label{sect:res_q1}
 
-Table~\ref{tab:ablations} compares four configurations: no PET-preservation or bone-rigidity loss, PET preservation alone, rigidity alone, and both.
-Each network is evaluated before and after IO.
+Figure~\ref{fig:q2} compares four configurations (the full results with significance tests are in Table~\ref{tab:ablations}, Appendix~A): no PET-preservation or bone-rigidity loss, PET preservation alone, rigidity alone, and both.
+Each network is evaluated before IO (squares; $\times$ without losses) and after IO (filled circles; $+$ without losses).
 In IO, the PET-preservation and bone-rigidity losses are enabled or disabled to match that network's training configuration.
-Training with the PET losses lowered the volume change of the lesions from 10.3\,\% to 8.2\,\% (significant) and the uptake change from 12.5\,\% to 9.8\,\% (not significant), at the cost of 1.9 Dice points.
-IO raised the Dice of every network by 3.7 to 4.7 points.
-With the PET losses in training and IO, $|\Delta\mathrm{MTV}|$ was 8.2\,\% instead of 11.3\,\% and $|\Delta\mathrm{TLG}|$ 10.3\,\% instead of 14.5\,\%, for 2.5 Dice points; with IO, these reductions were not significant.
-The rigidity loss alone did not change the Dice of the network and cost 0.6 points with IO; it lowered $|\Delta\mathrm{MTV}|$ significantly for the network output (10.3\,\% to 8.9\,\%) and $|\Delta\mathrm{TLG}|$ significantly with IO (14.5\,\% to 10.6\,\%).
-Combining both groups preserved about as well as the PET losses alone and was the least accurate variant (73.6\,\% and 77.3\,\% Dice).
+Without IO (squares vs.\ $\times$), training with the PET losses lowered the volume change of the lesions from 10.3\,\% to 8.2\,\% (significant) and the uptake change from 12.5\,\% to 9.8\,\% (not significant), at the cost of 1.9 Dice points.
+IO raised the Dice of every network by 3.7 to 4.7 points (each square to the filled circle of the same colour, $\times$ to $+$).
+With the PET losses in training and IO (blue filled circle vs.\ $+$), $|\Delta\mathrm{MTV}|$ was 8.2\,\% instead of 11.3\,\% and $|\Delta\mathrm{TLG}|$ 10.3\,\% instead of 14.5\,\%, for 2.5 Dice points; with IO, these reductions were not significant.
+The rigidity loss alone (red) did not change the Dice of the network and cost 0.6 points with IO; it lowered $|\Delta\mathrm{MTV}|$ significantly for the network output (10.3\,\% to 8.9\,\%) and $|\Delta\mathrm{TLG}|$ significantly with IO (14.5\,\% to 10.6\,\%).
+Combining both groups (purple) preserved about as well as the PET losses alone and was the least accurate variant (73.6\,\% and 77.3\,\% Dice).
 HD95 followed the Dice in every case (network 7.2 to 7.4~mm, with IO 6.6 to 7.1~mm).
 All network outputs and the IO variants without the PET losses stayed below the challenge's NDV threshold of 0.005\,\% (50~ppm) on every pair; with the PET losses in IO, one pair each exceeded it (150 and 262~ppm), and the variant means were at most 10~ppm.
 
 The losses therefore change the accuracy--preservation balance; the next question is whether they need to shape the trained network or can act only during per-pair refinement.
 
-\input{tables/ablations}
+\input{figures/q2}
 
 \subsection{Losses in Training or Only in IO}
 \label{sect:res_q2}
 
-To test whether the losses need to act during training, Fig.~\ref{fig:q2} compares networks trained with each loss group against the network trained without them, followed by IO with the same losses in each comparison.
-With both loss groups, applying them only in IO increased Dice by 1.7 points (95\,\% CI 1.1 to 2.2) compared with using them in training and IO.
-The paired differences (IO only minus training and IO) were $+0.8$ points in $|\Delta\mathrm{MTV}|$ (95\,\% CI $-1.0$ to 2.7) and $+0.2$ points in $|\Delta\mathrm{TLG}|$ ($-1.9$ to 2.4).
-With PET losses alone, the Dice gain was 1.2 points (0.4 to 1.9), while $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ increased by 1.3 (0.0 to 2.6) and 1.5 ($-0.1$ to 3.0) points.
-With rigidity alone, the paired differences were 0.0 ($-0.1$ to 0.1) Dice points, $+0.5$ (0.0 to 1.0) MTV points, and $+0.2$ ($-0.4$ to 0.8) TLG points.
+To test whether the losses need to act during training, Fig.~\ref{fig:q2} compares, for each loss group, the network trained with the losses followed by IO with them (filled circles) with the network trained without them followed by the same IO (hollow circles); the second dashed segment of each colour connects the two.
+With both loss groups (purple), applying them only in IO increased Dice by 1.0 points (95\,\% CI 0.4 to 1.6) compared with using them in training and IO.
+The paired differences (IO only minus training and IO) were $+0.8$ points in $|\Delta\mathrm{MTV}|$ (95\,\% CI $-0.4$ to 2.0) and $+1.0$ points in $|\Delta\mathrm{TLG}|$ ($-0.3$ to 2.6).
+With PET losses alone (blue), the Dice gain was 0.9 points (0.1 to 1.7), while $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ increased by 1.1 ($-0.3$ to 2.6) and 1.5 ($-0.0$ to 3.4) points.
+With rigidity alone (red), the paired differences were 0.0 ($-0.0$ to 0.1) Dice points, $+0.7$ ($-0.0$ to 1.8) MTV points, and $+0.8$ (0.0 to 1.9) TLG points.
 None of the preservation differences was significant after Holm correction; the intervals do not establish equivalent preservation.
-Without IO, training with the losses reduced registration-induced PET changes in the network-only variants tested (Table~\ref{tab:ablations}, left).
+Without IO, training with the losses reduced registration-induced PET changes in the network-only variants tested (Fig.~\ref{fig:q2}, squares; Table~\ref{tab:ablations}).
 
-\input{figures/q2}
+
 
 \subsection{Per-Lesion Volume Change}
 \label{sect:res_lesions}

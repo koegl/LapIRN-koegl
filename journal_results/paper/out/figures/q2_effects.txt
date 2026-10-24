@@ -1,9 +1,9 @@
-dice_ct   PET             IO only - trained = +1.2 [+0.4, +1.9]  p_holm = 0.0191
-dice_ct   Rigidity        IO only - trained = +0.0 [-0.1, +0.1]  p_holm = 0.399
-dice_ct   PET + rigidity  IO only - trained = +1.7 [+1.1, +2.2]  p_holm = 8.29e-06
-mtv_bias  PET             IO only - trained = +1.3 [+0.0, +2.6]  p_holm = 0.107
-mtv_bias  Rigidity        IO only - trained = +0.5 [+0.0, +1.0]  p_holm = 0.139
-mtv_bias  PET + rigidity  IO only - trained = +0.8 [-1.0, +2.7]  p_holm = 0.143
-tlg_bias  PET             IO only - trained = +1.5 [-0.1, +3.0]  p_holm = 0.168
-tlg_bias  Rigidity        IO only - trained = +0.2 [-0.4, +0.8]  p_holm = 1
-tlg_bias  PET + rigidity  IO only - trained = +0.2 [-1.9, +2.4]  p_holm = 1
+dice_ct   PET             IO only - trained = +0.9 [+0.1, +1.7]  p_holm = 0.0272
+dice_ct   Rigidity        IO only - trained = +0.0 [-0.0, +0.1]  p_holm = 0.218
+dice_ct   PET + rigidity  IO only - trained = +1.0 [+0.4, +1.6]  p_holm = 0.0029
+mtv_bias  PET             IO only - trained = +1.1 [-0.3, +2.6]  p_holm = 0.368
+mtv_bias  Rigidity        IO only - trained = +0.7 [-0.0, +1.8]  p_holm = 0.368
+mtv_bias  PET + rigidity  IO only - trained = +0.8 [-0.4, +2.0]  p_holm = 0.368
+tlg_bias  PET             IO only - trained = +1.5 [-0.0, +3.4]  p_holm = 0.596
+tlg_bias  Rigidity        IO only - trained = +0.8 [+0.0, +1.9]  p_holm = 0.606
+tlg_bias  PET + rigidity  IO only - trained = +1.0 [-0.3, +2.6]  p_holm = 0.606

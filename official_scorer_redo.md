@@ -27,7 +27,7 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
   - [x] table (`table_ablations.py`)
   - [x] text
 - [ ] Q2: losses in training or only in IO
-  - [ ] figure (`figure_q2.py`)
+  - [ ] figure (`figure_q2.py`, now all eleven variants: Q1 + Q2)
   - [ ] text
 - [ ] Per-lesion volume change
   - [ ] figure (`figure_lesions.py`)
@@ -56,10 +56,11 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
   - [ ] text
 
 ## Appendix
-- [ ] A: IO tuning table (`table_io_tuning.py`, new stages and rule)
-- [ ] B: signed MTV / TLG (`table_signed.py`)
-- [ ] C: detection tables (`table_detection_groups.py`, `table_detection_contributions.py`)
-- [ ] D: full rigidity table
+- [ ] A: Q1 table (`table_ablations.py`, moved from the results; figure_q2 now shows Q1 + Q2)
+- [ ] B: IO tuning table (`table_io_tuning.py`, new stages and rule)
+- [ ] C: signed MTV / TLG (`table_signed.py`)
+- [ ] D: detection tables (`table_detection_groups.py`, `table_detection_contributions.py`)
+- [ ] E: full rigidity table
 
 ## Rest of the manuscript
 - [ ] Abstract (numbers, rigidity sentence)

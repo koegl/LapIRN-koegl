@@ -1,19 +1,18 @@
 \begin{table}[t]
 \centering
-\caption{Effect of the PET and rigidity losses on the test set (CT Dice: 28 patients, 38 pairs; PET: 26 patients, 30 pairs). Each network is trained with the given losses and evaluated as is (left) and with instance optimisation (IO) using the same losses (right). Mean$\pm$SD over patients. $^{\dagger}$/$^{\ddagger}$: significantly better/worse than ``Neither'' in the same block (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over three comparisons within each column, $p<0.05$).}
+\caption{Effect of the PET and rigidity losses and of where they act, on the test set (CT Dice: 28 patients, 38 pairs; PET: 26 patients, 30 pairs); values of Fig.~\ref{fig:q2}. Left: network trained with the losses, without IO; middle: the same network followed by IO with the same losses; right: the network trained without losses followed by IO with the losses. Mean$\pm$SD over patients. $^{\dagger}$/$^{\ddagger}$: significantly better/worse than without losses in the same block (for the right block: the network without losses with IO); $^{*}$: significantly different from the same losses in training and IO (two-sided Wilcoxon signed-rank tests on patient values, Holm-corrected over three comparisons within each column, $p<0.05$).}
 \label{tab:ablations}
-\scriptsize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{lcccccc}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccccccccc}
 \toprule
- & \multicolumn{3}{c}{Network} & \multicolumn{3}{c}{Network + IO} \\
-\cmidrule(lr){2-4} \cmidrule(lr){5-7}
-Losses & Dice (\%) $\uparrow$ & $|\Delta\mathrm{MTV}|$ (\%) $\downarrow$ & $|\Delta\mathrm{TLG}|$ (\%) $\downarrow$ & Dice (\%) $\uparrow$ & $|\Delta\mathrm{MTV}|$ (\%) $\downarrow$ & $|\Delta\mathrm{TLG}|$ (\%) $\downarrow$ \\
+ & \multicolumn{3}{c}{Losses only in training (no IO)} & \multicolumn{3}{c}{Losses in training and IO} & \multicolumn{3}{c}{Losses only in IO} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10}
+Losses & Dice (\%) $\uparrow$ & $|\Delta\mathrm{MTV}|$ (\%) $\downarrow$ & $|\Delta\mathrm{TLG}|$ (\%) $\downarrow$ & Dice (\%) $\uparrow$ & $|\Delta\mathrm{MTV}|$ (\%) $\downarrow$ & $|\Delta\mathrm{TLG}|$ (\%) $\downarrow$ & Dice (\%) $\uparrow$ & $|\Delta\mathrm{MTV}|$ (\%) $\downarrow$ & $|\Delta\mathrm{TLG}|$ (\%) $\downarrow$ \\
 \midrule
-Neither & 75.5$\pm$4.7 & 10.3$\pm$9.5 & 12.5$\pm$11.1 & 80.2$\pm$4.2 & 11.3$\pm$11.9 & 14.5$\pm$14.1 \\
-PET & 73.6$\pm$4.6$^{\ddagger}$ & 8.2$\pm$9.1$^{\dagger}$ & 9.8$\pm$10.1 & 77.7$\pm$4.8$^{\ddagger}$ & 8.2$\pm$10.1 & 10.3$\pm$10.2 \\
-Rigidity & 75.5$\pm$4.7 & 8.9$\pm$8.4$^{\dagger}$ & 11.0$\pm$10.3 & 79.6$\pm$4.2$^{\ddagger}$ & 9.2$\pm$10.2 & 10.6$\pm$13.4$^{\dagger}$ \\
-PET + rigidity & 73.6$\pm$4.6$^{\ddagger}$ & 8.0$\pm$9.0$^{\dagger}$ & 9.8$\pm$10.9 & 77.3$\pm$4.9$^{\ddagger}$ & 7.9$\pm$9.7 & 10.3$\pm$10.4 \\
+None & 75.5$\pm$4.7 & 10.3$\pm$9.5 & 12.5$\pm$11.1 & 80.2$\pm$4.2 & 11.3$\pm$11.9 & 14.5$\pm$14.1 & -- & -- & -- \\
+PET & 73.6$\pm$4.6$^{\ddagger}$ & 8.2$\pm$9.1$^{\dagger}$ & 9.8$\pm$10.1 & 77.7$\pm$4.8$^{\ddagger}$ & 8.2$\pm$10.1 & 10.3$\pm$10.2 & 78.6$\pm$4.4$^{\ddagger}{}^{*}$ & 9.3$\pm$11.6 & 11.8$\pm$11.7 \\
+Rigidity & 75.5$\pm$4.7 & 8.9$\pm$8.4$^{\dagger}$ & 11.0$\pm$10.3 & 79.6$\pm$4.2$^{\ddagger}$ & 9.2$\pm$10.2 & 10.6$\pm$13.4$^{\dagger}$ & 79.6$\pm$4.2$^{\ddagger}$ & 10.0$\pm$11.3 & 11.5$\pm$14.2$^{\dagger}$ \\
+PET + rigidity & 73.6$\pm$4.6$^{\ddagger}$ & 8.0$\pm$9.0$^{\dagger}$ & 9.8$\pm$10.9 & 77.3$\pm$4.9$^{\ddagger}$ & 7.9$\pm$9.7 & 10.3$\pm$10.4 & 78.3$\pm$4.4$^{\ddagger}{}^{*}$ & 8.7$\pm$10.7 & 11.3$\pm$11.2 \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}

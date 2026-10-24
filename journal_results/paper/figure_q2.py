@@ -1,13 +1,15 @@
-"""Q2 of experiment 1: losses in training + IO, or only in IO? -> PDF + LaTeX.
+"""Experiment 1 (Q1 + Q2): which losses, and where they act -> PDF + LaTeX.
 
-For each loss set (PET / rigidity / both) two runs on test, both with the same
-IO losses: the network trained with the losses (I2-I4, filled) and the network
-trained without them (I5-I7, hollow). Reference:
-neither loss (I1, grey). Two panels: |MTV change| and |TLG change| against CT
-Dice; points are patient means with 95 % patient-bootstrap CIs.
+All eleven variants on test in two panels (|MTV change| and |TLG change|
+against CT Dice; patient means): colour = losses used (PET / rigidity / both),
+marker = where they act (square: only in training, no IO, T2-T4; filled
+circle: in training and IO, I2-I4; hollow circle: only in IO, I5-I7). No
+losses: black X (no IO, T1) and + (with IO, I1). A thin dashed line connects
+the variants of a loss group in this order. The significance tests are in the
+appendix table (table_ablations.py) and the text.
 
-The paired differences for the text (IO only minus trained, Holm over the 3
-pairs of a metric) are printed and written to out/figures/q2_effects.txt.
+The paired differences for the text (IO only minus training and IO, Holm over
+the 3 pairs of a metric) are printed and written to out/figures/q2_effects.txt.
 
     ../../.venv/bin/python figure_q2.py  ->  out/figures/q2.{pdf,tex}
 """
@@ -25,14 +27,35 @@ from matplotlib.lines import Line2D  # noqa: E402
 import common  # noqa: E402
 from common import METRIC_COLUMNS, two_sided  # noqa: E402
 
-# loss set -> (trained + IO, IO only, colour); categorical slots 1-3 of the
-# reference palette (valid for all pairs)
-PAIRS: Dict[str, Tuple[str, str, str]] = {
-    "PET": ("I2", "I5", "#2a78d6"),
-    "Rigidity": ("I3", "I6", "#eb6834"),
-    "PET + rigidity": ("I4", "I7", "#1baf7a"),
+# losses used -> colour (PET blue, rigidity red, both purple; none black)
+GROUPS = {
+    "None": "#0b0b0b",
+    "PET": "#2a78d6",
+    "Rigidity": "#d1342f",
+    "PET + rigidity": "#8b3fbf",
 }
-REFERENCE = ("I1", "Neither", "#8c8b86")
+# (losses used, where they act) -> run; "net" = only in training (no IO),
+# "both" = in training and IO, "io" = only in IO; for None: without / with IO
+RUNS: Dict[Tuple[str, str], str] = {
+    ("None", "net"): "T1",
+    ("PET", "net"): "T2",
+    ("Rigidity", "net"): "T3",
+    ("PET + rigidity", "net"): "T4",
+    ("None", "both"): "I1",
+    ("PET", "both"): "I2",
+    ("Rigidity", "both"): "I3",
+    ("PET + rigidity", "both"): "I4",
+    ("PET", "io"): "I5",
+    ("Rigidity", "io"): "I6",
+    ("PET + rigidity", "io"): "I7",
+}
+PLACEMENT_ORDER = ("net", "both", "io")
+MARKER = {"net": "s", "both": "o", "io": "o"}
+NONE_MARKER = {"net": "X", "both": "P"}
+# PET and PET + rigidity without IO nearly coincide: larger square below
+SIZE = {("PET", "net"): 80, ("PET + rigidity", "net"): 24}
+# Q2 pairs for the text: loss set -> (training and IO, only in IO)
+PAIRS = {"PET": ("I2", "I5"), "Rigidity": ("I3", "I6"), "PET + rigidity": ("I4", "I7")}
 X_METRIC = "dice_ct"
 Y_METRICS = ("mtv_bias", "tlg_bias")
 AXIS_LABELS = {
@@ -42,7 +65,6 @@ AXIS_LABELS = {
 }
 N_BOOTSTRAP = 2000
 SEED = 0
-ALPHA = 0.05
 TEXT = "#0b0b0b"
 MUTED = "#52514e"
 
@@ -54,34 +76,43 @@ def mean_ci(values: pd.Series, rng) -> Tuple[float, float, float]:
 
 
 def effects(patients) -> str:
-    """IO only minus trained, per loss set and metric, for the text."""
+    """Only in IO minus training and IO, per loss set and metric, for the text."""
     rng = np.random.default_rng(SEED)
     lines = []
     for metric in (X_METRIC,) + Y_METRICS:
         _, higher, scale, decimals, _ = METRIC_COLUMNS[metric]
         p, rows = {}, {}
-        for name, (trained, io_only, _) in PAIRS.items():
-            p[name], _ = two_sided(patients[io_only][metric], patients[trained][metric], higher)
+        for name, (trained, io_only) in PAIRS.items():
+            p[name], _ = two_sided(
+                patients[io_only][metric], patients[trained][metric], higher
+            )
             both = pd.concat(
-                [patients[io_only][metric], patients[trained][metric]], axis=1, keys=["a", "b"]
+                [patients[io_only][metric], patients[trained][metric]],
+                axis=1,
+                keys=["a", "b"],
             ).dropna()
             diff = (both["a"] - both["b"]) * scale
             _, lo, hi = mean_ci(diff, rng)
-            rows[name] = f"{diff.mean():+.{decimals}f} [{lo:+.{decimals}f}, {hi:+.{decimals}f}]"
+            rows[name] = (
+                f"{diff.mean():+.{decimals}f} [{lo:+.{decimals}f}, {hi:+.{decimals}f}]"
+            )
         adjusted = common.holm(p)
         for name in PAIRS:
-            lines.append(f"{metric:9s} {name:15s} IO only - trained = {rows[name]}  p_holm = {adjusted[name]:.3g}")
+            lines.append(
+                f"{metric:9s} {name:15s} IO only - trained = {rows[name]}"
+                f"  p_holm = {adjusted[name]:.3g}"
+            )
     return "\n".join(lines)
 
 
 def main() -> None:
-    runs = [REFERENCE[0]] + [r for t, o, _ in PAIRS.values() for r in (t, o)]
     metrics = [X_METRIC, *Y_METRICS]
-    patients = {r: common.patient_means(common.load_run(r), metrics) for r in runs}
-    rng = np.random.default_rng(SEED)
-    stats = {
-        r: {m: mean_ci(patients[r][m] * METRIC_COLUMNS[m][2], rng) for m in metrics}
-        for r in runs
+    patients = {
+        r: common.patient_means(common.load_run(r), metrics) for r in RUNS.values()
+    }
+    mean = {
+        r: {m: patients[r][m].mean() * METRIC_COLUMNS[m][2] for m in metrics}
+        for r in patients
     }
 
     plt.rcParams.update(
@@ -95,26 +126,37 @@ def main() -> None:
             "ytick.color": MUTED,
         }
     )
-    fig, axes = plt.subplots(1, len(Y_METRICS), figsize=(6.0, 2.6))
-
-    def point(ax, run, color, filled):
-        x, xl, xh = stats[run][X_METRIC]
-        y, yl, yh = stats[run][ax.y_metric]
-        ax.errorbar(
-            x, y, xerr=[[x - xl], [xh - x]], yerr=[[y - yl], [yh - y]],
-            fmt="none", ecolor=color, elinewidth=0.8, alpha=0.6, zorder=2,
-        )
-        ax.scatter(
-            x, y, s=36, zorder=4, linewidths=1.5, edgecolors=color,
-            facecolors=color if filled else "white",
-        )
-
+    fig, axes = plt.subplots(1, len(Y_METRICS), figsize=(6.5, 2.8))
     for ax, y_metric in zip(axes, Y_METRICS):
-        ax.y_metric = y_metric
-        point(ax, REFERENCE[0], REFERENCE[2], True)
-        for trained, io_only, color in PAIRS.values():
-            point(ax, trained, color, True)
-            point(ax, io_only, color, False)
+        for group, color in GROUPS.items():
+            path = [RUNS[(group, p)] for p in PLACEMENT_ORDER if (group, p) in RUNS]
+            ax.plot(
+                [mean[r][X_METRIC] for r in path],
+                [mean[r][y_metric] for r in path],
+                color=color,
+                linewidth=0.8,
+                linestyle=(0, (3, 2)),
+                alpha=0.6,
+                zorder=1,
+            )
+        for (group, placement), run in RUNS.items():
+            color = GROUPS[group]
+            x, y = mean[run][X_METRIC], mean[run][y_metric]
+            if group == "None":
+                ax.scatter(
+                    x, y, s=55, marker=NONE_MARKER[placement], color=color, zorder=4
+                )
+                continue
+            ax.scatter(
+                x,
+                y,
+                s=SIZE.get((group, placement), 40),
+                marker=MARKER[placement],
+                facecolors="white" if placement == "io" else color,
+                edgecolors=color,
+                linewidths=1.4,
+                zorder=4,
+            )
         ax.set_xlabel(AXIS_LABELS[X_METRIC])
         ax.set_ylabel(AXIS_LABELS[y_metric])
         ax.grid(color="#e4e3df", linewidth=0.5)
@@ -122,16 +164,86 @@ def main() -> None:
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
 
-    handles = [
-        Line2D([], [], marker="o", ls="", color=c, markersize=6, label=name)
-        for name, (_, _, c) in PAIRS.items()
+    loss_handles = [
+        Line2D([], [], marker="o", ls="", color=c, markersize=6, label=g)
+        for g, c in GROUPS.items()
+        if g != "None"
     ]
-    handles += [
-        Line2D([], [], marker="o", ls="", color=REFERENCE[2], markersize=6, label=f"{REFERENCE[1]} (I1)"),
-        Line2D([], [], marker="o", ls="", markerfacecolor=MUTED, markeredgecolor=MUTED, markersize=6, label="trained + IO"),
-        Line2D([], [], marker="o", ls="", markerfacecolor="white", markeredgecolor=MUTED, markersize=6, label="IO only"),
+    loss_handles += [
+        Line2D(
+            [],
+            [],
+            marker="X",
+            ls="",
+            color=GROUPS["None"],
+            markersize=7,
+            label="None, no IO",
+        ),
+        Line2D(
+            [],
+            [],
+            marker="P",
+            ls="",
+            color=GROUPS["None"],
+            markersize=7,
+            label="None, with IO",
+        ),
     ]
-    fig.legend(handles=handles, loc="upper center", ncol=len(handles), frameon=False, bbox_to_anchor=(0.5, 1.06), handletextpad=0.2, columnspacing=1.0)
+    placement_handles = [
+        Line2D(
+            [],
+            [],
+            marker="s",
+            ls="",
+            markerfacecolor=MUTED,
+            markeredgecolor=MUTED,
+            markersize=6,
+            label="Losses only in training (no IO)",
+        ),
+        Line2D(
+            [],
+            [],
+            marker="o",
+            ls="",
+            markerfacecolor=MUTED,
+            markeredgecolor=MUTED,
+            markersize=6,
+            label="Losses in training and IO",
+        ),
+        Line2D(
+            [],
+            [],
+            marker="o",
+            ls="",
+            markerfacecolor="white",
+            markeredgecolor=MUTED,
+            markersize=6,
+            label="Losses only in IO",
+        ),
+    ]
+    style = dict(
+        loc="lower center",
+        frameon=True,
+        edgecolor="#c9c8c3",
+        fontsize=7,
+        title_fontsize=7,
+        handletextpad=0.3,
+        columnspacing=1.0,
+    )
+    fig.legend(
+        handles=loss_handles,
+        title="Losses used",
+        ncol=2,
+        bbox_to_anchor=(0.3, 0.98),
+        **style,
+    )
+    fig.legend(
+        handles=placement_handles,
+        title="Where the losses act",
+        ncol=1,
+        bbox_to_anchor=(0.72, 0.98),
+        **style,
+    )
     fig.tight_layout()
 
     out_dir = common.OUT_DIR / "figures"
@@ -139,12 +251,12 @@ def main() -> None:
     fig.savefig(out_dir / "q2.pdf", bbox_inches="tight", pad_inches=0)
     text = effects(patients)
     (out_dir / "q2_effects.txt").write_text(text + "\n")
-    n = len(patients[REFERENCE[0]])
-    n_pet = patients[REFERENCE[0]]["mtv_bias"].notna().sum()
+    n = len(patients["T1"])
+    n_pet = patients["T1"]["mtv_bias"].notna().sum()
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/q2.pdf}}
-\caption{{Losses in training and IO versus only in IO (test set; CT Dice: {n} patients, PET: {n_pet} patients). For each loss set, filled: network trained with the losses, then IO with them; hollow: network trained without them (T1), same IO. Grey: neither loss (I1). Points: patient means with 95\,\% patient-bootstrap confidence intervals for each method; confidence intervals for paired differences are reported in the text.}}
+\caption{{Effect of the PET-preservation and rigidity losses and of where they act (test set; CT Dice: {n} patients, PET: {n_pet} patients). Colour: losses used; marker: where they act (square: only in network training, network output without IO; filled circle: in training and IO; hollow circle: only in IO, on the network trained without losses). Without losses: network output ($\times$) and with IO ($+$). Dashed lines connect the variants of a loss group. Points: patient means; the significance tests are reported in the text and in Table~\ref{{tab:ablations}}.}}
 \label{{fig:q2}}
 \end{{figure}}
 """
