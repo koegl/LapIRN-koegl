@@ -6,13 +6,15 @@ Lesions: 26-connected components of the moving scan's ground-truth lesion mask
 left out. Strata: soft tissue / bone-associated (>= 50 % of the voxels on a
 bone label) x small (< 0.5 ml) / medium (< 5 ml) / large.
 
-Median per-lesion |MTV change| (upper tail in lesions_summary.txt).
+Median per-lesion |MTV change| (main text) and |TLG change| (appendix, same
+layout); upper tail in lesions_summary.txt.
 Columns: network output (T1-T4) and network + matched IO (I1-I4); one marker
 per loss set. Error bars: 95 % CI from a patient-cluster bootstrap (patients
 resampled with all their lesions). Signed changes and the lesion counts are
 printed and written to out/figures/lesions_summary.txt.
 
-    ../../.venv/bin/python figure_lesions.py  ->  out/figures/lesions.{pdf,tex}
+    ../../.venv/bin/python figure_lesions.py
+        ->  out/figures/lesions.{pdf,tex}, out/figures/lesions_tlg.{pdf,tex}
 """
 
 from typing import Dict, Tuple
@@ -57,10 +59,11 @@ def load_lesions(run_id: str) -> pd.DataFrame:
     return df[df["size_bin"] != "tiny"]
 
 
-def stat_ci(df: pd.DataFrame, q: float, rng) -> Tuple[float, float, float]:
-    """Percentile q of |MTV change| (in %), with a patient-cluster bootstrap CI."""
-    values = df["mtv_bias"].to_numpy() * 100
-    groups = [g["mtv_bias"].to_numpy() * 100 for _, g in df.groupby("case_id")]
+def stat_ci(df: pd.DataFrame, q: float, rng, column: str) -> Tuple[float, float, float]:
+    """Percentile q of |change| of a column (in %), with a patient-cluster
+    bootstrap CI."""
+    values = df[column].to_numpy() * 100
+    groups = [g[column].to_numpy() * 100 for _, g in df.groupby("case_id")]
     samples = []
     for _ in range(N_BOOTSTRAP):
         picks = rng.integers(0, len(groups), len(groups))
@@ -72,7 +75,15 @@ def stat_ci(df: pd.DataFrame, q: float, rng) -> Tuple[float, float, float]:
     )
 
 
-def main() -> None:
+# figure -> (column, label, output name)
+METRICS = {
+    "MTV": ("mtv_bias", "lesions"),
+    "TLG": ("tlg_bias", "lesions_tlg"),
+}
+
+
+def main(metric: str) -> None:
+    column, name_out = METRICS[metric]
     lesions = {r: load_lesions(r) for runs in CONDITIONS.values() for r in runs[:2]}
     rng = np.random.default_rng(SEED)
 
@@ -107,6 +118,7 @@ def main() -> None:
                         df[(df["bone_associated"] == bone) & (df["size_bin"] == size)],
                         q,
                         rng,
+                        column,
                     )
                     for bone, size in STRATA
                 ]
@@ -137,7 +149,7 @@ def main() -> None:
             if row == 0:
                 ax.set_title(block, fontsize=9)
             if col == 0:
-                ax.set_ylabel(rf"{stat_name} $|\Delta\mathrm{{MTV}}|$ (\%)")
+                ax.set_ylabel(rf"{stat_name} $|\Delta\mathrm{{{metric}}}|$ (\%)")
     for ax in axes[-1]:
         ax.set_xticks(x)
         ax.set_xticklabels([s for _, s in STRATA])
@@ -193,21 +205,26 @@ def main() -> None:
 
     out_dir = common.OUT_DIR / "figures"
     out_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_dir / "lesions.pdf", bbox_inches="tight", pad_inches=0)
+    fig.savefig(out_dir / f"{name_out}.pdf", bbox_inches="tight", pad_inches=0)
     (out_dir / "lesions_summary.txt").write_text("\n".join(lines) + "\n")
     n_lesions = len(lesions["T1"])
     n_excluded = len(pd.read_csv(common.EVAL_DIR / "T1_lesions.csv")) - n_lesions
     n_patients = lesions["T1"]["case_id"].nunique()
+    if metric == "MTV":
+        caption = rf"Per-lesion volume change on the test set ({n_lesions} lesions of {n_patients} patients after excluding {n_excluded} components smaller than five voxels), by location (soft tissue / bone-associated, $\geq$50\,\% of the lesion on bone) and size (small $<$0.5\,ml, medium $<$5\,ml, large). Median $|\Delta\mathrm{{MTV}}|$ per lesion; left: network output, right: with instance optimisation (IO) using the same losses (squares / $\times$: without IO; circles / $+$: with IO; colours as in Fig.~\ref{{fig:q2}}). Error bars: 95\,\% confidence intervals from a patient-cluster bootstrap."
+    else:
+        caption = r"Per-lesion uptake change on the test set: median $|\Delta\mathrm{TLG}|$ per lesion, otherwise as Fig.~\ref{fig:lesions}."
     tex = rf"""\begin{{figure}}[t]
 \centering
-\includegraphics[width=\textwidth]{{figures/lesions.pdf}}
-\caption{{Per-lesion volume change on the test set ({n_lesions} lesions of {n_patients} patients after excluding {n_excluded} components smaller than five voxels), by location (soft tissue / bone-associated, $\geq$50\,\% of the lesion on bone) and size (small $<$0.5\,ml, medium $<$5\,ml, large). Median $|\Delta\mathrm{{MTV}}|$ per lesion; left: network output, right: with instance optimisation (IO) using the same losses (squares / $\times$: without IO; circles / $+$: with IO; colours as in Fig.~\ref{{fig:q2}}). Error bars: 95\,\% confidence intervals from a patient-cluster bootstrap.}}
-\label{{fig:lesions}}
+\includegraphics[width=\textwidth]{{figures/{name_out}.pdf}}
+\caption{{{caption}}}
+\label{{fig:{name_out}}}
 \end{{figure}}
 """
-    (out_dir / "lesions.tex").write_text(tex)
+    (out_dir / f"{name_out}.tex").write_text(tex)
     print("\n".join(lines))
 
 
 if __name__ == "__main__":
-    main()
+    for metric in METRICS:
+        main(metric)

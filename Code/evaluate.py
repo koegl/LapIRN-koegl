@@ -17,13 +17,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-import numpy as np
-import pandas as pd
-import torch
-import torch.nn.functional as F
-import tqdm
-from scipy import ndimage
-
 import affine_reg
 import bone_metrics
 import Functions
@@ -32,8 +25,14 @@ import instance_opt
 import jacobian
 import miccai2020_model_stage
 import my_data
+import numpy as np
+import pandas as pd
 import synthetic
+import torch
+import torch.nn.functional as F
+import tqdm
 from config import DATA_PATH, TrainingConfig
+from scipy import ndimage
 
 # --- training runs: plan ID -> cluster run name (as in the .pth file names) ---
 TRAINING_RUNS: Dict[str, str] = {
@@ -117,6 +116,8 @@ RIGIDITY_WEIGHTS: Dict[str, float] = {
 PET_IO_WEIGHTS = ("w_io_mtv", "w_io_mtv_avg", "w_io_tlg", "w_io_jacobian_tumor")
 W_SCALES = (0.0, 0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.3, 1.0)
 
+CC_WEIGHTS = {"w_io_mtv_cc": 8.0, "w_io_tlg_cc": 8.0, "w_io_mtv_avg_cc": 15.0}
+
 # --- evaluation runs: plan ID -> what to run ---
 # W* (PET-weight sweep) is added once the IO settings are frozen; B*
 # (baselines) are not networks.
@@ -153,6 +154,19 @@ EVAL_RUNS: Dict[str, EvalRun] = {
             rigidity=False,
             pet_label_dir=DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr",
             cfg_overrides={w: getattr(TrainingConfig(), w) for w in PET_IO_WEIGHTS},
+        ),
+    ),
+    # per-lesion terms (outlook): I5 / G1 plus the per-component MTV / TLG
+    # terms (config.py w_io_*_cc), fixed weights, not tuned: the values in the
+    # config comments scaled like the other PET weights (tuned PET scale x0.1)
+    "P1": EvalRun("T1", IOSpec(pet=True, rigidity=False, cfg_overrides=CC_WEIGHTS)),
+    "P2": EvalRun(
+        "T1",
+        IOSpec(
+            pet=True,
+            rigidity=False,
+            cfg_overrides=CC_WEIGHTS,
+            pet_label_dir=DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr",
         ),
     ),
     # trade-off (experiment 3): T1 + PET IO, the PET weights scaled together

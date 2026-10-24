@@ -9,6 +9,7 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
 - [x] Stage 2: IO PET scale -> x0.1
 - [ ] Stage 3: test runs, I1-I8 val, rigidity sweep (3 Kabsch runs left)
 - [ ] Stage 4: R2-R4 on test
+- [ ] Stage 5: P1 / P2 per-lesion terms (I5 / G1 + w_io_*_cc, fixed weights) -> outlook in per-lesion text
 - [x] Choice of "Ours" (I1-I8 val, new rule) -> I7
 - [ ] (Optional) re-tune NiftyReg / ConvexAdam with the new rule
 
@@ -30,8 +31,10 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
   - [x] figure (`figure_q2.py`, now all eleven variants: Q1 + Q2)
   - [x] text
 - [ ] Per-lesion volume change
-  - [ ] figure (`figure_lesions.py`)
-  - [ ] text
+  - [x] figure (`figure_lesions.py`)
+  - [x] TLG figure (appendix B, same script)
+  - [x] text
+  - [ ] outlook: P1 / P2 numbers
 - [ ] Leave-one-out
   - [ ] table (`table_loo.py`)
   - [ ] text
@@ -56,11 +59,12 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
   - [ ] text
 
 ## Appendix
-- [ ] A: Q1 table (`table_ablations.py`, moved from the results; figure_q2 now shows Q1 + Q2)
-- [ ] B: IO tuning table (`table_io_tuning.py`, new stages and rule)
-- [ ] C: signed MTV / TLG (`table_signed.py`)
-- [ ] D: detection tables (`table_detection_groups.py`, `table_detection_contributions.py`)
-- [ ] E: full rigidity table
+- [x] A: Q1 table (`table_ablations.py`, moved from the results; figure_q2 now shows Q1 + Q2)
+- [x] B: per-lesion TLG figure
+- [ ] C: IO tuning table (`table_io_tuning.py`, new stages and rule)
+- [ ] D: signed MTV / TLG (`table_signed.py`)
+- [ ] E: detection tables (`table_detection_groups.py`, `table_detection_contributions.py`)
+- [ ] F: full rigidity table
 
 ## Rest of the manuscript
 - [ ] Abstract (numbers, rigidity sentence)

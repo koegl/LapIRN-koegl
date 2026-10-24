@@ -66,6 +66,7 @@ STAGES: Dict[int, List[str]] = {
     + [f"eval/val/I{i}" for i in range(1, 9)]
     + [f"rig/{m}/{k}" for m, n in N_SWEEP.items() for k in range(n)],
     4: [f"rigtest/{r}" for r in RIGIDITY_METHODS],
+    5: ["eval/test/P1", "eval/test/P2"],  # per-lesion terms (outlook)
 }
 STAGE_WORKSTATION_FIRST = {3: WORKSTATION_ONLY}
 

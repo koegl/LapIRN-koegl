@@ -7899,4 +7899,997 @@ Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
 IO optimization:  98%|█████████▊| 39/40 [02:23<00:03,  3.71s/it, best=3.6430, best_i=0, dice=0.9171, hard_mtv=0.0348, hard_tlg=0.0184, loss=1.1751, masked_jac=0.0683, mtv=0.0035, mtv_avg=0.000001, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0465, tlg_cc=0.0000][A
 IO optimization:  98%|█████████▊| 39/40 [02:27<00:03,  3.71s/it, best=3.6430, best_i=0, dice=0.9177, hard_mtv=0.0327, hard_tlg=0.0162, loss=0.7361, masked_jac=0.0680, mtv=0.0017, mtv_avg=0.000007, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0440, tlg_cc=0.0000][A
 IO optimization: 100%|██████████| 40/40 [02:27<00:00,  3.71s/it, best=3.6430, best_i=0, dice=0.9177, hard_mtv=0.0327, hard_tlg=0.0162, loss=0.7361, masked_jac=0.0680, mtv=0.0017, mtv_avg=0.000007, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0440, tlg_cc=0.0000][AIO optimization: 100%|██████████| 40/40 [02:27<00:00,  3.69s/it, best=3.6430, best_i=0, dice=0.9177, hard_mtv=0.0327, hard_tlg=0.0162, loss=0.7361, masked_jac=0.0680, mtv=0.0017, mtv_avg=0.000007, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0440, tlg_cc=0.0000]
-                                                               kabsch_w2.5:  92%|█████████▏| 35/38 [1:56:26<09:43, 194.48s/it]kabsch_w2.5:  95%|█████████▍| 36/38 [1:56:26<06:29, 194.90s/it]
+                                                               kabsch_w2.5:  92%|█████████▏| 35/38 [1:56:26<09:43, 194.48s/it]kabsch_w2.5:  95%|█████████▍| 36/38 [1:56:26<06:29, 194.90s/it][kabsch_w2.5] 0331 01->00: dice_ct_before=0.2936 dice_ct=0.7414 hd95_before=17.2301 hd95=7.4669 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.7593 bone_hd95=5.9375 soft_dice=0.7488 soft_hd95=9.1947 near_bone_soft_dice=0.6925 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2197 stencil_leakage_staring_eroded=0.0000 bre_mm=1.8906 staring_energy_bone=0.4019 staring_properness_bone=0.0408 staring_orthonormality_bone=0.2476 staring_affinity_bone=0.1135 jac_det_dev_bone=0.2032 jac_ortho_dev_bone=0.5481 dist_distortion_short=0.0743 dist_distortion_long=0.0292 erosion_bones_retained=0.7869 erosion_voxels_retained=0.3392 lesion_voxels=10385.0000 mtv_change=0.0020 mtv_bias=0.0020 tlg_change=0.0186 tlg_bias=0.0186 n_lesions=13.0000
+
+IO optimization:   0%|          | 0/40 [00:00<?, ?it/s][A
+IO optimization:   0%|          | 0/40 [00:03<?, ?it/s, best=24.7389, best_i=0, dice=0.7976, hard_mtv=0.0238, hard_tlg=0.0167, loss=18.1980, masked_jac=0.0256, mtv=0.0192, mtv_avg=0.000576, mtv_cc=0.00000, non_diff=0.0001, tlg=0.1066, tlg_cc=0.0000][A
+IO optimization:   2%|▎         | 1/40 [00:03<02:20,  3.59s/it, best=24.7389, best_i=0, dice=0.7976, hard_mtv=0.0238, hard_tlg=0.0167, loss=18.1980, masked_jac=0.0256, mtv=0.0192, mtv_avg=0.000576, mtv_cc=0.00000, non_diff=0.0001, tlg=0.1066, tlg_cc=0.0000][A
+IO optimization:   2%|▎         | 1/40 [00:07<02:20,  3.59s/it, best=14.5801, best_i=1, dice=0.8069, hard_mtv=0.0180, hard_tlg=0.0209, loss=22.7793, masked_jac=0.0253, mtv=0.0226, mtv_avg=0.000187, mtv_cc=0.00000, non_diff=0.0029, tlg=0.0652, tlg_cc=0.0000][A
+IO optimization:   5%|▌         | 2/40 [00:07<02:16,  3.60s/it, best=14.5801, best_i=1, dice=0.8069, hard_mtv=0.0180, hard_tlg=0.0209, loss=22.7793, masked_jac=0.0253, mtv=0.0226, mtv_avg=0.000187, mtv_cc=0.00000, non_diff=0.0029, tlg=0.0652, tlg_cc=0.0000][A
+IO optimization:   5%|▌         | 2/40 [00:10<02:16,  3.60s/it, best=5.4974, best_i=2, dice=0.8157, hard_mtv=0.0103, hard_tlg=0.0140, loss=13.7529, masked_jac=0.0245, mtv=0.0170, mtv_avg=0.000135, mtv_cc=0.00000, non_diff=0.0015, tlg=0.0692, tlg_cc=0.0000] [A
+IO optimization:   8%|▊         | 3/40 [00:10<02:13,  3.60s/it, best=5.4974, best_i=2, dice=0.8157, hard_mtv=0.0103, hard_tlg=0.0140, loss=13.7529, masked_jac=0.0245, mtv=0.0170, mtv_avg=0.000135, mtv_cc=0.00000, non_diff=0.0015, tlg=0.0692, tlg_cc=0.0000][A
+IO optimization:   8%|▊         | 3/40 [00:14<02:13,  3.60s/it, best=4.4905, best_i=3, dice=0.8237, hard_mtv=0.0097, hard_tlg=0.0010, loss=2.1011, masked_jac=0.0238, mtv=0.0007, mtv_avg=0.000000, mtv_cc=0.00000, non_diff=0.0003, tlg=0.0836, tlg_cc=0.0000] [A
+IO optimization:  10%|█         | 4/40 [00:14<02:09,  3.60s/it, best=4.4905, best_i=3, dice=0.8237, hard_mtv=0.0097, hard_tlg=0.0010, loss=2.1011, masked_jac=0.0238, mtv=0.0007, mtv_avg=0.000000, mtv_cc=0.00000, non_diff=0.0003, tlg=0.0836, tlg_cc=0.0000][A
+IO optimization:  10%|█         | 4/40 [00:18<02:09,  3.60s/it, best=4.4905, best_i=3, dice=0.8312, hard_mtv=0.0193, hard_tlg=0.0076, loss=8.9467, masked_jac=0.0239, mtv=0.0129, mtv_avg=0.000107, mtv_cc=0.00000, non_diff=0.0001, tlg=0.0950, tlg_cc=0.0000][A
+IO optimization:  12%|█▎        | 5/40 [00:18<02:06,  3.61s/it, best=4.4905, best_i=3, dice=0.8312, hard_mtv=0.0193, hard_tlg=0.0076, loss=8.9467, masked_jac=0.0239, mtv=0.0129, mtv_avg=0.000107, mtv_cc=0.00000, non_diff=0.0001, tlg=0.0950, tlg_cc=0.0000][A
+IO optimization:  12%|█▎        | 5/40 [00:21<02:06,  3.61s/it, best=4.4905, best_i=3, dice=0.8381, hard_mtv=0.0193, hard_tlg=0.0071, loss=11.9752, masked_jac=0.0242, mtv=0.0157, mtv_avg=0.000131, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0958, tlg_cc=0.0000][A
+IO optimization:  15%|█▌        | 6/40 [00:21<02:02,  3.61s/it, best=4.4905, best_i=3, dice=0.8381, hard_mtv=0.0193, hard_tlg=0.0071, loss=11.9752, masked_jac=0.0242, mtv=0.0157, mtv_avg=0.000131, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0958, tlg_cc=0.0000][A
+IO optimization:  15%|█▌        | 6/40 [00:25<02:02,  3.61s/it, best=4.4905, best_i=3, dice=0.8445, hard_mtv=0.0167, hard_tlg=0.0032, loss=5.3968, masked_jac=0.0244, mtv=0.0094, mtv_avg=0.000028, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0881, tlg_cc=0.0000] [A
+IO optimization:  18%|█▊        | 7/40 [00:25<01:59,  3.61s/it, best=4.4905, best_i=3, dice=0.8445, hard_mtv=0.0167, hard_tlg=0.0032, loss=5.3968, masked_jac=0.0244, mtv=0.0094, mtv_avg=0.000028, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0881, tlg_cc=0.0000][A
+IO optimization:  18%|█▊        | 7/40 [00:28<01:59,  3.61s/it, best=2.7786, best_i=7, dice=0.8506, hard_mtv=0.0077, hard_tlg=0.0035, loss=1.5784, masked_jac=0.0249, mtv=0.0006, mtv_avg=0.000014, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0768, tlg_cc=0.0000][A
+IO optimization:  20%|██        | 8/40 [00:28<01:55,  3.62s/it, best=2.7786, best_i=7, dice=0.8506, hard_mtv=0.0077, hard_tlg=0.0035, loss=1.5784, masked_jac=0.0249, mtv=0.0006, mtv_avg=0.000014, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0768, tlg_cc=0.0000][A
+IO optimization:  20%|██        | 8/40 [00:32<01:55,  3.62s/it, best=0.6201, best_i=8, dice=0.8562, hard_mtv=0.0013, hard_tlg=0.0122, loss=4.8036, masked_jac=0.0258, mtv=0.0092, mtv_avg=0.000121, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0668, tlg_cc=0.0000][A
+IO optimization:  22%|██▎       | 9/40 [00:32<01:52,  3.62s/it, best=0.6201, best_i=8, dice=0.8562, hard_mtv=0.0013, hard_tlg=0.0122, loss=4.8036, masked_jac=0.0258, mtv=0.0092, mtv_avg=0.000121, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0668, tlg_cc=0.0000][A
+IO optimization:  22%|██▎       | 9/40 [00:36<01:52,  3.62s/it, best=0.6201, best_i=8, dice=0.8618, hard_mtv=0.0032, hard_tlg=0.0172, loss=7.3718, masked_jac=0.0265, mtv=0.0123, mtv_avg=0.000172, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0620, tlg_cc=0.0000][A
+IO optimization:  25%|██▌       | 10/40 [00:36<01:48,  3.62s/it, best=0.6201, best_i=8, dice=0.8618, hard_mtv=0.0032, hard_tlg=0.0172, loss=7.3718, masked_jac=0.0265, mtv=0.0123, mtv_avg=0.000172, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0620, tlg_cc=0.0000][A
+IO optimization:  25%|██▌       | 10/40 [00:39<01:48,  3.62s/it, best=0.4403, best_i=10, dice=0.8667, hard_mtv=0.0006, hard_tlg=0.0147, loss=4.8632, masked_jac=0.0270, mtv=0.0096, mtv_avg=0.000098, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0629, tlg_cc=0.0000][A
+IO optimization:  28%|██▊       | 11/40 [00:39<01:45,  3.63s/it, best=0.4403, best_i=10, dice=0.8667, hard_mtv=0.0006, hard_tlg=0.0147, loss=4.8632, masked_jac=0.0270, mtv=0.0096, mtv_avg=0.000098, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0629, tlg_cc=0.0000][A
+IO optimization:  28%|██▊       | 11/40 [00:43<01:45,  3.63s/it, best=0.4403, best_i=10, dice=0.8713, hard_mtv=0.0064, hard_tlg=0.0112, loss=1.5164, masked_jac=0.0275, mtv=0.0032, mtv_avg=0.000012, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0675, tlg_cc=0.0000][A
+IO optimization:  30%|███       | 12/40 [00:43<01:41,  3.63s/it, best=0.4403, best_i=10, dice=0.8713, hard_mtv=0.0064, hard_tlg=0.0112, loss=1.5164, masked_jac=0.0275, mtv=0.0032, mtv_avg=0.000012, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0675, tlg_cc=0.0000][A
+IO optimization:  30%|███       | 12/40 [00:47<01:41,  3.63s/it, best=0.4403, best_i=10, dice=0.8755, hard_mtv=0.0116, hard_tlg=0.0084, loss=1.7387, masked_jac=0.0283, mtv=0.0039, mtv_avg=0.000013, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0726, tlg_cc=0.0000][A
+IO optimization:  32%|███▎      | 13/40 [00:47<01:38,  3.63s/it, best=0.4403, best_i=10, dice=0.8755, hard_mtv=0.0116, hard_tlg=0.0084, loss=1.7387, masked_jac=0.0283, mtv=0.0039, mtv_avg=0.000013, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0726, tlg_cc=0.0000][A
+IO optimization:  32%|███▎      | 13/40 [00:50<01:38,  3.63s/it, best=0.4403, best_i=10, dice=0.8796, hard_mtv=0.0148, hard_tlg=0.0074, loss=3.9705, masked_jac=0.0293, mtv=0.0084, mtv_avg=0.000065, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0750, tlg_cc=0.0000][A
+IO optimization:  35%|███▌      | 14/40 [00:50<01:34,  3.64s/it, best=0.4403, best_i=10, dice=0.8796, hard_mtv=0.0148, hard_tlg=0.0074, loss=3.9705, masked_jac=0.0293, mtv=0.0084, mtv_avg=0.000065, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0750, tlg_cc=0.0000][A
+IO optimization:  35%|███▌      | 14/40 [00:54<01:34,  3.64s/it, best=0.4403, best_i=10, dice=0.8835, hard_mtv=0.0155, hard_tlg=0.0092, loss=4.1725, masked_jac=0.0303, mtv=0.0087, mtv_avg=0.000074, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0734, tlg_cc=0.0000][A
+IO optimization:  38%|███▊      | 15/40 [00:54<01:30,  3.64s/it, best=0.4403, best_i=10, dice=0.8835, hard_mtv=0.0155, hard_tlg=0.0092, loss=4.1725, masked_jac=0.0303, mtv=0.0087, mtv_avg=0.000074, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0734, tlg_cc=0.0000][A
+IO optimization:  38%|███▊      | 15/40 [00:57<01:30,  3.64s/it, best=0.4403, best_i=10, dice=0.8873, hard_mtv=0.0129, hard_tlg=0.0141, loss=2.1224, masked_jac=0.0310, mtv=0.0054, mtv_avg=0.000031, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0681, tlg_cc=0.0000][A
+IO optimization:  40%|████      | 16/40 [00:57<01:27,  3.64s/it, best=0.4403, best_i=10, dice=0.8873, hard_mtv=0.0129, hard_tlg=0.0141, loss=2.1224, masked_jac=0.0310, mtv=0.0054, mtv_avg=0.000031, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0681, tlg_cc=0.0000][A
+IO optimization:  40%|████      | 16/40 [01:01<01:27,  3.64s/it, best=0.4403, best_i=10, dice=0.8903, hard_mtv=0.0090, hard_tlg=0.0211, loss=0.7472, masked_jac=0.0318, mtv=0.0002, mtv_avg=0.000000, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0608, tlg_cc=0.0000][A
+IO optimization:  42%|████▎     | 17/40 [01:01<01:23,  3.64s/it, best=0.4403, best_i=10, dice=0.8903, hard_mtv=0.0090, hard_tlg=0.0211, loss=0.7472, masked_jac=0.0318, mtv=0.0002, mtv_avg=0.000000, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0608, tlg_cc=0.0000][A
+IO optimization:  42%|████▎     | 17/40 [01:05<01:23,  3.64s/it, best=0.4403, best_i=10, dice=0.8936, hard_mtv=0.0058, hard_tlg=0.0256, loss=1.5124, masked_jac=0.0327, mtv=0.0048, mtv_avg=0.000016, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0538, tlg_cc=0.0000][A
+IO optimization:  45%|████▌     | 18/40 [01:05<01:20,  3.64s/it, best=0.4403, best_i=10, dice=0.8936, hard_mtv=0.0058, hard_tlg=0.0256, loss=1.5124, masked_jac=0.0327, mtv=0.0048, mtv_avg=0.000016, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0538, tlg_cc=0.0000][A
+IO optimization:  45%|████▌     | 18/40 [01:08<01:20,  3.64s/it, best=0.4403, best_i=10, dice=0.8963, hard_mtv=0.0045, hard_tlg=0.0295, loss=2.6554, masked_jac=0.0337, mtv=0.0073, mtv_avg=0.000046, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0491, tlg_cc=0.0000][A
+IO optimization:  48%|████▊     | 19/40 [01:08<01:16,  3.65s/it, best=0.4403, best_i=10, dice=0.8963, hard_mtv=0.0045, hard_tlg=0.0295, loss=2.6554, masked_jac=0.0337, mtv=0.0073, mtv_avg=0.000046, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0491, tlg_cc=0.0000][A
+IO optimization:  48%|████▊     | 19/40 [01:12<01:16,  3.65s/it, best=0.4403, best_i=10, dice=0.8989, hard_mtv=0.0052, hard_tlg=0.0324, loss=2.2333, masked_jac=0.0346, mtv=0.0066, mtv_avg=0.000045, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0476, tlg_cc=0.0000][A
+IO optimization:  50%|█████     | 20/40 [01:12<01:12,  3.65s/it, best=0.4403, best_i=10, dice=0.8989, hard_mtv=0.0052, hard_tlg=0.0324, loss=2.2333, masked_jac=0.0346, mtv=0.0066, mtv_avg=0.000045, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0476, tlg_cc=0.0000][A
+IO optimization:  50%|█████     | 20/40 [01:16<01:12,  3.65s/it, best=0.4403, best_i=10, dice=0.9014, hard_mtv=0.0064, hard_tlg=0.0339, loss=0.8859, masked_jac=0.0353, mtv=0.0034, mtv_avg=0.000018, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0487, tlg_cc=0.0000][A
+IO optimization:  52%|█████▎    | 21/40 [01:16<01:09,  3.65s/it, best=0.4403, best_i=10, dice=0.9014, hard_mtv=0.0064, hard_tlg=0.0339, loss=0.8859, masked_jac=0.0353, mtv=0.0034, mtv_avg=0.000018, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0487, tlg_cc=0.0000][A
+IO optimization:  52%|█████▎    | 21/40 [01:19<01:09,  3.65s/it, best=0.4403, best_i=10, dice=0.9032, hard_mtv=0.0097, hard_tlg=0.0330, loss=0.4470, masked_jac=0.0363, mtv=0.0009, mtv_avg=0.000001, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0509, tlg_cc=0.0000][A
+IO optimization:  55%|█████▌    | 22/40 [01:19<01:05,  3.65s/it, best=0.4403, best_i=10, dice=0.9032, hard_mtv=0.0097, hard_tlg=0.0330, loss=0.4470, masked_jac=0.0363, mtv=0.0009, mtv_avg=0.000001, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0509, tlg_cc=0.0000][A
+IO optimization:  55%|█████▌    | 22/40 [01:23<01:05,  3.65s/it, best=0.4403, best_i=10, dice=0.9050, hard_mtv=0.0135, hard_tlg=0.0317, loss=1.1654, masked_jac=0.0374, mtv=0.0043, mtv_avg=0.000004, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0521, tlg_cc=0.0000][A
+IO optimization:  57%|█████▊    | 23/40 [01:23<01:02,  3.65s/it, best=0.4403, best_i=10, dice=0.9050, hard_mtv=0.0135, hard_tlg=0.0317, loss=1.1654, masked_jac=0.0374, mtv=0.0043, mtv_avg=0.000004, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0521, tlg_cc=0.0000][A
+IO optimization:  57%|█████▊    | 23/40 [01:27<01:02,  3.65s/it, best=0.4403, best_i=10, dice=0.9066, hard_mtv=0.0135, hard_tlg=0.0341, loss=1.5927, masked_jac=0.0384, mtv=0.0055, mtv_avg=0.000008, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0511, tlg_cc=0.0000][A
+IO optimization:  60%|██████    | 24/40 [01:27<00:58,  3.65s/it, best=0.4403, best_i=10, dice=0.9066, hard_mtv=0.0135, hard_tlg=0.0341, loss=1.5927, masked_jac=0.0384, mtv=0.0055, mtv_avg=0.000008, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0511, tlg_cc=0.0000][A
+IO optimization:  60%|██████    | 24/40 [01:30<00:58,  3.65s/it, best=0.4403, best_i=10, dice=0.9081, hard_mtv=0.0135, hard_tlg=0.0379, loss=0.9825, masked_jac=0.0394, mtv=0.0042, mtv_avg=0.000003, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0475, tlg_cc=0.0000][A
+IO optimization:  62%|██████▎   | 25/40 [01:30<00:54,  3.65s/it, best=0.4403, best_i=10, dice=0.9081, hard_mtv=0.0135, hard_tlg=0.0379, loss=0.9825, masked_jac=0.0394, mtv=0.0042, mtv_avg=0.000003, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0475, tlg_cc=0.0000][A
+IO optimization:  62%|██████▎   | 25/40 [01:34<00:54,  3.65s/it, best=0.4403, best_i=10, dice=0.9094, hard_mtv=0.0097, hard_tlg=0.0443, loss=0.2260, masked_jac=0.0403, mtv=0.0011, mtv_avg=0.000001, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0423, tlg_cc=0.0000][A
+IO optimization:  65%|██████▌   | 26/40 [01:34<00:51,  3.66s/it, best=0.4403, best_i=10, dice=0.9094, hard_mtv=0.0097, hard_tlg=0.0443, loss=0.2260, masked_jac=0.0403, mtv=0.0011, mtv_avg=0.000001, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0423, tlg_cc=0.0000][A
+IO optimization:  65%|██████▌   | 26/40 [01:38<00:51,  3.66s/it, best=0.4403, best_i=10, dice=0.9104, hard_mtv=0.0071, hard_tlg=0.0503, loss=0.2786, masked_jac=0.0413, mtv=0.0022, mtv_avg=0.000012, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0367, tlg_cc=0.0000][A
+IO optimization:  68%|██████▊   | 27/40 [01:38<00:47,  3.66s/it, best=0.4403, best_i=10, dice=0.9104, hard_mtv=0.0071, hard_tlg=0.0503, loss=0.2786, masked_jac=0.0413, mtv=0.0022, mtv_avg=0.000012, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0367, tlg_cc=0.0000][A
+IO optimization:  68%|██████▊   | 27/40 [01:41<00:47,  3.66s/it, best=0.4403, best_i=10, dice=0.9116, hard_mtv=0.0052, hard_tlg=0.0537, loss=0.7583, masked_jac=0.0424, mtv=0.0043, mtv_avg=0.000024, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0325, tlg_cc=0.0000][A
+IO optimization:  70%|███████   | 28/40 [01:41<00:43,  3.66s/it, best=0.4403, best_i=10, dice=0.9116, hard_mtv=0.0052, hard_tlg=0.0537, loss=0.7583, masked_jac=0.0424, mtv=0.0043, mtv_avg=0.000024, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0325, tlg_cc=0.0000][A
+IO optimization:  70%|███████   | 28/40 [01:45<00:43,  3.66s/it, best=0.4403, best_i=10, dice=0.9126, hard_mtv=0.0052, hard_tlg=0.0576, loss=0.7289, masked_jac=0.0434, mtv=0.0044, mtv_avg=0.000021, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0302, tlg_cc=0.0000][A
+IO optimization:  72%|███████▎  | 29/40 [01:45<00:40,  3.66s/it, best=0.4403, best_i=10, dice=0.9126, hard_mtv=0.0052, hard_tlg=0.0576, loss=0.7289, masked_jac=0.0434, mtv=0.0044, mtv_avg=0.000021, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0302, tlg_cc=0.0000][A
+IO optimization:  72%|███████▎  | 29/40 [01:49<00:40,  3.66s/it, best=0.4403, best_i=10, dice=0.9135, hard_mtv=0.0084, hard_tlg=0.0593, loss=0.1867, masked_jac=0.0445, mtv=0.0026, mtv_avg=0.000007, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0299, tlg_cc=0.0000][A
+IO optimization:  75%|███████▌  | 30/40 [01:49<00:36,  3.66s/it, best=0.4403, best_i=10, dice=0.9135, hard_mtv=0.0084, hard_tlg=0.0593, loss=0.1867, masked_jac=0.0445, mtv=0.0026, mtv_avg=0.000007, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0299, tlg_cc=0.0000][A
+IO optimization:  75%|███████▌  | 30/40 [01:52<00:36,  3.66s/it, best=0.4403, best_i=10, dice=0.9144, hard_mtv=0.0084, hard_tlg=0.0598, loss=-0.0952, masked_jac=0.0456, mtv=0.0001, mtv_avg=0.000000, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0306, tlg_cc=0.0000][A
+IO optimization:  78%|███████▊  | 31/40 [01:52<00:32,  3.66s/it, best=0.4403, best_i=10, dice=0.9144, hard_mtv=0.0084, hard_tlg=0.0598, loss=-0.0952, masked_jac=0.0456, mtv=0.0001, mtv_avg=0.000000, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0306, tlg_cc=0.0000][A
+IO optimization:  78%|███████▊  | 31/40 [01:56<00:32,  3.66s/it, best=0.4403, best_i=10, dice=0.9153, hard_mtv=0.0122, hard_tlg=0.0593, loss=0.1484, masked_jac=0.0469, mtv=0.0025, mtv_avg=0.000004, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0308, tlg_cc=0.0000] [A
+IO optimization:  80%|████████  | 32/40 [01:56<00:29,  3.66s/it, best=0.4403, best_i=10, dice=0.9153, hard_mtv=0.0122, hard_tlg=0.0593, loss=0.1484, masked_jac=0.0469, mtv=0.0025, mtv_avg=0.000004, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0308, tlg_cc=0.0000][A
+IO optimization:  80%|████████  | 32/40 [02:00<00:29,  3.66s/it, best=0.4403, best_i=10, dice=0.9161, hard_mtv=0.0122, hard_tlg=0.0624, loss=0.3204, masked_jac=0.0480, mtv=0.0034, mtv_avg=0.000008, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0295, tlg_cc=0.0000][A
+IO optimization:  82%|████████▎ | 33/40 [02:00<00:25,  3.66s/it, best=0.4403, best_i=10, dice=0.9161, hard_mtv=0.0122, hard_tlg=0.0624, loss=0.3204, masked_jac=0.0480, mtv=0.0034, mtv_avg=0.000008, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0295, tlg_cc=0.0000][A
+IO optimization:  82%|████████▎ | 33/40 [02:03<00:25,  3.66s/it, best=0.4403, best_i=10, dice=0.9168, hard_mtv=0.0116, hard_tlg=0.0666, loss=0.0463, masked_jac=0.0491, mtv=0.0025, mtv_avg=0.000003, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0264, tlg_cc=0.0000][A
+IO optimization:  85%|████████▌ | 34/40 [02:03<00:21,  3.66s/it, best=0.4403, best_i=10, dice=0.9168, hard_mtv=0.0116, hard_tlg=0.0666, loss=0.0463, masked_jac=0.0491, mtv=0.0025, mtv_avg=0.000003, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0264, tlg_cc=0.0000][A
+IO optimization:  85%|████████▌ | 34/40 [02:07<00:21,  3.66s/it, best=0.4403, best_i=10, dice=0.9175, hard_mtv=0.0097, hard_tlg=0.0702, loss=-0.2761, masked_jac=0.0501, mtv=0.0004, mtv_avg=0.000000, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0220, tlg_cc=0.0000][A
+IO optimization:  88%|████████▊ | 35/40 [02:07<00:18,  3.66s/it, best=0.4403, best_i=10, dice=0.9175, hard_mtv=0.0097, hard_tlg=0.0702, loss=-0.2761, masked_jac=0.0501, mtv=0.0004, mtv_avg=0.000000, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0220, tlg_cc=0.0000][A
+IO optimization:  88%|████████▊ | 35/40 [02:11<00:18,  3.66s/it, best=0.4403, best_i=10, dice=0.9182, hard_mtv=0.0077, hard_tlg=0.0743, loss=-0.2322, masked_jac=0.0511, mtv=0.0018, mtv_avg=0.000006, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0176, tlg_cc=0.0000][A
+IO optimization:  90%|█████████ | 36/40 [02:11<00:14,  3.66s/it, best=0.4403, best_i=10, dice=0.9182, hard_mtv=0.0077, hard_tlg=0.0743, loss=-0.2322, masked_jac=0.0511, mtv=0.0018, mtv_avg=0.000006, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0176, tlg_cc=0.0000][A
+IO optimization:  90%|█████████ | 36/40 [02:14<00:14,  3.66s/it, best=0.4403, best_i=10, dice=0.9187, hard_mtv=0.0071, hard_tlg=0.0772, loss=-0.0651, masked_jac=0.0522, mtv=0.0030, mtv_avg=0.000014, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0142, tlg_cc=0.0000][A
+IO optimization:  92%|█████████▎| 37/40 [02:14<00:10,  3.66s/it, best=0.4403, best_i=10, dice=0.9187, hard_mtv=0.0071, hard_tlg=0.0772, loss=-0.0651, masked_jac=0.0522, mtv=0.0030, mtv_avg=0.000014, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0142, tlg_cc=0.0000][A
+IO optimization:  92%|█████████▎| 37/40 [02:18<00:10,  3.66s/it, best=0.4403, best_i=10, dice=0.9192, hard_mtv=0.0071, hard_tlg=0.0798, loss=-0.1719, masked_jac=0.0534, mtv=0.0026, mtv_avg=0.000013, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0124, tlg_cc=0.0000][A
+IO optimization:  95%|█████████▌| 38/40 [02:18<00:07,  3.66s/it, best=0.4403, best_i=10, dice=0.9192, hard_mtv=0.0071, hard_tlg=0.0798, loss=-0.1719, masked_jac=0.0534, mtv=0.0026, mtv_avg=0.000013, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0124, tlg_cc=0.0000][A
+IO optimization:  95%|█████████▌| 38/40 [02:22<00:07,  3.66s/it, best=0.4403, best_i=10, dice=0.9197, hard_mtv=0.0084, hard_tlg=0.0811, loss=-0.4258, masked_jac=0.0546, mtv=0.0011, mtv_avg=0.000006, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0118, tlg_cc=0.0000][A
+IO optimization:  98%|█████████▊| 39/40 [02:22<00:03,  3.66s/it, best=0.4403, best_i=10, dice=0.9197, hard_mtv=0.0084, hard_tlg=0.0811, loss=-0.4258, masked_jac=0.0546, mtv=0.0011, mtv_avg=0.000006, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0118, tlg_cc=0.0000][A
+IO optimization:  98%|█████████▊| 39/40 [02:25<00:03,  3.66s/it, best=0.4403, best_i=10, dice=0.9202, hard_mtv=0.0109, hard_tlg=0.0800, loss=-0.4682, masked_jac=0.0558, mtv=0.0008, mtv_avg=0.000001, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0116, tlg_cc=0.0000][A
+IO optimization: 100%|██████████| 40/40 [02:25<00:00,  3.66s/it, best=0.4403, best_i=10, dice=0.9202, hard_mtv=0.0109, hard_tlg=0.0800, loss=-0.4682, masked_jac=0.0558, mtv=0.0008, mtv_avg=0.000001, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0116, tlg_cc=0.0000][AIO optimization: 100%|██████████| 40/40 [02:25<00:00,  3.64s/it, best=0.4403, best_i=10, dice=0.9202, hard_mtv=0.0109, hard_tlg=0.0800, loss=-0.4682, masked_jac=0.0558, mtv=0.0008, mtv_avg=0.000001, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0116, tlg_cc=0.0000]
+                                                               kabsch_w2.5:  95%|█████████▍| 36/38 [1:59:39<06:29, 194.90s/it]kabsch_w2.5:  97%|█████████▋| 37/38 [1:59:39<03:14, 194.35s/it][kabsch_w2.5] 0356 01->00: dice_ct_before=0.0601 dice_ct=0.7466 hd95_before=45.3292 hd95=6.5491 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.7246 bone_hd95=8.0091 soft_dice=0.7991 soft_hd95=4.9000 near_bone_soft_dice=0.7464 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2102 stencil_leakage_staring_eroded=0.0000 bre_mm=1.2359 staring_energy_bone=0.7347 staring_properness_bone=0.0446 staring_orthonormality_bone=0.3086 staring_affinity_bone=0.3814 jac_det_dev_bone=0.1984 jac_ortho_dev_bone=0.5739 dist_distortion_short=0.0572 dist_distortion_long=0.0175 erosion_bones_retained=0.8197 erosion_voxels_retained=0.3605 lesion_voxels=931.0000 mtv_change=-0.0021 mtv_bias=0.0021 tlg_change=0.0268 tlg_bias=0.0268 n_lesions=13.0000
+
+IO optimization:   0%|          | 0/40 [00:00<?, ?it/s][A
+IO optimization:   0%|          | 0/40 [00:03<?, ?it/s, best=52.8159, best_i=0, dice=0.7827, hard_mtv=0.0351, hard_tlg=0.0161, loss=4.2764, masked_jac=0.0568, mtv=0.0041, mtv_avg=0.000002, mtv_cc=0.00000, non_diff=0.0002, tlg=0.0175, tlg_cc=0.0000][A
+IO optimization:   2%|▎         | 1/40 [00:03<02:20,  3.60s/it, best=52.8159, best_i=0, dice=0.7827, hard_mtv=0.0351, hard_tlg=0.0161, loss=4.2764, masked_jac=0.0568, mtv=0.0041, mtv_avg=0.000002, mtv_cc=0.00000, non_diff=0.0002, tlg=0.0175, tlg_cc=0.0000][A
+IO optimization:   2%|▎         | 1/40 [00:07<02:20,  3.60s/it, best=52.8159, best_i=0, dice=0.7928, hard_mtv=0.0351, hard_tlg=0.0161, loss=202.6947, masked_jac=0.0615, mtv=0.0699, mtv_avg=0.002636, mtv_cc=0.00000, non_diff=0.0076, tlg=0.0982, tlg_cc=0.0000][A
+IO optimization:   5%|▌         | 2/40 [00:07<02:16,  3.60s/it, best=52.8159, best_i=0, dice=0.7928, hard_mtv=0.0351, hard_tlg=0.0161, loss=202.6947, masked_jac=0.0615, mtv=0.0699, mtv_avg=0.002636, mtv_cc=0.00000, non_diff=0.0076, tlg=0.0982, tlg_cc=0.0000][A
+IO optimization:   5%|▌         | 2/40 [00:10<02:16,  3.60s/it, best=52.5764, best_i=2, dice=0.8023, hard_mtv=0.0351, hard_tlg=0.0161, loss=17.7228, masked_jac=0.0543, mtv=0.0187, mtv_avg=0.000064, mtv_cc=0.00000, non_diff=0.0059, tlg=0.0398, tlg_cc=0.0000] [A
+IO optimization:   8%|▊         | 3/40 [00:10<02:13,  3.61s/it, best=52.5764, best_i=2, dice=0.8023, hard_mtv=0.0351, hard_tlg=0.0161, loss=17.7228, masked_jac=0.0543, mtv=0.0187, mtv_avg=0.000064, mtv_cc=0.00000, non_diff=0.0059, tlg=0.0398, tlg_cc=0.0000][A
+IO optimization:   8%|▊         | 3/40 [00:14<02:13,  3.61s/it, best=16.4686, best_i=3, dice=0.8108, hard_mtv=0.0175, hard_tlg=0.0226, loss=48.4718, masked_jac=0.0502, mtv=0.0333, mtv_avg=0.000990, mtv_cc=0.00000, non_diff=0.0026, tlg=0.0198, tlg_cc=0.0000][A
+IO optimization:  10%|█         | 4/40 [00:14<02:09,  3.61s/it, best=16.4686, best_i=3, dice=0.8108, hard_mtv=0.0175, hard_tlg=0.0226, loss=48.4718, masked_jac=0.0502, mtv=0.0333, mtv_avg=0.000990, mtv_cc=0.00000, non_diff=0.0026, tlg=0.0198, tlg_cc=0.0000][A
+IO optimization:  10%|█         | 4/40 [00:18<02:09,  3.61s/it, best=16.4686, best_i=3, dice=0.8187, hard_mtv=0.0175, hard_tlg=0.0246, loss=109.7478, masked_jac=0.0500, mtv=0.0511, mtv_avg=0.002100, mtv_cc=0.00000, non_diff=0.0015, tlg=0.0399, tlg_cc=0.0000][A
+IO optimization:  12%|█▎        | 5/40 [00:18<02:06,  3.61s/it, best=16.4686, best_i=3, dice=0.8187, hard_mtv=0.0175, hard_tlg=0.0246, loss=109.7478, masked_jac=0.0500, mtv=0.0511, mtv_avg=0.002100, mtv_cc=0.00000, non_diff=0.0015, tlg=0.0399, tlg_cc=0.0000][A
+IO optimization:  12%|█▎        | 5/40 [00:21<02:06,  3.61s/it, best=16.4686, best_i=3, dice=0.8258, hard_mtv=0.0175, hard_tlg=0.0246, loss=68.3801, masked_jac=0.0503, mtv=0.0399, mtv_avg=0.001665, mtv_cc=0.00000, non_diff=0.0009, tlg=0.0270, tlg_cc=0.0000] [A
+IO optimization:  15%|█▌        | 6/40 [00:21<02:02,  3.62s/it, best=16.4686, best_i=3, dice=0.8258, hard_mtv=0.0175, hard_tlg=0.0246, loss=68.3801, masked_jac=0.0503, mtv=0.0399, mtv_avg=0.001665, mtv_cc=0.00000, non_diff=0.0009, tlg=0.0270, tlg_cc=0.0000][A
+IO optimization:  15%|█▌        | 6/40 [00:25<02:02,  3.62s/it, best=15.7816, best_i=6, dice=0.8326, hard_mtv=0.0175, hard_tlg=0.0246, loss=13.1208, masked_jac=0.0514, mtv=0.0158, mtv_avg=0.000680, mtv_cc=0.00000, non_diff=0.0007, tlg=0.0008, tlg_cc=0.0000][A
+IO optimization:  18%|█▊        | 7/40 [00:25<01:59,  3.62s/it, best=15.7816, best_i=6, dice=0.8326, hard_mtv=0.0175, hard_tlg=0.0246, loss=13.1208, masked_jac=0.0514, mtv=0.0158, mtv_avg=0.000680, mtv_cc=0.00000, non_diff=0.0007, tlg=0.0008, tlg_cc=0.0000][A
+IO optimization:  18%|█▊        | 7/40 [00:28<01:59,  3.62s/it, best=15.7816, best_i=6, dice=0.8394, hard_mtv=0.0351, hard_tlg=0.0078, loss=6.5568, masked_jac=0.0542, mtv=0.0096, mtv_avg=0.000075, mtv_cc=0.00000, non_diff=0.0005, tlg=0.0301, tlg_cc=0.0000] [A
+IO optimization:  20%|██        | 8/40 [00:28<01:55,  3.62s/it, best=15.7816, best_i=6, dice=0.8394, hard_mtv=0.0351, hard_tlg=0.0078, loss=6.5568, masked_jac=0.0542, mtv=0.0096, mtv_avg=0.000075, mtv_cc=0.00000, non_diff=0.0005, tlg=0.0301, tlg_cc=0.0000][A
+IO optimization:  20%|██        | 8/40 [00:32<01:55,  3.62s/it, best=15.7816, best_i=6, dice=0.8453, hard_mtv=0.0351, hard_tlg=0.0078, loss=34.0269, masked_jac=0.0565, mtv=0.0278, mtv_avg=0.000031, mtv_cc=0.00000, non_diff=0.0004, tlg=0.0510, tlg_cc=0.0000][A
+IO optimization:  22%|██▎       | 9/40 [00:32<01:52,  3.62s/it, best=15.7816, best_i=6, dice=0.8453, hard_mtv=0.0351, hard_tlg=0.0078, loss=34.0269, masked_jac=0.0565, mtv=0.0278, mtv_avg=0.000031, mtv_cc=0.00000, non_diff=0.0004, tlg=0.0510, tlg_cc=0.0000][A
+IO optimization:  22%|██▎       | 9/40 [00:36<01:52,  3.62s/it, best=15.7816, best_i=6, dice=0.8510, hard_mtv=0.0351, hard_tlg=0.0078, loss=52.4358, masked_jac=0.0583, mtv=0.0351, mtv_avg=0.000155, mtv_cc=0.00000, non_diff=0.0003, tlg=0.0594, tlg_cc=0.0000][A
+IO optimization:  25%|██▌       | 10/40 [00:36<01:48,  3.63s/it, best=15.7816, best_i=6, dice=0.8510, hard_mtv=0.0351, hard_tlg=0.0078, loss=52.4358, masked_jac=0.0583, mtv=0.0351, mtv_avg=0.000155, mtv_cc=0.00000, non_diff=0.0003, tlg=0.0594, tlg_cc=0.0000][A
+IO optimization:  25%|██▌       | 10/40 [00:39<01:48,  3.63s/it, best=15.7816, best_i=6, dice=0.8565, hard_mtv=0.0351, hard_tlg=0.0078, loss=42.7812, masked_jac=0.0592, mtv=0.0315, mtv_avg=0.000122, mtv_cc=0.00000, non_diff=0.0002, tlg=0.0554, tlg_cc=0.0000][A
+IO optimization:  28%|██▊       | 11/40 [00:39<01:45,  3.63s/it, best=15.7816, best_i=6, dice=0.8565, hard_mtv=0.0351, hard_tlg=0.0078, loss=42.7812, masked_jac=0.0592, mtv=0.0315, mtv_avg=0.000122, mtv_cc=0.00000, non_diff=0.0002, tlg=0.0554, tlg_cc=0.0000][A
+IO optimization:  28%|██▊       | 11/40 [00:43<01:45,  3.63s/it, best=15.7816, best_i=6, dice=0.8608, hard_mtv=0.0351, hard_tlg=0.0078, loss=19.2349, masked_jac=0.0592, mtv=0.0204, mtv_avg=0.000015, mtv_cc=0.00000, non_diff=0.0001, tlg=0.0428, tlg_cc=0.0000][A
+IO optimization:  30%|███       | 12/40 [00:43<01:41,  3.63s/it, best=15.7816, best_i=6, dice=0.8608, hard_mtv=0.0351, hard_tlg=0.0078, loss=19.2349, masked_jac=0.0592, mtv=0.0204, mtv_avg=0.000015, mtv_cc=0.00000, non_diff=0.0001, tlg=0.0428, tlg_cc=0.0000][A
+IO optimization:  30%|███       | 12/40 [00:47<01:41,  3.63s/it, best=15.7816, best_i=6, dice=0.8658, hard_mtv=0.0351, hard_tlg=0.0078, loss=3.4387, masked_jac=0.0591, mtv=0.0054, mtv_avg=0.000035, mtv_cc=0.00000, non_diff=0.0001, tlg=0.0257, tlg_cc=0.0000] [A
+IO optimization:  32%|███▎      | 13/40 [00:47<01:38,  3.64s/it, best=15.7816, best_i=6, dice=0.8658, hard_mtv=0.0351, hard_tlg=0.0078, loss=3.4387, masked_jac=0.0591, mtv=0.0054, mtv_avg=0.000035, mtv_cc=0.00000, non_diff=0.0001, tlg=0.0257, tlg_cc=0.0000][A
+IO optimization:  32%|███▎      | 13/40 [00:50<01:38,  3.64s/it, best=14.6950, best_i=13, dice=0.8703, hard_mtv=0.0175, hard_tlg=0.0246, loss=5.8956, masked_jac=0.0580, mtv=0.0097, mtv_avg=0.000229, mtv_cc=0.00000, non_diff=0.0001, tlg=0.0085, tlg_cc=0.0000][A
+IO optimization:  35%|███▌      | 14/40 [00:50<01:34,  3.64s/it, best=14.6950, best_i=13, dice=0.8703, hard_mtv=0.0175, hard_tlg=0.0246, loss=5.8956, masked_jac=0.0580, mtv=0.0097, mtv_avg=0.000229, mtv_cc=0.00000, non_diff=0.0001, tlg=0.0085, tlg_cc=0.0000][A
+IO optimization:  35%|███▌      | 14/40 [00:54<01:34,  3.64s/it, best=14.6950, best_i=13, dice=0.8746, hard_mtv=0.0175, hard_tlg=0.0254, loss=19.4861, masked_jac=0.0584, mtv=0.0208, mtv_avg=0.000444, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0042, tlg_cc=0.0000][A
+IO optimization:  38%|███▊      | 15/40 [00:54<01:30,  3.64s/it, best=14.6950, best_i=13, dice=0.8746, hard_mtv=0.0175, hard_tlg=0.0254, loss=19.4861, masked_jac=0.0584, mtv=0.0208, mtv_avg=0.000444, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0042, tlg_cc=0.0000][A
+IO optimization:  38%|███▊      | 15/40 [00:58<01:30,  3.64s/it, best=14.6950, best_i=13, dice=0.8789, hard_mtv=0.0175, hard_tlg=0.0254, loss=27.0010, masked_jac=0.0592, mtv=0.0249, mtv_avg=0.000485, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0088, tlg_cc=0.0000][A
+IO optimization:  40%|████      | 16/40 [00:58<01:27,  3.64s/it, best=14.6950, best_i=13, dice=0.8789, hard_mtv=0.0175, hard_tlg=0.0254, loss=27.0010, masked_jac=0.0592, mtv=0.0249, mtv_avg=0.000485, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0088, tlg_cc=0.0000][A
+IO optimization:  40%|████      | 16/40 [01:01<01:27,  3.64s/it, best=14.6084, best_i=16, dice=0.8826, hard_mtv=0.0175, hard_tlg=0.0254, loss=20.6800, masked_jac=0.0606, mtv=0.0216, mtv_avg=0.000325, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0049, tlg_cc=0.0000][A
+IO optimization:  42%|████▎     | 17/40 [01:01<01:23,  3.64s/it, best=14.6084, best_i=16, dice=0.8826, hard_mtv=0.0175, hard_tlg=0.0254, loss=20.6800, masked_jac=0.0606, mtv=0.0216, mtv_avg=0.000325, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0049, tlg_cc=0.0000][A
+IO optimization:  42%|████▎     | 17/40 [01:05<01:23,  3.64s/it, best=14.3365, best_i=17, dice=0.8860, hard_mtv=0.0175, hard_tlg=0.0254, loss=8.4644, masked_jac=0.0624, mtv=0.0130, mtv_avg=0.000107, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0052, tlg_cc=0.0000] [A
+IO optimization:  45%|████▌     | 18/40 [01:05<01:20,  3.64s/it, best=14.3365, best_i=17, dice=0.8860, hard_mtv=0.0175, hard_tlg=0.0254, loss=8.4644, masked_jac=0.0624, mtv=0.0130, mtv_avg=0.000107, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0052, tlg_cc=0.0000][A
+IO optimization:  45%|████▌     | 18/40 [01:08<01:20,  3.64s/it, best=14.3365, best_i=17, dice=0.8892, hard_mtv=0.0351, hard_tlg=0.0070, loss=1.9343, masked_jac=0.0657, mtv=0.0021, mtv_avg=0.000001, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0179, tlg_cc=0.0000][A
+IO optimization:  48%|████▊     | 19/40 [01:08<01:16,  3.64s/it, best=14.3365, best_i=17, dice=0.8892, hard_mtv=0.0351, hard_tlg=0.0070, loss=1.9343, masked_jac=0.0657, mtv=0.0021, mtv_avg=0.000001, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0179, tlg_cc=0.0000][A
+IO optimization:  48%|████▊     | 19/40 [01:12<01:16,  3.64s/it, best=14.3365, best_i=17, dice=0.8922, hard_mtv=0.0351, hard_tlg=0.0070, loss=4.7927, masked_jac=0.0680, mtv=0.0084, mtv_avg=0.000058, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0299, tlg_cc=0.0000][A
+IO optimization:  50%|█████     | 20/40 [01:12<01:12,  3.65s/it, best=14.3365, best_i=17, dice=0.8922, hard_mtv=0.0351, hard_tlg=0.0070, loss=4.7927, masked_jac=0.0680, mtv=0.0084, mtv_avg=0.000058, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0299, tlg_cc=0.0000][A
+IO optimization:  50%|█████     | 20/40 [01:16<01:12,  3.65s/it, best=14.3365, best_i=17, dice=0.8948, hard_mtv=0.0351, hard_tlg=0.0070, loss=11.3042, masked_jac=0.0696, mtv=0.0151, mtv_avg=0.000181, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0376, tlg_cc=0.0000][A
+IO optimization:  52%|█████▎    | 21/40 [01:16<01:09,  3.65s/it, best=14.3365, best_i=17, dice=0.8948, hard_mtv=0.0351, hard_tlg=0.0070, loss=11.3042, masked_jac=0.0696, mtv=0.0151, mtv_avg=0.000181, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0376, tlg_cc=0.0000][A
+IO optimization:  52%|█████▎    | 21/40 [01:19<01:09,  3.65s/it, best=14.3365, best_i=17, dice=0.8970, hard_mtv=0.0351, hard_tlg=0.0070, loss=14.1922, masked_jac=0.0703, mtv=0.0173, mtv_avg=0.000238, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0401, tlg_cc=0.0000][A
+IO optimization:  55%|█████▌    | 22/40 [01:19<01:05,  3.65s/it, best=14.3365, best_i=17, dice=0.8970, hard_mtv=0.0351, hard_tlg=0.0070, loss=14.1922, masked_jac=0.0703, mtv=0.0173, mtv_avg=0.000238, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0401, tlg_cc=0.0000][A
+IO optimization:  55%|█████▌    | 22/40 [01:23<01:05,  3.65s/it, best=14.3365, best_i=17, dice=0.8989, hard_mtv=0.0351, hard_tlg=0.0070, loss=11.0665, masked_jac=0.0702, mtv=0.0150, mtv_avg=0.000182, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0375, tlg_cc=0.0000][A
+IO optimization:  57%|█████▊    | 23/40 [01:23<01:02,  3.65s/it, best=14.3365, best_i=17, dice=0.8989, hard_mtv=0.0351, hard_tlg=0.0070, loss=11.0665, masked_jac=0.0702, mtv=0.0150, mtv_avg=0.000182, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0375, tlg_cc=0.0000][A
+IO optimization:  57%|█████▊    | 23/40 [01:27<01:02,  3.65s/it, best=14.3365, best_i=17, dice=0.9004, hard_mtv=0.0351, hard_tlg=0.0070, loss=5.4237, masked_jac=0.0694, mtv=0.0095, mtv_avg=0.000074, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0310, tlg_cc=0.0000] [A
+IO optimization:  60%|██████    | 24/40 [01:27<00:58,  3.65s/it, best=14.3365, best_i=17, dice=0.9004, hard_mtv=0.0351, hard_tlg=0.0070, loss=5.4237, masked_jac=0.0694, mtv=0.0095, mtv_avg=0.000074, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0310, tlg_cc=0.0000][A
+IO optimization:  60%|██████    | 24/40 [01:30<00:58,  3.65s/it, best=14.3365, best_i=17, dice=0.9023, hard_mtv=0.0351, hard_tlg=0.0070, loss=1.7426, masked_jac=0.0683, mtv=0.0022, mtv_avg=0.000005, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0224, tlg_cc=0.0000][A
+IO optimization:  62%|██████▎   | 25/40 [01:30<00:54,  3.65s/it, best=14.3365, best_i=17, dice=0.9023, hard_mtv=0.0351, hard_tlg=0.0070, loss=1.7426, masked_jac=0.0683, mtv=0.0022, mtv_avg=0.000005, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0224, tlg_cc=0.0000][A
+IO optimization:  62%|██████▎   | 25/40 [01:34<00:54,  3.65s/it, best=13.8696, best_i=25, dice=0.9037, hard_mtv=0.0175, hard_tlg=0.0254, loss=2.4045, masked_jac=0.0661, mtv=0.0051, mtv_avg=0.000017, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0138, tlg_cc=0.0000][A
+IO optimization:  65%|██████▌   | 26/40 [01:34<00:51,  3.65s/it, best=13.8696, best_i=25, dice=0.9037, hard_mtv=0.0175, hard_tlg=0.0254, loss=2.4045, masked_jac=0.0661, mtv=0.0051, mtv_avg=0.000017, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0138, tlg_cc=0.0000][A
+IO optimization:  65%|██████▌   | 26/40 [01:38<00:51,  3.65s/it, best=13.8696, best_i=25, dice=0.9051, hard_mtv=0.0175, hard_tlg=0.0254, loss=5.6581, masked_jac=0.0653, mtv=0.0104, mtv_avg=0.000080, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0074, tlg_cc=0.0000][A
+IO optimization:  68%|██████▊   | 27/40 [01:38<00:47,  3.65s/it, best=13.8696, best_i=25, dice=0.9051, hard_mtv=0.0175, hard_tlg=0.0254, loss=5.6581, masked_jac=0.0653, mtv=0.0104, mtv_avg=0.000080, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0074, tlg_cc=0.0000][A
+IO optimization:  68%|██████▊   | 27/40 [01:41<00:47,  3.65s/it, best=13.8696, best_i=25, dice=0.9063, hard_mtv=0.0175, hard_tlg=0.0254, loss=7.6869, masked_jac=0.0650, mtv=0.0127, mtv_avg=0.000128, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0046, tlg_cc=0.0000][A
+IO optimization:  70%|███████   | 28/40 [01:41<00:43,  3.65s/it, best=13.8696, best_i=25, dice=0.9063, hard_mtv=0.0175, hard_tlg=0.0254, loss=7.6869, masked_jac=0.0650, mtv=0.0127, mtv_avg=0.000128, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0046, tlg_cc=0.0000][A
+IO optimization:  70%|███████   | 28/40 [01:45<00:43,  3.65s/it, best=13.8553, best_i=28, dice=0.9072, hard_mtv=0.0175, hard_tlg=0.0254, loss=6.5430, masked_jac=0.0651, mtv=0.0115, mtv_avg=0.000121, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0056, tlg_cc=0.0000][A
+IO optimization:  72%|███████▎  | 29/40 [01:45<00:40,  3.65s/it, best=13.8553, best_i=28, dice=0.9072, hard_mtv=0.0175, hard_tlg=0.0254, loss=6.5430, masked_jac=0.0651, mtv=0.0115, mtv_avg=0.000121, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0056, tlg_cc=0.0000][A
+IO optimization:  72%|███████▎  | 29/40 [01:49<00:40,  3.65s/it, best=13.7713, best_i=29, dice=0.9081, hard_mtv=0.0175, hard_tlg=0.0254, loss=3.5331, masked_jac=0.0655, mtv=0.0076, mtv_avg=0.000071, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0099, tlg_cc=0.0000][A
+IO optimization:  75%|███████▌  | 30/40 [01:49<00:36,  3.65s/it, best=13.7713, best_i=29, dice=0.9081, hard_mtv=0.0175, hard_tlg=0.0254, loss=3.5331, masked_jac=0.0655, mtv=0.0076, mtv_avg=0.000071, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0099, tlg_cc=0.0000][A
+IO optimization:  75%|███████▌  | 30/40 [01:52<00:36,  3.65s/it, best=13.7713, best_i=29, dice=0.9090, hard_mtv=0.0351, hard_tlg=0.0070, loss=1.4255, masked_jac=0.0673, mtv=0.0022, mtv_avg=0.000021, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0159, tlg_cc=0.0000][A
+IO optimization:  78%|███████▊  | 31/40 [01:52<00:32,  3.65s/it, best=13.7713, best_i=29, dice=0.9090, hard_mtv=0.0351, hard_tlg=0.0070, loss=1.4255, masked_jac=0.0673, mtv=0.0022, mtv_avg=0.000021, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0159, tlg_cc=0.0000][A
+IO optimization:  78%|███████▊  | 31/40 [01:56<00:32,  3.65s/it, best=13.7713, best_i=29, dice=0.9097, hard_mtv=0.0351, hard_tlg=0.0070, loss=1.6942, masked_jac=0.0680, mtv=0.0032, mtv_avg=0.000000, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0219, tlg_cc=0.0000][A
+IO optimization:  80%|████████  | 32/40 [01:56<00:29,  3.65s/it, best=13.7713, best_i=29, dice=0.9097, hard_mtv=0.0351, hard_tlg=0.0070, loss=1.6942, masked_jac=0.0680, mtv=0.0032, mtv_avg=0.000000, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0219, tlg_cc=0.0000][A
+IO optimization:  80%|████████  | 32/40 [02:00<00:29,  3.65s/it, best=13.7713, best_i=29, dice=0.9105, hard_mtv=0.0351, hard_tlg=0.0070, loss=3.4002, masked_jac=0.0685, mtv=0.0072, mtv_avg=0.000007, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0262, tlg_cc=0.0000][A
+IO optimization:  82%|████████▎ | 33/40 [02:00<00:25,  3.65s/it, best=13.7713, best_i=29, dice=0.9105, hard_mtv=0.0351, hard_tlg=0.0070, loss=3.4002, masked_jac=0.0685, mtv=0.0072, mtv_avg=0.000007, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0262, tlg_cc=0.0000][A
+IO optimization:  82%|████████▎ | 33/40 [02:03<00:25,  3.65s/it, best=13.7713, best_i=29, dice=0.9112, hard_mtv=0.0351, hard_tlg=0.0070, loss=4.4717, masked_jac=0.0686, mtv=0.0089, mtv_avg=0.000017, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0278, tlg_cc=0.0000][A
+IO optimization:  85%|████████▌ | 34/40 [02:03<00:21,  3.66s/it, best=13.7713, best_i=29, dice=0.9112, hard_mtv=0.0351, hard_tlg=0.0070, loss=4.4717, masked_jac=0.0686, mtv=0.0089, mtv_avg=0.000017, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0278, tlg_cc=0.0000][A
+IO optimization:  85%|████████▌ | 34/40 [02:07<00:21,  3.66s/it, best=13.7713, best_i=29, dice=0.9121, hard_mtv=0.0351, hard_tlg=0.0070, loss=3.9126, masked_jac=0.0684, mtv=0.0081, mtv_avg=0.000013, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0267, tlg_cc=0.0000][A
+IO optimization:  88%|████████▊ | 35/40 [02:07<00:18,  3.66s/it, best=13.7713, best_i=29, dice=0.9121, hard_mtv=0.0351, hard_tlg=0.0070, loss=3.9126, masked_jac=0.0684, mtv=0.0081, mtv_avg=0.000013, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0267, tlg_cc=0.0000][A
+IO optimization:  88%|████████▊ | 35/40 [02:11<00:18,  3.66s/it, best=13.7713, best_i=29, dice=0.9127, hard_mtv=0.0351, hard_tlg=0.0070, loss=2.3203, masked_jac=0.0679, mtv=0.0053, mtv_avg=0.000003, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0232, tlg_cc=0.0000][A
+IO optimization:  90%|█████████ | 36/40 [02:11<00:14,  3.66s/it, best=13.7713, best_i=29, dice=0.9127, hard_mtv=0.0351, hard_tlg=0.0070, loss=2.3203, masked_jac=0.0679, mtv=0.0053, mtv_avg=0.000003, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0232, tlg_cc=0.0000][A
+IO optimization:  90%|█████████ | 36/40 [02:14<00:14,  3.66s/it, best=13.7713, best_i=29, dice=0.9133, hard_mtv=0.0351, hard_tlg=0.0070, loss=1.1508, masked_jac=0.0673, mtv=0.0014, mtv_avg=0.000002, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0183, tlg_cc=0.0000][A
+IO optimization:  92%|█████████▎| 37/40 [02:14<00:10,  3.66s/it, best=13.7713, best_i=29, dice=0.9133, hard_mtv=0.0351, hard_tlg=0.0070, loss=1.1508, masked_jac=0.0673, mtv=0.0014, mtv_avg=0.000002, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0183, tlg_cc=0.0000][A
+IO optimization:  92%|█████████▎| 37/40 [02:18<00:10,  3.66s/it, best=13.7713, best_i=29, dice=0.9138, hard_mtv=0.0351, hard_tlg=0.0070, loss=1.2568, masked_jac=0.0667, mtv=0.0026, mtv_avg=0.000017, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0134, tlg_cc=0.0000][A
+IO optimization:  95%|█████████▌| 38/40 [02:18<00:07,  3.66s/it, best=13.7713, best_i=29, dice=0.9138, hard_mtv=0.0351, hard_tlg=0.0070, loss=1.2568, masked_jac=0.0667, mtv=0.0026, mtv_avg=0.000017, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0134, tlg_cc=0.0000][A
+IO optimization:  95%|█████████▌| 38/40 [02:22<00:07,  3.66s/it, best=13.7713, best_i=29, dice=0.9142, hard_mtv=0.0351, hard_tlg=0.0070, loss=2.1798, masked_jac=0.0662, mtv=0.0056, mtv_avg=0.000037, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0096, tlg_cc=0.0000][A
+IO optimization:  98%|█████████▊| 39/40 [02:22<00:03,  3.66s/it, best=13.7713, best_i=29, dice=0.9142, hard_mtv=0.0351, hard_tlg=0.0070, loss=2.1798, masked_jac=0.0662, mtv=0.0056, mtv_avg=0.000037, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0096, tlg_cc=0.0000][A
+IO optimization:  98%|█████████▊| 39/40 [02:25<00:03,  3.66s/it, best=13.7713, best_i=29, dice=0.9147, hard_mtv=0.0351, hard_tlg=0.0070, loss=2.7706, masked_jac=0.0659, mtv=0.0069, mtv_avg=0.000044, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0078, tlg_cc=0.0000][A
+IO optimization: 100%|██████████| 40/40 [02:25<00:00,  3.66s/it, best=13.7713, best_i=29, dice=0.9147, hard_mtv=0.0351, hard_tlg=0.0070, loss=2.7706, masked_jac=0.0659, mtv=0.0069, mtv_avg=0.000044, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0078, tlg_cc=0.0000][AIO optimization: 100%|██████████| 40/40 [02:25<00:00,  3.64s/it, best=13.7713, best_i=29, dice=0.9147, hard_mtv=0.0351, hard_tlg=0.0070, loss=2.7706, masked_jac=0.0659, mtv=0.0069, mtv_avg=0.000044, mtv_cc=0.00000, non_diff=0.0000, tlg=0.0078, tlg_cc=0.0000]
+                                                               kabsch_w2.5:  97%|█████████▋| 37/38 [2:02:51<03:14, 194.35s/it]kabsch_w2.5: 100%|██████████| 38/38 [2:02:51<00:00, 193.62s/it]kabsch_w2.5: 100%|██████████| 38/38 [2:02:51<00:00, 193.99s/it]
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+[kabsch_w2.5] 0370 01->00: dice_ct_before=0.0314 dice_ct=0.7754 hd95_before=51.9767 hd95=5.0927 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.7842 bone_hd95=4.2001 soft_dice=0.7942 soft_hd95=6.1011 near_bone_soft_dice=0.7435 ndv_bone_percent=0.0005 ndv_band_percent=0.0004 stencil_leakage_staring=0.2330 stencil_leakage_staring_eroded=0.0000 bre_mm=1.6317 staring_energy_bone=2.0372 staring_properness_bone=0.1221 staring_orthonormality_bone=0.9065 staring_affinity_bone=1.0086 jac_det_dev_bone=0.3139 jac_ortho_dev_bone=0.9546 dist_distortion_short=0.0672 dist_distortion_long=0.0212 erosion_bones_retained=0.6230 erosion_voxels_retained=0.3223 lesion_voxels=22.0000 mtv_change=0.2727 mtv_bias=0.2727 tlg_change=0.2081 tlg_bias=0.2081 n_lesions=1.0000
+[kabsch_w2.5] wrote /home/iml/fryderyk.koegl/code/LapIRN-koegl/evaluation_official_scorer/rigidity_sweep/kabsch/val/kabsch_w2.5.csv
+runtime_s                          157.788526
+dice_ct_before                       0.135594
+dice_ct                              0.784685
+hd95_before                         34.964101
+hd95                                 6.475456
+ndv_percent                          0.000205
+n_bones                             60.947368
+bone_dice                            0.788873
+bone_hd95                            7.153326
+soft_dice                            0.807975
+soft_hd95                            5.704318
+near_bone_soft_dice                  0.752664
+ndv_bone_percent                     0.000143
+ndv_band_percent                     0.000127
+stencil_leakage_staring              0.212909
+stencil_leakage_staring_eroded       0.000000
+bre_mm                               1.590291
+staring_energy_bone                  1.476110
+staring_properness_bone              0.086869
+staring_orthonormality_bone          0.712980
+staring_affinity_bone                0.676261
+jac_det_dev_bone                     0.256727
+jac_ortho_dev_bone                   0.781829
+dist_distortion_short                0.068751
+dist_distortion_long                 0.024111
+erosion_bones_retained               0.755170
+erosion_voxels_retained              0.352741
+lesion_voxels                     7684.236842
+mtv_change                           0.047783
+mtv_bias                             0.068726
+tlg_change                           0.068741
+tlg_bias                             0.090363
+n_lesions                           24.605263
+dtype: float64
+[kabsch_w2.5] wrote /home/iml/fryderyk.koegl/code/LapIRN-koegl/evaluation_official_scorer/rigidity_sweep/kabsch/val/kabsch_w2.5_lesions.csv
+per-lesion |MTV change|:
+                          count      mean  ...       95%       max
+bone_associated size_bin                   ...                    
+False           large      27.0  0.138592  ...  0.489551  0.722874
+                medium    138.0  0.149279  ...  0.412951  0.668639
+                small      27.0  0.350712  ...  1.233333  2.500000
+True            large     151.0  0.070982  ...  0.189047  0.293375
+                medium    441.0  0.126230  ...  0.379310  1.152778
+                small      96.0  0.191750  ...  0.542735  1.222222
+
+[6 rows x 7 columns]
+skip rig/kabsch/3 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/kabsch/2 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/kabsch/1 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/kabsch/0 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/staring_eroded/6 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/staring_eroded/5 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/staring_eroded/4 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/staring_eroded/3 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/staring_eroded/2 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/staring_eroded/1 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/staring_eroded/0 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/staring/6 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/staring/5 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/staring/4 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/staring/3 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/staring/2 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/staring/1 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip rig/staring/0 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/val/I8 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/val/I7 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/val/I6 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/val/I5 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/val/I4 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/val/I3 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/val/I2 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/val/I1 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/R1 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/G2 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/G1 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/W1 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/W0.3 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/W0.03 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/W0.01 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/W0.003 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/W0.001 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/W0.0003 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/W0.0001 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/W0 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/L4 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/L3 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/L2 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/L1 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/I8 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/I7 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/I6 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/I5 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/I4 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/I3 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/I2 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip eval/test/I1 (done or claimed)
+stage 3: janus finished its part
