@@ -21,7 +21,9 @@
       0.19764780176840116,
       0.6588260058946706,
       1.9764780176840118,
-      6.588260058946705
+      6.588260058946705,
+      19.764780176840116,
+      65.88260058946706
     ],
     "staring_eroded": [
       0.10319728792937213,
@@ -33,5 +35,5 @@
       103.19728792937212
     ]
   },
-  "sweep_note": "kabsch and staring_eroded extended by x30, x100 after x10 was still within 1 Dice point of R1"
+  "sweep_note": "all methods x0.1 ... x100 of the reference weight (x30, x100 added for Staring for the 2-point tolerance)"
 }

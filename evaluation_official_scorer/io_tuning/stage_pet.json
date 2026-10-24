@@ -1,0 +1,76 @@
+{
+  "chosen": "pet_x0.1",
+  "rule": "lowest |MTV| + |TLG| within 2 Dice points of the most accurate",
+  "table": [
+    {
+      "candidate": "pet_x0",
+      "dice_ct": 0.7948682969992487,
+      "hd95": 6.606602618667029,
+      "mtv_bias": 0.10104902718820179,
+      "tlg_bias": 0.11482535243677304,
+      "ndv_percent": 3.63421413013151e-05,
+      "preservation": 0.21587437962497483,
+      "within_tolerance": true
+    },
+    {
+      "candidate": "pet_x0.1",
+      "dice_ct": 0.7788072419531548,
+      "hd95": 6.771354087991259,
+      "mtv_bias": 0.05597312116976342,
+      "tlg_bias": 0.07761873825163504,
+      "ndv_percent": 0.0006918499064297855,
+      "preservation": 0.13359185942139845,
+      "within_tolerance": true
+    },
+    {
+      "candidate": "pet_x0.25",
+      "dice_ct": 0.771438770518688,
+      "hd95": 6.86092734393936,
+      "mtv_bias": 0.050709606064028405,
+      "tlg_bias": 0.06810468608801395,
+      "ndv_percent": 0.001241709125592085,
+      "preservation": 0.11881429215204237,
+      "within_tolerance": false
+    },
+    {
+      "candidate": "pet_x0.5",
+      "dice_ct": 0.7708423746017181,
+      "hd95": 6.867404034126234,
+      "mtv_bias": 0.04926631794869028,
+      "tlg_bias": 0.0661322552197857,
+      "ndv_percent": 0.0012433714520609107,
+      "preservation": 0.11539857316847599,
+      "within_tolerance": false
+    },
+    {
+      "candidate": "pet_x1",
+      "dice_ct": 0.7707514515408427,
+      "hd95": 6.867794719662255,
+      "mtv_bias": 0.049787227858029914,
+      "tlg_bias": 0.06659578167068345,
+      "ndv_percent": 0.001243556829099646,
+      "preservation": 0.11638300952871336,
+      "within_tolerance": false
+    },
+    {
+      "candidate": "pet_x2",
+      "dice_ct": 0.7695358058636962,
+      "hd95": 6.886047779022345,
+      "mtv_bias": 0.049206309869150915,
+      "tlg_bias": 0.0657381268889446,
+      "ndv_percent": 0.0012685487635307425,
+      "preservation": 0.11494443675809551,
+      "within_tolerance": false
+    },
+    {
+      "candidate": "pet_x4",
+      "dice_ct": 0.769531434731828,
+      "hd95": 6.891092161072228,
+      "mtv_bias": 0.0460177697588502,
+      "tlg_bias": 0.061802398397912434,
+      "ndv_percent": 0.0012140536492029905,
+      "preservation": 0.10782016815676262,
+      "within_tolerance": false
+    }
+  ]
+}

@@ -49,6 +49,15 @@ qualitative figure).
 - [ ] 25. **Cover letter:** fill in the rigidity bullet, check all findings bullets against the final results (add: tiny PET weights suffice, GT masks -> 2 % MTV), shorten to one page.
 - [ ] 26. **Before submission:** remove `\todo` macro and line numbers if required, check figures/tables are copied from `journal_results/paper/out/`, compile, author approval. Deadline: Oct 30, 2026.
 
+## Re-evaluation with the official scorer (deadline Oct 31)
+Our scorer copy deviated from the official one (align_corners=False, PET warped linearly; conversion (n-1)/2): fixed in `evaluate.py` / `instance_opt.py` (official transformer, PET nearest, exact n/2 conversion, official NDV mask; IO selects its step with the official MTV / TLG). Old results stay in `evaluation/`; new ones in `evaluation_official_scorer/` (fields on lustre: `fields_official_scorer/`). Runner: `journal_results/official_scorer/` (claims on lustre; cluster forward via `submit_stage.sh`, janus backward via `worker.py janus`; choice after each stage: `select_stage.py`). Selection rule everywhere: lowest |MTV| + |TLG| within 2 Dice points of the most accurate (rigidity: largest weight within 2 Dice points of R1, grid x0.1-x100).
+- [x] O1. Stage 1: IO lr x iterations (val, 12 runs) -> lr 0.025 / it 40.
+- [ ] O2. Stage 2: IO PET weight scale (val, 7 runs).
+- [ ] O3. Stage 3: all test runs, I1-I8 on val (choice of "Ours" with the new rule), rigidity sweep (21 runs incl. Staring x30, x100); janus first does T1-T4, T1-tum, B1-B4.
+- [ ] O4. Stage 4: R2-R4 on test at the new weights.
+- [ ] O5. Rerun all paper scripts on `evaluation_official_scorer/` (switch their input folders), update results / abstract / discussion; methods: selection rule (IO tuning, choice of "Ours", rigidity tolerance 2 points), scorer conventions, remove the TLG floor.
+- [ ] O6. (Optional, if time) Re-tune NiftyReg and ConvexAdam with the same rule under the official scorer (val fields of the non-chosen configs were deleted: NiftyReg ~22 h, ConvexAdam ~4 h registration on janus).
+
 ## Optional
 - [ ] 19. **Gradient analysis:** loss-pair cosine matrix, IO trajectories.
 - [ ] 20. **External cohort** (only if it doesn't delay submission).

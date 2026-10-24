@@ -3,13 +3,14 @@ import time
 from pathlib import Path
 from typing import Callable, Dict, Optional, Tuple
 
-import config
-import Functions
-import jacobian
 import numpy as np
-import synthetic
 import torch
+import torch.nn.functional as F
 import tqdm
+
+import config
+import jacobian
+import synthetic
 import utils
 from miccai2020_model_stage import (
     NCC,
@@ -26,6 +27,35 @@ def warp_label(
 ) -> torch.Tensor:
     warped = transform_nearest(label, disp_unit.permute(0, 2, 3, 4, 1), grid)
     return warped
+
+
+def official_nearest_warp(
+    volume: torch.Tensor, disp_voxel: torch.Tensor
+) -> torch.Tensor:
+    """Nearest-neighbour warp exactly as the official PSMAReg scorer
+    (align_corners=True, (n - 1)-normalised, zero padding), for the hard MTV /
+    TLG that select IO's best step.
+
+    volume: (B, C, D, H, W); disp_voxel: (B, D, H, W, 3) voxel displacement,
+    component c along axis c (jacobian.unit_flow_to_voxel_flow, i.e. the warp
+    the network applies)."""
+    shape = disp_voxel.shape[1:4]
+    grid = torch.stack(
+        torch.meshgrid(
+            *[
+                torch.arange(n, device=disp_voxel.device, dtype=disp_voxel.dtype)
+                for n in shape
+            ],
+            indexing="ij",
+        ),
+        dim=-1,
+    )
+    loc = grid + disp_voxel
+    sizes = torch.tensor(shape, device=disp_voxel.device, dtype=disp_voxel.dtype)
+    loc = 2 * (loc / (sizes - 1) - 0.5)
+    return F.grid_sample(
+        volume, loc[..., [2, 1, 0]], align_corners=True, mode="nearest"
+    )
 
 
 def dice_loss_with_grad(
@@ -263,24 +293,20 @@ def io_objective(
         )
         with torch.no_grad():
             if include_pet:
-                # MTV exactly as the scorer counts it: nearest-warped binary
-                # mask, whole voxels (the soft bilinear `mtv` sits between the
-                # scorer's integer rounding levels)
-                warped_pet_hard = warp_label(
-                    moving_pet_mask, disp_unit, grid, transform_nearest
-                )
+                # MTV and TLG exactly as the official scorer computes them:
+                # lesion mask AND PET image warped nearest with its transformer
+                # (official_nearest_warp), whole voxels (the soft bilinear `mtv`
+                # / `tlg` above are the differentiable surrogates)
+                warped_pet_hard = official_nearest_warp(moving_pet_mask, disp_voxel)
                 n_moving = moving_pet_mask.sum()
                 warped_pet_hard = (warped_pet_hard > 0.5).float()
                 n_warped = warped_pet_hard.sum()
                 hard_mtv = (
                     torch.abs(n_warped - n_moving) / n_moving.clamp_min(1)
                 ).item()
-                # TLG exactly as the scorer computes it: the lesion mask warped
-                # with NEAREST, the PET image warped with bilinear. The soft
-                # `tlg` above uses the bilinear mask for both, which is not a
-                # quantity the scorer ever evaluates.
+                pet_hard = official_nearest_warp(moving_pet_image, disp_voxel)
                 tlg_moving_hard = (moving_pet_image * moving_pet_mask).sum()
-                tlg_warped_hard = (warped_pet_image * warped_pet_hard).sum()
+                tlg_warped_hard = (pet_hard * warped_pet_hard).sum()
                 hard_tlg = (
                     torch.abs(tlg_warped_hard - tlg_moving_hard)
                     / tlg_moving_hard.clamp_min(1e-5)

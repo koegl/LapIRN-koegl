@@ -17,21 +17,23 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn.functional as F
+import tqdm
+from scipy import ndimage
+
 import affine_reg
 import bone_metrics
 import Functions
 import hd95_official
 import instance_opt
+import jacobian
 import miccai2020_model_stage
 import my_data
-import numpy as np
-import pandas as pd
 import synthetic
-import torch
-import torch.nn.functional as F
-import tqdm
 from config import DATA_PATH, TrainingConfig
-from scipy import ndimage
 
 # --- training runs: plan ID -> cluster run name (as in the .pth file names) ---
 TRAINING_RUNS: Dict[str, str] = {
@@ -138,7 +140,11 @@ EVAL_RUNS: Dict[str, EvalRun] = {
     # with GT masks (tuned weights), G2 = W1 with GT masks
     "G1": EvalRun(
         "T1",
-        IOSpec(pet=True, rigidity=False, pet_label_dir=DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr"),
+        IOSpec(
+            pet=True,
+            rigidity=False,
+            pet_label_dir=DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr",
+        ),
     ),
     "G2": EvalRun(
         "T1",
@@ -204,7 +210,12 @@ BASELINE_METHODS = ("niftyreg", "convexadam")
 # --- what to run (no argparse) ---
 SPLIT = "val"  # "val" while developing; "test" only for frozen final runs
 RUN_IDS: List[str] = ["T1"]
-OUT_DIR = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/evaluation")
+# results with the official scorer conventions (the first evaluation, with
+# align_corners=False and linear PET warping, stays in evaluation/)
+OUT_DIR = Path("/home/iml/fryderyk.koegl/code/LapIRN-koegl/evaluation_official_scorer")
+# where to save every pair's displacement field (scorer convention, float32,
+# compressed .npz under FIELD_DIR/<split>/<run>/); None: not saved
+FIELD_DIR: Optional[Path] = None
 # predicted CT organ labels (TotalSegmentator) and PET lesion labels (nnU-Net),
 # same file names as labelsTr; the only labels IO may see
 PRED_LABEL_DIR = DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr_pred"
@@ -217,9 +228,7 @@ SKIP_EXISTING = True
 MODEL_DIR = DATA_PATH / "PSMAReg/models_journal"
 # IO settings chosen on val (journal_results/tune_io.py), applied to every IO
 # run before its own overrides; None while tuning
-IO_TUNED_PATH: Optional[Path] = Path(
-    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/journal_results/io_tuning/chosen.json"
-)
+IO_TUNED_PATH: Optional[Path] = OUT_DIR / "io_tuning" / "chosen.json"
 
 # --- per-lesion analysis ---
 # a lesion is a 26-connected component of the moving scan's lesion mask
@@ -233,8 +242,10 @@ LESION_SIZE_BINS_ML = ((0.5, "small"), (5.0, "medium"), (float("inf"), "large"))
 
 
 class SpatialTransformer(torch.nn.Module):
-    """Voxel-displacement warp as used by the challenge scorer (from
-    voxelmorph); evaluation warps go through this, not through the training
+    """Voxel-displacement warp exactly as the official PSMAReg scorer
+    (Learn2Reg26_PSMA, psmareg_scoring_program/scoring.py; voxelmorph): sampling
+    position = voxel index + displacement, (n - 1)-normalised, align_corners=True,
+    zero padding. Evaluation warps go through this, not through the training
     transforms, so the numbers match the official metrics."""
 
     def __init__(self, size: Tuple[int, int, int], mode: str = "bilinear") -> None:
@@ -250,7 +261,18 @@ class SpatialTransformer(torch.nn.Module):
         for i in range(len(shape)):
             new_locs[:, i, ...] = 2 * (new_locs[:, i, ...] / (shape[i] - 1) - 0.5)
         new_locs = new_locs.permute(0, 2, 3, 4, 1)[..., [2, 1, 0]]
-        return F.grid_sample(src, new_locs, align_corners=False, mode=self.mode)
+        return F.grid_sample(src, new_locs, align_corners=True, mode=self.mode)
+
+
+def unit_flow_to_eval_disp(total_unit_flow: torch.Tensor) -> torch.Tensor:
+    """Network unit flow (1, 3, H, W, D) -> the voxel displacement the scorer
+    applies (1, 3, H, W, D), channel i along array axis i.
+
+    Exact: the network warps with align_corners=False on a unit grid, so a unit
+    step is n/2 voxels (jacobian.unit_flow_to_voxel_flow); with the official
+    align_corners=True transformer this field reproduces the network's warp."""
+    voxel = jacobian.unit_flow_to_voxel_flow(total_unit_flow.permute(0, 2, 3, 4, 1))
+    return voxel.permute(0, 4, 1, 2, 3)
 
 
 def model_path_for(cfg: TrainingConfig, run: EvalRun) -> Path:
@@ -344,29 +366,49 @@ def baseline_field_path(field_dir: Path, case_id: str, tp_x: str, tp_y: str) -> 
     return field_dir / f"disp_{case_id}_{tp_x}_{tp_y}.nii.gz"
 
 
+def legacy_to_exact_disp(field: torch.Tensor) -> torch.Tensor:
+    """(1, 3, *shape) voxel displacement in the legacy convention of the MIR /
+    voxelmorph transformer with align_corners=False ((n - 1)-normalised), which
+    samples at (x + v) * n / (n - 1) - 0.5 -> the displacement that samples at
+    the same positions with the official align_corners=True transformer."""
+    shape = field.shape[2:]
+    out = field.clone()
+    for i, n in enumerate(shape):
+        x = torch.arange(n, device=field.device, dtype=field.dtype)
+        x = x.view(*[n if k == i else 1 for k in range(len(shape))])
+        out[:, i] = (x + field[:, i]) * n / (n - 1) - 0.5 - x
+    return out
+
+
 def load_external_unit_flow(
-    path: Path, full_shape: Tuple[int, int, int], device: torch.device
+    path: Path,
+    full_shape: Tuple[int, int, int],
+    device: torch.device,
+    legacy_grid: bool = False,
 ) -> torch.Tensor:
     """A baseline's total displacement field -> total unit flow (1, 3, H, W, D).
 
     The field is stored channel-first, channel i along array axis i, in
-    full-resolution voxels, on the full grid or a coarser one (ConvexAdam).
-    It is converted with the (n - 1)/2 convention of transform_unit_flow_to_
-    flow_cuda, so evaluate_pair hands the scorer exactly the stored field.
-    Unit flow is resolution-independent, so a coarse field is upsampled after
-    the conversion."""
+    full-resolution voxels, on the full grid or a coarser one (ConvexAdam,
+    trilinearly upsampled as by the scorer). legacy_grid: the field was built
+    with the legacy align_corners=False transformer (ConvexAdam, through MIR) and
+    is converted to the exact geometry (legacy_to_exact_disp). The conversion to
+    unit flow uses n/2 per voxel, the inverse of unit_flow_to_eval_disp, so the
+    scorer is handed exactly this field."""
     field = my_data.nib.load(str(path)).get_fdata().astype(np.float32)
     if field.shape[0] != 3:
         raise ValueError(f"{path}: expected a channel-first field, got {field.shape}")
-    shape = field.shape[1:]
-    # unit-flow layout: channel 0 along the LAST array axis
-    unit = torch.from_numpy(field[::-1].copy())[None].to(device)
-    for c, n in enumerate(reversed(full_shape)):
-        unit[:, c] /= (n - 1) / 2.0
-    if tuple(shape) != tuple(full_shape):
-        unit = F.interpolate(
-            unit, size=full_shape, mode="trilinear", align_corners=False
+    disp = torch.from_numpy(field)[None].to(device)
+    if tuple(disp.shape[2:]) != tuple(full_shape):
+        disp = F.interpolate(
+            disp, size=full_shape, mode="trilinear", align_corners=False
         )
+    if legacy_grid:
+        disp = legacy_to_exact_disp(disp)
+    # unit-flow layout: channel 0 along the LAST array axis
+    unit = disp.flip(1).clone()
+    for c, n in enumerate(reversed(full_shape)):
+        unit[:, c] /= n / 2.0
     return unit
 
 
@@ -396,7 +438,10 @@ def register_pair(
         path = baseline_field_path(
             baseline_field_dir(run.external), case_id, tp_x, tp_y
         )
-        return load_external_unit_flow(path, tuple(cfg.img_shape), device), X, Y
+        unit = load_external_unit_flow(
+            path, tuple(cfg.img_shape), device, legacy_grid=run.external == "convexadam"
+        )
+        return unit, X, Y
     if model is None and not run.affine:
         return torch.zeros(1, 3, *cfg.img_shape, device=device), X, Y
 
@@ -558,7 +603,6 @@ def evaluate_pair(
     tp_x: str,
     tp_y: str,
     warp_nearest: SpatialTransformer,
-    warp_linear: SpatialTransformer,
     device: torch.device,
 ) -> Tuple[Dict[str, float], List[Dict[str, float]]]:
     """Metrics of one registered pair, all against the ground-truth labels.
@@ -567,14 +611,10 @@ def evaluate_pair(
     before and after registration. Regularity: %NDV in the fixed body mask.
     Preservation: MTV and TLG of the moving scan's lesions after vs. before
     warping, signed and absolute. TLG uses the raw SUV image, not the network's
-    clipped input; the lesion mask is warped nearest, the PET image linearly,
-    as by the challenge scorer.
+    clipped input; the lesion mask and the PET image are both warped nearest,
+    as by the official scorer.
     """
-    total_voxel = Functions.transform_unit_flow_to_flow_cuda(
-        total_unit_flow.permute(0, 2, 3, 4, 1).clone()
-    ).permute(0, 4, 1, 2, 3)
-    # the scorer's transformer expects the components in the opposite order
-    disp_eval = total_voxel.flip(1)
+    disp_eval = unit_flow_to_eval_disp(total_unit_flow)
 
     # --- CT organ labels: Dice and HD95 ---
     seg_moving = load_label(GT_LABEL_DIR, case_id, "0000", tp_x, device)
@@ -592,8 +632,12 @@ def evaluate_pair(
     fixed_np = fixed_i.cpu().numpy().astype(np.int16)
     warped_np = warped_i.cpu().numpy().astype(np.int16)
 
-    # --- deformation regularity ---
-    body_mask = Y[0, 0].detach().cpu().numpy() > 0
+    # --- deformation regularity: official mask, fixed CT above its minimum ---
+    ct_fixed_path = (
+        cfg.data_dir / "imagesTr" / f"PSMARegPSMA_{case_id}_0000_{tp_y}.nii.gz"
+    )
+    ct_fixed = my_data.nib.load(str(ct_fixed_path)).get_fdata()
+    body_mask = ct_fixed > ct_fixed.min()
 
     # --- PET lesion preservation ---
     lesion_moving = (
@@ -604,7 +648,7 @@ def evaluate_pair(
     suv_moving = torch.from_numpy(
         my_data.nib.load(str(pet_path)).get_fdata().astype(np.float32)
     )[None, None].to(device)
-    suv_warped = warp_linear(suv_moving, disp_eval)
+    suv_warped = warp_nearest(suv_moving, disp_eval)
     mtv_change = relative_change(lesion_warped.sum(), lesion_moving.sum())
     tlg_change = relative_change(
         (suv_warped * lesion_warped).sum(), (suv_moving * lesion_moving).sum()
@@ -691,11 +735,10 @@ def evaluate_run(
     grid = Functions.generate_grid_unit(cfg.img_shape)
     grid_full = torch.from_numpy(grid[None]).to(device).float()
     warp_nearest = SpatialTransformer(cfg.img_shape, mode="nearest").to(device)
-    warp_linear = SpatialTransformer(cfg.img_shape, mode="bilinear").to(device)
     if not run.warp:
         if run.network is not None or run.external is not None or run.affine:
             raise ValueError("warp=False is only meaningful for the identity")
-        warp_nearest = warp_linear = lambda src, flow: src
+        warp_nearest = lambda src, flow: src  # noqa: E731
 
     rows = []
     lesion_rows = []
@@ -731,9 +774,13 @@ def evaluate_run(
             tp_x,
             tp_y,
             warp_nearest,
-            warp_linear,
             device,
         )
+        if FIELD_DIR is not None:
+            field_path = FIELD_DIR / split / run_id / f"{case_id}_{tp_x}_{tp_y}.npz"
+            field_path.parent.mkdir(parents=True, exist_ok=True)
+            disp = unit_flow_to_eval_disp(total_unit_flow)[0].float().cpu().numpy()
+            np.savez_compressed(field_path, disp=disp)
         pair_keys = {
             "run_id": run_id,
             "case_id": case_id,

@@ -1,0 +1,86 @@
+{
+  "chosen": "I7",
+  "rule": "lowest |MTV| + |TLG| within 2 Dice points of the most accurate",
+  "table": [
+    {
+      "candidate": "I1",
+      "dice_ct": 0.807989295873161,
+      "hd95": 6.42354301757544,
+      "mtv_bias": 0.11277620788443911,
+      "tlg_bias": 0.14562491273525952,
+      "ndv_percent": 6.18600352430388e-05,
+      "preservation": 0.2584011206196986,
+      "within_tolerance": true
+    },
+    {
+      "candidate": "I6",
+      "dice_ct": 0.8028864584308893,
+      "hd95": 6.435795095136309,
+      "mtv_bias": 0.09604895903021994,
+      "tlg_bias": 0.11121835259675136,
+      "ndv_percent": 5.5643070669944e-05,
+      "preservation": 0.20726731162697132,
+      "within_tolerance": true
+    },
+    {
+      "candidate": "I3",
+      "dice_ct": 0.802613020716459,
+      "hd95": 6.48848358930203,
+      "mtv_bias": 0.09226442839136377,
+      "tlg_bias": 0.10781509155864435,
+      "ndv_percent": 5.4639296385127876e-05,
+      "preservation": 0.2000795199500081,
+      "within_tolerance": true
+    },
+    {
+      "candidate": "I5",
+      "dice_ct": 0.7955706389663303,
+      "hd95": 6.6621392492065405,
+      "mtv_bias": 0.07117172815752623,
+      "tlg_bias": 0.08937519514573948,
+      "ndv_percent": 0.0001405763503262471,
+      "preservation": 0.1605469233032657,
+      "within_tolerance": true
+    },
+    {
+      "candidate": "I7",
+      "dice_ct": 0.7921714817302212,
+      "hd95": 6.664031506938489,
+      "mtv_bias": 0.06921476067702804,
+      "tlg_bias": 0.08869669715421423,
+      "ndv_percent": 0.0001510835411577736,
+      "preservation": 0.15791145783124227,
+      "within_tolerance": true
+    },
+    {
+      "candidate": "I2",
+      "dice_ct": 0.7825953919964085,
+      "hd95": 6.604011298727325,
+      "mtv_bias": 0.06266844888939244,
+      "tlg_bias": 0.08199875031207718,
+      "ndv_percent": 0.00021152275662385847,
+      "preservation": 0.14466719920146962,
+      "within_tolerance": false
+    },
+    {
+      "candidate": "I4",
+      "dice_ct": 0.7815762667987207,
+      "hd95": 6.761894284526803,
+      "mtv_bias": 0.05767538280616687,
+      "tlg_bias": 0.07887868024551153,
+      "ndv_percent": 0.0008349356750982347,
+      "preservation": 0.1365540630516784,
+      "within_tolerance": false
+    },
+    {
+      "candidate": "I8",
+      "dice_ct": 0.5577406650265337,
+      "hd95": 12.105473339120588,
+      "mtv_bias": 0.04766074093218067,
+      "tlg_bias": 0.05826868648870175,
+      "ndv_percent": 2.7236401496921984e-05,
+      "preservation": 0.10592942742088243,
+      "within_tolerance": false
+    }
+  ]
+}
