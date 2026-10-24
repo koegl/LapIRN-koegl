@@ -61,7 +61,7 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
 ## Appendix
 - [x] A: Q1 table (`table_ablations.py`, moved from the results; figure_q2 now shows Q1 + Q2)
 - [x] B: per-lesion TLG figure
-- [ ] C: IO tuning table (`table_io_tuning.py`, new stages and rule)
+- [x] C: IO tuning table (`table_io_tuning.py`, new stages and rule)
 - [ ] D: signed MTV / TLG (`table_signed.py`)
 - [x] E: detection tables (`table_detection_groups.py`, `table_detection_contributions.py`)
 - [ ] F: full rigidity table
