@@ -1,0 +1,21 @@
+\begin{table}[t]
+\centering
+\caption{Contribution of ground-truth lesions, grouped by how much of each lesion the predicted lesion mask seen by IO covers, to the volume and uptake change of the evaluation (test set; network trained without PET losses, IO with the PET weights scaled by the given factor). Contribution of a group: the change per scan if only the group's lesions changed and all other lesions kept their volume and uptake, in \%; mean over patients. All: the evaluation metric. Since changes of different lesions in a scan partly cancel, the contributions add up to slightly more.}
+\label{tab:detection_contributions}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lcccccccc}
+\toprule
+ & \multicolumn{2}{c}{Missed} & \multicolumn{2}{c}{Partly ($<$50\,\%)} & \multicolumn{2}{c}{Covered ($\geq$50\,\%)} & \multicolumn{2}{c}{All lesions} \\
+ & \multicolumn{2}{c}{\tiny 214 lesions, 6\,\% of volume} & \multicolumn{2}{c}{\tiny 155 lesions, 6\,\% of volume} & \multicolumn{2}{c}{\tiny 1066 lesions, 88\,\% of volume} & \multicolumn{2}{c}{\tiny 1435 lesions} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+ & $|\Delta\mathrm{MTV}|$ & $|\Delta\mathrm{TLG}|$ & $|\Delta\mathrm{MTV}|$ & $|\Delta\mathrm{TLG}|$ & $|\Delta\mathrm{MTV}|$ & $|\Delta\mathrm{TLG}|$ & $|\Delta\mathrm{MTV}|$ & $|\Delta\mathrm{TLG}|$ \\
+\midrule
+Network only & 5.0 & 5.6 & 1.4 & 1.1 & 4.7 & 4.7 & 10.6 & 10.8 \\
+\midrule
++ IO, PET $\times$0 & 4.7 & 5.8 & 1.1 & 1.1 & 5.0 & 5.5 & 10.2 & 11.9 \\
++ IO, PET $\times$0.1 (tuned) & 4.8 & 5.7 & 1.2 & 0.9 & 2.6 & 3.2 & 7.6 & 8.7 \\
++ IO, PET $\times$1 & 4.8 & 5.7 & 1.1 & 0.9 & 2.6 & 3.2 & 7.5 & 8.6 \\
+\bottomrule
+\end{tabular}
+\end{table}

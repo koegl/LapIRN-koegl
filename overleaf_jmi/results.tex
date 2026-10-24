@@ -12,13 +12,13 @@ We then examine individual lesions and PET loss terms, compare with baseline met
 Table~\ref{tab:ablations} compares four configurations: no PET-preservation or bone-rigidity loss, PET preservation alone, rigidity alone, and both.
 Each network is evaluated before and after IO.
 In IO, the PET-preservation and bone-rigidity losses are enabled or disabled to match that network's training configuration.
-Training with the PET losses lowered the volume change of the lesions from 10.6\,\% to 7.6\,\% and the uptake change from 10.8\,\% to 7.6\,\%, at the cost of 1.9 Dice points.
-IO raised the Dice of every network by 2.8 to 4.4 points and kept the effect of the losses: with the PET losses, $|\Delta\mathrm{MTV}|$ was 6.3\,\% instead of 10.2\,\% and $|\Delta\mathrm{TLG}|$ 7.2\,\% instead of 11.9\,\%, for 2.8 Dice points.
-The rigidity loss alone did not change the Dice of the network and cost 0.5 points with IO, and it lowered $|\Delta\mathrm{MTV}|$ in both cases (network 9.4\,\%, with IO 7.9\,\%).
-It significantly lowered $|\Delta\mathrm{TLG}|$ for the network output (10.8\,\% to 9.5\,\%), but its reduction with IO (11.9\,\% to 10.1\,\%) was not significant (Holm-adjusted $p=0.29$).
-Combining both groups changed the mean PET metrics little relative to the PET losses alone and was the least accurate variant (72.8\,\% and 75.6\,\% Dice).
-HD95 followed the Dice in every case (network 7.2 to 7.5~mm, with IO 6.8 to 7.2~mm).
-The non-diffeomorphic volume (NDV) of every pair stayed below the challenge's 0.005\,\% threshold (50~ppm); variant means were at most 0.6~ppm.
+Training with the PET losses lowered the volume change of the lesions from 10.3\,\% to 8.2\,\% (significant) and the uptake change from 12.5\,\% to 9.8\,\% (not significant), at the cost of 1.9 Dice points.
+IO raised the Dice of every network by 3.7 to 4.7 points.
+With the PET losses in training and IO, $|\Delta\mathrm{MTV}|$ was 8.2\,\% instead of 11.3\,\% and $|\Delta\mathrm{TLG}|$ 10.3\,\% instead of 14.5\,\%, for 2.5 Dice points; with IO, these reductions were not significant.
+The rigidity loss alone did not change the Dice of the network and cost 0.6 points with IO; it lowered $|\Delta\mathrm{MTV}|$ significantly for the network output (10.3\,\% to 8.9\,\%) and $|\Delta\mathrm{TLG}|$ significantly with IO (14.5\,\% to 10.6\,\%).
+Combining both groups preserved about as well as the PET losses alone and was the least accurate variant (73.6\,\% and 77.3\,\% Dice).
+HD95 followed the Dice in every case (network 7.2 to 7.4~mm, with IO 6.6 to 7.1~mm).
+All network outputs and the IO variants without the PET losses stayed below the challenge's NDV threshold of 0.005\,\% (50~ppm) on every pair; with the PET losses in IO, one pair each exceeded it (150 and 262~ppm), and the variant means were at most 10~ppm.
 
 The losses therefore change the accuracy--preservation balance; the next question is whether they need to shape the trained network or can act only during per-pair refinement.
 

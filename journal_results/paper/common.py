@@ -17,7 +17,9 @@ sys.path.insert(0, str(REPO / "journal_results"))
 
 import ranking  # noqa: E402
 
-EVAL_DIR = REPO / "evaluation" / "test"
+# results with the official scorer conventions (the first evaluation is in
+# evaluation/; its paper outputs are backed up in out_old_scorer/)
+EVAL_DIR = REPO / "evaluation_official_scorer" / "test"
 BASELINE_DIR = REPO / "journal_results" / "baselines"
 OUT_DIR = Path(__file__).resolve().parent / "out"
 

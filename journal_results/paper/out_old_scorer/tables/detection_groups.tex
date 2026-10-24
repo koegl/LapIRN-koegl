@@ -1,0 +1,21 @@
+\begin{table}[t]
+\centering
+\caption{Volume and uptake change of ground-truth lesions, grouped by how much of each lesion the predicted lesion mask seen by IO covers (test set; network trained without PET losses, IO with the PET weights scaled by the given factor). Per scan, the change of the summed volume or uptake of the group's lesions relative to the unwarped moving scan, in \%; mean over the patients with lesions in the group.}
+\label{tab:detection_groups}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lcccccc}
+\toprule
+ & \multicolumn{2}{c}{Missed} & \multicolumn{2}{c}{Partly ($<$50\,\%)} & \multicolumn{2}{c}{Covered ($\geq$50\,\%)} \\
+ & \multicolumn{2}{c}{\tiny 214 lesions, 6\,\% of volume} & \multicolumn{2}{c}{\tiny 155 lesions, 6\,\% of volume} & \multicolumn{2}{c}{\tiny 1066 lesions, 88\,\% of volume} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+ & $|\Delta\mathrm{MTV}|$ & $|\Delta\mathrm{TLG}|$ & $|\Delta\mathrm{MTV}|$ & $|\Delta\mathrm{TLG}|$ & $|\Delta\mathrm{MTV}|$ & $|\Delta\mathrm{TLG}|$ \\
+\midrule
+Network only & 14.9 & 16.4 & 12.0 & 13.5 & 7.4 & 6.9 \\
+\midrule
++ IO, PET $\times$0 & 14.9 & 17.0 & 11.3 & 14.6 & 7.8 & 7.9 \\
++ IO, PET $\times$0.1 (tuned) & 15.7 & 17.3 & 11.5 & 12.7 & 4.9 & 5.1 \\
++ IO, PET $\times$1 & 15.5 & 17.3 & 11.4 & 12.7 & 4.9 & 5.1 \\
+\bottomrule
+\end{tabular}
+\end{table}

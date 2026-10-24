@@ -1,6 +1,6 @@
 \begin{table}[t]
 \centering
-\caption{Effect of the PET and rigidity losses on the test set (28 patients, 38 pairs). Each network is trained with the given losses and evaluated as is (left) and with instance optimisation (IO) using the same losses (right). Mean$\pm$SD over patients. $^{\dagger}$/$^{\ddagger}$: significantly better/worse than ``Neither'' in the same block (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected within each column, $p<0.05$).}
+\caption{Effect of the PET and rigidity losses on the test set (CT Dice: 28 patients, 38 pairs; PET: 26 patients, 30 pairs). Each network is trained with the given losses and evaluated as is (left) and with instance optimisation (IO) using the same losses (right). Mean$\pm$SD over patients. $^{\dagger}$/$^{\ddagger}$: significantly better/worse than ``Neither'' in the same block (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over three comparisons within each column, $p<0.05$).}
 \label{tab:ablations}
 \scriptsize
 \setlength{\tabcolsep}{3pt}
@@ -10,10 +10,10 @@
 \cmidrule(lr){2-4} \cmidrule(lr){5-7}
 Losses & Dice (\%) $\uparrow$ & $|\Delta\mathrm{MTV}|$ (\%) $\downarrow$ & $|\Delta\mathrm{TLG}|$ (\%) $\downarrow$ & Dice (\%) $\uparrow$ & $|\Delta\mathrm{MTV}|$ (\%) $\downarrow$ & $|\Delta\mathrm{TLG}|$ (\%) $\downarrow$ \\
 \midrule
-Neither & 74.8$\pm$4.5 & 10.6$\pm$10.2 & 10.8$\pm$11.7 & 79.2$\pm$4.3 & 10.2$\pm$10.1 & 11.9$\pm$12.5 \\
-PET & 72.9$\pm$4.4$^{\ddagger}$ & 7.6$\pm$9.0$^{\dagger}$ & 7.6$\pm$9.3$^{\dagger}$ & 76.4$\pm$4.7$^{\ddagger}$ & 6.3$\pm$9.1$^{\dagger}$ & 7.2$\pm$9.4$^{\dagger}$ \\
-Rigidity & 74.8$\pm$4.5 & 9.4$\pm$9.5$^{\dagger}$ & 9.5$\pm$10.9$^{\dagger}$ & 78.7$\pm$4.2$^{\ddagger}$ & 7.9$\pm$9.0$^{\dagger}$ & 10.1$\pm$11.0 \\
-PET + rigidity & 72.8$\pm$4.3$^{\ddagger}$ & 7.4$\pm$9.0$^{\dagger}$ & 7.7$\pm$10.1$^{\dagger}$ & 75.6$\pm$4.8$^{\ddagger}$ & 6.2$\pm$8.7$^{\dagger}$ & 7.9$\pm$9.0 \\
+Neither & 75.5$\pm$4.7 & 10.3$\pm$9.5 & 12.5$\pm$11.1 & 80.2$\pm$4.2 & 11.3$\pm$11.9 & 14.5$\pm$14.1 \\
+PET & 73.6$\pm$4.6$^{\ddagger}$ & 8.2$\pm$9.1$^{\dagger}$ & 9.8$\pm$10.1 & 77.7$\pm$4.8$^{\ddagger}$ & 8.2$\pm$10.1 & 10.3$\pm$10.2 \\
+Rigidity & 75.5$\pm$4.7 & 8.9$\pm$8.4$^{\dagger}$ & 11.0$\pm$10.3 & 79.6$\pm$4.2$^{\ddagger}$ & 9.2$\pm$10.2 & 10.6$\pm$13.4$^{\dagger}$ \\
+PET + rigidity & 73.6$\pm$4.6$^{\ddagger}$ & 8.0$\pm$9.0$^{\dagger}$ & 9.8$\pm$10.9 & 77.3$\pm$4.9$^{\ddagger}$ & 7.9$\pm$9.7 & 10.3$\pm$10.4 \\
 \bottomrule
 \end{tabular}
 \end{table}

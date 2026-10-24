@@ -1,0 +1,18 @@
+\begin{table}[t]
+\centering
+\caption{Rigidity penalties compared (test set, 28 patients): network trained with the PET losses, IO with the PET terms and one rigidity penalty at the weight chosen on the validation set. Rigidity of bones is measured in three ways: the residual of a rigid fit to each bone (the quantity the rigid-fit penalty minimises), the Staring energy, i.e.\ the Staring penalty (properness, orthonormality, and affinity) on the whole bone (the quantity the Staring penalty minimises), and the distortion of short (5--15~mm) and long ($\geq$15~mm) within-bone distances (minimised by neither). Mean$\pm$SD over patients. $^{\dagger}$/$^{\ddagger}$: significantly better/worse than without rigidity (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over the three penalties per column, $p<0.05$).}
+\label{tab:rigidity}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccccccc}
+\toprule
+ & \multicolumn{3}{c}{Alignment} & \multicolumn{5}{c}{Rigidity of bones} & \multicolumn{2}{c}{Preservation} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-9}\cmidrule(lr){10-11}
+Rigidity penalty & CT Dice (\%) & Bone Dice (\%) & Soft-tissue Dice (\%) & Rigid-fit residual (mm) & Staring energy & Distortion short (\%) & Distortion long (\%) & NDV in bone (ppm) & $|\Delta\mathrm{MTV}|$ (\%) & $|\Delta\mathrm{TLG}|$ (\%) \\
+\midrule
+No rigidity & 76.3$\pm$4.6 & 76.7$\pm$6.3 & 78.8$\pm$3.9 & 2.45$\pm$0.46 & 1.939$\pm$0.961 & 11.22$\pm$2.15 & 4.07$\pm$0.67 & 1.2$\pm$1.1 & 6.9$\pm$9.4 & 7.8$\pm$9.5 \\
+Staring ($\times$1) & 75.2$\pm$4.3$^{\ddagger}$ & 74.6$\pm$5.7$^{\ddagger}$ & 78.7$\pm$3.9$^{\ddagger}$ & 2.08$\pm$0.48$^{\dagger}$ & 0.343$\pm$0.073$^{\dagger}$ & 6.70$\pm$0.64$^{\dagger}$ & 3.37$\pm$0.66$^{\dagger}$ & 0.1$\pm$0.5$^{\dagger}$ & 6.5$\pm$8.9 & 7.3$\pm$8.6 \\
+Staring + erosion ($\times$100) & 76.2$\pm$4.5$^{\ddagger}$ & 75.9$\pm$6.0$^{\ddagger}$ & 79.4$\pm$4.0 & 2.21$\pm$0.47$^{\dagger}$ & 1.100$\pm$0.380$^{\dagger}$ & 7.91$\pm$0.78$^{\dagger}$ & 3.48$\pm$0.63$^{\dagger}$ & 3.7$\pm$7.0$^{\ddagger}$ & 6.5$\pm$9.5 & 7.2$\pm$9.2 \\
+Per-bone rigid fit ($\times$100) & 75.0$\pm$4.4$^{\ddagger}$ & 73.6$\pm$5.9$^{\ddagger}$ & 79.4$\pm$3.9 & 1.56$\pm$0.46$^{\dagger}$ & 0.809$\pm$0.226$^{\dagger}$ & 5.51$\pm$1.01$^{\dagger}$ & 2.25$\pm$0.69$^{\dagger}$ & 2.1$\pm$7.2$^{\dagger}$ & 6.6$\pm$8.8 & 7.4$\pm$8.6 \\
+\bottomrule
+\end{tabular}}
+\end{table}
