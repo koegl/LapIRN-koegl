@@ -51,7 +51,7 @@ RUNS: Dict[Tuple[str, str], str] = {
 }
 PLACEMENT_ORDER = ("net", "both", "io")
 MARKER = {"net": "s", "both": "o", "io": "o"}
-NONE_MARKER = {"net": "X", "both": "P"}
+NONE_MARKER = {"net": "x", "both": "+"}
 # PET and PET + rigidity without IO nearly coincide: larger square below
 SIZE = {("PET", "net"): 80, ("PET + rigidity", "net"): 24}
 # Q2 pairs for the text: loss set -> (training and IO, only in IO)
@@ -144,7 +144,13 @@ def main() -> None:
             x, y = mean[run][X_METRIC], mean[run][y_metric]
             if group == "None":
                 ax.scatter(
-                    x, y, s=55, marker=NONE_MARKER[placement], color=color, zorder=4
+                    x,
+                    y,
+                    s=50,
+                    marker=NONE_MARKER[placement],
+                    color=color,
+                    linewidths=1.2,
+                    zorder=4,
                 )
                 continue
             ax.scatter(
@@ -173,19 +179,21 @@ def main() -> None:
         Line2D(
             [],
             [],
-            marker="X",
+            marker="x",
             ls="",
             color=GROUPS["None"],
             markersize=7,
+            markeredgewidth=1.2,
             label="None, no IO",
         ),
         Line2D(
             [],
             [],
-            marker="P",
+            marker="+",
             ls="",
             color=GROUPS["None"],
             markersize=7,
+            markeredgewidth=1.2,
             label="None, with IO",
         ),
     ]

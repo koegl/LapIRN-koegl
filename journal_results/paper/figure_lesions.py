@@ -29,15 +29,21 @@ import common  # noqa: E402
 
 # loss set -> (network run, network + IO run, colour); colours as in figure_q2
 CONDITIONS: Dict[str, Tuple[str, str, str]] = {
-    "Neither": ("T1", "I1", "#8c8b86"),
+    "None": ("T1", "I1", "#0b0b0b"),
     "PET": ("T2", "I2", "#2a78d6"),
-    "Rigidity": ("T3", "I3", "#eb6834"),
-    "PET + rigidity": ("T4", "I4", "#1baf7a"),
+    "Rigidity": ("T3", "I3", "#d1342f"),
+    "PET + rigidity": ("T4", "I4", "#8b3fbf"),
 }
+# markers as in figure_q2: block -> (with losses, without losses)
+MARKERS = (("s", "x"), ("o", "+"))
 BLOCKS = ("Network", "Network + IO")
 STRATA = [
-    (False, "small"), (False, "medium"), (False, "large"),
-    (True, "small"), (True, "medium"), (True, "large"),
+    (False, "small"),
+    (False, "medium"),
+    (False, "large"),
+    (True, "small"),
+    (True, "medium"),
+    (True, "large"),
 ]
 STATS = {"median": 50}
 N_BOOTSTRAP = 1000
@@ -59,7 +65,11 @@ def stat_ci(df: pd.DataFrame, q: float, rng) -> Tuple[float, float, float]:
     for _ in range(N_BOOTSTRAP):
         picks = rng.integers(0, len(groups), len(groups))
         samples.append(np.percentile(np.concatenate([groups[i] for i in picks]), q))
-    return np.percentile(values, q), np.percentile(samples, 2.5), np.percentile(samples, 97.5)
+    return (
+        np.percentile(values, q),
+        np.percentile(samples, 2.5),
+        np.percentile(samples, 97.5),
+    )
 
 
 def main() -> None:
@@ -77,7 +87,14 @@ def main() -> None:
             "ytick.color": MUTED,
         }
     )
-    fig, axes = plt.subplots(len(STATS), len(BLOCKS), figsize=(7.0, 2.6), sharex=True, sharey="row", squeeze=False)
+    fig, axes = plt.subplots(
+        len(STATS),
+        len(BLOCKS),
+        figsize=(7.0, 2.6),
+        sharex=True,
+        sharey="row",
+        squeeze=False,
+    )
     offsets = np.linspace(-0.27, 0.27, len(CONDITIONS))
     x = np.arange(len(STRATA))
     for col, block in enumerate(BLOCKS):
@@ -85,10 +102,33 @@ def main() -> None:
             ax = axes[row, col]
             for offset, (name, runs) in zip(offsets, CONDITIONS.items()):
                 df = lesions[runs[col]]
-                est = [stat_ci(df[(df["bone_associated"] == bone) & (df["size_bin"] == size)], q, rng) for bone, size in STRATA]
+                est = [
+                    stat_ci(
+                        df[(df["bone_associated"] == bone) & (df["size_bin"] == size)],
+                        q,
+                        rng,
+                    )
+                    for bone, size in STRATA
+                ]
                 mid = np.array([e[0] for e in est])
-                err = np.array([[m - e[1] for m, e in zip(mid, est)], [e[2] - m for m, e in zip(mid, est)]])
-                ax.errorbar(x + offset, mid, yerr=err, fmt="o", color=runs[2], markersize=3.5, elinewidth=0.8, capsize=0)
+                err = np.array(
+                    [
+                        [m - e[1] for m, e in zip(mid, est)],
+                        [e[2] - m for m, e in zip(mid, est)],
+                    ]
+                )
+                marker = MARKERS[col][name == "None"]
+                ax.errorbar(
+                    x + offset,
+                    mid,
+                    yerr=err,
+                    fmt=marker,
+                    color=runs[2],
+                    markersize=5 if name == "None" else 3.5,
+                    markeredgewidth=1.0,
+                    elinewidth=0.8,
+                    capsize=0,
+                )
             ax.axvline(2.5, color=MUTED, linewidth=0.5)
             ax.grid(axis="y", color="#e4e3df", linewidth=0.5)
             ax.set_axisbelow(True)
@@ -102,9 +142,39 @@ def main() -> None:
         ax.set_xticks(x)
         ax.set_xticklabels([s for _, s in STRATA])
         for xpos, label in ((1, "soft tissue"), (4, "bone")):
-            ax.text(xpos, -0.13, label, transform=ax.get_xaxis_transform(), ha="center", va="top")
-    handles = [Line2D([], [], marker="o", ls="", color=c, markersize=5, label=n) for n, (_, _, c) in CONDITIONS.items()]
-    fig.legend(handles=handles, loc="upper center", ncol=len(handles), frameon=False, bbox_to_anchor=(0.5, 1.08))
+            ax.text(
+                xpos,
+                -0.13,
+                label,
+                transform=ax.get_xaxis_transform(),
+                ha="center",
+                va="top",
+            )
+    handles = [
+        Line2D([], [], marker="o", ls="", color=c, markersize=5, label=n)
+        for n, (_, _, c) in CONDITIONS.items()
+        if n != "None"
+    ]
+    handles += [
+        Line2D(
+            [],
+            [],
+            marker=m,
+            ls="",
+            color=CONDITIONS["None"][2],
+            markersize=6,
+            markeredgewidth=1.0,
+            label=label,
+        )
+        for m, label in (("x", "None, no IO"), ("+", "None, with IO"))
+    ]
+    fig.legend(
+        handles=handles,
+        loc="upper center",
+        ncol=len(handles),
+        frameon=False,
+        bbox_to_anchor=(0.5, 1.08),
+    )
     fig.tight_layout()
 
     # numbers for the text: counts and median signed / absolute change
@@ -131,7 +201,7 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/lesions.pdf}}
-\caption{{Per-lesion volume change on the test set ({n_lesions} lesions of {n_patients} patients after excluding {n_excluded} components smaller than five voxels), by location (soft tissue / bone-associated, $\geq$50\,\% of the lesion on bone) and size (small $<$0.5\,ml, medium $<$5\,ml, large). Median $|\Delta\mathrm{{MTV}}|$ per lesion; left: network output, right: with instance optimisation (IO) using the same losses. Error bars: 95\,\% confidence intervals from a patient-cluster bootstrap.}}
+\caption{{Per-lesion volume change on the test set ({n_lesions} lesions of {n_patients} patients after excluding {n_excluded} components smaller than five voxels), by location (soft tissue / bone-associated, $\geq$50\,\% of the lesion on bone) and size (small $<$0.5\,ml, medium $<$5\,ml, large). Median $|\Delta\mathrm{{MTV}}|$ per lesion; left: network output, right: with instance optimisation (IO) using the same losses (squares / $\times$: without IO; circles / $+$: with IO; colours as in Fig.~\ref{{fig:q2}}). Error bars: 95\,\% confidence intervals from a patient-cluster bootstrap.}}
 \label{{fig:lesions}}
 \end{{figure}}
 """

@@ -41,13 +41,16 @@ Without IO, training with the losses reduced registration-induced PET changes in
 \label{sect:res_lesions}
 
 To reveal changes hidden by scan-level aggregation, Fig.~\ref{fig:lesions} shows the volume change of 1327 lesions from 26 patients, after excluding 108 components smaller than five voxels.
-Small lesions changed most in every condition: for bone-associated lesions with IO and without the losses, the median change was 33\,\% (small), 17\,\% (medium), and 9\,\% (large).
+Small lesions changed most in every condition: for bone-associated lesions with IO and without the losses ($+$), the median change was 30\,\% (small), 19\,\% (medium), and 10\,\% (large).
 A small lesion has fewer than about 20 voxels, so gaining or losing one or two voxels is already a large relative change.
-Without the losses, IO increased the distortion of lesions, most of all of small bone lesions (median from 20\,\% to 33\,\%); bone lesions tended to grow (median signed change $+3$ to $+10$\,\%) and soft-tissue lesions to shrink ($-9$ to $-13$\,\%).
-The rigidity loss acted only on bone-associated lesions, as expected from its construction: with IO, it lowered the median change of small, medium, and large bone lesions from 33\,\% to 20\,\%, 17\,\% to 12\,\%, and 9\,\% to 5\,\%, and left soft-tissue lesions unchanged (17 to 22\,\%).
-The PET losses acted in both locations, for example from 18\,\% to 10\,\% for medium soft-tissue lesions and from 33\,\% to 13\,\% for small bone lesions; only for small soft-tissue lesions, the smallest group (41 lesions), no clear effect was visible.
-With both groups, bone lesions changed least at every size (10\,\%, 9\,\%, and 4\,\%), and their systematic growth disappeared (median signed change about 0).
-The medians of small lesions take only a few distinct values (e.g.\ 10.0\,\%, 12.5\,\%, 20.0\,\%) because they are ratios of small voxel counts.
+Without the losses, IO increased the distortion of lesions ($\times$ to $+$), most of all of small lesions (soft tissue from 17\,\% to 33\,\%, bone from 25\,\% to 30\,\%); bone lesions tended to grow (median signed change $+1$ to $+5$\,\%) and soft-tissue lesions to shrink ($-3$ to $-14$\,\%).
+The rigidity loss (red) acted mainly on bone-associated lesions, as expected from its construction: with IO, it lowered the median change of small, medium, and large bone lesions from 30\,\% to 20\,\%, 19\,\% to 12\,\%, and 10\,\% to 5\,\%, and left medium and large soft-tissue lesions unchanged (19\,\% and 17\,\%).
+The PET losses (blue) acted in both locations, already without IO (squares), and with IO, for example from 19\,\% to 10\,\% for medium soft-tissue lesions and from 30\,\% to 16\,\% for small bone lesions.
+With both groups (purple), bone lesions changed by 14\,\%, 9\,\%, and 6\,\%, similar to the PET losses alone; only for large bone lesions, the rigidity loss alone changed them less (5\,\%).
+With the losses, IO did not reduce the per-lesion change below that of the network output (circles vs.\ squares of the same colour), in line with the unchanged scan-level change (Sec.~\ref{sect:res_q1}).
+The PET losses in IO penalise the change in the total volume and uptake of the predicted lesion mask, so the growth of some lesions can offset the shrinkage of others.
+Even with the ground-truth lesion masks in IO, which lowered the scan-level $|\Delta\mathrm{MTV}|$ to 0.1\,\% (Sec.~\ref{sect:res_tradeoff}), the median per-lesion change was 13.5\,\%, as with the predicted masks (13.7\,\%).
+The medians of small lesions take only a few distinct values (e.g.\ 12.5\,\%, 14.3\,\%, 33.3\,\%) because they are ratios of small voxel counts.
 
 \input{figures/lesions}
 

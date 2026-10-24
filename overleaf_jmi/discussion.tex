@@ -41,7 +41,9 @@ A smaller set of terms would likely suffice; we kept all four because they were 
 Aggregate MTV and TLG changes hide how individual lesions are deformed.
 Small lesions changed most in every condition, partly because a change of one or two voxels is already a large relative change.
 Without the losses, IO increased the distortion of lesions, most of all of small bone-associated lesions, and bone lesions tended to grow.
-The rigidity loss acted only on bone-associated lesions, as intended, and the PET losses on both bone and soft-tissue lesions; with both groups of losses, bone lesions changed least, and their systematic growth disappeared.
+The rigidity loss acted mainly on bone-associated lesions, as intended, and the PET losses on both bone and soft-tissue lesions; with both groups of losses, bone lesions changed about as little as with the PET losses alone.
+IO with the losses kept the scan-level measurements of the network output while improving alignment, but did not reduce the change of individual lesions, not even with the ground-truth lesion masks.
+The PET losses constrain the total volume and uptake of a scan, which can be preserved while single lesions grow or shrink; a per-lesion term, for example on the connected components of the lesion mask, would address this directly and is left for future work.
 
 \subsection{Interpreting the Evaluation}
 The significance-based ranking of the challenge was decided mainly by accuracy: differences in alignment between methods are consistent across patients and reach significance, whereas differences in MTV and TLG vary strongly between patients and rarely do.
