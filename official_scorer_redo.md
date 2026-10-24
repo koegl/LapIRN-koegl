@@ -14,14 +14,14 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
 - [ ] (Optional) re-tune NiftyReg / ConvexAdam with the new rule
 
 ## Methods
-- [ ] Evaluation metrics: official scorer conventions (mask and PET warped nearest, align_corners=True, official NDV mask, exact field conversion)
+- [x] Evaluation metrics: official scorer conventions (mask and PET warped nearest, align_corners=True, official NDV mask, exact field conversion)
 - [ ] Remove the TLG resampling floor (methods, results, discussion, findings)
-- [ ] Tuning and model selection
-  - [ ] new selection rule (lowest |MTV| + |TLG| within 2 Dice points of the most accurate)
-  - [ ] new IO settings (lr 0.025, 40 iterations, PET x0.1)
+- [x] Tuning and model selection
+  - [x] new selection rule (lowest |MTV| + |TLG| within 2 Dice points of the most accurate)
+  - [x] new IO settings (lr 0.025, 40 iterations, PET x0.1)
   - [x] choice of "Ours" -> I7 (paragraph "Choice of the full method")
-- [ ] Rigidity weight selection: 2-point tolerance, grid x0.1-x100 for all penalties
-- [ ] Weights table (`tab:weights`): IO row
+- [x] Rigidity weight selection: 2-point tolerance, grid x0.1-x100 for all penalties
+- [x] Weights table (`tab:weights`): IO row
 
 ## Results
 - [x] Q1: effect of the losses

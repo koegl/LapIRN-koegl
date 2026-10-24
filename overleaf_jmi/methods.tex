@@ -67,7 +67,7 @@ Each sub-network has 24 base channels and a trunk of ten residual blocks with an
 \paragraph{Instance optimisation.}
 \label{sect:io}
 At test time, the deformation of each pair is refined by optimising a residual stationary velocity field, initialised at zero and integrated by scaling and squaring (seven steps), on top of the total transformation $\varphi$.
-The residual is optimised at full resolution with Adam~\cite{ref_adam} (learning rate $0.0125$, 40 iterations).
+The residual is optimised at full resolution with Adam~\cite{ref_adam} (learning rate $0.025$, 40 iterations).
 The objective is the same as in training (Sec.~\ref{sect:objective}), with the predicted labels in place of ground-truth labels.
 Of the 40 iterates, we return the one with the lowest objective, in which the interpolated (soft) MTV and TLG terms are replaced by their nearest-neighbour (hard) values, i.e.\ by how the evaluation counts them; this selection uses only predicted labels.
 
@@ -175,7 +175,7 @@ All generated code was reviewed and tested by the authors, who are responsible f
 \subsection{Evaluation Metrics}
 \label{sect:metrics}
 
-All metrics are computed with the provided labels of the test scans, after warping the moving scan with the scorer of the challenge.
+All metrics are computed with the provided labels of the test scans and follow the scorer of the challenge: the moving scan is warped with the voxel displacement field, sampled with corner-aligned grid coordinates, and PET and labels are warped by nearest-neighbour interpolation. The challenge submits displacement fields at half resolution and upsamples them; we evaluate the full-resolution fields directly.
 Of the 28 test patients (38 pairs), 26 patients (30 pairs) have lesions in the moving scan and contribute to the PET metrics.
 
 \paragraph{Alignment.}
@@ -194,7 +194,7 @@ This leaves 1327 lesions, grouped by size (small $<0.5$~ml, medium $<5$~ml, larg
 Scan-level PET metrics and the lesion-coverage analysis retain all 1435 components so that the coverage decomposition includes the full evaluated lesion volume.
 
 \paragraph{Deformation quality.}
-Percentage of non-diffeomorphic volume (NDV) inside the body, as defined by the challenge~\cite{Liu2024}.
+Percentage of non-diffeomorphic volume (NDV) as defined by the challenge~\cite{Liu2024}, within the challenge's mask (voxels where the fixed CT exceeds its minimum intensity).
 
 \paragraph{Bone metrics.}
 For the rigidity comparison, we additionally compute Dice and HD95 separately over bones and soft-tissue organs; the distortion of within-bone distances, i.e.\ the mean relative change of the physical distance between randomly sampled pairs of interior points (eroded mask) of the same bone, separately for short (5--15~mm) and long ($\geq15$~mm) distances (short distances reflect local compression or bending, long ones the deformation of a bone as a whole; below 5~mm, i.e.\ about two voxels, the relative change is dominated by interpolation and discretisation); NDV inside bones and in a three-voxel band around them; and, as a secondary measure, the residual of a rigid fit to each bone's displacement (bone rigidity error).
@@ -220,10 +220,10 @@ The stability of the ranks is shown by 95\,\% rank intervals over 1000 patient b
 \subsection{Tuning and Model Selection}
 \label{sect:tuning}
 
-All tuning used the validation set and the challenge ranking above as the selection rule: the candidate settings of one grid are ranked against each other, and the top-ranked one is kept.
+All tuning used the validation set. For our IO settings and the choice of our method, we use one selection rule: among the candidates of a grid whose CT Dice is within two points of the most accurate one, we keep the one with the lowest $|\Delta\mathrm{MTV}|+|\Delta\mathrm{TLG}|$. We do not use the challenge ranking for this, because it is decided by accuracy: differences in Dice between candidates are consistently significant, differences in MTV and TLG rarely, so the ranking almost always keeps the most accurate candidate regardless of preservation. The baselines were tuned with the challenge ranking, ranking the candidates of each method's grid against each other.
 \begin{itemize}
-  \item \textbf{IO:} on the network trained with both losses, step-wise: first learning rate $\times$ iterations ($\{0.0125,0.025,0.05,0.1\}\times\{10,20,40\}$), then a common scale of the four PET weights ($\times\{0,0.1,0.25,0.5,1,2,4\}$ of the training-derived values).
-  The ranking does not reward rigidity (its cost in Dice is significant, while folding stays below the threshold for every weight), so it would set $\lambda_{\mathrm{rig}}$ to zero; we fixed $\lambda_{\mathrm{rig}}=0.25$ instead, which costs 0.3 Dice points on validation.
+  \item \textbf{IO:} on the network trained with both losses, step-wise: first learning rate $\times$ iterations ($\{0.0125,0.025,0.05,0.1\}\times\{10,20,40\}$), then a common scale of the four PET weights ($\times\{0,0.1,0.25,0.5,1,2,4\}$ of the training-derived values); chosen: learning rate 0.025 with 40 iterations, and $\times0.1$ (Table~\ref{tab:io_tuning}).
+  Neither the selection rule nor the ranking rewards rigidity, which costs Dice without reducing the PET metrics or folding, so both would set $\lambda_{\mathrm{rig}}$ to zero; we fixed $\lambda_{\mathrm{rig}}=0.25$ instead.
   \item \textbf{NiftyReg}~\cite{MODAT2010,modat2014}: \texttt{reg\_aladin} followed by \texttt{reg\_f3d} on the GPU with normalised mutual information (local NCC is not available on the GPU), over the bending-energy weights $\{0.0002, 0.0005, 0.001, 0.005, 0.02\}$ and final control-point spacings of $\{3, 5, 7, 9\}$ voxels; chosen: $0.0002$ and 9 voxels.
   \item \textbf{ConvexAdam}~\cite{ref_convexadam}: after its own ANTs affine registration with a $[-300,300]$~HU CT window, over the regularisation weight $\lambda\in\{0.1,0.25,0.5,1.25,2,4\}$; chosen: 0.1.
 \end{itemize}
@@ -255,15 +255,14 @@ Initial alignment, the affine pre-registration, NiftyReg, ConvexAdam, IO after t
 All registrations use the same follow-up-to-baseline pairs and are scored with the same provided organ and lesion labels and original-SUV PET images.
 NiftyReg and ConvexAdam use CT alone for registration, with no organ or lesion labels; both remove the patient bed, but each uses its own affine step and CT preprocessing (NiftyReg: \texttt{reg\_aladin} on bed-removed CT; ConvexAdam: ANTs with a $[-300,300]$~HU window).
 Our method uses CT and PET, the affine pre-registration described above, provided labels in network training, and predicted labels during IO.
-The NiftyReg and ConvexAdam settings were selected on the validation pairs by the same adapted challenge ranking used for our IO settings, with candidates ranked within each method's grid.
+The NiftyReg and ConvexAdam settings were selected on the validation pairs by the challenge ranking, with candidates ranked within each method's grid (Sec.~\ref{sect:tuning}).
 Runtimes are per pair on one NVIDIA RTX A6000 GPU and include the affine step.
 
 \paragraph{Rigidity penalties.}
 On the network trained with the PET losses, IO with the PET terms is combined with no rigidity, Staring, Staring with erosion, or the per-bone rigid fit.
 Because the penalties have different units, a reference weight is first calibrated for each so that its initial value on five validation pairs equals that of the rigid fit at $\lambda_{\mathrm{rig}}=0.25$ (Staring 0.66, Staring with erosion 1.03).
-Each method is then evaluated on the validation set at $\{0.1,0.3,1,3,10\}$ times its reference weight, giving a curve of CT Dice against within-bone distance distortion.
-For the test set, we choose for each method the largest weight whose validation Dice is within one Dice point of the variant without rigidity.
-Where the largest weight still met this criterion (Staring with erosion and the rigid fit), we extended the grid by $\times30$ and $\times100$ and capped it there.
+Each method is then evaluated on the validation set at $\{0.1,0.3,1,3,10,30,100\}$ times its reference weight, giving a curve of CT Dice against within-bone distance distortion.
+For the test set, we choose for each method the largest weight whose validation Dice is within two Dice points of the variant without rigidity, the same tolerance as in the selection rule above, with the grid capped at $\times100$: $\times3$ for Staring, and $\times100$ for Staring with erosion and the rigid fit.
 
 \paragraph{Accuracy--preservation trade-off.}
 On the network trained without the losses, IO with the PET terms (without rigidity) is run with all four PET weights scaled by $\{0,10^{-4},3\cdot10^{-4},0.001,0.003,0.01,0.03,0.1,0.3,1\}$ relative to the training-derived values; $\times0.1$ is the setting chosen by the IO tuning.
