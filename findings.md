@@ -63,6 +63,19 @@ basis; **preliminary** = not yet confirmed on the full dataset.
      Qualitative pair 0146 (chosen for its tumour change): official scorer I7
      +2.6 / +6.6 %, I4 +2.4 / +7.2 %, I1 -0.6 / +2.3 % (old I4 -0.1 / +0.9 %
      was partly the old scorer); kept, text shows alignment, not preservation.
+   - **Candidate core claim: IO with the losses is "free" for preservation.**
+     After IO minus network output (patient means, 95 % bootstrap CI, test):
+     I5 - T1: Dice +3.2 [+2.6, +3.7], |ΔMTV| -1.1 [-3.2, +1.5] (p 0.17),
+     |ΔTLG| -0.7 [-3.2, +2.1] (p 0.86); I7 - T1 (Ours): Dice +2.9 [+2.3, +3.4],
+     |ΔMTV| -1.7 [-3.6, +0.3] (p 0.09), |ΔTLG| -1.2 [-3.6, +1.2] (p 0.48);
+     I4 - T4: Dice +3.7 [+3.1, +4.3], |ΔMTV| -0.1 [-1.3, +1.0], |ΔTLG| +0.5
+     [-1.1, +2.0]. Without the losses IO worsens preservation (T1 -> I1:
+     MTV 10.3 -> 11.3 %, TLG 12.5 -> 14.5 %). Per-lesion agrees (IO with the
+     losses stays at the network's level). Wording: "With the PET losses, IO
+     improved alignment by about 3 Dice points without measurably increasing
+     the change in lesion volume and uptake (differences within +-2 points);
+     without the losses, IO increased both." Not proven equivalence: CIs rule
+     out increases above ~1.5-2 points. Use for abstract / discussion.
 8. **Discussion:**
    - losses in IO only vs. in training: use case (time budget) decides;
    - ranking weakness: methods that barely deform score high on biomarkers

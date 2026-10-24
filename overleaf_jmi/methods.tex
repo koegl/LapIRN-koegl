@@ -183,8 +183,7 @@ CT Dice and the 95th percentile of the Hausdorff distance (HD95), averaged over 
 
 \paragraph{PET-preservation metrics.}
 We compute $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ as defined in Eq.~\eqref{eq:pet_error}, using the provided moving-scan lesion masks and the challenge scorer.
-Because PET and mask are warped separately, the scorer changes TLG even for the identity transformation: on the test pairs with lesions, an all-zero displacement changes TLG by $2.9\pm1.2\,\%$ (MTV: $0\,\%$).
-This resampling floor applies to every warped method; we therefore report the unregistered scans (``Initial'') without resampling.
+``Initial'' denotes the unregistered scans; their MTV and TLG change is zero by construction.
 
 \paragraph{Per-lesion change.}
 The aggregate errors of Eq.~\eqref{eq:pet_error} can hide large changes of individual lesions that cancel.

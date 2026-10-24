@@ -32,8 +32,8 @@ The diagnostic run with provided lesion masks reduced the measured changes from 
 This supports mask quality as a major limit in this setting, but measurable change remains even with provided masks; the intervention does not establish that segmentation explains all residual error.
 
 Because IO meets its objective on the predicted masks already at small weights, the PET weight mainly trades accuracy.
-A factor of $10^{-4}$ of the training-derived weights gave most of the preservation for 0.1 Dice points, whereas the factor chosen by the tuning on the validation set ($\times0.1$) cost 1.6 points more for 0.4 points less volume change; the tuning grid contained no factor between 0 and $\times0.1$.
-Even with the ground-truth masks, a ten times larger weight did not improve preservation.
+A factor of $10^{-4}$ of the training-derived weights gave most of the preservation without a loss in Dice, whereas the factor chosen by the tuning on the validation set ($\times0.1$) cost 1.6 points more for the same volume change and 1.1 points less uptake change; the tuning grid contained no factor between 0 and $\times0.1$.
+Even with the ground-truth masks, a ten times larger weight hardly improved preservation.
 
 In IO, the Jacobian terms carried the preservation, whereas removing the volume term $\mathcal{L}_{\mathrm{MTV}}$ or the uptake term $\mathcal{L}_{\mathrm{TLG}}$ improved $|\Delta\mathrm{TLG}|$ by 1.1 and 2.0 points, respectively, and removing $\mathcal{L}_{\mathrm{MTV}}$ also gained 0.6 Dice points.
 Both terms act on the soft, linearly warped mask, whose change differs from the nearest-neighbour change that is evaluated; a surrogate closer to the evaluated quantity, or the Jacobian terms alone, would likely preserve more.
@@ -50,7 +50,6 @@ The PET losses constrain the total volume and uptake of a scan, which can be pre
 The significance-based ranking of the challenge was decided mainly by accuracy: differences in alignment between methods are consistent across patients and reach significance, whereas differences in MTV and TLG vary strongly between patients and rarely do.
 On the validation set, the ranking consequently chose our variant without any of the losses.
 Preservation metrics should therefore be read together with anatomical alignment; neither higher CT Dice nor lower MTV/TLG change alone establishes which registration is more useful for a clinical task.
-A further effect of the scorer is that warping the PET image changes TLG even for the identity transformation (2.9\,\% on average); this floor applies equally to all methods but limits how small a TLG change can be reported.
 Per-lesion changes, which do not cancel between lesions, would complement the aggregate metrics.
 
 Both the measured alignment and preservation of IO depend in part on the labels it uses.

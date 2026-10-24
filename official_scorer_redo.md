@@ -38,10 +38,10 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
 - [x] Leave-one-out
   - [x] table (`table_loo.py`)
   - [x] text
-- [ ] Comparison with baselines
-  - [ ] table (`table_baselines.py`; "Ours" = I7)
-  - [ ] distribution figure (`plot_baselines_distribution.py`)
-  - [ ] text
+- [x] Comparison with baselines
+  - [x] table (`table_baselines.py`; "Ours" = I7)
+  - [x] distribution figure (`plot_baselines_distribution.py`)
+  - [x] text
 - [ ] Qualitative example
   - [ ] figure (`figure_qualitative.py`, new I4 field from lustre)
   - [ ] text

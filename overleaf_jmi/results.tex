@@ -111,14 +111,16 @@ We compare rigidity penalties by how well they preserve within-bone distances wi
 \label{sect:res_tradeoff}
 We vary the PET-loss weights in IO to show how alignment and lesion preservation change together and whether stronger weights resolve the residual error.
 Figure~\ref{fig:tradeoff} varies the PET weights in IO on the network trained without the losses.
-Already the smallest factor ($\times10^{-4}$) lowered the volume change of the predicted lesion masks from 8.6\,\% (IO without the PET losses) to 2.2\,\% and that of the ground-truth lesions from 10.2\,\% to 8.0\,\%, at a cost of 0.1 Dice points; $|\Delta\mathrm{TLG}|$ fell from 11.8\,\% to 8.9\,\%.
-Larger factors reduced the change of the predicted masks further, to 1.0\,\% from $\times0.1$ on, but hardly that of the ground-truth lesions (7.6\,\% at $\times0.1$, 7.5\,\% at $\times1$), while Dice decreased steadily, to 77.5\,\% at $\times0.1$.
-The factor chosen on the validation set ($\times0.1$) thus cost 1.6 Dice points more than $\times10^{-4}$ for 0.4 points less volume change.
-On the predicted masks, $|\Delta\mathrm{TLG}|$ stayed at about 3\,\% for all factors, close to the resampling floor of 2.9\,\%.
-The same gap between the labels IO optimises and the ground truth appeared for the organs: without the PET losses, IO reached 90.5\,\% Dice on the predicted organ labels but 79.2\,\% on the ground-truth labels, starting from 79.0\,\% and 74.8\,\% for the network output.
+Already the smallest factor ($\times10^{-4}$) lowered the volume change of the predicted lesion masks from 9.3\,\% (IO without the PET losses) to 2.1\,\% and that of the ground-truth lesions from 11.3\,\% to 9.3\,\%, without a loss in Dice (80.2\,\%); $|\Delta\mathrm{TLG}|$ fell from 14.5\,\% to 12.9\,\%.
+Larger factors reduced the change of the predicted masks further, to below 1\,\% from $\times0.01$ on, but not that of the ground-truth lesions (9.0 to 9.8\,\%), while Dice decreased steadily, to 78.6\,\% at $\times0.1$ and 78.0\,\% at $\times1$.
+Compared with the network output before IO (dashed), IO with the PET losses thus cancelled the increase that IO otherwise causes and ended slightly below it ($|\Delta\mathrm{MTV}|$ 9.3\,\% vs.\ 10.3\,\%, $|\Delta\mathrm{TLG}|$ 11.8\,\% vs.\ 12.5\,\% at $\times0.1$), but not significantly (two-sided Wilcoxon signed-rank test, $p=0.17$ and $p=0.86$; lower for 14 and 13 of 26 patients), while gaining 3.2 Dice points.
+The factor chosen on the validation set ($\times0.1$) thus cost 1.6 Dice points more than $\times10^{-4}$ for the same volume change (9.3\,\%) and 1.1 points less uptake change (11.8\,\%).
+On the predicted masks, $|\Delta\mathrm{TLG}|$ fell from 10.2\,\% to 5.2\,\% at $\times10^{-4}$ and to about 3\,\% from $\times0.1$ on.
+The same gap between the labels IO optimises and the ground truth appeared for the organs: without the PET losses, IO reached 92.9\,\% Dice on the predicted organ labels but 80.2\,\% on the ground-truth labels, starting from 79.0\,\% and 75.5\,\% for the network output.
 
-In the diagnostic run with provided lesion masks (black diamonds), the measured changes fell from 7.6\,\% to 2.1\,\% for MTV and from 8.7\,\% to 3.2\,\% for TLG at the tuned factor; Dice rose from 77.5\,\% to 78.1\,\%.
-At $\times1$, preservation was unchanged (2.1\,\% MTV, 3.2\,\% TLG; 77.7\,\% Dice), so a larger weight did not remove the residual change even with provided masks.
+In the diagnostic run with provided lesion masks (black diamonds), the measured changes fell from 9.3\,\% to 0.1\,\% for MTV and from 11.8\,\% to 4.5\,\% for TLG at the tuned factor; Dice rose from 78.6\,\% to 79.1\,\%.
+At $\times1$, the changes were similar (0.2\,\% MTV, 4.0\,\% TLG; 78.6\,\% Dice), so a larger weight hardly reduced the remaining uptake change even with provided masks.
+The near-zero volume change is that of the scan total, which this run optimises directly; the change of individual lesions remained (Sec.~\ref{sect:res_lesions}).
 
 \input{figures/tradeoff}
 
