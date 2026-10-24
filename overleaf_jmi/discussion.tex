@@ -10,7 +10,7 @@ The residual PET change was concentrated in lesions that the predicted masks use
 \subsection{Choosing Where to Apply the Losses}
 Which placement to choose depends on the time budget and on the availability of predicted organ and lesion masks for IO.
 If IO is affordable, about 2.5 minutes per pair on our GPU, the network can be trained for accuracy alone and the losses applied during refinement.
-Compared with training and IO with both loss groups, this gained 1.7 Dice points.
+Compared with training and IO with both loss groups, this gained 1.0 Dice points.
 The paired intervals still allow worse MTV or TLG preservation with IO-only placement, so the result supports an accuracy gain but leaves the preservation trade-off uncertain.
 Without IO, the network alone registers a pair in 11~s, and training with the losses reduced registration-induced change to lesion volume and uptake.
 The training losses are therefore not superseded by IO, but they serve a different setting, e.g.\ fast registration of many follow-up examinations.
@@ -28,8 +28,8 @@ Missed lesions were the largest measured contributor to the residual (5.2 of 9.3
 Their weight comes from patients with little tumour volume: the metric is relative per scan and averaged over patients, and in the third of patients with the smallest lesion volume, missed lesions made up 33\,\% of the volume (23\,\% and 3\,\% in the other thirds) and caused 72\,\% of the missed-lesion contribution.
 Higher recall alone did not solve the problem in a validation experiment: a recall-oriented mask (SUV threshold minus physiological organs, combined with nnU-Net) detected more lesions but had a precision of 0.18, and PET IO with this mask preserved worse than IO without PET losses.
 False-positive regions may therefore also divert the preservation constraints from the lesions being evaluated.
-The diagnostic run with provided lesion masks reduced the measured changes from 7.6\,\% to 2.1\,\% for MTV and from 8.7\,\% to 3.2\,\% for TLG, while improving Dice from 77.5\,\% to 78.1\,\%.
-This supports mask quality as a major limit in this setting, but measurable change remains even with provided masks; the intervention does not establish that segmentation explains all residual error.
+The diagnostic run with provided lesion masks reduced the measured changes from 9.3\,\% to 0.1\,\% for MTV and from 11.8\,\% to 4.5\,\% for TLG, while improving Dice from 78.6\,\% to 79.1\,\%.
+This supports mask quality as a major limit of the scan-level change, but uptake change remains even with provided masks, and individual lesions still change (below); the intervention does not establish that segmentation explains all residual error.
 
 Because IO meets its objective on the predicted masks already at small weights, the PET weight mainly trades accuracy.
 A factor of $10^{-4}$ of the training-derived weights gave most of the preservation without a loss in Dice, whereas the factor chosen by the tuning on the validation set ($\times0.1$) cost 1.6 points more for the same volume change and 1.1 points less uptake change; the tuning grid contained no factor between 0 and $\times0.1$.
@@ -48,7 +48,7 @@ The PET losses constrain the total volume and uptake of a scan, which can be pre
 
 \subsection{Interpreting the Evaluation}
 The significance-based ranking of the challenge was decided mainly by accuracy: differences in alignment between methods are consistent across patients and reach significance, whereas differences in MTV and TLG vary strongly between patients and rarely do.
-On the validation set, the ranking consequently chose our variant without any of the losses.
+On the validation set, the ranking would consequently have chosen our variant without any of the losses; we therefore selected our method with a rule that weighs preservation within a fixed Dice tolerance (Sec.~\ref{sect:tuning}).
 Preservation metrics should therefore be read together with anatomical alignment; neither higher CT Dice nor lower MTV/TLG change alone establishes which registration is more useful for a clinical task.
 The scan-level MTV and TLG changes are also an incomplete measure of preservation: they sum over all lesions of a scan, so a lesion that grows can cancel one that shrinks.
 With provided lesion masks, IO reduced the scan-level volume change to 0.1\,\%, although single lesions still changed by a median of 13.5\,\%; a near-zero scan-level change therefore does not show that each lesion was preserved.
@@ -61,9 +61,9 @@ Outside this setting, label overlap and the change of MTV and TLG are proxies: w
 Future work should therefore evaluate registration on such tasks and clinical endpoints rather than optimise further for segmentation-based metrics.
 
 The baseline comparison also illustrates the role of deformation regularity.
-NiftyReg exceeded the folding threshold on 5 of 38 validation pairs and 8 of 38 test pairs (21\,\%), with three test pairs above 0.8\,\% NDV.
+NiftyReg exceeded the folding threshold on 5 of 38 validation pairs and 8 of 38 test pairs (21\,\%), with up to 0.37\,\% NDV.
 The ranking selected its least-regularised setting because accuracy separated the settings more than folding; a setting chosen on the validation set did not transfer to new patients.
-Our network and IO variants stayed below the 0.005\,\% NDV threshold on every test pair.
+Our variants exceeded the 0.005\,\% NDV threshold on at most two test pairs, with at most 0.026\,\% NDV.
 
 \subsection{Bone Rigidity}
 \todo{After the rigidity experiments: stencil leakage of finite-difference penalties at bone boundaries (21\,\% of stencil reads leave the bone), erosion removes most of the skeleton at this resolution (35.5\,\% of bone voxels kept, ribs 2.4\,\%), per-bone rigid fit avoids both; results of the comparison.}

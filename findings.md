@@ -80,7 +80,7 @@ basis; **preliminary** = not yet confirmed on the full dataset.
    - losses in IO only vs. in training: use case (time budget) decides;
    - ranking weakness: methods that barely deform score high on biomarkers
      (Affine + IO rank 5 with 53 % Dice);
-   - TLG resampling floor; predicted lesion labels limit PET IO;
+   - predicted lesion labels limit PET IO;
    - NiftyReg folding on test; Staring stencil leakage (entries below).
 
 ## [ ] Staring stencils leak; erosion leaves most of the skeleton unconstrained
@@ -107,25 +107,6 @@ val, test and single-session), ground-truth CT labels. Identical across splits.
 
 Source: `journal_results/erosion_leakage.py` → `journal_results/erosion_leakage/`
 (`per_scan.csv`, `per_bone.csv`, `summary.txt`).
-
-## [x] The scorer's warp changes TLG even for the identity transform
-
-**Status:** confirmed — all test pairs with lesions (30 of 38 pairs), our copy
-of the scorer's transformer (`evaluate.SpatialTransformer`, from voxelmorph).
-To check against the official scorer code.
-
-- The transformer normalises voxel positions with (n − 1) but samples with
-  `align_corners=False`, so voxel i is read at i·n/(n − 1) − 0.5: a zero field
-  shifts the image by up to half a voxel (−0.5 at one end, +0.5 at the other).
-- With an all-zero field, the linearly resampled PET changes TLG by
-  **2.9% ± 1.2%** (range 1.0–6.9%), always downwards (signed −2.9%: the linear
-  interpolation smooths the lesion peaks); MTV (nearest-neighbour mask) stays
-  at 0%. Val pair 0071 01→00 gave 2.5%.
-- Handling: the "initial" row (B1) is scored without any resampling (MTV / TLG
-  change exactly 0); all other methods keep the scorer's warp. The floor is
-  stated in the paper as a resampling effect common to all methods.
-
-Source: `evaluate.py` runs B1, B1-floor → `evaluation/test/`.
 
 ## [x] NiftyReg folds more on test than on val
 
@@ -237,7 +218,7 @@ Source: `journal_results/paper/figure_lesions.py` → `lesions.pdf`,
 | G2: GT lesion masks, x1 | 77.7 | → 2.1 | → 3.2 |
 
 - Already x0.0001 gives most of the preservation (GT MTV 10.2 -> 8.0) for 0.1 Dice points; the tuned x0.1 costs 1.7 Dice for 0.4 points more. The val tuning chose a weight that is too high (report honestly).
-- With GT lesion masks (G1), GT MTV drops to 2.1 % (vs 7.6 %), TLG to 3.2 % (near the 2.9 % resampling floor), and Dice is higher (78.1 vs 77.5): the predicted masks, not the optimisation, limit PET IO. x1 (G2) gives the same: higher weights do not help even with correct masks.
+- With GT lesion masks (G1), GT MTV drops to 2.1 % (vs 7.6 %), TLG to 3.2 %, and Dice is higher (78.1 vs 77.5): the predicted masks, not the optimisation, limit PET IO. x1 (G2) gives the same: higher weights do not help even with correct masks.
 - Coverage breakdown (contribution to MTV / TLG): I5 missed 4.8/5.7, partly 1.2/0.9, covered 2.6/3.2; G1 missed 1.5/2.2, partly 1.3/1.0, covered 1.2/1.8. Mask inaccuracy explains most of both the missed and the covered part, not all.
 
 Source: `evaluation/test/W*.csv`, `G1.csv`, `G2.csv`; `journal_results/paper/figure_tradeoff.py`, `detection.py`.

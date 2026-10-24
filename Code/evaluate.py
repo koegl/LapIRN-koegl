@@ -117,6 +117,7 @@ PET_IO_WEIGHTS = ("w_io_mtv", "w_io_mtv_avg", "w_io_tlg", "w_io_jacobian_tumor")
 W_SCALES = (0.0, 0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.3, 1.0)
 
 CC_WEIGHTS = {"w_io_mtv_cc": 8.0, "w_io_tlg_cc": 8.0, "w_io_mtv_avg_cc": 15.0}
+CC_SCALES = (10.0, 100.0)
 
 # --- evaluation runs: plan ID -> what to run ---
 # W* (PET-weight sweep) is added once the IO settings are frozen; B*
@@ -169,6 +170,19 @@ EVAL_RUNS: Dict[str, EvalRun] = {
             pet_label_dir=DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr",
         ),
     ),
+    # val sweep of the per-lesion weight (P1 = x1): x10, x100 of CC_WEIGHTS;
+    # the chosen scale is then run on test
+    **{
+        f"P1x{scale:g}": EvalRun(
+            "T1",
+            IOSpec(
+                pet=True,
+                rigidity=False,
+                cfg_overrides={k: v * scale for k, v in CC_WEIGHTS.items()},
+            ),
+        )
+        for scale in CC_SCALES
+    },
     # trade-off (experiment 3): T1 + PET IO, the PET weights scaled together
     # relative to the TrainingConfig values (x0 = I1, x0.1 = tuned = I5)
     **{

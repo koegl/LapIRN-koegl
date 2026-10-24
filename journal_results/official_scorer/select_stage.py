@@ -6,6 +6,7 @@ next stage needs (as tune_io.py / sweep_rigidity.py), and push it back.
     ../../.venv/bin/python select_stage.py pet           # after stage 2 -> chosen.json
     ../../.venv/bin/python select_stage.py rigidity      # after stage 3 -> sweep chosen.json
     ../../.venv/bin/python select_stage.py ours          # after stage 3 -> choice of "Ours"
+    ../../.venv/bin/python select_stage.py perlesion     # after stage 6 -> per-lesion weight
 
 Each choice is written below evaluation_official_scorer/ on janus and copied to
 the same place on lustre. "pull" copies CSVs and IO histories, not the claims.
@@ -146,6 +147,59 @@ def ours() -> None:
     print(pd.DataFrame(selection["table"]).round(4).to_string(index=False))
 
 
+PER_LESION_CANDIDATES = {"x0": "I5", "x1": "P1", "x10": "P1x10", "x100": "P1x100"}
+
+
+def per_lesion() -> None:
+    """Scale of the per-lesion weights (stage 6) on val: as select(), but the
+    preservation criterion is the target of these terms, the median per-lesion
+    |MTV change| + |TLG change| (lesions >= 5 voxels, as in the paper)."""
+    table = {}
+    for scale, run in PER_LESION_CANDIDATES.items():
+        pairs = pd.read_csv(OUT / "val" / f"{run}.csv", dtype={"case_id": str})
+        lesions = pd.read_csv(
+            OUT / "val" / f"{run}_lesions.csv", dtype={"case_id": str}
+        )
+        lesions = lesions[lesions["size_bin"] != "tiny"]
+        means = (
+            pairs.groupby("case_id")[["dice_ct", "mtv_bias", "tlg_bias"]].mean().mean()
+        )
+        table[scale] = {
+            "run": run,
+            **means.to_dict(),
+            "lesion_mtv_median": lesions["mtv_bias"].median(),
+            "lesion_tlg_median": lesions["tlg_bias"].median(),
+        }
+    table = pd.DataFrame(table).T
+    for c in table.columns.drop("run"):
+        table[c] = table[c].astype(float)
+    table["lesion_preservation"] = (
+        table["lesion_mtv_median"] + table["lesion_tlg_median"]
+    )
+    table["within_tolerance"] = (
+        table["dice_ct"] >= table["dice_ct"].max() - DICE_TOLERANCE
+    )
+    chosen = table[table["within_tolerance"]]["lesion_preservation"].idxmin()
+    path = OUT / "per_lesion" / "chosen.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "chosen": chosen,
+                "run": table.loc[chosen, "run"],
+                "rule": "lowest median per-lesion |MTV| + |TLG| within "
+                f"{100 * DICE_TOLERANCE:g} Dice points of the most accurate",
+                "table": table.reset_index(names="scale").to_dict("records"),
+            },
+            indent=2,
+            default=str,
+        )
+    )
+    push(path)
+    print(f"per-lesion weight: chosen {chosen} ({table.loc[chosen, 'run']})")
+    print(table.round(4).to_string())
+
+
 def patient_mean(df: pd.DataFrame) -> pd.Series:
     df = df.reindex(columns=["case_id", *CURVE_COLUMNS])
     return df.groupby(df["case_id"].astype(str))[CURVE_COLUMNS].mean().mean()
@@ -202,6 +256,9 @@ if __name__ == "__main__":
     elif action == "ours":
         pull()
         ours()
+    elif action == "perlesion":
+        pull()
+        per_lesion()
     elif action == "rigidity":
         pull()
         rigidity()

@@ -9,13 +9,14 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
 - [x] Stage 2: IO PET scale -> x0.1
 - [x] Stage 3: test runs, I1-I8 val, rigidity sweep -> R2 Staring 1.98, R3 eroded 103.2, R4 Kabsch 25
 - [ ] Stage 4: R2-R4 on test
-- [ ] Stage 5: P1 / P2 per-lesion terms (I5 / G1 + w_io_*_cc, fixed weights) -> outlook in per-lesion text
+- [x] Stage 5: P1 / P2 per-lesion terms (fixed weights 8/8/15) -> no effect (terms < 1 % of the loss)
+- [ ] Stage 6: val sweep of the per-lesion weight (P1 x1 / x10 / x100) -> `select_stage.py perlesion` -> chosen scale on test
 - [x] Choice of "Ours" (I1-I8 val, new rule) -> I7
 - [ ] (Optional) re-tune NiftyReg / ConvexAdam with the new rule
 
 ## Methods
 - [x] Evaluation metrics: official scorer conventions (mask and PET warped nearest, align_corners=True, official NDV mask, exact field conversion)
-- [ ] Remove the TLG resampling floor (methods, results, discussion, findings)
+- [x] Remove the TLG resampling floor (methods, results, discussion, findings)
 - [x] Tuning and model selection
   - [x] new selection rule (lowest |MTV| + |TLG| within 2 Dice points of the most accurate)
   - [x] new IO settings (lr 0.025, 40 iterations, PET x0.1)
@@ -70,9 +71,9 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
 - [ ] Abstract (numbers, rigidity sentence)
 - [ ] Introduction: contribution list
 - [ ] Discussion
-  - [ ] numbers
-  - [ ] weighting paragraph (tuning grid statement)
-  - [ ] evaluation paragraph (TLG floor)
+  - [x] numbers
+  - [x] weighting paragraph (tuning grid statement)
+  - [x] evaluation paragraph (TLG floor)
   - [ ] rigidity subsection
 - [ ] Conclusion
 - [ ] Cover letter bullets
