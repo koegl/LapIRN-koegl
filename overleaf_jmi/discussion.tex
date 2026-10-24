@@ -22,10 +22,10 @@ This could explain why adding the preservation losses during training provides l
 The comparison does not test what lesion information the registration network learns, and the segmentation model cannot by itself explain the Dice advantage of IO-only placement: both IO variants use the same predicted masks.
 
 \subsection{Limits of Lesion Preservation}
-On the predicted lesion masks that IO optimises, the PET losses reduced volume change from 8.6\,\% to 1.0\,\%; on the provided masks, 7.6\,\% MTV and 8.7\,\% TLG change remained.
+On the predicted lesion masks that IO optimises, the PET losses reduced volume change from 9.3\,\% to 0.8\,\%; on the provided masks, 9.3\,\% MTV and 11.8\,\% TLG change remained.
 Increasing the PET weights tenfold had little effect on those measured changes.
-Missed lesions were the largest measured contributor to the residual (4.8 of 7.6 MTV points and 5.7 of 8.7 TLG points), although they make up only 6\,\% of lesion volume; covered lesions still contributed 2.6 and 3.2 points.
-Their weight comes from patients with little tumour volume: the metric is relative per scan and averaged over patients, and in the third of patients with the smallest lesion volume, missed lesions made up 45\,\% of the volume (18\,\% and 6\,\% in the other thirds) and caused 70\,\% of the missed-lesion contribution.
+Missed lesions were the largest measured contributor to the residual (5.2 of 9.3 MTV points and 6.2 of 11.8 TLG points), although they make up only 6\,\% of lesion volume; covered lesions still contributed 3.3 and 5.4 points.
+Their weight comes from patients with little tumour volume: the metric is relative per scan and averaged over patients, and in the third of patients with the smallest lesion volume, missed lesions made up 33\,\% of the volume (23\,\% and 3\,\% in the other thirds) and caused 72\,\% of the missed-lesion contribution.
 Higher recall alone did not solve the problem in a validation experiment: a recall-oriented mask (SUV threshold minus physiological organs, combined with nnU-Net) detected more lesions but had a precision of 0.18, and PET IO with this mask preserved worse than IO without PET losses.
 False-positive regions may therefore also divert the preservation constraints from the lesions being evaluated.
 The diagnostic run with provided lesion masks reduced the measured changes from 7.6\,\% to 2.1\,\% for MTV and from 8.7\,\% to 3.2\,\% for TLG, while improving Dice from 77.5\,\% to 78.1\,\%.
@@ -50,10 +50,12 @@ The PET losses constrain the total volume and uptake of a scan, which can be pre
 The significance-based ranking of the challenge was decided mainly by accuracy: differences in alignment between methods are consistent across patients and reach significance, whereas differences in MTV and TLG vary strongly between patients and rarely do.
 On the validation set, the ranking consequently chose our variant without any of the losses.
 Preservation metrics should therefore be read together with anatomical alignment; neither higher CT Dice nor lower MTV/TLG change alone establishes which registration is more useful for a clinical task.
-Per-lesion changes, which do not cancel between lesions, would complement the aggregate metrics.
+The scan-level MTV and TLG changes are also an incomplete measure of preservation: they sum over all lesions of a scan, so a lesion that grows can cancel one that shrinks.
+With provided lesion masks, IO reduced the scan-level volume change to 0.1\,\%, although single lesions still changed by a median of 13.5\,\%; a near-zero scan-level change therefore does not show that each lesion was preserved.
+Per-lesion changes, which do not cancel between lesions, should complement the scan-level metrics, in particular for tasks that follow individual lesions, such as lesion-level response assessment.
 
 Both the measured alignment and preservation of IO depend in part on the labels it uses.
-On the predicted organ labels, IO raised Dice from 79.0\,\% to 85.9\,\%, on the ground-truth labels only from 74.8\,\% to 77.5\,\%; for lesions, it preserved the predicted masks almost perfectly but not the missed lesions.
+On the predicted organ labels, IO raised Dice from 79.0\,\% to 88.0\,\%, on the ground-truth labels only from 75.5\,\% to 78.6\,\%; for lesions, it preserved the predicted masks almost perfectly but not the missed lesions.
 Within this segmentation-based evaluation, the diagnostic lesion-mask run shows that better lesion masks can improve the reported PET metrics; organ-mask quality may also affect the measured alignment.
 Outside this setting, label overlap and the change of MTV and TLG are proxies: what matters clinically is whether registration supports downstream tasks such as lesion tracking, response assessment, or dose accumulation.
 Future work should therefore evaluate registration on such tasks and clinical endpoints rather than optimise further for segmentation-based metrics.

@@ -129,16 +129,16 @@ The near-zero volume change is that of the scan total, which this run optimises 
 
 To locate the remaining registration-induced change, we group all 1435 provided lesions, including the 108 smaller than five voxels, by how much each overlaps the mask used by IO (Fig.~\ref{fig:detection}): 214 had no overlap (missed; 6\,\% of lesion volume), 155 had less than 50\,\% overlap (partly covered; 6\,\%), and 1066 had at least 50\,\% overlap (covered; 88\,\%).
 
-PET IO reduced the change only of covered lesions, from 7.8\,\% to 4.9\,\% for $|\Delta\mathrm{MTV}|$ and from 7.9\,\% to 5.1\,\% for $|\Delta\mathrm{TLG}|$ (IO without and with the PET losses at the tuned weights).
-Missed and partly covered lesions changed as much with the PET losses as without them (missed: 14.9\,\% and 15.7\,\%; partly covered: 11.3\,\% and 11.5\,\%).
+PET IO reduced the change of covered lesions below that of the network output, from 9.1\,\% to 6.0\,\% for $|\Delta\mathrm{MTV}|$ and from 11.0\,\% to 8.4\,\% for $|\Delta\mathrm{TLG}|$ (IO without and with the PET losses at the tuned weights; network output 7.9\,\% and 9.2\,\%).
+Partly covered lesions changed as much with the PET losses as without them (12.5\,\% and 12.0\,\%), and missed lesions less (14.4\,\% and 17.0\,\%) but still more than at the network output (12.4\,\%).
 The loss has no direct target for a missed lesion and only a partial target for a partly covered lesion.
-After PET IO, missed lesions therefore contributed most of the remaining change: 4.8 of 7.6 points of $|\Delta\mathrm{MTV}|$ and 5.7 of 8.7 points of $|\Delta\mathrm{TLG}|$, although they make up only 6\,\% of the lesion volume.
-Covered lesions contributed 2.6 and 3.2 points.
-Scaling the PET weights from $\times0.1$ to $\times1$ changed none of these values by more than 0.2 points.
+After PET IO, missed lesions therefore contributed more than half of the remaining change: 5.2 of 9.3 points of $|\Delta\mathrm{MTV}|$ and 6.2 of 11.8 points of $|\Delta\mathrm{TLG}|$, although they make up only 6\,\% of the lesion volume.
+Covered lesions contributed 3.3 and 5.4 points.
+Scaling the PET weights from $\times0.1$ to $\times1$ changed none of these values by more than 0.3 points.
 
-Without the PET losses, IO increased the change of covered lesions over the network output, from 7.4\,\% to 7.8\,\% ($|\Delta\mathrm{MTV}|$) and from 6.9\,\% to 7.9\,\% ($|\Delta\mathrm{TLG}|$), and the overall $|\Delta\mathrm{TLG}|$ from 10.8\,\% to 11.9\,\%; the overall $|\Delta\mathrm{MTV}|$ fell slightly, from 10.6\,\% to 10.2\,\%, because missed and partly covered lesions changed less.
+Without the PET losses, IO increased the change of every group over the network output, for covered lesions from 7.9\,\% to 9.1\,\% ($|\Delta\mathrm{MTV}|$) and from 9.2\,\% to 11.0\,\% ($|\Delta\mathrm{TLG}|$), and the overall change from 10.3\,\% to 11.3\,\% and from 12.5\,\% to 14.5\,\%.
 This agrees with the per-lesion analysis (Sec.~\ref{sect:res_lesions}), in which IO without the losses increased the volume change of lesions.
-In the diagnostic run with provided lesion masks, the contribution of lesions that nnU-Net missed fell from 4.8 to 1.5 points of $|\Delta\mathrm{MTV}|$, and that of covered lesions from 2.6 to 1.2 points.
-Mask errors therefore account for much of the measured change in both groups, although neither contribution disappeared.
+In the diagnostic run with provided lesion masks, the contribution of lesions that nnU-Net missed fell from 5.2 to 1.2 points of $|\Delta\mathrm{MTV}|$ and from 6.2 to 2.1 points of $|\Delta\mathrm{TLG}|$, and that of covered lesions from 3.3 to 0.9 and from 5.4 to 3.8 points.
+The near-zero overall change with provided masks does not mean that the lesions kept their volumes: if only the missed, partly covered, or covered lesions had changed, MTV would have changed by 1.2, 1.2, and 0.9 points, respectively. Some lesions therefore grew while others shrank, and their changes cancelled in the scan total, which is what both the PET loss and the evaluation metric measure (see also Sec.~\ref{sect:res_lesions}).
 
 \input{figures/detection}
