@@ -26,9 +26,9 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
 - [x] Q1: effect of the losses
   - [x] table (`table_ablations.py`)
   - [x] text
-- [ ] Q2: losses in training or only in IO
-  - [ ] figure (`figure_q2.py`, now all eleven variants: Q1 + Q2)
-  - [ ] text
+- [x] Q2: losses in training or only in IO
+  - [x] figure (`figure_q2.py`, now all eleven variants: Q1 + Q2)
+  - [x] text
 - [ ] Per-lesion volume change
   - [ ] figure (`figure_lesions.py`)
   - [ ] text
