@@ -216,3 +216,187 @@ stage 3: 61/62 done
 stage 3: 61/62 done
 stage 3: 61/62 done
 stage 3: 61/62 done
+stage 3: 62/62 done
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+run         method   weight  dice_ct   hd95  bone_dice  soft_dice  near_bone_soft_dice  dist_distortion_short  dist_distortion_long  bre_mm  staring_energy_bone  ndv_percent  ndv_bone_percent  ndv_band_percent  mtv_bias  tlg_bias
+ R1           none   0.0000   0.7826 6.6040     0.7909     0.7983               0.7414                 0.1271                0.0425  2.4929               3.1284       0.0002            0.0005            0.0001    0.0627    0.0820
+ R2        staring   0.0659   0.7794 6.5942     0.7833     0.7999               0.7423                 0.0904                0.0365  2.1906               0.9170       0.0004            0.0002            0.0001    0.0420    0.0670
+ R2        staring   0.1976   0.7763 6.6069     0.7778     0.7994               0.7418                 0.0796                0.0349  2.0968               0.6188       0.0004            0.0001            0.0001    0.0417    0.0660
+ R2        staring   0.6588   0.7723 6.6229     0.7701     0.7996               0.7409                 0.0677                0.0331  1.9963               0.4051       0.0004            0.0000            0.0001    0.0425    0.0683
+ R2        staring   1.9765   0.7660 6.6568     0.7595     0.7978               0.7387                 0.0573                0.0316  1.9136               0.2953       0.0002            0.0000            0.0001    0.0591    0.0754
+ R2        staring   6.5883   0.7615 6.6663     0.7486     0.8003               0.7385                 0.0481                0.0302  1.8440               0.2315       0.0003            0.0000            0.0002    0.0418    0.0691
+ R2        staring  19.7648   0.7591 6.6627     0.7421     0.8023               0.7380                 0.0430                0.0291  1.8044               0.2015       0.0003            0.0001            0.0007    0.0405    0.0670
+ R2        staring  65.8826   0.7580 6.6459     0.7375     0.8052               0.7383                 0.0380                0.0281  1.7654               0.1708       0.0003            0.0002            0.0015    0.0445    0.0706
+ R3 staring_eroded   0.1032   0.7820 6.6037     0.7898     0.7983               0.7414                 0.1073                0.0391  2.3424               2.1155       0.0002            0.0005            0.0001    0.0559    0.0710
+ R3 staring_eroded   0.3096   0.7814 6.6082     0.7887     0.7981               0.7414                 0.1022                0.0382  2.3004               1.9637       0.0002            0.0005            0.0001    0.0546    0.0680
+ R3 staring_eroded   1.0320   0.7806 6.6147     0.7872     0.7982               0.7412                 0.0980                0.0374  2.2703               1.8548       0.0002            0.0006            0.0002    0.0524    0.0678
+ R3 staring_eroded   3.0959   0.7816 6.6026     0.7873     0.8002               0.7428                 0.0950                0.0368  2.2538               1.8312       0.0002            0.0008            0.0002    0.0522    0.0689
+ R3 staring_eroded  10.3197   0.7817 6.5943     0.7862     0.8016               0.7444                 0.0917                0.0361  2.2339               1.7773       0.0002            0.0012            0.0003    0.0518    0.0679
+ R3 staring_eroded  30.9592   0.7808 6.5930     0.7841     0.8020               0.7448                 0.0893                0.0355  2.2198               1.7233       0.0002            0.0017            0.0004    0.0533    0.0676
+ R3 staring_eroded 103.1973   0.7823 6.5637     0.7836     0.8057               0.7482                 0.0874                0.0349  2.2167               1.7672       0.0001            0.0020            0.0005    0.0582    0.0739
+ R4         kabsch   0.0250   0.7838 6.5843     0.7916     0.8000               0.7425                 0.1129                0.0360  2.1926               2.8804       0.0004            0.0004            0.0001    0.0472    0.0738
+ R4         kabsch   0.0750   0.7831 6.5890     0.7903     0.8000               0.7425                 0.1032                0.0329  2.0432               2.6025       0.0004            0.0004            0.0001    0.0471    0.0730
+ R4         kabsch   0.2500   0.7815 6.5921     0.7874     0.8000               0.7424                 0.0911                0.0297  1.8757               2.2125       0.0004            0.0003            0.0001    0.0479    0.0718
+ R4         kabsch   0.7500   0.7800 6.5997     0.7837     0.8007               0.7433                 0.0801                0.0266  1.7147               1.8598       0.0003            0.0001            0.0001    0.0514    0.0777
+ R4         kabsch   2.5000   0.7766 6.6095     0.7752     0.8030               0.7454                 0.0668                0.0227  1.5194               1.5915       0.0001            0.0002            0.0001    0.0622    0.0858
+ R4         kabsch   7.5000   0.7703 6.6482     0.7643     0.8016               0.7433                 0.0593                0.0213  1.4494               1.3291       0.0004            0.0004            0.0002    0.0463    0.0735
+ R4         kabsch  25.0000   0.7685 6.6391     0.7563     0.8068               0.7471                 0.0518                0.0183  1.3194               1.4136       0.0001            0.0010            0.0004    0.0608    0.0865
+{
+  "R2": {
+    "method": "staring",
+    "weight": 1.9764780176840118
+  },
+  "R3": {
+    "method": "staring_eroded",
+    "weight": 103.19728792937212
+  },
+  "R4": {
+    "method": "kabsch",
+    "weight": 25.0
+  }
+}
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+Submitted stage 4 (tasks 0-2 of 3) as array 41948537, snapshot /home/iml/fryderyk.koegl/code_snapshots/official_stage4_20261024_104317
+Sa 24. Okt 10:43:22 CEST 2026: stage 4 started
+Sa 24. Okt 10:43:22 CEST 2026: chain done (stage 4 running)

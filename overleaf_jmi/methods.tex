@@ -207,7 +207,7 @@ We also measure the fraction of stencil reads that leave the bone of the centre 
 A patient may contribute several pairs and many lesions.
 We average each metric over a patient's eligible pairs before analysis: CT Dice, HD95, and NDV comparisons include 28 test patients, whereas MTV and TLG comparisons include the 26 patients with moving-scan lesions.
 Paired comparisons use only patients with values for both methods and a two-sided Wilcoxon signed-rank test~\cite{ref_wilcoxon}; the implementation doubles the smaller one-sided $p$-value, drops zero paired differences, assigns average ranks to tied nonzero magnitudes, and returns $p=1$ when all differences are zero.
-Holm correction~\cite{ref_holm} is applied separately per metric to three comparisons against ``None'' (no losses) in each ablation block, three IO-only versus training-plus-IO comparisons, four leave-one-out comparisons, and comparisons of the full method against the other baseline-table methods (nine for CT, HD95, and NDV; eight for MTV and TLG, because ``Initial'' has zero PET change by construction).
+Holm correction~\cite{ref_holm} is applied separately per metric to three comparisons against ``None'' (no losses) in each ablation block, three IO-only versus training-plus-IO comparisons, four leave-one-out comparisons, and comparisons of our method against the other baseline-table methods (nine for CT, HD95, and NDV; eight for MTV and TLG, because ``Initial'' has zero PET change by construction).
 We call a difference significant if its adjusted $p<0.05$.
 Confidence intervals are 95\,\% percentile patient-bootstrap intervals~\cite{ref_bootstrap}: scan-level plots show intervals for method means, whereas intervals stated for IO-only minus training-plus-IO are for paired patient-mean differences.
 For per-lesion medians, patients are resampled together with all their lesions (cluster bootstrap).
@@ -230,11 +230,12 @@ All tuning used the validation set and the challenge ranking above as the select
 \end{itemize}
 Several choices ended at the edge of their grid; extending the grids changed the validation scores only marginally.
 
-\paragraph{Choice of the full method.}
+\paragraph{Choice of our method.}
 Before the experiments, we defined our full method as the network trained with both losses followed by IO with both losses.
-To check this choice, we also ranked all variants of Sec.~\ref{sect:ablations} on the validation set.
-This ranking favoured the variant without any of the losses, because accuracy differences between variants are significant while differences in MTV and TLG rarely are.
-We therefore report both in the comparison with baselines, together with the variant that uses the losses only in IO.
+Instead, we select our method on the validation set among the IO variants of Sec.~\ref{sect:ablations} and IO directly after the affine pre-registration, with the same rule as for the IO settings: the variant with the lowest $|\Delta\mathrm{MTV}|+|\Delta\mathrm{TLG}|$ among those within two Dice points of the most accurate one.
+This selected the network trained without the losses followed by IO with both losses (79.2\,\% Dice, $|\Delta\mathrm{MTV}|$ 6.9\,\%, $|\Delta\mathrm{TLG}|$ 8.9\,\%; the most accurate variant, IO without the losses, reached 80.8\,\%).
+The variants with the losses in training and IO changed the lesions slightly less (e.g.\ 5.8\,\% and 7.9\,\% with both losses) but were 2.6 points less accurate than the most accurate variant.
+We refer to the selected variant as our method and report the predefined full method and IO without the losses alongside it in the comparison with baselines.
 
 \subsection{Comparisons}
 \label{sect:ablations}

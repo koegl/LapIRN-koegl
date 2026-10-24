@@ -44,6 +44,25 @@ basis; **preliminary** = not yet confirmed on the full dataset.
    basic IO (I1) and full (I4) 2. Affine + IO
    (no network) reaches only 52.7 % Dice: the network is essential.
 7. **Rigidity comparison (exp. 2)** and **trade-off (exp. 3)**: follow.
+   - **Framing question (official scorer, open):** the losses reduce the change
+     in every comparison (with IO: |ΔMTV| 11.3 → 8.7 %, |ΔTLG| 14.5 → 11.3 %,
+     ~23 % relative; network: 10.3 → 8.0 %, 12.5 → 9.8 %), but mostly not
+     significantly after Holm (26 patients, patient SD 10-12 %). vs. baselines:
+     same preservation as NiftyReg (8.7 / 10.2 %) and ConvexAdam (9.3 / 10.8 %)
+     at +8 / +17 Dice points -> defensible claim; "better preservation than the
+     baselines" is not. The losses work on what they see (predicted masks ~1 %
+     MTV in the trade-off sweep; GT masks 0.1 %) but transfer is limited by
+     (1) missed lesions (detection), (2) total-only loss: single lesions still
+     change (per-lesion; GT masks leave the per-lesion median at 13.5 %),
+     (3) soft surrogate vs. nearest evaluation (LOO: L_MTV / L_TLG hurt).
+     Possible reframing: from "our losses preserve PET" to "losses trade
+     alignment for preservation, and what limits them". Decide after P1 / P2
+     (per-lesion terms, stage 5); if they help, that is the method contribution.
+     Post-hoc option: IO with only the Jacobian terms (LOO) - would need val
+     tuning to be more than an observation.
+     Qualitative pair 0146 (chosen for its tumour change): official scorer I7
+     +2.6 / +6.6 %, I4 +2.4 / +7.2 %, I1 -0.6 / +2.3 % (old I4 -0.1 / +0.9 %
+     was partly the old scorer); kept, text shows alignment, not preservation.
 8. **Discussion:**
    - losses in IO only vs. in training: use case (time budget) decides;
    - ranking weakness: methods that barely deform score high on biomarkers

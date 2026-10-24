@@ -70,20 +70,22 @@ Both terms measure the change on the linearly warped, soft mask and PET (Eq.~\re
 \subsection{Comparison with Baselines}
 \label{sect:res_baselines}
 
-To place the alignment--preservation trade-off among our variants in context, we compare them with CT-only registration baselines and with IO applied directly after affine pre-registration (Table~\ref{tab:baselines}, Fig.~\ref{fig:baselines_distribution}).
-Every variant of ours had higher mean CT Dice and lower mean HD95 than NiftyReg (69.4\,\% Dice, 8.6~mm HD95), ConvexAdam (61.7\,\%, 9.2~mm), and the affine pre-registration (46.4\,\%, 13.9~mm), and stayed below the folding threshold on every test pair.
-NiftyReg, tuned on the validation set, exceeded the threshold on 5 of 38 validation pairs and 8 of 38 test pairs (21\,\%); its test-set NDV averaged 1170~ppm over patients, driven by three pairs with 0.8 to 1.3\,\% NDV.
-IO directly after the affine pre-registration reached only 52.7\,\% Dice: within the same iteration budget, IO cannot replace the network.
-Its MTV and TLG change was the lowest of all methods (3.4\,\%), because the deformation it adds to the affine is small.
+To place our method in context, we compare it with CT-only registration baselines, with IO applied directly after affine pre-registration, and with our other variants (Table~\ref{tab:baselines}, Fig.~\ref{fig:baselines_distribution}).
+Our method, with the losses only in IO, reached 78.3\,\% CT Dice and 6.89~mm HD95, significantly better than NiftyReg (70.1\,\%, 8.85~mm), ConvexAdam (61.7\,\%, 9.16~mm), and the affine pre-registration (46.4\,\%, 14.00~mm); its $|\Delta\mathrm{MTV}|$ (8.7\,\%) and $|\Delta\mathrm{TLG}|$ (11.3\,\%) did not differ significantly from those of NiftyReg (8.7\,\%, 10.2\,\%) and ConvexAdam (9.3\,\%, 10.8\,\%).
+NiftyReg, tuned on the validation set, exceeded the folding threshold on 5 of 38 validation pairs and 8 of 38 test pairs (21\,\%), with up to 0.37\,\% NDV; ConvexAdam stayed below it on every pair.
+Our method exceeded it on two test pairs (76 and 125~ppm), and the variant with the losses also in training on one (262~ppm).
+IO directly after the affine pre-registration reached only 56.6\,\% Dice: within the same iteration budget, IO cannot replace the network.
+Resampling alone already changes the measurements: the affine pre-registration changed MTV by 4.5\,\% and TLG by 4.4\,\%, the lowest of all methods.
 
-Among our variants, IO without the PET and rigidity losses was the most accurate (79.2\,\% Dice), and our full method, with the losses in training and IO, preserved best ($|\Delta\mathrm{MTV}|$ 6.2\,\%, significantly lower than without the losses).
-By the composite score, the variant with the losses only in IO ranked first (77.3\,\% Dice, 7.0\,\% $|\Delta\mathrm{MTV}|$), while the full method and basic IO tied for second; all three had bootstrap rank intervals of 1--5, so this rank order is descriptive.
-The ranking was decided mainly by accuracy: after correction for multiple comparisons, few differences in preservation were significant (on $|\Delta\mathrm{MTV}|$, each variant with the losses outperformed one other method and IO after the affine two; on $|\Delta\mathrm{TLG}|$, only IO after the affine outperformed others), and none in folding.
+Among our variants, IO without the losses was the most accurate (80.2\,\% Dice, significantly higher than our method) but changed the lesions most ($|\Delta\mathrm{MTV}|$ 11.3\,\%, $|\Delta\mathrm{TLG}|$ 14.5\,\%).
+The losses only in IO lowered these changes to 8.7\,\% and 11.3\,\% at a cost of 1.9 Dice points, and the losses also in training to 7.9\,\% and 10.3\,\% at a cost of 2.9 points; after correction for multiple comparisons, none of these differences in preservation was significant.
+By the challenge's composite score, IO without the losses ranked first, our method second, and the variant with the losses in training and IO third, with overlapping bootstrap rank intervals (1--4, 1--4, and 1--5).
+The ranking was decided by accuracy: apart from the affine pre-registration on $|\Delta\mathrm{TLG}|$, no method won a significant comparison in preservation or folding.
 The network alone needs 11~s per pair, as fast as ConvexAdam and ten times faster than NiftyReg (108~s); IO adds about 2.5~minutes.
-Figure~\ref{fig:qualitative} shows a test pair whose lesion volume grew tenfold between baseline and follow-up (from 2400 to 24\,191 voxels).
-The scans were initially far apart (CT Dice 3.5\,\%); our full method aligned them to 81.0\,\% Dice (NiftyReg 69.5\,\%, ConvexAdam 65.6\,\%), while the volume and uptake of the 163 follow-up lesions changed by only $-0.1\,\%$ and $+0.9\,\%$; NDV remained below the challenge threshold.
-Before registration, the CT overlay (Fig.~\ref{fig:qualitative}c) and the label residual (e) show misalignment across the whole trunk; after registration (d, f), the residual is reduced to thin bands at organ boundaries.
-The remaining residual lies mostly at organ boundaries and in the lumbar vertebrae (f), and the lesions keep their shape after warping (h).
+Figure~\ref{fig:qualitative} shows a test pair whose lesion volume grew tenfold between baseline and follow-up (from 2400 to 24\,191 voxels); it was chosen for this change, not for its registration result, and illustrates alignment.
+The scans were initially far apart (CT Dice 3.5\,\%); our method aligned them to 83.7\,\% Dice (NiftyReg 70.8\,\%, ConvexAdam 65.7\,\%), and NDV remained below the challenge threshold.
+The volume and uptake of the 163 follow-up lesions changed by $+2.6\,\%$ and $+6.6\,\%$, more than with IO without the losses ($-0.6\,\%$ and $+2.3\,\%$); single pairs vary widely (Fig.~\ref{fig:baselines_distribution}).
+Before registration, the CT overlay (Fig.~\ref{fig:qualitative}c) and the label residual (e) show misalignment across the whole trunk; after registration (d, f), the residual is reduced to thin bands at organ boundaries and to parts of the lumbar vertebrae, and the warped lesion contours lie in the corresponding bones (h).
 The Jacobian determinant (g) shows fine-grained changes in the local volume scale of the sampling transform throughout the body, which IO adds to the smooth network field because it has no smoothness term ($\lambda_{\mathrm{smooth}}=0$).
 
 \input{tables/baselines}

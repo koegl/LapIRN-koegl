@@ -20,6 +20,10 @@ import ranking  # noqa: E402
 # results with the official scorer conventions (the first evaluation is in
 # evaluation/; its paper outputs are backed up in out_old_scorer/)
 EVAL_DIR = REPO / "evaluation_official_scorer" / "test"
+# runtimes from the old-scorer runs: all on one RTX A6000 (janus) with the same
+# IO (40 iterations, same weights; only the lr differed), whereas the official
+# scorer runs were spread over janus and cluster GPUs
+RUNTIME_DIR = REPO / "evaluation" / "test"
 BASELINE_DIR = REPO / "journal_results" / "baselines"
 OUT_DIR = Path(__file__).resolve().parent / "out"
 
@@ -27,9 +31,9 @@ OUT_DIR = Path(__file__).resolve().parent / "out"
 # baseline comparison (plan, experiment 4). training / io: the PET and
 # rigidity losses used in training and in IO ("--" in the IO column = no IO;
 # "basic" = IO with similarity and regularisation terms only); short: x label
-# of the plot (two lines: method, where the losses act). The ours rows are runs of experiment 1: T1 / I1 = the val-chosen
-# method (select_full_method.py), T4 / I4 = the full method fixed in advance,
-# I7 = losses only in IO (Q2).
+# of the plot (two lines: method, where the losses act). The ours rows are runs of experiment 1: T1 / I1 = without
+# losses, T4 / I4 = both losses in training (and IO), I7 = both losses only in
+# IO = "Ours", chosen on val with the selection rule (select_stage.py ours).
 class Method(NamedTuple):
     label: str
     run: str
@@ -51,13 +55,13 @@ BASELINES: Dict[str, Method] = {
     "B7": Method("Ours", "T4", PR, "--", "Ours\n(training: PET + rig.)"),
     # network + IO
     "B6": Method("Ours + IO", "I1", "--", "basic", "Ours + IO\n(IO: basic)"),
-    "B10": Method("Ours + IO", "I7", "--", PR, "Ours + IO\n(IO: PET + rig.)"),
     "B8": Method("Ours + IO", "I4", PR, PR, "Ours + IO\n(both: PET + rig.)"),
+    "B10": Method("Ours + IO", "I7", "--", PR, "Ours + IO\n(IO: PET + rig.)"),
 }
 # not ranked: its MTV / TLG change is 0 by construction (nothing resampled)
 UNRANKED = ("B1",)
 # reference of the significance marks
-OURS = "B8"
+OURS = "B10"
 # our rows (a rule above B5 in the table, accent colour in the plot)
 OURS_IDS = ("B5", "B6", "B7", "B8", "B10")
 # precomputed fields: their registration time is in the tuning timings, the
@@ -120,7 +124,8 @@ def runtimes(method_id: str) -> Optional[pd.Series]:
         return pd.read_csv(BASELINE_DIR / method / config / "timings_test.csv")[
             "seconds"
         ]
-    return load_pairs(method_id)["runtime_s"]
+    run = BASELINES[method_id].run
+    return pd.read_csv(RUNTIME_DIR / f"{run}.csv")["runtime_s"]
 
 
 def holm(p: Dict[str, float]) -> Dict[str, float]:
