@@ -23,9 +23,9 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
 - [ ] Weights table (`tab:weights`): IO row
 
 ## Results
-- [ ] Q1: effect of the losses
-  - [ ] table (`table_ablations.py`)
-  - [ ] text
+- [x] Q1: effect of the losses
+  - [x] table (`table_ablations.py`)
+  - [x] text
 - [ ] Q2: losses in training or only in IO
   - [ ] figure (`figure_q2.py`)
   - [ ] text
