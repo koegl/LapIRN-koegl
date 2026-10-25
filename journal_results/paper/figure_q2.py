@@ -1,7 +1,7 @@
 """Experiment 1 (Q1 + Q2): which losses, and where they act -> PDF + LaTeX.
 
 All eleven variants on test in two panels (|MTV change| and |TLG change|
-against CT Dice; patient means): colour = losses used (PET / rigidity / both),
+against CT Dice; patient means): color = losses used (PET / rigidity / both),
 marker = where they act (square: only in training, no IO, T2-T4; filled
 circle: in training and IO, I2-I4; hollow circle: only in IO, I5-I7). No
 losses: black X (no IO, T1) and + (with IO, I1). A thin dashed line connects
@@ -27,7 +27,7 @@ from matplotlib.lines import Line2D  # noqa: E402
 import common  # noqa: E402
 from common import METRIC_COLUMNS, two_sided  # noqa: E402
 
-# losses used -> colour (PET blue, rigidity red, both purple; none black)
+# losses used -> color (PET blue, rigidity red, both purple; none black)
 GROUPS = {
     "None": "#0b0b0b",
     "PET": "#2a78d6",
@@ -264,7 +264,7 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/q2.pdf}}
-\caption{{Effect of the PET-preservation and rigidity losses and of where they act (test set; CT Dice: {n} patients, PET: {n_pet} patients). Colour: losses used; marker: where they act (square: only in network training, network output without IO; filled circle: in training and IO; hollow circle: only in IO, on the network trained without losses). Without losses: network output ($\times$) and with IO ($+$). Dashed lines connect the variants of a loss group. Points: patient means; the significance tests are reported in the text and in Table~\ref{{tab:ablations}}.}}
+\caption{{Effect of the PET-preservation and rigidity losses and of where they act (test set; CT Dice: {n} patients, PET: {n_pet} patients). Color: losses used; marker: where they act (square: only in network training, network output without IO; filled circle: in training and IO; hollow circle: only in IO, on the network trained without losses). Without losses: network output ($\times$) and with IO ($+$). Dashed lines connect the variants of a loss group. Points: patient means; the significance tests are reported in the text and in Table~\ref{{tab:ablations}}.}}
 \label{{fig:q2}}
 \end{{figure}}
 """

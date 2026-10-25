@@ -30,7 +30,7 @@ OUT_DIR = Path(__file__).resolve().parent / "out"
 
 # baseline comparison (plan, experiment 4). training / io: the PET and
 # rigidity losses used in training and in IO ("--" in the IO column = no IO;
-# "basic" = IO with similarity and regularisation terms only); short: x label
+# "basic" = IO with similarity and regularization terms only); short: x label
 # of the plot (two lines: method, where the losses act). The ours rows are runs of experiment 1: T1 / I1 = without
 # losses, T4 / I4 = both losses in training (and IO), I7 = both losses only in
 # IO = "Ours", chosen on val with the selection rule (select_stage.py ours).
@@ -62,7 +62,7 @@ BASELINES: Dict[str, Method] = {
 UNRANKED = ("B1",)
 # reference of the significance marks
 OURS = "B10"
-# our rows (a rule above B5 in the table, accent colour in the plot)
+# our rows (a rule above B5 in the table, accent color in the plot)
 OURS_IDS = ("B5", "B6", "B7", "B8", "B10")
 # precomputed fields: their registration time is in the tuning timings, the
 # runtime_s of the evaluation only covers loading the field

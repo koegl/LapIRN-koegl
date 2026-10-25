@@ -28,7 +28,7 @@ SWEEP_DIR = common.REPO / "evaluation_official_scorer" / "rigidity_sweep"
 CALIBRATION = (
     common.REPO / "journal_results" / "rigidity_calibration" / "reference.json"
 )
-# method -> (label, colour); categorical slots 1-3 of the reference palette
+# method -> (label, color); categorical slots 1-3 of the reference palette
 METHODS = {
     "staring": ("Staring", "#eb6834"),
     "staring_eroded": ("Staring + erosion", "#1baf7a"),

@@ -5,7 +5,7 @@ R2-R4 (rigidity.py) relative to R1 (no rigidity), per patient:
         (residual of a per-bone rigid fit, |det J - 1|, orthonormality
         deviation, short and long distance distortion; lower = more rigid).
         A penalty that is consistently rigid sits low in every group; each
-        penalty is expected to win on the measure it optimises itself.
+        penalty is expected to win on the measure it optimizes itself.
     (b) the accuracy cost: CT, bone, and soft-tissue Dice minus R1 (points)
 Points: patient means; bars: 95 % patient-bootstrap CIs.
 
@@ -137,7 +137,7 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/rigidity_measures.pdf}}
-\caption{{Rigidity penalties evaluated with all rigidity measures ({rigidity.split_label()}, {n} patients): network trained with the PET losses, IO with the PET terms and one rigidity penalty at the weight chosen on the validation set. (a)~Rigidity of bones relative to IO without rigidity (dashed, 100\,\%), per patient: residual of a rigid fit to each bone (the quantity the rigid-fit penalty minimises), Staring energy, i.e.\ the Staring penalty (properness, orthonormality, and affinity) on the whole bone (the quantity the Staring penalty minimises), and the distortion of short (5--15~mm) and long ($\geq$15~mm) within-bone distances (minimised by neither). (b)~Change of CT, bone, and soft-tissue Dice relative to IO without rigidity. Points: patient means; bars: 95\,\% patient-bootstrap confidence intervals.}}
+\caption{{Rigidity penalties evaluated with all rigidity measures ({rigidity.split_label()}, {n} patients): network trained with the PET losses, IO with the PET terms and one rigidity penalty at the weight chosen on the validation set. (a)~Rigidity of bones relative to IO without rigidity (dashed, 100\,\%), per patient: residual of a rigid fit to each bone (the quantity the rigid-fit penalty minimizes), Staring energy, i.e.\ the Staring penalty (properness, orthonormality, and affinity) on the whole bone (the quantity the Staring penalty minimizes), and the distortion of short (5--15~mm) and long ($\geq$15~mm) within-bone distances (minimized by neither). (b)~Change of CT, bone, and soft-tissue Dice relative to IO without rigidity. Points: patient means; bars: 95\,\% patient-bootstrap confidence intervals.}}
 \label{{fig:rigidity_measures}}
 \end{{figure}}
 """

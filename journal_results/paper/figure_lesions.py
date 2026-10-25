@@ -29,7 +29,7 @@ from matplotlib.lines import Line2D  # noqa: E402
 
 import common  # noqa: E402
 
-# loss set -> (network run, network + IO run, colour); colours as in figure_q2
+# loss set -> (network run, network + IO run, color); colors as in figure_q2
 CONDITIONS: Dict[str, Tuple[str, str, str]] = {
     "None": ("T1", "I1", "#0b0b0b"),
     "PET": ("T2", "I2", "#2a78d6"),
@@ -211,7 +211,7 @@ def main(metric: str) -> None:
     n_excluded = len(pd.read_csv(common.EVAL_DIR / "T1_lesions.csv")) - n_lesions
     n_patients = lesions["T1"]["case_id"].nunique()
     if metric == "MTV":
-        caption = rf"Per-lesion volume change on the test set ({n_lesions} lesions of {n_patients} patients after excluding {n_excluded} components smaller than five voxels), by location (soft tissue / bone-associated, $\geq$50\,\% of the lesion on bone) and size (small $<$0.5\,ml, medium $<$5\,ml, large). Median $|\Delta\mathrm{{MTV}}|$ per lesion; left: network output, right: with instance optimisation (IO) using the same losses (squares / $\times$: without IO; circles / $+$: with IO; colours as in Fig.~\ref{{fig:q2}}). Error bars: 95\,\% confidence intervals from a patient-cluster bootstrap."
+        caption = rf"Per-lesion volume change on the test set ({n_lesions} lesions of {n_patients} patients after excluding {n_excluded} components smaller than five voxels), by location (soft tissue / bone-associated, $\geq$50\,\% of the lesion on bone) and size (small $<$0.5\,ml, medium $<$5\,ml, large). Median $|\Delta\mathrm{{MTV}}|$ per lesion; left: network output, right: with instance optimization (IO) using the same losses (squares / $\times$: without IO; circles / $+$: with IO; colors as in Fig.~\ref{{fig:q2}}). Error bars: 95\,\% confidence intervals from a patient-cluster bootstrap."
     else:
         caption = r"Per-lesion uptake change on the test set: median $|\Delta\mathrm{TLG}|$ per lesion, otherwise as Fig.~\ref{fig:lesions}."
     tex = rf"""\begin{{figure}}[t]

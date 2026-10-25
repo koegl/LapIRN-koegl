@@ -22,7 +22,7 @@ RUNS: Dict[str, str] = {
     "R3": r"Staring + erosion ($\times$100)",
     "R4": r"Per-bone rigid fit ($\times$100)",
 }
-# run -> colour (as figure_rigidity.py; R1 neutral)
+# run -> color (as figure_rigidity.py; R1 neutral)
 COLORS = {"R1": "#0b0b0b", "R2": "#eb6834", "R3": "#1baf7a", "R4": "#2a78d6"}
 _OLD = common.REPO / "journal_results" / "rigidity_sweep_interior_metric"
 _VAL_OLD = {

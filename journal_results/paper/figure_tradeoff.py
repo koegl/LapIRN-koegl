@@ -1,13 +1,13 @@
 """Experiment 3: accuracy-preservation trade-off of the PET IO weights -> PDF + LaTeX.
 
 T1 + PET IO (no rigidity) with all PET IO weights scaled together
-(x 0 = W0: PET terms on with weight 0, same optimisation as I1 but logging the
+(x 0 = W0: PET terms on with weight 0, same optimization as I1 but logging the
 predicted-mask values; x 0.1 = I5 = tuned operating point; W* = the others).
 Three panels against the scale (equally spaced = log, x 0 set apart):
 - CT Dice on the predicted organ labels (hard_dice_ct of the IO history,
   same definition as the evaluation) and on the ground-truth labels (all pairs)
 - |MTV change| and |TLG change| on the predicted lesion masks that IO
-  optimises (orange; hard_mtv / hard_tlg of the IO history at the returned
+  optimizes (orange; hard_mtv / hard_tlg of the IO history at the returned
   step) and on the ground-truth masks of the evaluation (blue), on the pairs
   with lesions in both masks; solid = after IO, dashed horizontal lines = the network output (T1,
   before IO), the same for every scale
@@ -202,7 +202,7 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/tradeoff.pdf}}
-\caption{{Effect of the PET loss weight in IO (test set): network trained without PET losses (T1) followed by IO with all PET weights scaled by the given factor (0: PET losses off; 1: the PET weights of network training). Each metric on the predicted labels that IO optimises (orange; organs: TotalSegmentator, lesions: nnU-Net) and on the ground-truth labels used for evaluation (blue). Dice over all {n_dice} patients, lesion volume and uptake change over the {n_masks} patients with lesions in both label sets. Solid: after IO; dashed: network output before IO, the same for every factor. Outlined point and dotted line: operating point tuned on the validation set. Black diamonds: IO with the ground-truth instead of the predicted lesion masks (at $\times0.1$ and $\times1$), evaluated on the ground-truth labels. Points: patient means; bands: 95\,\% patient-bootstrap confidence intervals.}}
+\caption{{Effect of the PET loss weight in IO (test set): network trained without PET losses (T1) followed by IO with all PET weights scaled by the given factor (0: PET losses off; 1: the PET weights of network training). Each metric on the predicted labels that IO optimizes (orange; organs: TotalSegmentator, lesions: nnU-Net) and on the ground-truth labels used for evaluation (blue). Dice over all {n_dice} patients, lesion volume and uptake change over the {n_masks} patients with lesions in both label sets. Solid: after IO; dashed: network output before IO, the same for every factor. Outlined point and dotted line: operating point tuned on the validation set. Black diamonds: IO with the ground-truth instead of the predicted lesion masks (at $\times0.1$ and $\times1$), evaluated on the ground-truth labels. Points: patient means; bands: 95\,\% patient-bootstrap confidence intervals.}}
 \label{{fig:tradeoff}}
 \end{{figure}}
 """

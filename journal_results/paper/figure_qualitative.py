@@ -1,16 +1,16 @@
 """Qualitative example: one test pair registered by our method -> PNG + LaTeX.
 
-The pair (CASE) has a large change in tumour volume between the scans. Panels,
+The pair (CASE) has a large change in tumor volume between the scans. Panels,
 one coronal slice index (fixed frame; the moving scan shown at the same index
 of its own frame):
     row 1: fixed (CT with PET), moving (CT with PET), CT overlay of fixed and
            moving, CT overlay of fixed and warped moving (fixed green, other
-           magenta: grey where they agree)
+           magenta: gray where they agree)
     row 2: label residual (fixed minus moving / warped moving label ID, black
            where they agree); Jacobian determinant of the transform; warped
            moving (CT with PET)
 Ground-truth lesion masks are drawn as red contours on the CT + PET panels.
-The slice maximises the smaller of the fixed and warped lesion voxel counts on
+The slice maximizes the smaller of the fixed and warped lesion voxel counts on
 it, so lesions are visible in both.
 
 The field is the one saved by the evaluation (evaluate.FIELD_DIR, official
@@ -41,7 +41,7 @@ import synthetic  # noqa: E402
 from config import TrainingConfig  # noqa: E402
 # isort: on
 
-# (case_id, tp_moving, tp_fixed): tumour volume 2400 -> 24191 voxels (x10)
+# (case_id, tp_moving, tp_fixed): tumor volume 2400 -> 24191 voxels (x10)
 CASE: Tuple[str, str, str] = ("0146", "01", "00")
 # evaluation run of the method shown: T4 = network trained with PET + rigidity
 # losses (no IO); I4 = the same followed by IO with both losses; I7 = network
@@ -244,9 +244,9 @@ def main() -> None:
         )  # fixed green, other magenta
 
     def show_labels(ax, other) -> float:
-        """Label residual, coloured as the CT overlay: green where the fixed
+        """Label residual, colored as the CT overlay: green where the fixed
         scan's organ label is not matched by the other scan (unlabelled there
-        or a different organ), magenta where only the other scan is labelled;
+        or a different organ), magenta where only the other scan is labeled;
         black where the labels agree. The shade gives the group of the shown
         label: bone (full), organ (medium), muscle (dark)."""
         a, b = (
@@ -262,8 +262,8 @@ def main() -> None:
         ):
             rgb[mask] = np.array(color) * GROUP_SHADE[label[mask]][:, None]
         ax.imshow(rgb, aspect=aspect, interpolation="nearest")
-        labelled = (a > 0) | (b > 0)
-        return 100 * (fixed_unmatched | other_only).sum() / max(labelled.sum(), 1)
+        labeled = (a > 0) | (b > 0)
+        return 100 * (fixed_unmatched | other_only).sum() / max(labeled.sum(), 1)
 
     show_ct_pet(axes[0, 0], "fixed")
     show_ct_pet(axes[0, 1], "moving")
@@ -291,7 +291,7 @@ def main() -> None:
             )
             axes[i, j].set_xticks([])
             axes[i, j].set_yticks([])
-    # colour bar inside the det J panel, at the bottom
+    # color bar inside the det J panel, at the bottom
     cax = axes[1, 2].inset_axes([0.15, 0.04, 0.7, 0.025])
     fig.colorbar(image, cax=cax, ticks=[0, 1, 2], orientation="horizontal")
     cax.tick_params(labelsize=6, pad=1, length=2)
@@ -307,7 +307,7 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[p]
 \centering
 \includegraphics[width=\textwidth]{{figures/qualitative.png}}
-\caption{{Test pair with a large change in tumour volume (patient {case_id}; lesion volume {lesions["fixed"].sum()} voxels at baseline, {lesions["moving"].sum()} at follow-up), registered by {RUN_LABEL[RUN]}; one coronal slice. (a)~Fixed and (b)~moving CT with PET (SUV {SUV_RANGE[0]:g}--{SUV_RANGE[1]:g}, {100 * PET_ALPHA:.0f}\,\% opacity) and ground-truth lesion contours (red). (c,~d)~CT of the fixed scan (green) overlaid with the moving scan (magenta) before~(c) and after~(d) registration; grey where they agree. (e,~f)~Organ labels that differ before~(e) and after~(f) registration: green where the fixed scan has a label that the moving scan lacks there, magenta where only the moving scan is labelled; bright, medium, and dark shades for bones, organs, and muscles. (g)~Jacobian determinant of the fixed-to-moving sampling transform: white is volume-preserving (1), blue is below 1 and red is above 1; changes in the displayed warped anatomy have the opposite direction. (h)~Warped moving CT with PET and warped lesion contours.}}
+\caption{{Test pair with a large change in tumor volume (patient {case_id}; lesion volume {lesions["fixed"].sum()} voxels at baseline, {lesions["moving"].sum()} at follow-up), registered by {RUN_LABEL[RUN]}; one coronal slice. (a)~Fixed and (b)~moving CT with PET (SUV {SUV_RANGE[0]:g}--{SUV_RANGE[1]:g}, {100 * PET_ALPHA:.0f}\,\% opacity) and ground-truth lesion contours (red). (c,~d)~CT of the fixed scan (green) overlaid with the moving scan (magenta) before~(c) and after~(d) registration; gray where they agree. (e,~f)~Organ labels that differ before~(e) and after~(f) registration: green where the fixed scan has a label that the moving scan lacks there, magenta where only the moving scan is labeled; bright, medium, and dark shades for bones, organs, and muscles. (g)~Jacobian determinant of the fixed-to-moving sampling transform: white is volume-preserving (1), blue is below 1 and red is above 1; changes in the displayed warped anatomy have the opposite direction. (h)~Warped moving CT with PET and warped lesion contours.}}
 \label{{fig:qualitative}}
 \end{{figure}}
 """

@@ -25,7 +25,7 @@ import common  # noqa: E402
 import detection  # noqa: E402
 from detection import RUNS  # noqa: E402
 
-# group -> (legend label, colour); categorical slots 1-3 of the reference palette
+# group -> (legend label, color); categorical slots 1-3 of the reference palette
 GROUP_STYLE = {
     "missed": ("missed", "#eb6834"),
     "partial": (r"partly covered ($<$50\,\%)", "#1baf7a"),
@@ -188,7 +188,7 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/detection.pdf}}
-\caption{{Lesion volume and uptake change of all {shares["all"]} in {n_patients} test patients ({n_pairs} pairs), including components smaller than five voxels, grouped by how much of each lesion the predicted lesion mask seen by IO covers: missed ({shares["missed"]}), partly covered ({shares["partial"]}), covered ({shares["covered"]}). Network trained without PET losses; IO with the PET weights scaled by the given factor. Left: change within each group (per scan, the change of the summed volume or uptake of the group's lesions; mean over the patients with lesions in the group); grey dashed: all lesions, i.e.\ the evaluation metric. Right: contribution of each group to the evaluation metric (the change per scan if only the group's lesions changed; mean over patients); grey ticks: the evaluation metric, below the stacked total because changes of different lesions in a scan partly cancel.}}
+\caption{{Lesion volume and uptake change of all {shares["all"]} in {n_patients} test patients ({n_pairs} pairs), including components smaller than five voxels, grouped by how much of each lesion the predicted lesion mask seen by IO covers: missed ({shares["missed"]}), partly covered ({shares["partial"]}), covered ({shares["covered"]}). Network trained without PET losses; IO with the PET weights scaled by the given factor. Left: change within each group (per scan, the change of the summed volume or uptake of the group's lesions; mean over the patients with lesions in the group); gray dashed: all lesions, i.e.\ the evaluation metric. Right: contribution of each group to the evaluation metric (the change per scan if only the group's lesions changed; mean over patients); gray ticks: the evaluation metric, below the stacked total because changes of different lesions in a scan partly cancel.}}
 \label{{fig:detection}}
 \end{{figure}}
 """

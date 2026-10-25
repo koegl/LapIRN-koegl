@@ -22,10 +22,10 @@ This could explain why adding the preservation losses during training provides l
 The comparison does not test what lesion information the registration network learns, and the segmentation model cannot by itself explain the Dice advantage of IO-only placement: both IO variants use the same predicted masks.
 
 \subsection{Limits of Lesion Preservation}
-On the predicted lesion masks that IO optimises, the PET losses reduced volume change from 9.3\,\% to 0.8\,\%; on the provided masks, 9.3\,\% MTV and 11.8\,\% TLG change remained.
+On the predicted lesion masks that IO optimizes, the PET losses reduced volume change from 9.3\,\% to 0.8\,\%; on the provided masks, 9.3\,\% MTV and 11.8\,\% TLG change remained.
 Increasing the PET weights tenfold had little effect on those measured changes.
 Missed lesions were the largest measured contributor to the residual (5.2 of 9.3 MTV points and 6.2 of 11.8 TLG points), although they make up only 6\,\% of lesion volume; covered lesions still contributed 3.3 and 5.4 points.
-Their weight comes from patients with little tumour volume: the metric is relative per scan and averaged over patients, and in the third of patients with the smallest lesion volume, missed lesions made up 33\,\% of the volume (23\,\% and 3\,\% in the other thirds) and caused 72\,\% of the missed-lesion contribution.
+Their weight comes from patients with little tumor volume: the metric is relative per scan and averaged over patients, and in the third of patients with the smallest lesion volume, missed lesions made up 33\,\% of the volume (23\,\% and 3\,\% in the other thirds) and caused 72\,\% of the missed-lesion contribution.
 Higher recall alone did not solve the problem in a validation experiment: a recall-oriented mask (SUV threshold minus physiological organs, combined with nnU-Net) detected more lesions but had a precision of 0.18, and PET IO with this mask preserved worse than IO without PET losses.
 False-positive regions may therefore also divert the preservation constraints from the lesions being evaluated.
 The diagnostic run with provided lesion masks reduced the measured changes from 9.3\,\% to 0.1\,\% for MTV and from 11.8\,\% to 4.5\,\% for TLG, while improving Dice from 78.6\,\% to 79.1\,\%.
@@ -36,7 +36,7 @@ A factor of $10^{-4}$ of the training-derived weights gave most of the preservat
 Even with the ground-truth masks, a ten times larger weight hardly improved preservation.
 
 In IO, the Jacobian terms carried the preservation, whereas removing the volume term $\mathcal{L}_{\mathrm{MTV}}$ or the uptake term $\mathcal{L}_{\mathrm{TLG}}$ improved $|\Delta\mathrm{TLG}|$ by 1.1 and 2.0 points, respectively, and removing $\mathcal{L}_{\mathrm{MTV}}$ also gained 0.6 Dice points.
-Both terms act on the soft, linearly warped mask, whose change differs from the nearest-neighbour change that is evaluated; a surrogate closer to the evaluated quantity, or the Jacobian terms alone, would likely preserve more.
+Both terms act on the soft, linearly warped mask, whose change differs from the nearest-neighbor change that is evaluated; a surrogate closer to the evaluated quantity, or the Jacobian terms alone, would likely preserve more.
 We kept all four terms because they were chosen before the test set was evaluated.
 
 Aggregate MTV and TLG changes hide how individual lesions are deformed.
@@ -48,7 +48,7 @@ The PET losses constrain the total volume and uptake of a scan, which can be pre
 
 Per-lesion terms on the connected components of the predicted mask did not solve this: they reduced the per-lesion change on the validation set but not on the test set.
 They leave the small lesions, which change most, unconstrained (components below 20 voxels and beyond the eight largest), they act on the predicted components, which miss lesions and merge or split others, and they use the same soft, linearly warped masks as the scan-level terms, whose change differs from the evaluated one (Sec.~\ref{sect:res_loo}).
-A per-lesion constraint would likely need a closer surrogate of the nearest-neighbour evaluation and constraints for small lesions.
+A per-lesion constraint would likely need a closer surrogate of the nearest-neighbor evaluation and constraints for small lesions.
 
 \subsection{Interpreting the Evaluation}
 The significance-based ranking of the challenge was decided mainly by accuracy: differences in alignment between methods are consistent across patients and reach significance, whereas differences in MTV and TLG vary strongly between patients and rarely do.
@@ -62,17 +62,17 @@ Both the measured alignment and preservation of IO depend in part on the labels 
 On the predicted organ labels, IO raised Dice from 79.0\,\% to 88.0\,\%, on the ground-truth labels only from 75.5\,\% to 78.6\,\%; for lesions, it preserved the predicted masks almost perfectly but not the missed lesions.
 Within this segmentation-based evaluation, the diagnostic lesion-mask run shows that better lesion masks can improve the reported PET metrics; organ-mask quality may also affect the measured alignment.
 Outside this setting, label overlap and the change of MTV and TLG are proxies: what matters clinically is whether registration supports downstream tasks such as lesion tracking, response assessment, or dose accumulation.
-Future work should therefore evaluate registration on such tasks and clinical endpoints rather than optimise further for segmentation-based metrics.
+Future work should therefore evaluate registration on such tasks and clinical endpoints rather than optimize further for segmentation-based metrics.
 
 The baseline comparison also illustrates the role of deformation regularity.
 NiftyReg exceeded the folding threshold on 5 of 38 validation pairs and 8 of 38 test pairs (21\,\%), with up to 0.37\,\% NDV.
-The ranking selected its least-regularised setting because accuracy separated the settings more than folding; a setting chosen on the validation set did not transfer to new patients.
+The ranking selected its least-regularized setting because accuracy separated the settings more than folding; a setting chosen on the validation set did not transfer to new patients.
 Our variants exceeded the 0.005\,\% NDV threshold on at most two test pairs, with at most 0.026\,\% NDV.
 
 \subsection{Bone Rigidity}
 Finite-difference rigidity penalties face a trade-off at bone boundaries: their stencils read across the boundary (21\,\% of the reads), so they also stiffen the surrounding tissue, and eroding the bones to avoid this leaves most of the skeleton unconstrained at this resolution (35.5\,\% of bone voxels kept, ribs 2.4\,\%).
 The per-bone rigid fit avoids both, because it compares each bone's displacement with its best rigid motion and needs no derivatives.
-It preserved within-bone distances best, although it does not optimise them, and kept soft-tissue alignment, whereas Staring with erosion constrained the bones least.
+It preserved within-bone distances best, although it does not optimize them, and kept soft-tissue alignment, whereas Staring with erosion constrained the bones least.
 The cost of rigid bones is lower bone Dice, possibly because a rigid bone cannot follow differences between the automatic bone labels of the two examinations as closely as a freely deforming one.
 Whether this lower overlap reflects worse alignment or more plausible bone motion cannot be decided with label overlap alone; the distance distortion indicates the latter.
 
@@ -83,8 +83,8 @@ Third, the scan-level metrics are dominated by missed lesions, by cancellation b
 Rigidity can therefore be chosen for anatomical plausibility; a measurable benefit for lesion preservation would require bones that are rigid to within a fraction of a voxel.
 
 \subsection{Limitations}
-The study uses a single cohort with 28 test patients, so small differences, in particular in MTV and TLG, could not be resolved, and generalisation to other scanners and tracers is untested.
-The images were resampled to about $2.7\times2.7\times3.3$~mm, at which many lesions consist of few voxels and small lesions are dominated by discretisation.
+The study uses a single cohort with 28 test patients, so small differences, in particular in MTV and TLG, could not be resolved, and generalization to other scanners and tracers is untested.
+The images were resampled to about $2.7\times2.7\times3.3$~mm, at which many lesions consist of few voxels and small lesions are dominated by discretization.
 The organ labels used for evaluation are themselves automatic (TotalSegmentator), and the lesion labels used by IO are predictions with a Dice of about 0.5, which, as shown above, limits preservation in IO.
 All patients, including the test patients, were part of the challenge data with which the earlier version of the method was developed; the test patients were not used for any decision in the present study.
 We studied one network architecture, and we measured the change caused by registration, not its effect on clinical decisions such as response assessment.
@@ -92,8 +92,8 @@ We studied one network architecture, and we measured the change caused by regist
 \section{Conclusion}
 \label{sect:conclusion}
 
-PET-preservation losses allow instance optimisation to improve the alignment of longitudinal whole-body PSMA PET/CT without measurably increasing the registration-induced change of lesion volume and uptake, which instance optimisation without them increases.
-Applied only during instance optimisation, the losses gave higher alignment accuracy than when they were also used in training; the present test set did not resolve whether preservation differs between these placements.
-Without instance optimisation, training with the losses reduced the change of lesion measurements at a cost in alignment, which suits fast registration of many examinations.
+PET-preservation losses allow instance optimization to improve the alignment of longitudinal whole-body PSMA PET/CT without measurably increasing the registration-induced change of lesion volume and uptake, which instance optimization without them increases.
+Applied only during instance optimization, the losses gave higher alignment accuracy than when they were also used in training; the present test set did not resolve whether preservation differs between these placements.
+Without instance optimization, training with the losses reduced the change of lesion measurements at a cost in alignment, which suits fast registration of many examinations.
 The remaining change came mostly from lesions missed by the predicted masks, and scan-level MTV and TLG hid per-lesion change that neither provided masks nor per-lesion losses removed; better lesion masks and per-lesion evaluation are therefore needed to improve preservation further.
 For bones, a per-bone rigid fit preserved within-bone distances best, but rigidity did not reduce the change of lesion measurements.

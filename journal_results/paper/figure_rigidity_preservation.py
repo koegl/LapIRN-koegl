@@ -28,7 +28,7 @@ SWEEP_DIR = common.REPO / "evaluation_official_scorer" / "rigidity_sweep"
 CALIBRATION = (
     common.REPO / "journal_results" / "rigidity_calibration" / "reference.json"
 )
-# method -> (label, colour); as figure_rigidity.py
+# method -> (label, color); as figure_rigidity.py
 METHODS = {
     "staring": ("Staring", "#eb6834"),
     "staring_eroded": ("Staring + erosion", "#1baf7a"),
