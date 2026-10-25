@@ -66,7 +66,12 @@ The ranking selected its least-regularised setting because accuracy separated th
 Our variants exceeded the 0.005\,\% NDV threshold on at most two test pairs, with at most 0.026\,\% NDV.
 
 \subsection{Bone Rigidity}
-\todo{After the rigidity experiments: stencil leakage of finite-difference penalties at bone boundaries (21\,\% of stencil reads leave the bone), erosion removes most of the skeleton at this resolution (35.5\,\% of bone voxels kept, ribs 2.4\,\%), per-bone rigid fit avoids both; results of the comparison.}
+Finite-difference rigidity penalties face a trade-off at bone boundaries: their stencils read across the boundary (21\,\% of the reads), so they also stiffen the surrounding tissue, and eroding the bones to avoid this leaves most of the skeleton unconstrained at this resolution (35.5\,\% of bone voxels kept, ribs 2.4\,\%).
+The per-bone rigid fit avoids both, because it compares each bone's displacement with its best rigid motion and needs no derivatives.
+It preserved within-bone distances best, although it does not optimise them, and kept soft-tissue alignment, whereas Staring with erosion constrained the bones least.
+The cost of rigid bones is lower bone Dice, possibly because a rigid bone cannot follow differences between the automatic bone labels of the two examinations as closely as a freely deforming one.
+Whether this lower overlap reflects worse alignment or more plausible bone motion cannot be decided with label overlap alone; the distance distortion indicates the latter.
+None of the penalties changed the lesion measurements, so rigidity can be chosen for anatomical plausibility independently of PET preservation.
 
 \subsection{Limitations}
 The study uses a single cohort with 28 test patients, so small differences, in particular in MTV and TLG, could not be resolved, and generalisation to other scanners and tracers is untested.

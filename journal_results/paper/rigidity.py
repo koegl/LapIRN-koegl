@@ -1,9 +1,9 @@
 """Experiment 2: shared inputs of table_rigidity.py and figure_rigidity_measures.py.
 
 R1 (no rigidity) and R2-R4 (Staring, Staring with erosion, per-bone rigid fit at
-the weights chosen on val; evaluate.RIGIDITY_WEIGHTS) on the network trained
+the weights chosen on val; evaluation_official_scorer/rigidity_sweep/chosen.json) on the network trained
 with the PET losses, IO with the PET terms. SOURCE selects the data:
-    "test":    the test runs R1-R4 (evaluation/test/R*.csv)
+    "test":    the test runs R1-R4 (common.EVAL_DIR, official scorer)
     "val_old": the val runs at the chosen weights from the first sweep, with
                distance distortion on eroded interiors only (drafting until
                the test runs with the whole-bone metric are in)
@@ -18,7 +18,7 @@ import common
 SOURCE = "test"
 RUNS: Dict[str, str] = {
     "R1": "No rigidity",
-    "R2": r"Staring ($\times$1)",
+    "R2": r"Staring ($\times$3)",
     "R3": r"Staring + erosion ($\times$100)",
     "R4": r"Per-bone rigid fit ($\times$100)",
 }
@@ -41,6 +41,15 @@ MEASURES: Dict[str, tuple] = {
     "dist_distortion_short": (r"Distortion short (\%)", False, 100.0, 2),
     "dist_distortion_long": (r"Distortion long (\%)", False, 100.0, 2),
     "ndv_bone_percent": (r"NDV in bone (ppm)", False, 1e4, 1),
+    "hd95": (r"CT HD95 (mm)", False, 1.0, 2),
+    "bone_hd95": (r"Bone HD95 (mm)", False, 1.0, 2),
+    "soft_hd95": (r"Soft-tissue HD95 (mm)", False, 1.0, 2),
+    "near_bone_soft_dice": (r"Near-bone soft-tissue Dice (\%)", True, 100.0, 1),
+    "staring_properness_bone": (r"Staring properness", False, 1.0, 3),
+    "staring_orthonormality_bone": (r"Staring orthonormality", False, 1.0, 3),
+    "staring_affinity_bone": (r"Staring affinity", False, 1.0, 3),
+    "ndv_percent": (r"NDV (ppm)", False, 1e4, 1),
+    "ndv_band_percent": (r"NDV in bone band (ppm)", False, 1e4, 1),
     "mtv_bias": (r"$|\Delta\mathrm{MTV}|$ (\%)", False, 100.0, 1),
     "tlg_bias": (r"$|\Delta\mathrm{TLG}|$ (\%)", False, 100.0, 1),
 }

@@ -6,9 +6,7 @@ penalty at x0.1 ... x100 of its calibrated reference weight): |MTV change| and
 rigidity (R1 = I2 on val); outlined: weight chosen for the test set. Patient
 means from the per-pair CSVs of the sweep.
 
-SWEEP_DIR: the sweep folder; MTV / TLG do not depend on the bone metrics, so
-the first sweep (rigidity_sweep_interior_metric) can be used until the rerun
-with the whole-bone distortion is synced to rigidity_sweep.
+SWEEP_DIR: the sweep with the official scorer (curve.csv, chosen.json).
 
     ../../.venv/bin/python figure_rigidity_preservation.py
         ->  out/figures/rigidity_preservation.{pdf,tex}
@@ -25,13 +23,10 @@ from matplotlib.lines import Line2D  # noqa: E402
 
 import common  # noqa: E402
 
-SWEEP_DIR = common.REPO / "journal_results" / "rigidity_sweep_interior_metric"
-REFERENCE_CSV = common.REPO / "evaluation" / "val" / "I2_interior_metric.csv"
+SWEEP_DIR = common.REPO / "evaluation_official_scorer" / "rigidity_sweep"
 CALIBRATION = (
     common.REPO / "journal_results" / "rigidity_calibration" / "reference.json"
 )
-# chosen weights (evaluate.RIGIDITY_WEIGHTS, as factors of the reference weight)
-CHOSEN_FACTOR = {"staring": 1, "staring_eroded": 100, "kabsch": 100}
 # method -> (label, colour); as figure_rigidity.py
 METHODS = {
     "staring": ("Staring", "#eb6834"),
@@ -46,22 +41,22 @@ TEXT = "#0b0b0b"
 MUTED = "#52514e"
 
 
-def patient_mean(csv) -> pd.Series:
-    df = pd.read_csv(csv, dtype={"case_id": str})
-    return df.groupby("case_id")[[m for m, _ in METRICS]].mean().mean() * 100
-
-
 def main() -> None:
-    sweep = json.loads(CALIBRATION.read_text())["sweep"]
     reference_weight = json.loads(CALIBRATION.read_text())["reference_weight"]
-    reference = patient_mean(REFERENCE_CSV)
-    rows = []
-    for method in METHODS:
-        for weight in sweep[method]:
-            csv = SWEEP_DIR / method / "val" / f"{method}_w{weight:.3g}.csv"
-            factor = round(weight / reference_weight[method], 6)
-            rows.append({"method": method, "factor": factor, **patient_mean(csv)})
-    curve = pd.DataFrame(rows)
+    chosen = json.loads((SWEEP_DIR / "chosen.json").read_text())["chosen"]
+    chosen_factor = {
+        c["method"]: round(c["weight"] / reference_weight[c["method"]], 6)
+        for c in chosen.values()
+    }
+    all_rows = pd.read_csv(SWEEP_DIR / "curve.csv")
+    for column, _ in METRICS:
+        all_rows[column] *= 100
+    reference = all_rows[all_rows["method"] == "none"].iloc[0]
+    curve = all_rows[all_rows["method"] != "none"].copy()
+    curve["factor"] = [
+        round(w / reference_weight[m], 6)
+        for m, w in zip(curve["method"], curve["weight"])
+    ]
 
     plt.rcParams.update(
         {
@@ -89,7 +84,7 @@ def main() -> None:
                 linewidths=0.6,
                 zorder=4,
             )
-            best = d[d["factor"] == CHOSEN_FACTOR[method]].iloc[0]
+            best = d[d["factor"] == chosen_factor[method]].iloc[0]
             ax.scatter(
                 best["factor"],
                 best[metric],
@@ -158,7 +153,10 @@ def main() -> None:
 """
     (out_dir / "rigidity_preservation.tex").write_text(tex)
     print(curve.round(2).to_string(index=False))
-    print("no rigidity:", reference.round(2).to_dict())
+    print(
+        "no rigidity:",
+        reference[[m for m, _ in METRICS]].astype(float).round(2).to_dict(),
+    )
 
 
 if __name__ == "__main__":

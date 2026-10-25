@@ -10,6 +10,9 @@ Wilcoxon on patient values, Holm over the three penalties per column). The
 pairwise tests between the penalties (Holm over the three pairs per column),
 for the text, go to out/tables/rigidity_pairwise.txt.
 
+A transposed table with all measures (appendix; rows = measures, columns =
+runs, same marks) goes to out/tables/rigidity_full.tex.
+
     ../../.venv/bin/python table_rigidity.py  ->  out/tables/rigidity.tex
 """
 
@@ -34,6 +37,95 @@ GROUPS = (
     ),
     ("Preservation", ("mtv_bias", "tlg_bias")),
 )
+
+
+# appendix table: all measures, one row each
+FULL_GROUPS = (
+    (
+        "Alignment",
+        (
+            "dice_ct",
+            "hd95",
+            "bone_dice",
+            "bone_hd95",
+            "soft_dice",
+            "soft_hd95",
+            "near_bone_soft_dice",
+        ),
+    ),
+    (
+        "Rigidity of bones",
+        (
+            "bre_mm",
+            "staring_energy_bone",
+            "staring_properness_bone",
+            "staring_orthonormality_bone",
+            "staring_affinity_bone",
+            "dist_distortion_short",
+            "dist_distortion_long",
+        ),
+    ),
+    ("Regularity", ("ndv_percent", "ndv_bone_percent", "ndv_band_percent")),
+    ("Preservation", ("mtv_bias", "tlg_bias")),
+)
+
+
+def marks_vs_reference(patients, columns) -> dict:
+    """(run, column) -> dagger / double dagger vs. R1 (Holm over the penalties)."""
+    marks = {}
+    for column in columns:
+        higher = MEASURES[column][1]
+        if patients["R1"][column].isna().all():
+            continue
+        p, better = {}, {}
+        for run in list(RUNS)[1:]:
+            p[run], better[run] = two_sided(
+                patients[run][column], patients["R1"][column], higher
+            )
+        adjusted = common.holm(p)
+        for run in p:
+            if adjusted[run] < 0.05:
+                marks[run, column] = (
+                    r"$^{\dagger}$" if better[run] else r"$^{\ddagger}$"
+                )
+    return marks
+
+
+def full_table(patients) -> str:
+    columns = [c for _, cols in FULL_GROUPS for c in cols]
+    marks = marks_vs_reference(patients, columns)
+    rows = []
+    for name, cols in FULL_GROUPS:
+        rows.append(rf"\multicolumn{{{1 + len(RUNS)}}}{{l}}{{\textit{{{name}}}}} \\")
+        for column in cols:
+            header, _, scale, decimals = MEASURES[column]
+            cells = []
+            for run in RUNS:
+                v = patients[run][column] * scale
+                cells.append(
+                    "--"
+                    if v.isna().all()
+                    else f"{v.mean():.{decimals}f}$\\pm${v.std():.{decimals}f}"
+                    + marks.get((run, column), "")
+                )
+            rows.append(f"{header} & " + " & ".join(cells) + r" \\")
+    body = "\n".join(rows)
+    runs = " & ".join(RUNS.values())
+    n = len(patients["R1"])
+    return rf"""\begin{{table}}[t]
+\centering
+\caption{{All measures of the rigidity comparison ({rigidity.split_label()}, {n} patients; setup as in Table~\ref{{tab:rigidity}}). HD95 over bones and soft-tissue organs; near-bone soft tissue: soft-tissue organs within three voxels of a bone; Staring energy: sum of its properness, orthonormality, and affinity terms on the whole bone; NDV in bone band: in a three-voxel band around the bones. Mean$\pm$SD over patients; $^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than without rigidity (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over the three penalties per row, $p<0.05$).}}
+\label{{tab:rigidity_full}}
+\resizebox{{\textwidth}}{{!}}{{%
+\begin{{tabular}}{{l{"c" * len(RUNS)}}}
+\toprule
+Measure & {runs} \\
+\midrule
+{body}
+\bottomrule
+\end{{tabular}}}}
+\end{{table}}
+"""
 
 
 def main() -> None:
@@ -102,6 +194,8 @@ Rigidity penalty & {header} \\
     (out_dir / "rigidity_pairwise.txt").write_text(pairwise_text + "\n")
     print(body)
     print(pairwise_text)
+    (out_dir / "rigidity_full.tex").write_text(full_table(patients))
+    common.table_preview(out_dir / "rigidity_full.tex")
 
 
 def pairwise(patients, columns) -> str:

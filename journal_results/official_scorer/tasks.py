@@ -69,6 +69,9 @@ STAGES: Dict[int, List[str]] = {
     5: ["eval/test/P1", "eval/test/P2"],  # per-lesion terms (outlook)
     # val sweep of the per-lesion weight (x1 = P1, x10, x100)
     6: ["eval/val/P1", "eval/val/P1x10", "eval/val/P1x100"],
+    7: [
+        "eval/test/P1x10"
+    ],  # per-lesion weight chosen on val (select_stage.py perlesion)
 }
 STAGE_WORKSTATION_FIRST = {3: WORKSTATION_ONLY}
 

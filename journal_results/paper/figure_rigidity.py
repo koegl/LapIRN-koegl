@@ -2,12 +2,13 @@
 
 T2 + PET IO with one rigidity penalty (Staring, Staring with erosion, per-bone
 rigid fit) at x0.1 ... x100 of its calibrated reference weight
-(rigidity_sweep/curve.csv, patient means, written by sweep_rigidity.py).
+(evaluation_official_scorer/rigidity_sweep/curve.csv, patient means, written
+by official_scorer/select_stage.py rigidity).
     columns: short-distance (5-15 mm) and long-distance (>= 15 mm) distortion
     within bones; rows: CT Dice and bone Dice
 One line per method through its weights; R1 (no rigidity) as a separate point;
 the weight chosen for the test set outlined; the CT Dice row also shows the
-selection threshold (1 Dice point below R1).
+selection threshold (2 Dice points below R1).
 
     ../../.venv/bin/python figure_rigidity.py  ->  out/figures/rigidity.{pdf,tex}
 """
@@ -17,12 +18,13 @@ import json
 import matplotlib
 
 matplotlib.use("Agg")
-import common  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 
-SWEEP_DIR = common.REPO / "journal_results" / "rigidity_sweep"
+import common  # noqa: E402
+
+SWEEP_DIR = common.REPO / "evaluation_official_scorer" / "rigidity_sweep"
 CALIBRATION = (
     common.REPO / "journal_results" / "rigidity_calibration" / "reference.json"
 )
@@ -51,16 +53,16 @@ OFFSETS_A = {
 }
 OFFSETS_B = {
     "staring": ((10, 0), (10, -1)),
-    "staring_eroded": ((6, 6), (7, 4)),
+    "staring_eroded": ((5.5, -7), (7, 4)),
     "kabsch": ((5.5, 6), (10, 0)),
 }
 OFFSETS_C = {
-    "staring": ((0, 0), (10, 0)),
+    "staring": ((10, -2), (10, 0)),
     "staring_eroded": ((5.5, -6), (10, 0)),
     "kabsch": ((5.5, -7), (10, 0)),
 }
 OFFSETS_D = {
-    "staring": ((0, 0), (10, 0)),
+    "staring": ((10, -2), (10, 0)),
     "staring_eroded": ((5.5, -6), (10, 0)),
     "kabsch": ((5.5, -7), (10, 0)),
 }
@@ -205,7 +207,7 @@ def main() -> None:
     tex = r"""\begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/rigidity.pdf}
-\caption{Rigidity weight sweep on the validation set: network trained with the PET losses, IO with the PET terms and one rigidity penalty at $0.1$ to $100$ times its calibrated reference weight (factors at the ends of each line). Top: CT Dice, bottom: bone Dice; left: distortion of short (5--15~mm), right: of long ($\geq$15~mm) within-bone distances, i.e.\ the mean relative change of the distance between point pairs in the same bone. Star: variant without rigidity; dashed (a,~b): selection threshold, one Dice point below it; outlined: weight chosen for the test set (the largest within the threshold, at most $\times100$). Points: patient means.}
+\caption{Rigidity weight sweep on the validation set: network trained with the PET losses, IO with the PET terms and one rigidity penalty at $0.1$ to $100$ times its calibrated reference weight (factors at the ends of each line). Top: CT Dice, bottom: bone Dice; left: distortion of short (5--15~mm), right: of long ($\geq$15~mm) within-bone distances, i.e.\ the mean relative change of the distance between point pairs in the same bone. Star: variant without rigidity; dashed (a,~b): selection threshold, two Dice points below it; outlined: weight chosen for the test set (the largest within the threshold, at most $\times100$). Points: patient means.}
 \label{fig:rigidity}
 \end{figure}
 """
