@@ -40,7 +40,7 @@ Re-reviewed 2026-10-25 after the corrected `align_corners` evaluations, using `m
 
 15. [x] **#15 — State transform and loss conventions.** The draft gives the fixed-to-moving sampling direction, Jacobian meaning, soft loss masks, and hard nearest-neighbor evaluation. Current IO code also uses nearest-neighbor PET and masks to choose its best iterate. Retain this precision (`methods.tex`, `Code/instance_opt.py`).
 
-16. [ ] **#16 — Fix the bone-distance metric description.** `methods.tex` says point pairs come from an “eroded mask,” but `Code/bone_metrics.py` passes the whole bone mask to `distance_distortion`; erosion is measured separately. Correct this concrete mismatch and check rigidity captions/appendices. Keep bone-associated lesions distinct from bone-rigidity metrics.
+16. [x] **#16 — Fix the bone-distance metric description.** `methods.tex` says point pairs come from an “eroded mask,” but `Code/bone_metrics.py` passes the whole bone mask to `distance_distortion`; erosion is measured separately. Correct this concrete mismatch and check rigidity captions/appendices. Keep bone-associated lesions distinct from bone-rigidity metrics.
 
 17. [ ] **#17 — State the practical cost of each option.** Network output takes about 11 s per pair and IO adds about 2.5 min on the stated GPU. In one concise paragraph or figure, connect runtime, Dice, scan-level PET change, and need for predicted lesion masks. The right operating point depends on per-pair time budget (`results.tex`, `discussion.tex`).
 
