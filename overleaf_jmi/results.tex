@@ -76,7 +76,7 @@ Both terms measure the change on the linearly warped, soft mask and PET (Eq.~\re
 \subsection{Comparison with Baselines}
 \label{sect:res_baselines}
 
-To place our method in context, we compare it with CT-only registration baselines, with IO applied directly after affine pre-registration, and with our other variants (Table~\ref{tab:baselines}, Fig.~\ref{fig:baselines_distribution}).
+To place our method in context, we compare it with CT-only registration baselines, with IO applied directly after affine pre-registration, and with our other variants (Table~\ref{tab:baselines}).
 Our method, with the losses only in IO, reached 78.3\,\% CT Dice and 6.89~mm HD95, significantly better than NiftyReg (70.1\,\%, 8.85~mm), ConvexAdam (61.7\,\%, 9.16~mm), and the affine pre-registration (46.4\,\%, 14.00~mm); its $|\Delta\mathrm{MTV}|$ (8.7\,\%) and $|\Delta\mathrm{TLG}|$ (11.3\,\%) did not differ significantly from those of NiftyReg (8.7\,\%, 10.2\,\%) and ConvexAdam (9.3\,\%, 10.8\,\%).
 Compared with the same network before IO, our method gained 2.9 Dice points (95\,\% CI 2.3 to 3.4).
 The paired changes in $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ were $-1.7$ points (95\,\% CI $-3.6$ to 0.3) and $-1.2$ points ($-3.6$ to 1.2), respectively, so an increase in scan-level PET change was not detected.
@@ -92,12 +92,11 @@ The ranking was decided by accuracy: apart from the affine pre-registration on $
 The network alone needs 11~s per pair, as fast as ConvexAdam and ten times faster than NiftyReg (108~s); IO adds about 2.5~minutes.
 Figure~\ref{fig:qualitative} shows a test pair whose lesion volume grew tenfold between baseline and follow-up (from 2400 to 24\,191 voxels); it was chosen for this change, not for its registration result, and illustrates alignment.
 The scans were initially far apart (CT Dice 3.5\,\%); our method aligned them to 83.7\,\% Dice (NiftyReg 70.8\,\%, ConvexAdam 65.7\,\%), and NDV remained below the challenge threshold.
-The volume and uptake of the 163 follow-up lesions changed by $+2.6\,\%$ and $+6.6\,\%$, more than with IO without the losses ($-0.6\,\%$ and $+2.3\,\%$); single pairs vary widely (Fig.~\ref{fig:baselines_distribution}).
+The volume and uptake of the 163 follow-up lesions changed by $+2.6\,\%$ and $+6.6\,\%$, more than with IO without the losses ($-0.6\,\%$ and $+2.3\,\%$).
 Before registration, the CT overlay (Fig.~\ref{fig:qualitative}c) and the label residual (e) show misalignment across the whole trunk; after registration (d, f), the residual is reduced to thin bands at organ boundaries and to parts of the lumbar vertebrae, and the warped lesion contours lie in the corresponding bones (h).
 The Jacobian determinant (g) shows fine-grained changes in the local volume scale of the sampling transform throughout the body, which IO adds to the smooth network field because it has no smoothness term ($\lambda_{\mathrm{smooth}}=0$).
 
 \input{tables/baselines}
-\input{figures/baselines_distribution}
 \input{figures/qualitative}
 
 \subsection{Rigidity Penalties}

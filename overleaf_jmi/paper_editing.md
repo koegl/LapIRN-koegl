@@ -1,6 +1,6 @@
 # Paper editing checklist for the JMI extension
 
-Re-reviewed 2026-10-25 after the corrected `align_corners` evaluations, using `main.tex` and its included manuscript, tables, figures, appendices, `../findings.md`, and the six supplied JMI examples (`024502`, `024503`, `034001`, `034002`, `044002`, `044003`). The current PDF is 58 double-spaced pages including references, appendices, and lists of figures and tables. The examples show presentation patterns, not current submission rules. Keep the `#NN` identifiers when discussing items. Reopened boxes mark earlier edits that need review against the new evidence.
+Re-reviewed 2026-10-25 after the corrected `align_corners` evaluations, using `main.tex` and its included manuscript, tables, figures, appendices, `../findings.md`, and the six supplied JMI examples (`024502`, `024503`, `034001`, `034002`, `044002`, `044003`). The current PDF is 57 double-spaced pages including references, appendices, and lists of figures and tables. The examples show presentation patterns, not current submission rules. Keep the `#NN` identifiers when discussing items. Reopened boxes mark earlier edits that need review against the new evidence.
 
 **Recommended story.** Longitudinal PSMA PET/CT registration should improve anatomical correspondence without changing measurements of the *same* follow-up lesions. The corrected results support a bounded claim: loss-guided IO gains about three CT Dice points over network output without a detected increase in scan-level MTV/TLG change; IO without those losses increases both changes. This is an operating-point finding, conditional on predicted lesion masks and per-pair runtime. The remaining change is informative: predicted masks miss lesions, whole-scan losses permit opposing changes in individual lesions to cancel, and the soft direct MTV/TLG terms do not track the nearest-neighbor evaluation well. Per-bone rigidity is a separate anatomical result; it does not show a PET benefit. Do not claim equivalence of preservation or demonstrated clinical benefit.
 
@@ -68,7 +68,7 @@ Re-reviewed 2026-10-25 after the corrected `align_corners` evaluations, using `m
 
 27. [ ] **#27 — Finish disclosures and availability.** Replace code-link and funding TODOs; specify release scope and data access, and verify AI-use/disclosure wording against active policy (`main.tex`).
 
-28. [ ] **#28 — Remove drafting artefacts and inspect layout.** Resolve every `\todo`, inspect resized tables and crowded figures, and decide whether lists of figures/tables belong in submission. Current PDF is 58 pages including appendices, references, and those lists. Use current submission instructions for spacing and numbering (`main.tex`).
+28. [ ] **#28 — Remove drafting artefacts and inspect layout.** Resolve every `\todo`, inspect resized tables and crowded figures, and decide whether lists of figures/tables belong in submission. Current PDF is 57 pages including appendices, references, and those lists. Use current submission instructions for spacing and numbering (`main.tex`).
 
 29. [ ] **#29 — Check live JMI special-issue instructions before submission.** Verify abstract/section/appendix limits, supplementary material, disclosures, availability statements, and final layout. Published examples alone cannot establish these rules.
 
