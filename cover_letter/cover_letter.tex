@@ -29,12 +29,13 @@ In this paper, we report on registering follow-up to baseline PSMA PET/CT scans 
 We use a learning-based pipeline (the LapIRN network followed by instance optimization) with losses that preserve the PET volume and uptake of lesions and keep bones rigid, and we study where these losses should act.
 On a held-out patient-level test set of the public PSMAReg data, with tuned NiftyReg and ConvexAdam baselines and patient-level statistics, we find that:
 \begin{itemize}
-  \item our pipeline is significantly more accurate than both baselines, without folding, and the preservation losses reduce the lesion volume and uptake change caused by the registration;
-  \item applying the losses only during instance optimization is more accurate and preserves about as well as training with them, whereas without instance optimization, which is about 14 times faster, training with the losses is the only means of preservation;
-  \item the losses act mainly on small and bone-associated lesions, and the rigidity loss only on bone-associated lesions;
-  \item \todo{rigidity-penalty comparison, once the experiments are done.}
+  \item our method is significantly more accurate than both baselines, with similar lesion volume and uptake change;
+  \item with the preservation losses, instance optimization improves alignment by about three Dice points without measurably increasing the lesion volume and uptake change, whereas without them it increases this change;
+  \item applying the losses only during instance optimization is more accurate than also training with them, with no significant difference in preservation; without instance optimization, which is about 14 times faster, training with the losses reduces the change at a cost in accuracy;
+  \item the remaining change comes mostly from lesions missed by the predicted lesion masks, and the scan-level MTV and TLG hide changes of individual lesions that neither provided masks nor per-lesion losses removed;
+  \item among three bone-rigidity penalties, a per-bone rigid fit preserves within-bone distances best, avoiding the boundary leakage and loss of skeleton of finite-difference penalties, but rigidity does not reduce the lesion change.
 \end{itemize}
-This is significant because registration can only be used for quantitative response assessment if its effect on lesion quantification is measured and controlled, not only its alignment accuracy; our results show how large this effect is and how it can be reduced at a known cost in accuracy.
+This is significant because registration can only be used for quantitative response assessment if its effect on lesion quantification is measured and controlled, not only its alignment accuracy; our results show how large this effect is, how it can be controlled without losing accuracy, and where scan-level preservation metrics fall short.
 
 The paper should be of interest to readers in the areas of deformable image registration, learning-based and optimization-based registration, and quantitative PET imaging.
 It addresses a central question of the special issue: how constraints on the deformation, learned during training or imposed at test time, affect clinically relevant quantities beyond image alignment.

@@ -77,5 +77,5 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
   - [x] evaluation paragraph (TLG floor)
   - [x] rigidity subsection
 - [x] Conclusion
-- [ ] Cover letter bullets
+- [x] Cover letter bullets
 - [ ] findings.md
