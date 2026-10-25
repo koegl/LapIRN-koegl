@@ -1,11 +1,11 @@
 \section{Discussion}
 \label{sect:discussion}
 
-The central trade-off is between anatomical alignment and registration-induced change to lesion measurements.
-PET-preservation losses reduced volume and uptake change at a cost of about two to three Dice points, while the rigidity loss reduced volume change at a smaller alignment cost.
-When IO was used, applying the losses only during refinement improved alignment over using them in both training and IO.
-The preservation differences were not statistically significant, but their confidence intervals do not establish that the placements are equivalent.
-The residual PET change was concentrated in lesions that the predicted masks used by IO missed, showing that the choice of loss placement is only part of the preservation problem.
+Compared with network output, IO with the PET-preservation and bone-rigidity losses improved alignment by about three Dice points without a detected increase in scan-level MTV or TLG change; IO without those losses increased both changes.
+This result supports loss-guided IO when predicted lesion masks and time for per-pair refinement are available.
+Applying the losses only during IO gave higher alignment accuracy than using them in both training and IO, although the paired intervals do not establish equivalent PET preservation.
+The remaining scan-level change arose largely from lesions missed by the predicted masks, while individual lesions still changed substantially even with provided masks.
+Bone-rigidity penalties addressed a separate anatomical aim: preserving within-bone geometry.
 
 \subsection{Choosing Where to Apply the Losses}
 Which placement to choose depends on the time budget and on the availability of predicted organ and lesion masks for IO.
@@ -92,8 +92,10 @@ We studied one network architecture, and we measured the change caused by regist
 \section{Conclusion}
 \label{sect:conclusion}
 
-PET-preservation losses allow instance optimization to improve the alignment of longitudinal whole-body PSMA PET/CT without measurably increasing the registration-induced change of lesion volume and uptake, which instance optimization without them increases.
+With predicted lesion masks, instance optimization with PET-preservation and bone-rigidity losses improved anatomical alignment without a detected increase in scan-level MTV or TLG change relative to network output; instance optimization without those losses increased both changes.
 Applied only during instance optimization, the losses gave higher alignment accuracy than when they were also used in training; the present test set did not resolve whether preservation differs between these placements.
 Without instance optimization, training with the losses reduced the change of lesion measurements at a cost in alignment, which suits fast registration of many examinations.
-The remaining change came mostly from lesions missed by the predicted masks, and scan-level MTV and TLG hid per-lesion change that neither provided masks nor per-lesion losses removed; better lesion masks and per-lesion evaluation are therefore needed to improve preservation further.
+Missed lesions accounted for much of the residual scan-level change in the mask-coverage analysis.
+Even with provided masks, substantial changes to individual lesions remained despite a near-zero scan-level MTV change.
+Better lesion masks may reduce scan-level error, while per-lesion evaluation is needed to reveal changes that whole-scan metrics hide.
 For bones, a per-bone rigid fit preserved within-bone distances best, but rigidity did not reduce the change of lesion measurements.

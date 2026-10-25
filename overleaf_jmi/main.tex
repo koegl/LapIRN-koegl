@@ -43,16 +43,16 @@ We examine how PET-preservation and bone-rigidity losses trade alignment for les
 \textbf{Approach:} We trained LapIRN networks with and without the losses on the Learn2Reg 2026 PSMAReg data, applied them in training, IO, or both, compared three rigidity penalties, and evaluated on 28 held-out patients against tuned NiftyReg and ConvexAdam, with patient-level statistics and per-lesion analyses.
 
 \textbf{Results:} With the losses only in IO, our method reached 78.3\,\% CT Dice (NiftyReg 70.1\,\%, ConvexAdam 61.7\,\%) with similar MTV and TLG change. \todo{Baseline numbers after re-tuning.}
-IO without the losses increased the MTV and TLG change; with them, it gained 2.9 Dice points over the network output without measurably increasing them.
-Applying the losses only in IO gained 1.0 Dice point over applying them in training and IO, with no significant difference in preservation.
-Lesions missed by the predicted masks contributed most of the remaining change; with provided masks, the scan-level MTV change fell to 0.1\,\%, but single lesions still changed by a median of 13.5\,\%, even with per-lesion losses.
+IO without the losses increased the MTV and TLG change relative to network output; with the losses, IO gained 2.9 Dice points without a detected increase in either scan-level measure.
+Applying the losses only in IO gained 1.0 Dice point over applying them in both training and IO; whether preservation differs between these placements remains unresolved.
+Lesions missed by the predicted masks contributed more than half of the residual scan-level change in the PET-loss IO analysis.
+With provided masks, the scan-level MTV change fell to 0.1\,\%, but individual lesions still changed by a median of 13.5\,\%.
 A per-bone rigid fit preserved within-bone distances best (distortion 13.4\,\% to 5.0\,\%) but did not reduce lesion change.
 
-\textbf{Conclusions:} PET-preservation losses let IO improve alignment without increasing registration-induced PET change.
-Scan-level MTV and TLG hide per-lesion change; lesion masks and per-lesion evaluation limit further preservation.
-This option requires time for per-pair refinement and predicted lesion masks.
-Without IO, training with the losses reduced PET changes.
-The benefit of IO depends on whether its masks cover the lesions being measured.
+\textbf{Conclusions:} With predicted lesion masks, IO with PET-preservation and bone-rigidity losses improved anatomical alignment without a detected increase in scan-level MTV or TLG change relative to network output.
+This option requires time for per-pair refinement; when IO is omitted, training with the losses reduces registration-induced PET change.
+Missed lesions limit scan-level preservation, while substantial changes to individual lesions remain even with provided masks.
+Per-lesion evaluation is therefore needed to judge preservation for lesion-level applications.
 \end{abstract}
 
 \keywords{deformable image registration, PSMA PET/CT, longitudinal imaging, biomarker preservation, instance optimization}
