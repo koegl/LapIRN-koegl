@@ -69,13 +69,13 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
 - [x] F: full rigidity table
 
 ## Rest of the manuscript
-- [ ] Abstract (numbers, rigidity sentence)
-- [ ] Introduction: contribution list
+- [x] Abstract (numbers, rigidity sentence)
+- [x] Introduction: contribution list
 - [x] Discussion
   - [x] numbers
   - [x] weighting paragraph (tuning grid statement)
   - [x] evaluation paragraph (TLG floor)
   - [x] rigidity subsection
-- [ ] Conclusion
+- [x] Conclusion
 - [ ] Cover letter bullets
 - [ ] findings.md

@@ -24,8 +24,14 @@ These 28 patients were among the challenge data available during development of 
 First, we ask whether the PET-preservation and bone-rigidity losses reduce registration-induced change and what alignment accuracy they cost, both with and without IO.
 We then ask whether applying the losses only during IO can recover the preservation obtained by also using them in training, and compare that choice with the faster network-only setting.
 Finally, we analyse changes to individual lesions and the coverage of the predicted lesion masks used by IO to understand what limits preservation.
-Because many PSMA lesions lie in bone, we also compare rigidity penalties for low-resolution whole-body CT, where thin skeletal structures make local constraints difficult to apply. \todo{Check against the rigidity results.}
-Together, these experiments test where preservation constraints should act and what limits the benefit of per-pair refinement.
+Because many PSMA lesions lie in bone, we also compare rigidity penalties for low-resolution whole-body CT, where thin skeletal structures make local constraints difficult to apply.
+Our contributions are:
+\begin{itemize}
+  \item a controlled comparison of where PET-preservation and rigidity losses act (network training, IO, or both), showing that with the losses, IO improves alignment without measurably increasing the change in lesion volume and uptake, and that applying them only in IO is the more accurate placement;
+  \item an analysis of the remaining change, showing that lesions missed by the predicted masks dominate it and that scan-level MTV and TLG hide per-lesion change, which neither provided masks nor per-lesion losses removed;
+  \item a comparison of rigidity penalties for whole-body CT, showing that a per-bone rigid fit avoids the boundary leakage of finite-difference penalties and the loss of skeleton under erosion, and preserves within-bone distances best;
+  \item a patient-level evaluation with the official challenge scorer, a selection rule that weighs preservation against a fixed Dice tolerance, and tuned NiftyReg and ConvexAdam baselines.
+\end{itemize}
 
 \begin{figure}
 \begin{center}
@@ -35,6 +41,6 @@ Together, these experiments test where preservation constraints should act and w
 Registration pipeline.
 The follow-up (moving) and baseline (fixed) PET/CT scans are aligned by an affine pre-registration, then by the LapIRN network, which predicts a dense deformation.
 Instance optimisation (IO) refines this deformation per pair before the moving scan is resampled into the fixed frame.
-Network training and IO use the same groups of loss terms: alignment, PET preservation, and deformation regularisation (Sec.~\ref{sect:objective}).
-\todo{Update the figure if the rigidity term or the IO-only variant should appear.}}
+Network training and IO use the same groups of loss terms: registration accuracy, bone rigidity, PET quantification, and deformation regularisation (Sec.~\ref{sect:objective}).
+The bone-rigidity and PET-quantification terms can be used in training, in IO, or in both; our method uses them only in IO.}
 \end{figure}

@@ -74,13 +74,13 @@ Of the 40 iterates, we return the one with the lowest objective, in which the in
 \subsection{Registration Objective}
 \label{sect:objective}
 
-Network training and IO minimise a weighted sum of three groups of terms:
+Network training and IO minimise a weighted sum of four groups of terms (Fig.~\ref{fig:pipeline}):
 \begin{equation}
   \begin{aligned}
   \mathcal{L} = {} &
-  \underbrace{\lambda_{\mathrm{NCC}}\mathcal{L}_{\mathrm{NCC}} + \lambda_{\mathrm{DSC}}\mathcal{L}_{\mathrm{DSC}}}_{\text{alignment}}
-  + \underbrace{\lambda_{\mathrm{MTV}}\mathcal{L}_{\mathrm{MTV}} + \lambda_{\overline{J}}\mathcal{L}_{\overline{J}} + \lambda_{J}\mathcal{L}_{J} + \lambda_{\mathrm{TLG}}\mathcal{L}_{\mathrm{TLG}}}_{\text{PET preservation}} \\
-  & + \underbrace{\lambda_{\mathrm{rig}}\mathcal{L}_{\mathrm{rig}} + \lambda_{\mathrm{smooth}}\mathcal{L}_{\mathrm{smooth}} + \lambda_{\mathrm{NDV}}\mathcal{L}_{\mathrm{NDV}}}_{\text{regularisation}} .
+  \underbrace{\lambda_{\mathrm{NCC}}\mathcal{L}_{\mathrm{NCC}} + \lambda_{\mathrm{DSC}}\mathcal{L}_{\mathrm{DSC}}}_{\text{registration accuracy}}
+  + \underbrace{\lambda_{\mathrm{MTV}}\mathcal{L}_{\mathrm{MTV}} + \lambda_{\overline{J}}\mathcal{L}_{\overline{J}} + \lambda_{J}\mathcal{L}_{J} + \lambda_{\mathrm{TLG}}\mathcal{L}_{\mathrm{TLG}}}_{\text{PET quantification}} \\
+  & + \underbrace{\lambda_{\mathrm{rig}}\mathcal{L}_{\mathrm{rig}}}_{\text{bone rigidity}} + \underbrace{\lambda_{\mathrm{smooth}}\mathcal{L}_{\mathrm{smooth}} + \lambda_{\mathrm{NDV}}\mathcal{L}_{\mathrm{NDV}}}_{\text{deformation regularisation}} .
   \end{aligned}
   \label{eq:objective}
 \end{equation}
@@ -88,12 +88,13 @@ All terms are evaluated on the total transformation $\varphi$.
 The PET-preservation terms and the rigidity term are the subject of this study; they can be switched on in network training, in IO, or in both (Sec.~\ref{sect:experiments}).
 The two coarse network levels never use them, because lesions and thin bones span only a few voxels at these resolutions.
 
-\paragraph{Alignment.}
+\paragraph{Registration accuracy.}
 $\mathcal{L}_{\mathrm{NCC}}$ is the negative local normalised cross-correlation of the CTs, summed over one to three scales depending on the pyramid level.
 PET is not used for similarity, because uptake changes between examinations with disease and therapy and a PET similarity would reward matching these changes.
 $\mathcal{L}_{\mathrm{DSC}}$ is a soft Dice loss on the CT organ labels.
 
-\paragraph{PET-preservation.}
+\paragraph{PET quantification.}
+The PET-preservation terms keep the PET measures of Eq.~\eqref{eq:pet_measures} unchanged by the registration.
 For the differentiable loss terms, let $M$ be the moving lesion mask and $\widetilde M$, $\widetilde P$ the linearly warped mask and PET.
 Nearest-neighbour warping, as used in the evaluation, is piecewise constant in the displacement and gives no useful gradient; linear warping gives a soft lesion boundary instead.
 The volume and uptake terms penalise the relative change defined above, using the soft mask,
@@ -121,7 +122,7 @@ Many PSMA lesions lie in bone, which moves rigidly between examinations.
 For each of the 61 skeletal labels of the fixed scan (in IO: the predicted labels), we fit a rigid transformation to the displacement of the structure in closed form~\cite{ref_kabsch,ref_umeyama} and penalise the mean squared residual of its voxels; $\mathcal{L}_{\mathrm{rig}}$ is the mean over structures with at least 50 voxels.
 Each bone is fitted independently, so neighbouring bones may move relative to each other, and the term involves no finite differences, so it does not constrain the tissue around a bone.
 
-\paragraph{Regularisation.}
+\paragraph{Deformation regularisation.}
 $\mathcal{L}_{\mathrm{smooth}}$ is the mean squared spatial gradient of the displacement.
 $\mathcal{L}_{\mathrm{NDV}}$ is a differentiable version of the challenge's non-diffeomorphic volume, which splits every voxel into tetrahedra and accumulates the negative part of their Jacobian determinants~\cite{Liu2024}.
 
