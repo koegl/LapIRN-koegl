@@ -76,7 +76,7 @@ It preserved within-bone distances best, although it does not optimise them, and
 The cost of rigid bones is lower bone Dice, possibly because a rigid bone cannot follow differences between the automatic bone labels of the two examinations as closely as a freely deforming one.
 Whether this lower overlap reflects worse alignment or more plausible bone motion cannot be decided with label overlap alone; the distance distortion indicates the latter.
 
-Although most lesion volume lies in bone (83\,\%), the penalties did not measurably reduce the change of lesion volume and uptake in this comparison, for three likely reasons.
+Although about two thirds of the lesion voxels lie on bone labels (63\,\% in the training and 67\,\% in the test scans), the penalties did not measurably reduce the change of lesion volume and uptake in this comparison, for three likely reasons.
 First, they were added on top of the PET losses, which already constrain the predicted lesions; used alone, the rigidity loss did reduce the change (Sec.~\ref{sect:res_q1}).
 Second, the bones were not made rigid at the scale of the lesions: the remaining rigid-fit residual of 1.4 to 2.3~mm is about half a voxel, enough to move the boundary voxels of lesions that span only a few voxels, whereas an exactly affine transformation changed bone lesions by a median of only 1.0\,\%.
 Third, the scan-level metrics are dominated by missed lesions, by cancellation between lesions, and by a few patients with large changes (Sec.~\ref{sect:res_detection}).

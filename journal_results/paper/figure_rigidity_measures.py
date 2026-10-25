@@ -119,11 +119,12 @@ def main() -> None:
         Line2D([], [], color=COLORS[r], marker="o", markersize=4, linestyle="")
         for r in penalties
     ]
+    handles.append(Line2D([], [], color=MUTED, linewidth=0.8, linestyle=(0, (4, 2))))
     fig.legend(
         handles,
-        [RUNS[r] for r in penalties],
+        [RUNS[r] for r in penalties] + ["no rigidity (a: 100\\,\\%, b: 0)"],
         loc="upper center",
-        ncol=3,
+        ncol=4,
         frameon=False,
         bbox_to_anchor=(0.5, 1.07),
     )
