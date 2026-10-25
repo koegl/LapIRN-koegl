@@ -41,8 +41,8 @@ We kept all four terms because they were chosen before the test set was evaluate
 
 Aggregate MTV and TLG changes hide how individual lesions are deformed.
 Small lesions changed most in every condition, partly because a change of one or two voxels is already a large relative change.
-Without the losses, IO increased the distortion of lesions, most of all of small bone-associated lesions, and bone lesions tended to grow.
-The rigidity loss acted mainly on bone-associated lesions, as intended, and the PET losses on both bone and soft-tissue lesions; with both groups of losses, bone lesions changed about as little as with the PET losses alone.
+Without the losses, IO increased the distortion of lesions, most of all of small bone-associated lesions, which tended to grow.
+The rigidity loss acted mainly on bone-associated lesions, as intended, and the PET losses on both bone-associated and soft-tissue lesions; with both groups of losses, bone-associated lesions changed about as little as with the PET losses alone.
 IO with the losses kept the scan-level measurements of the network output while improving alignment, but did not reduce the change of individual lesions, not even with the ground-truth lesion masks.
 The PET losses constrain the total volume and uptake of a scan, which can be preserved while single lesions grow or shrink.
 
@@ -78,7 +78,7 @@ Whether this lower overlap reflects worse alignment or more plausible bone motio
 
 Although about two thirds of the lesion voxels lie on bone labels (63\,\% in the training and 67\,\% in the test scans), the penalties did not measurably reduce the change of lesion volume and uptake in this comparison, for three likely reasons.
 First, they were added on top of the PET losses, which already constrain the predicted lesions; used alone, the rigidity loss did reduce the change (Sec.~\ref{sect:res_q1}).
-Second, the bones were not made rigid at the scale of the lesions: the remaining rigid-fit residual of 1.4 to 2.3~mm is about half a voxel, enough to move the boundary voxels of lesions that span only a few voxels, whereas an exactly affine transformation changed bone lesions by a median of only 1.0\,\%.
+Second, the bones were not made rigid at the scale of the lesions: the remaining rigid-fit residual of 1.4 to 2.3~mm is about half a voxel, enough to move the boundary voxels of lesions that span only a few voxels, whereas an exactly affine transformation changed bone-associated lesions by a median of only 1.0\,\%.
 Third, the scan-level metrics are dominated by missed lesions, by cancellation between lesions, and by a few patients with large changes (Sec.~\ref{sect:res_detection}).
 Rigidity can therefore be chosen for anatomical plausibility; a measurable benefit for lesion preservation would require bones that are rigid to within a fraction of a voxel.
 

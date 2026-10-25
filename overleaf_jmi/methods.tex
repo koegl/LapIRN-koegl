@@ -198,8 +198,13 @@ Scan-level PET metrics and the lesion-coverage analysis retain all 1435 componen
 Percentage of non-diffeomorphic volume (NDV) as defined by the challenge~\cite{Liu2024}, within the challenge's mask (voxels where the fixed CT exceeds its minimum intensity).
 
 \paragraph{Bone metrics.}
-For the rigidity comparison, we additionally compute Dice and HD95 separately over bones and soft-tissue organs; the distortion of within-bone distances, i.e.\ the mean relative change of the physical distance between randomly sampled pairs of interior points (eroded mask) of the same bone, separately for short (5--15~mm) and long ($\geq15$~mm) distances (short distances reflect local compression or bending, long ones the deformation of a bone as a whole; below 5~mm, i.e.\ about two voxels, the relative change is dominated by interpolation and discretization); NDV inside bones and in a three-voxel band around them; and, as a secondary measure, the residual of a rigid fit to each bone's displacement (bone rigidity error).
-We also measure the fraction of stencil reads that leave the bone of the center voxel (stencil leakage) and the fraction of bone voxels and of bones that remain after erosion.
+For the rigidity comparison, we additionally compute Dice and HD95 separately over bones and soft-tissue organs.
+We measure within-bone distance distortion as the mean relative change in physical distance between randomly sampled pairs of points in the same fixed-scan bone, including its boundary voxels.
+We compute this separately for short (5--15~mm) and long ($\geq15$~mm) distances; pairs below 5~mm are excluded because their relative change is sensitive to interpolation and discretization at this image resolution.
+Short distances characterize local deformation, whereas long distances characterize deformation across a larger part of the bone.
+We also compute NDV inside bones and in a three-voxel band around them and, as a secondary measure, the residual of a rigid fit to each bone's displacement (bone rigidity error).
+We also measure the fraction of stencil reads that leave the bone of the center voxel (stencil leakage) and the fraction of bone voxels and of bones that remain after erosion for the eroded Staring penalty.
+Erosion does not restrict the point pairs used for distance distortion.
 
 \subsection{Statistical Analysis}
 \label{sect:statistics}
