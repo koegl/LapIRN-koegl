@@ -23,6 +23,8 @@ janus), done first by janus and never given to the cluster.
 """
 
 import json
+import shutil
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -59,6 +61,12 @@ TEST_RUNS = (
 WORKSTATION_ONLY = [
     f"eval/test/{r}" for r in ("T1", "T2", "T3", "T4", "T1-tum", "B1", "B2", "B3", "B4")
 ]
+CONVEXADAM_CONFIGS = [f"lambda{lam:g}" for lam in (0.1, 0.25, 0.5, 1.25, 2.0, 4.0)]
+NIFTYREG_CONFIGS = [
+    f"be{be}_sx{sx}"
+    for be in (0.0002, 0.0005, 0.001, 0.005, 0.02)
+    for sx in (3, 5, 7, 9)
+]
 STAGES: Dict[int, List[str]] = {
     1: [f"tune/optimiser/{c}" for c in TUNING["optimiser"]],
     2: [f"tune/pet/{c}" for c in TUNING["pet"]],
@@ -72,7 +80,14 @@ STAGES: Dict[int, List[str]] = {
     7: [
         "eval/test/P1x10"
     ],  # per-lesion weight chosen on val (select_stage.py perlesion)
+    # re-tuning the baselines with the official scorer and the selection rule:
+    # every config of tune_<method>.GRID registers and scores val (fields
+    # deleted after scoring); then the chosen configs on test (B3 / B4)
+    8: [f"base/niftyreg/{c}" for c in NIFTYREG_CONFIGS]
+    + [f"base/convexadam/{c}" for c in CONVEXADAM_CONFIGS],
+    9: ["basetest/niftyreg", "basetest/convexadam"],
 }
+BASELINE_RUN = {"niftyreg": "B3", "convexadam": "B4"}
 STAGE_WORKSTATION_FIRST = {3: WORKSTATION_ONLY}
 
 
@@ -142,6 +157,47 @@ def resolve(spec: str, out_root: Path, reference: Dict):
     raise ValueError(f"unknown task spec {spec}")
 
 
+def baseline_grid(method: str) -> Dict[str, Dict]:
+    """The tuning grid of a baseline (journal_results/tune_<method>.py; next to
+    official_scorer/ on janus, copied to the snapshot root on the cluster)."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    module = __import__(f"tune_{method}")
+    return module.GRID
+
+
+def run_baseline(spec: str, out_root: Path, device) -> Path:
+    """base/<method>/<config>: register val with one config, score it, delete
+    the fields; basetest/<method>: register test with the chosen config and
+    score it as B3 / B4. Baseline files live under out_root/baselines."""
+    evaluate.BASELINE_DIR = out_root / "baselines"
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    import baselines
+
+    baselines.BASELINE_DIR = evaluate.BASELINE_DIR
+    evaluate.IO_TUNED_PATH = None
+    evaluate.FIELD_DIR = None
+    kind, method, *rest = spec.split("/")
+    grid = baseline_grid(method)
+    if kind == "base":
+        (config,) = rest
+        field_dir = baselines.register_split(method, config, grid[config], "val")
+        csv = evaluate.evaluate_run(
+            config,
+            "val",
+            device,
+            run=evaluate.EvalRun(external=field_dir),
+            out_dir=evaluate.BASELINE_DIR / method / "eval",
+        )
+        shutil.rmtree(field_dir, ignore_errors=True)
+        return csv
+    chosen = json.loads((evaluate.BASELINE_DIR / method / "chosen.json").read_text())
+    baselines.register_split(method, chosen["config"], grid[chosen["config"]], "test")
+    run_id = BASELINE_RUN[method]
+    return evaluate.evaluate_run(
+        run_id, "test", device, run=evaluate.EVAL_RUNS[run_id], out_dir=out_root
+    )
+
+
 def result_csv(spec: str, out_root: Path, reference: Dict) -> Path:
     """Where a task's per-pair CSV goes. Needs no stage choices (JSON files
     written between stages), so it also works for paths on lustre seen from
@@ -162,6 +218,12 @@ def result_csv(spec: str, out_root: Path, reference: Dict) -> Path:
     if kind == "rigtest":
         (run_id,) = rest
         return out_root / "test" / f"{run_id}.csv"
+    if kind == "base":
+        method, config = rest
+        return out_root / "baselines" / method / "eval" / "val" / f"{config}.csv"
+    if kind == "basetest":
+        (method,) = rest
+        return out_root / "test" / f"{BASELINE_RUN[method]}.csv"
     raise ValueError(f"unknown task spec {spec}")
 
 
@@ -169,6 +231,8 @@ def run(
     spec: str, out_root: Path, field_root: Optional[Path], reference: Dict, device
 ) -> Path:
     """Evaluate one task; fields to field_root/<split>/<run name>/."""
+    if spec.split("/")[0] in ("base", "basetest"):
+        return run_baseline(spec, out_root, device)
     name, split, eval_run, out_dir, tuned = resolve(spec, out_root, reference)
     evaluate.IO_TUNED_PATH = tuned
     evaluate.FIELD_DIR = (

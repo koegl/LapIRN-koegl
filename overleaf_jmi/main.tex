@@ -38,16 +38,18 @@
 
 \begin{abstract}
 \textbf{Purpose:} Registering follow-up to baseline PSMA PET/CT scans enables voxel-wise comparison of tumour burden, but the deformation can itself change the metabolic tumour volume (MTV) and total lesion glycolysis (TLG) of lesions.
-We examine how PET-preservation and bone-rigidity losses trade anatomical alignment for less registration-induced change, and whether the losses are better applied in network training or in instance optimisation (IO).
+We examine how PET-preservation and bone-rigidity losses trade alignment for less registration-induced change, and whether they belong in network training or instance optimisation (IO).
 
-\textbf{Approach:} We trained LapIRN networks with and without PET-preservation and bone-rigidity losses on the Learn2Reg 2026 PSMAReg data, applied the losses in training, IO, or both, and compared against tuned NiftyReg and ConvexAdam on 28 held-out patients, with patient-level statistics and a per-lesion analysis. We also reran IO with provided lesion masks as a diagnostic intervention. \todo{Rigidity penalties compared.}
+\textbf{Approach:} We trained LapIRN networks with and without the losses on the Learn2Reg 2026 PSMAReg data, applied them in training, IO, or both, compared three rigidity penalties, and evaluated on 28 held-out patients against tuned NiftyReg and ConvexAdam, with patient-level statistics and per-lesion analyses.
 
-\textbf{Results:} Our IO variants had higher CT Dice than NiftyReg and ConvexAdam (75.6--79.2\,\% vs.\ 69.4\,\% and 61.7\,\%), with every pair below the folding threshold.
-With IO and no rigidity loss, adding the PET losses lowered the MTV change from 10.2\,\% to 6.3\,\% and the TLG change from 11.9\,\% to 7.2\,\% at a cost of 2.8 Dice points.
-Applying both loss groups only in IO gained 1.7 Dice points over using them in training and IO; the paired MTV and TLG differences were $+0.8$ points (95\,\% CI $-1.0$ to 2.7) and $+0.2$ points ($-1.9$ to 2.4), respectively.
-After PET IO using predicted masks, missed lesions were the largest measured contributor to the remaining change; in a diagnostic IO run using the provided lesion masks, MTV and TLG changes fell from 7.6\,\% and 8.7\,\% to 2.1\,\% and 3.2\,\%. \todo{Rigidity result.}
+\textbf{Results:} With the losses only in IO, our method reached 78.3\,\% CT Dice (NiftyReg 70.1\,\%, ConvexAdam 61.7\,\%) with similar MTV and TLG change. \todo{Baseline numbers after re-tuning.}
+IO without the losses increased the MTV and TLG change; with them, it gained 2.9 Dice points over the network output without measurably increasing them.
+Applying the losses only in IO gained 1.0 Dice point over applying them in training and IO, with no significant difference in preservation.
+Lesions missed by the predicted masks contributed most of the remaining change; with provided masks, the scan-level MTV change fell to 0.1\,\%, but single lesions still changed by a median of 13.5\,\%, even with per-lesion losses.
+A per-bone rigid fit preserved within-bone distances best (distortion 13.4\,\% to 5.0\,\%) but did not reduce lesion change.
 
-\textbf{Conclusions:} Applying preservation losses only during IO improved alignment over using them in both training and IO, but equivalent PET preservation was not established.
+\textbf{Conclusions:} PET-preservation losses let IO improve alignment without increasing registration-induced PET change.
+Scan-level MTV and TLG hide per-lesion change; lesion masks and per-lesion evaluation limit further preservation.
 This option requires time for per-pair refinement and predicted lesion masks.
 Without IO, training with the losses reduced PET changes.
 The benefit of IO depends on whether its masks cover the lesions being measured.

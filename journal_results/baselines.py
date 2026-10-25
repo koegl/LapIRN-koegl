@@ -10,8 +10,8 @@ channel-first, channel i along array axis i, in full-resolution voxels, as
 (the layout evaluate.py reads).
 
 Tuning: every config of a grid registers all val pairs, evaluate.py scores them,
-and the configs are ranked against each other with the challenge's
-significance ranking (ranking.py); the winner goes to chosen.json. With split
+and the config is chosen with the selection rule (select_rule; the first
+tuning used the challenge's significance ranking, ranking.py) -> chosen.json. With split
 "test" only the chosen config is registered (evaluate.py runs B3 / B4).
 """
 
@@ -21,7 +21,7 @@ import sys
 import time
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 import nibabel as nib
 import numpy as np
@@ -31,17 +31,17 @@ import torch
 CODE_DIR = Path(__file__).resolve().parents[1] / "Code"
 sys.path.insert(0, str(CODE_DIR))
 
-import baseline_ConvexAdam as convexadam  # noqa: E402
 import baseline_NiftyReg as niftyreg  # noqa: E402
 import config  # noqa: E402
 import evaluate  # noqa: E402
-import ranking  # noqa: E402
 
 BASELINE_DIR = evaluate.BASELINE_DIR
 CT_TEMPLATE = "PSMARegPSMA_{case_id}_0000_{tp}.nii.gz"
 
 
-def ct_paths(cfg: config.TrainingConfig, case_id: str, tp_x: str, tp_y: str) -> Tuple[Path, Path]:
+def ct_paths(
+    cfg: config.TrainingConfig, case_id: str, tp_x: str, tp_y: str
+) -> Tuple[Path, Path]:
     image_dir = cfg.data_dir / "imagesTr"
     return (
         image_dir / CT_TEMPLATE.format(case_id=case_id, tp=tp_y),
@@ -79,7 +79,12 @@ NIFTYREG_DEFAULTS = dict(
 
 
 def niftyreg_field(
-    cfg: config.TrainingConfig, case_id: str, tp_x: str, tp_y: str, params: Dict, work_dir: Path
+    cfg: config.TrainingConfig,
+    case_id: str,
+    tp_x: str,
+    tp_y: str,
+    params: Dict,
+    work_dir: Path,
 ) -> np.ndarray:
     """(3, H, W, D) total displacement of one pair, full resolution."""
     args = SimpleNamespace(**{**NIFTYREG_DEFAULTS, **params})
@@ -95,11 +100,22 @@ def niftyreg_field(
     log_path = work_dir / "niftyreg.log"
     affine_path = work_dir / "affine.txt"
     niftyreg.run_aladin(
-        args, fixed_reg, moving_reg, affine_path, work_dir / "aladin_res.nii.gz", log_path
+        args,
+        fixed_reg,
+        moving_reg,
+        affine_path,
+        work_dir / "aladin_res.nii.gz",
+        log_path,
     )
     cpp_path = work_dir / "cpp.nii.gz"
     niftyreg.run_f3d(
-        args, fixed_reg, moving_reg, affine_path, cpp_path, work_dir / "f3d_res.nii.gz", log_path
+        args,
+        fixed_reg,
+        moving_reg,
+        affine_path,
+        cpp_path,
+        work_dir / "f3d_res.nii.gz",
+        log_path,
     )
     disp_mm_path = niftyreg.convert_transformation_to_displacement_field(
         args, cpp_path, fixed_reg, work_dir / "disp_mm.nii.gz", log_path
@@ -130,14 +146,22 @@ CONVEXADAM_DEFAULTS = dict(
     svf_steps=7,
     ic=True,
 )
-convexadam.ensure_mir(Path("/home/iml/fryderyk.koegl/code/MIR/src"))
 
 
 def convexadam_field(
-    cfg: config.TrainingConfig, case_id: str, tp_x: str, tp_y: str, params: Dict, work_dir: Path
+    cfg: config.TrainingConfig,
+    case_id: str,
+    tp_x: str,
+    tp_y: str,
+    params: Dict,
+    work_dir: Path,
 ) -> np.ndarray:
     """(3, H/2, W/2, D/2) total displacement of one pair in full-resolution
     voxels (ConvexAdam's native half-resolution grid)."""
+    # imported here: ANTs is not installed everywhere (NiftyReg runs on the cluster)
+    import baseline_ConvexAdam as convexadam
+
+    convexadam.ensure_mir(Path("/home/iml/fryderyk.koegl/code/MIR/src"))
     args = SimpleNamespace(**{**CONVEXADAM_DEFAULTS, **params})
     fixed_path, moving_path = ct_paths(cfg, case_id, tp_x, tp_y)
     fixed_nii, moving_nii = nib.load(str(fixed_path)), nib.load(str(moving_path))
@@ -196,7 +220,9 @@ def register_split(method: str, config_name: str, params: Dict, split: str) -> P
     config_dir = BASELINE_DIR / method / config_name
     field_dir = config_dir / "fields"
     timings_csv = config_dir / f"timings_{split}.csv"
-    timings = pd.read_csv(timings_csv).to_dict("records") if timings_csv.exists() else []
+    timings = (
+        pd.read_csv(timings_csv).to_dict("records") if timings_csv.exists() else []
+    )
     (config_dir / "params.json").parent.mkdir(parents=True, exist_ok=True)
     (config_dir / "params.json").write_text(json.dumps(params, indent=2))
 
@@ -214,10 +240,50 @@ def register_split(method: str, config_name: str, params: Dict, split: str) -> P
         # intermediate files (control point grid, resampled images): not needed
         # once the field is written, and several GB per config
         shutil.rmtree(config_dir / "work" / f"{case_id}_{tp_x}", ignore_errors=True)
-        timings.append({"case_id": case_id, "tp_moving": tp_x, "tp_fixed": tp_y, "seconds": seconds})
+        timings.append(
+            {
+                "case_id": case_id,
+                "tp_moving": tp_x,
+                "tp_fixed": tp_y,
+                "seconds": seconds,
+            }
+        )
         pd.DataFrame(timings).to_csv(timings_csv, index=False)
-        print(f"[{method}/{config_name}] {i + 1}/{len(pairs)} {case_id} {tp_x}->{tp_y}: {seconds:.0f}s", flush=True)
+        print(
+            f"[{method}/{config_name}] {i + 1}/{len(pairs)} {case_id} {tp_x}->{tp_y}: {seconds:.0f}s",
+            flush=True,
+        )
     return field_dir
+
+
+DICE_TOLERANCE = 0.02
+
+
+def select_rule(results: Dict[str, pd.DataFrame]) -> Dict:
+    """The selection rule of the journal (official_scorer/select_stage.py):
+    lowest |MTV| + |TLG| among the configs within DICE_TOLERANCE of the most
+    accurate one; patient means. (The first tuning used ranking.select.)"""
+    table = pd.DataFrame(
+        {
+            name: df.groupby(df["case_id"].astype(str))[
+                ["dice_ct", "hd95", "mtv_bias", "tlg_bias", "ndv_percent"]
+            ]
+            .mean()
+            .mean()
+            for name, df in results.items()
+        }
+    ).T
+    table["preservation"] = table["mtv_bias"] + table["tlg_bias"]
+    table["within_tolerance"] = (
+        table["dice_ct"] >= table["dice_ct"].max() - DICE_TOLERANCE
+    )
+    chosen = table[table["within_tolerance"]]["preservation"].idxmin()
+    table = table.sort_values("dice_ct", ascending=False)
+    return {
+        "chosen": chosen,
+        "rule": f"lowest |MTV| + |TLG| within {100 * DICE_TOLERANCE:g} Dice points of the most accurate",
+        "table": table.reset_index(names="candidate").to_dict("records"),
+    }
 
 
 def tune(method: str, grid: Dict[str, Dict], split: str) -> None:
@@ -238,9 +304,15 @@ def tune(method: str, grid: Dict[str, Dict], split: str) -> None:
                 out_dir=method_dir / "eval",
             )
             results[name] = pd.read_csv(csv)
-        selection = ranking.select(results)
-        chosen = {"config": selection["chosen"], "table": selection["table"]}
-        (method_dir / "chosen.json").write_text(json.dumps(chosen, indent=2, default=str))
+        selection = select_rule(results)
+        chosen = {
+            "config": selection["chosen"],
+            "rule": selection["rule"],
+            "table": selection["table"],
+        }
+        (method_dir / "chosen.json").write_text(
+            json.dumps(chosen, indent=2, default=str)
+        )
         print(pd.DataFrame(chosen["table"]).round(4).to_string(index=False))
         print(f"chosen: {chosen['config']}")
     elif split == "test":

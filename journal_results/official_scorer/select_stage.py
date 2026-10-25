@@ -7,6 +7,7 @@ next stage needs (as tune_io.py / sweep_rigidity.py), and push it back.
     ../../.venv/bin/python select_stage.py rigidity      # after stage 3 -> sweep chosen.json
     ../../.venv/bin/python select_stage.py ours          # after stage 3 -> choice of "Ours"
     ../../.venv/bin/python select_stage.py perlesion     # after stage 6 -> per-lesion weight
+    ../../.venv/bin/python select_stage.py baselines     # after stage 8 -> NiftyReg / ConvexAdam
 
 Each choice is written below evaluation_official_scorer/ on janus and copied to
 the same place on lustre. "pull" copies CSVs and IO histories, not the claims.
@@ -200,6 +201,44 @@ def per_lesion() -> None:
     print(table.round(4).to_string())
 
 
+def baselines() -> None:
+    """Configs of NiftyReg / ConvexAdam (stage 8) with the selection rule ->
+    baselines/<method>/chosen.json. The test results of the configs chosen by
+    the challenge ranking (first tuning) are kept as B3_ranking / B4_ranking,
+    so that stage 9 writes B3 / B4 anew."""
+    for method, run_id in tasks.BASELINE_RUN.items():
+        configs = (
+            tasks.NIFTYREG_CONFIGS if method == "niftyreg" else tasks.CONVEXADAM_CONFIGS
+        )
+        results = {
+            c: pd.read_csv(
+                OUT / "baselines" / method / "eval" / "val" / f"{c}.csv",
+                dtype={"case_id": str},
+            )
+            for c in configs
+        }
+        selection = select(results)
+        path = OUT / "baselines" / method / "chosen.json"
+        path.write_text(
+            json.dumps(
+                {"config": selection["chosen"], **selection}, indent=2, default=str
+            )
+        )
+        push(path)
+        print(f"{method}: chosen {selection['chosen']}")
+        print(pd.DataFrame(selection["table"]).round(4).to_string(index=False))
+        for suffix in (".csv", "_lesions.csv"):
+            for root, move in (
+                (OUT, lambda a, b: Path(a).rename(b)),
+                (worker.LUSTRE_OUT, lambda a, b: worker.remote(f"mv {a} {b}")),
+            ):
+                old = root / "test" / f"{run_id}{suffix}"
+                new = root / "test" / f"{run_id}_ranking{suffix}"
+                if root == OUT and not old.exists():
+                    continue
+                move(old, new)
+
+
 def patient_mean(df: pd.DataFrame) -> pd.Series:
     df = df.reindex(columns=["case_id", *CURVE_COLUMNS])
     return df.groupby(df["case_id"].astype(str))[CURVE_COLUMNS].mean().mean()
@@ -259,6 +298,9 @@ if __name__ == "__main__":
     elif action == "perlesion":
         pull()
         per_lesion()
+    elif action == "baselines":
+        pull()
+        baselines()
     elif action == "rigidity":
         pull()
         rigidity()

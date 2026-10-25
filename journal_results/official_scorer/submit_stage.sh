@@ -20,6 +20,9 @@ SNAP="/home/iml/fryderyk.koegl/code_snapshots/official_stage${STAGE}_$STAMP"
 ssh "$HOST" "mkdir -p $SNAP"
 rsync -a --exclude='__pycache__' --exclude='*.pyc' "$REPO/Code/" "$HOST:$SNAP/Code/"
 rsync -a --exclude='__pycache__' "$HERE/" "$HOST:$SNAP/official_scorer/"
+# baseline registration (stages 8 / 9): next to official_scorer/, as on janus
+rsync -a "$REPO/journal_results/baselines.py" "$REPO/journal_results/tune_niftyreg.py" \
+    "$REPO/journal_results/tune_convexadam.py" "$HOST:$SNAP/"
 git -C "$REPO" rev-parse HEAD | ssh "$HOST" "cat > $SNAP/.snapshot_git_head"
 git -C "$REPO" diff HEAD | ssh "$HOST" "cat > $SNAP/.snapshot_git_diff"
 

@@ -12,6 +12,7 @@ Run from the Code directory: python evaluate.py
 
 import copy
 import json
+import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -230,8 +231,12 @@ EVAL_RUNS: Dict[str, EvalRun] = {
 # precomputed baseline fields, written by journal_results/tune_*.py:
 # <BASELINE_DIR>/<method>/<config>/fields/disp_<case>_<tp moving>_<tp fixed>.nii.gz,
 # the config chosen on val named in <BASELINE_DIR>/<method>/chosen.json
+# PSMAREG_BASELINE_DIR: another root (re-tuning with the official scorer)
 BASELINE_DIR = Path(
-    "/home/iml/fryderyk.koegl/code/LapIRN-koegl/journal_results/baselines"
+    os.environ.get(
+        "PSMAREG_BASELINE_DIR",
+        "/home/iml/fryderyk.koegl/code/LapIRN-koegl/journal_results/baselines",
+    )
 )
 BASELINE_METHODS = ("niftyreg", "convexadam")
 
@@ -466,8 +471,12 @@ def register_pair(
         path = baseline_field_path(
             baseline_field_dir(run.external), case_id, tp_x, tp_y
         )
+        # ConvexAdam fields: by method name, or by their directory while tuning
+        legacy_grid = run.external == "convexadam" or (
+            isinstance(run.external, Path) and "convexadam" in run.external.parts
+        )
         unit = load_external_unit_flow(
-            path, tuple(cfg.img_shape), device, legacy_grid=run.external == "convexadam"
+            path, tuple(cfg.img_shape), device, legacy_grid=legacy_grid
         )
         return unit, X, Y
     if model is None and not run.affine:
