@@ -51,6 +51,11 @@ With both groups (purple), bone lesions changed by 14\,\%, 9\,\%, and 6\,\%, sim
 With the losses, IO did not reduce the per-lesion change below that of the network output (circles vs.\ squares of the same colour), in line with the unchanged scan-level change (Sec.~\ref{sect:res_q1}).
 The PET losses in IO penalise the change in the total volume and uptake of the predicted lesion mask, so the growth of some lesions can offset the shrinkage of others.
 Even with the ground-truth lesion masks in IO, which lowered the scan-level $|\Delta\mathrm{MTV}|$ to 0.1\,\% (Sec.~\ref{sect:res_tradeoff}), the median per-lesion change was 13.5\,\%, as with the predicted masks (13.7\,\%).
+
+Adding per-lesion terms to IO did not change this either.
+On the validation set, the selection chose ten times the base weight (median per-lesion $|\Delta\mathrm{MTV}|$ 11.3\,\% vs.\ 12.5\,\% without the terms).
+On the test set, the median per-lesion volume change fell only from 13.7\,\% to 13.3\,\%, it decreased for only 5 of 26 patients, and small lesions changed more (median 20.0\,\% vs.\ 16.7\,\%); the scan-level changes were unchanged ($|\Delta\mathrm{MTV}|$ 9.3\,\%, $|\Delta\mathrm{TLG}|$ 12.0\,\% vs.\ 11.8\,\%), and Dice rose by 0.6 points.
+At the base weight, the terms also had no effect with the ground-truth lesion masks (median 13.5\,\% with and without them).
 The medians of small lesions take only a few distinct values (e.g.\ 12.5\,\%, 14.3\,\%, 33.3\,\%) because they are ratios of small voxel counts.
 
 \input{figures/lesions}
@@ -101,15 +106,19 @@ On the validation set (Fig.~\ref{fig:rigidity}), the per-bone rigid fit reached 
 With erosion, the Staring penalty barely changed the distortion even at $\times100$ (short distances 8.7\,\% vs.\ 12.7\,\% without rigidity), and Dice stayed almost constant, because most of the skeleton is no longer constrained.
 Within the two-point tolerance, the selection chose $\times3$ for Staring and the largest grid value, $\times100$, for the other two penalties.
 
-On the test set (Table~\ref{tab:rigidity}, Fig.~\ref{fig:rigidity_measures}), every penalty made the bones significantly more rigid by all three measures than IO without rigidity.
-Each penalty was best on the measure it optimises: the rigid fit on the rigid-fit residual (1.39 vs.\ 2.67~mm), Staring on the Staring energy (0.27 vs.\ 3.52).
-On the distance distortion, which neither penalty optimises, the rigid fit was best: it reduced short-distance distortion from 13.4\,\% to 5.0\,\% and long-distance distortion from 4.4\,\% to 1.8\,\%, compared with 5.5\,\% and 3.2\,\% for Staring and 8.8\,\% and 3.5\,\% for Staring with erosion (all pairwise differences significant).
-The rigid fit and Staring cost 1.6 and 2.0 points of CT Dice and about 4 points of bone Dice, whereas soft-tissue Dice was unchanged with Staring and increased slightly with the rigid fit (79.9\,\% to 80.8\,\%); Staring with erosion cost no CT Dice but also constrained the bones least.
+On the test set, Fig.~\ref{fig:rigidity_measures}a shows each rigidity measure relative to IO without rigidity (100\,\%).
+Each penalty was best on the measure it optimises: the rigid fit lowered the rigid-fit residual to 53\,\%, Staring the Staring energy to 18\,\%.
+On the distance distortion, which neither penalty optimises, the rigid fit was best, with 41\,\% (short) and 42\,\% (long) of the distortion without rigidity, compared with 47\,\% and 73\,\% for Staring and 69\,\% and 80\,\% for Staring with erosion.
+Fig.~\ref{fig:rigidity_measures}b shows the cost in alignment: the rigid fit and Staring lowered CT Dice by 1.6 and 2.0 points and bone Dice by about 4 points, whereas soft-tissue Dice was unchanged with Staring and rose by 0.9 points with the rigid fit; Staring with erosion cost almost no Dice but also constrained the bones least.
+
+In absolute terms (Table~\ref{tab:rigidity_full}, Appendix~F), the rigid fit reduced the short-distance distortion from 13.4\,\% to 5.0\,\% and the long-distance distortion from 4.4\,\% to 1.8\,\%; all three penalties improved every rigidity measure significantly over IO without rigidity, and all pairwise differences in distortion between the penalties were significant.
 Staring also removed folding inside bones (NDV in bone from 6.5 to 0.3~ppm), whereas the rigid fit, which constrains only the displacement, left it unchanged (9.6~ppm, not significant).
-None of the penalties changed the lesion volume or uptake change significantly (Fig.~\ref{fig:rigidity_preservation}; all measures in Table~\ref{tab:rigidity_full}, Appendix~F).
+
+No penalty changed the lesion volume or uptake change significantly on the test set (Table~\ref{tab:rigidity_full}).
+On the validation set (Fig.~\ref{fig:rigidity_preservation}), every penalty and weight changed the lesions less than IO without rigidity, but the change did not decrease with the weight; the drop from weight 0 to the smallest weight came mostly from two patients whose volume change fell by 27 and 10 points already with the rigid fit at $\times0.1$.
+Per lesion, the penalties lowered the median volume change of bone-associated lesions only from 9.3\,\% to 7.7--8.8\,\%, whereas an exactly affine transformation (the affine pre-registration) changed them by a median of 1.0\,\%.
 
 \input{figures/rigidity}
-\input{tables/rigidity}
 \input{figures/rigidity_measures}
 \input{figures/rigidity_preservation}
 

@@ -18,6 +18,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 
@@ -38,6 +39,7 @@ METRICS = (
     ("tlg_bias", r"$|\Delta\mathrm{TLG}|$ (\%) $\downarrow$"),
 )
 TEXT = "#0b0b0b"
+ZERO_X = -2.0  # x position of weight 0 (log10 axis, set apart from x0.1)
 MUTED = "#52514e"
 
 
@@ -72,11 +74,22 @@ def main() -> None:
     fig, axes = plt.subplots(1, 2, figsize=(6.5, 2.4), sharex=True)
     for ax, (metric, label) in zip(axes, METRICS):
         ax.axhline(reference[metric], color=MUTED, linewidth=0.8, linestyle=(0, (4, 2)))
+        ax.scatter(ZERO_X, reference[metric], marker="*", s=90, color=TEXT, zorder=6)
         for method, (_, color) in METHODS.items():
             d = curve[curve["method"] == method].sort_values("factor")
-            ax.plot(d["factor"], d[metric], color=color, linewidth=1.5, zorder=3)
+            x = np.log10(d["factor"].to_numpy())
+            # thin dotted link from no rigidity (weight 0) to the smallest weight
+            ax.plot(
+                [ZERO_X, x[0]],
+                [reference[metric], d[metric].iloc[0]],
+                color=color,
+                linewidth=0.8,
+                linestyle=(0, (1, 1.5)),
+                zorder=2,
+            )
+            ax.plot(x, d[metric], color=color, linewidth=1.5, zorder=3)
             ax.scatter(
-                d["factor"],
+                x,
                 d[metric],
                 s=14,
                 color=color,
@@ -86,7 +99,7 @@ def main() -> None:
             )
             best = d[d["factor"] == chosen_factor[method]].iloc[0]
             ax.scatter(
-                best["factor"],
+                np.log10(best["factor"]),
                 best[metric],
                 s=40,
                 color=color,
@@ -94,8 +107,7 @@ def main() -> None:
                 linewidths=1.0,
                 zorder=5,
             )
-        ax.set_xscale("log")
-        ax.set_xticks([0.1, 1, 10, 100], ["0.1", "1", "10", "100"])
+        ax.set_xticks([ZERO_X, -1, 0, 1, 2], ["0", "0.1", "1", "10", "100"])
         ax.set_xlabel(r"Rigidity weight (factor of the reference weight)")
         ax.set_ylabel(label)
         ax.grid(color="#e4e3df", linewidth=0.5)
@@ -113,10 +125,11 @@ def main() -> None:
         Line2D(
             [],
             [],
-            color=MUTED,
-            linewidth=0.8,
-            linestyle=(0, (4, 2)),
-            label="no rigidity",
+            color=TEXT,
+            marker="*",
+            markersize=8,
+            linestyle="",
+            label="no rigidity (weight 0)",
         ),
         Line2D(
             [],
@@ -147,7 +160,7 @@ def main() -> None:
     tex = r"""\begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/rigidity_preservation.pdf}
-\caption{Effect of the rigidity weight on lesion preservation (validation set): network trained with the PET losses, IO with the PET terms and one rigidity penalty at $0.1$ to $100$ times its calibrated reference weight. (a)~Lesion volume change, (b)~uptake change. Dashed: IO without rigidity; outlined: weight chosen for the test set. Points: patient means.}
+\caption{Effect of the rigidity weight on lesion preservation (validation set): network trained with the PET losses, IO with the PET terms and one rigidity penalty at $0.1$ to $100$ times its calibrated reference weight. (a)~Lesion volume change, (b)~uptake change. Star and dashed line: IO without rigidity (weight 0), dotted: link to the smallest weight; outlined: weight chosen for the test set. Points: patient means.}
 \label{fig:rigidity_preservation}
 \end{figure}
 """

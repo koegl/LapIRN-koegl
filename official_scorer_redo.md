@@ -32,11 +32,11 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
 - [x] Q2: losses in training or only in IO
   - [x] figure (`figure_q2.py`, now all eleven variants: Q1 + Q2)
   - [x] text
-- [ ] Per-lesion volume change
+- [x] Per-lesion volume change
   - [x] figure (`figure_lesions.py`)
   - [x] TLG figure (appendix B, same script)
   - [x] text
-  - [ ] outlook: P1 / P2 numbers
+  - [x] outlook: P1 / P2 numbers
 - [x] Leave-one-out
   - [x] table (`table_loo.py`)
   - [x] text

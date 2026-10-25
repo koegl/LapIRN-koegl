@@ -250,6 +250,11 @@ To measure what the network contributes, IO with both losses is also run directl
 \paragraph{Contribution of each PET term.}
 On the network trained without the losses, IO with all four PET terms is compared with IO in which one term at a time is switched off.
 
+\paragraph{Per-lesion terms.}
+Because the PET losses constrain the total volume and uptake of a scan, we test per-lesion versions of the volume, uptake, and mean-Jacobian terms in IO, added to the PET terms on the network trained without the losses.
+The predicted lesion mask is split into connected components; each of the eight largest components with at least 20 voxels gets its own relative volume and uptake change and mean Jacobian determinant, and the terms are averaged over the components weighted by size, so that changes of different lesions cannot cancel.
+Their weight is selected on the validation set among $\{1,10,100\}$ times a base value scaled like the other PET weights, with the selection rule of Sec.~\ref{sect:tuning} applied to the median per-lesion $|\Delta\mathrm{MTV}|+|\Delta\mathrm{TLG}|$, the quantity these terms target.
+
 \paragraph{Comparison with baselines.}
 Initial alignment, the affine pre-registration, NiftyReg, ConvexAdam, IO after the affine, and our variants are compared on the test set.
 All registrations use the same follow-up-to-baseline pairs and are scored with the same provided organ and lesion labels and original-SUV PET images.
