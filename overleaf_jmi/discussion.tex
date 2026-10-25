@@ -92,8 +92,8 @@ We studied one network architecture, and we measured the change caused by regist
 \section{Conclusion}
 \label{sect:conclusion}
 
-Lesion-preserving losses reduce the change of PET measurements caused by deformable registration of longitudinal whole-body PSMA PET/CT, at a cost in anatomical alignment.
-When per-pair instance optimisation is feasible and predicted lesion masks can be obtained, applying the losses only during refinement yielded higher alignment accuracy than using them in training as well.
-The present test set did not resolve whether PET preservation differs between these placements.
-Without instance optimisation, the training losses reduced the change in lesion measurements.
-The remaining error was largest for lesions missed by the predicted masks used in instance optimisation, indicating that mask coverage limits the benefit of stronger preservation constraints.
+PET-preservation losses allow instance optimisation to improve the alignment of longitudinal whole-body PSMA PET/CT without measurably increasing the registration-induced change of lesion volume and uptake, which instance optimisation without them increases.
+Applied only during instance optimisation, the losses gave higher alignment accuracy than when they were also used in training; the present test set did not resolve whether preservation differs between these placements.
+Without instance optimisation, training with the losses reduced the change of lesion measurements at a cost in alignment, which suits fast registration of many examinations.
+The remaining change came mostly from lesions missed by the predicted masks, and scan-level MTV and TLG hid per-lesion change that neither provided masks nor per-lesion losses removed; better lesion masks and per-lesion evaluation are therefore needed to improve preservation further.
+For bones, a per-bone rigid fit preserved within-bone distances best, but rigidity did not reduce the change of lesion measurements.
