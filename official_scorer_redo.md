@@ -78,4 +78,4 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
   - [x] rigidity subsection
 - [x] Conclusion
 - [x] Cover letter bullets
-- [ ] findings.md
+- [x] findings.md

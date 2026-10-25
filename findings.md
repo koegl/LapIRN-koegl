@@ -5,30 +5,27 @@ basis; **preliminary** = not yet confirmed on the full dataset.
 
 ## [ ] Paper story (order of results and discussion)
 
-**Status:** agreed outline; numbers from the test set (28 patients, 38 pairs).
+**Status:** agreed outline; numbers from the test set (28 patients, 38 pairs),
+official scorer (`evaluation_official_scorer/`).
 
 1. **Problem:** follow-up→baseline PSMA PET/CT registration should align the
    anatomy without changing lesion volume / uptake (MTV / TLG); bones should
    stay rigid.
-2. **Method:** LapIRN network + instance optimisation (IO) with PET-preservation
-   and bone-rigidity losses. Full method = losses in training and IO (I4),
-   defined in advance. The val selection (challenge ranking over I1–I8) chose
-   I1 (no losses): the ranking is dominated by accuracy, biomarker differences
-   are rarely significant (methods section).
-3. **Q1 — do the losses work?** (`ablations.tex`, network | network + IO):
-   PET lowers both |ΔMTV| and |ΔTLG| significantly in both blocks. Rigidity
-   lowers |ΔMTV| in both blocks and |ΔTLG| for network output, but its TLG
-   reduction with IO is not significant (10.1 % vs. 11.9 %, Holm-adjusted
-   p = 0.29). PET costs about 2–3 Dice points; rigidity costs at most 0.5.
-   Early stopping was tested as a possible alternative (T1-tum; entry below),
-   but is not part of the present manuscript story without the training curves.
-4. **Q2 — where should the losses act?** (`q2.pdf`): losses only in IO (I7)
-   vs. in training + IO (I4): Dice +1.7 points (significant). The paired
-   preservation differences were not significant, but equivalence was not
-   established (MTV +0.8 points, 95% CI −1.0 to 2.7; TLG +0.2,
-   −1.9 to 2.4). IO-only placement is more accurate when per-pair refinement
-   is feasible; without IO (14× faster: ~11 s vs. ~157 s per pair), training
-   losses reduce the registration-induced PET changes.
+2. **Method:** LapIRN network + instance optimization (IO) with PET-preservation
+   and bone-rigidity losses. "Ours" = I7 (network without losses, both losses
+   only in IO), chosen on val with the selection rule (lowest |MTV| + |TLG|
+   within 2 Dice points of the most accurate); the predefined full method (I4)
+   is reported alongside.
+3. **Q1 — do the losses work?** (`q2.pdf` + appendix `ablations.tex`):
+   network: PET 10.3 → 8.2 % |ΔMTV| (significant), 12.5 → 9.8 % |ΔTLG|
+   (n.s.), -1.9 Dice; rigidity 8.9 % |ΔMTV| (significant). With IO: none
+   11.3 / 14.5 %, PET 8.2 / 10.3 %, rigidity 9.2 / 10.6 % (TLG significant),
+   both 7.9 / 10.3 %. IO without the losses worsens preservation; with them,
+   IO is "free" (entry under 7).
+4. **Q2 — where should the losses act?** losses only in IO vs. training + IO:
+   Dice +1.0 [0.4, 1.6] (both groups), +0.9 (PET), 0.0 (rigidity); preservation
+   differences n.s. Without IO (~14x faster) training with the losses reduces
+   the change at ~2 Dice points.
 5. **Leave-one-out** (`loo.tex`): what each PET term contributes in IO.
    - Official scorer (test, I5 = T1 + PET IO): the direct volume / uptake terms
      are counterproductive. Removing L_TLG improves |ΔTLG| 11.8 → 9.8 %; removing
@@ -38,13 +35,15 @@ basis; **preliminary** = not yet confirmed on the full dataset.
      warped mask and PET, the scorer warps both nearest. Candidate for the
      abstract / cover letter (placement to decide).
 6. **Baselines** (`baselines.tex`, distribution plot, qualitative figure):
-   training / IO columns state where the losses act. Every variant of ours has
-   higher mean Dice and lower mean HD95 than NiftyReg / ConvexAdam / Affine, with NDV
-   below the 0.005 % threshold on every test pair; ranks: IO only (I7) 1,
-   basic IO (I1) and full (I4) 2. Affine + IO
-   (no network) reaches only 52.7 % Dice: the network is essential.
+   Ours 78.3 % Dice vs. NiftyReg 70.1 %, ConvexAdam 61.7 % (significant), with
+   similar |ΔMTV| / |ΔTLG| (8.7 / 11.3 vs. 8.7 / 10.2 and 9.3 / 10.8, n.s.).
+   NDV: Ours 2 pairs above the threshold (76, 125 ppm), I4 1 pair, NiftyReg 8
+   pairs (up to 0.37 %). Affine + IO 56.6 % Dice. Challenge ranking: basic IO
+   1, Ours 2, I4 3 (overlapping intervals). Baseline re-tuning with the
+   selection rule running (stages 8 / 9); numbers will change.
 7. **Rigidity comparison (exp. 2)** and **trade-off (exp. 3)**: follow.
-   - **Framing question (official scorer, open):** the losses reduce the change
+   - **Framing (decided 2026-10-25: core claim below + limits; abstract, intro,
+     conclusion, cover letter rewritten accordingly):** the losses reduce the change
      in every comparison (with IO: |ΔMTV| 11.3 → 8.7 %, |ΔTLG| 14.5 → 11.3 %,
      ~23 % relative; network: 10.3 → 8.0 %, 12.5 → 9.8 %), but mostly not
      significantly after Holm (26 patients, patient SD 10-12 %). vs. baselines:
@@ -63,7 +62,7 @@ basis; **preliminary** = not yet confirmed on the full dataset.
      Qualitative pair 0146 (chosen for its tumour change): official scorer I7
      +2.6 / +6.6 %, I4 +2.4 / +7.2 %, I1 -0.6 / +2.3 % (old I4 -0.1 / +0.9 %
      was partly the old scorer); kept, text shows alignment, not preservation.
-   - **Candidate core claim: IO with the losses is "free" for preservation.**
+   - **Core claim (used in the abstract): IO with the losses is "free" for preservation.**
      After IO minus network output (patient means, 95 % bootstrap CI, test):
      I5 - T1: Dice +3.2 [+2.6, +3.7], |ΔMTV| -1.1 [-3.2, +1.5] (p 0.17),
      |ΔTLG| -0.7 [-3.2, +2.1] (p 0.86); I7 - T1 (Ours): Dice +2.9 [+2.3, +3.4],
@@ -82,6 +81,19 @@ basis; **preliminary** = not yet confirmed on the full dataset.
      (Affine + IO rank 5 with 53 % Dice);
    - predicted lesion labels limit PET IO;
    - NiftyReg folding on test; Staring stencil leakage (entries below).
+
+   - **Per-lesion terms (stages 5-7):** per-component MTV / TLG / mean-Jacobian
+     terms on the 8 largest predicted components (>= 20 voxels). Fixed weight:
+     no effect (< 1 % of the loss). Val sweep x1 / x10 / x100 -> x10 (per-lesion
+     median MTV 12.5 -> 11.3 %); test: 13.7 -> 13.3 %, better for 5/26
+     patients, small lesions worse (16.7 -> 20.0 %), scan level unchanged,
+     Dice +0.6 -> negative result (in results + discussion).
+   - **Rigidity (test, R1-R4):** per-bone rigid fit best on within-bone
+     distances (short 13.4 -> 5.0 %, long 4.4 -> 1.8 %), Staring best on its own
+     energy, erosion weakest; rigid fit / Staring cost 1.6 / 2.0 CT Dice. No
+     penalty changes MTV / TLG (on top of PET IO; residual ~half a voxel; scan
+     metric dominated by missed lesions / few patients). 63 % (train) / 67 %
+     (test) of lesion voxels lie on bone labels.
 
 ## [ ] Staring stencils leak; erosion leaves most of the skeleton unconstrained
 
