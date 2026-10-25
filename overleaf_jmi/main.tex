@@ -42,7 +42,8 @@ We examine how PET-preservation and bone-rigidity losses trade alignment for les
 
 \textbf{Approach:} We trained LapIRN networks with and without the losses on the Learn2Reg 2026 PSMAReg data, applied them in training, IO, or both, compared three rigidity penalties, and evaluated on 28 held-out patients against tuned NiftyReg and ConvexAdam, with patient-level statistics and per-lesion analyses.
 
-\textbf{Results:} With the losses only in IO, our method reached 78.3\,\% CT Dice (NiftyReg 70.1\,\%, ConvexAdam 61.7\,\%) with similar MTV and TLG change. \todo{Baseline numbers after re-tuning.}
+\textbf{Results:} With the losses only in IO, our method reached 78.3\,\% CT Dice (NiftyReg 70.1\,\%, ConvexAdam 61.7\,\%) with similar MTV and TLG change.
+% \todo{Baseline numbers after re-tuning.}
 IO without the losses increased the MTV and TLG change relative to network output; with the losses, IO gained 2.9 Dice points without a detected increase in either scan-level measure.
 Applying the losses only in IO gained 1.0 Dice point over applying them in both training and IO; whether preservation differs between these placements remains unresolved.
 Lesions missed by the predicted masks contributed more than half of the residual scan-level change in the PET-loss IO analysis.
@@ -74,13 +75,13 @@ The authors declare that there are no financial interests, commercial affiliatio
 All experiments use the publicly available training data of the Learn2Reg 2026 PSMAReg challenge~\cite{ref_learn2reg_alessa,ref_learn2reg_hansen}, which is adapted from the PSMA-PET-CT-Lesions dataset in The Cancer Imaging Archive~\cite{ref_psmaregdata} (DOI: 10.7937/r7ep-3x37).
 The private test data of the challenge were not used.
 The patient-level split into training, validation, and test sets is provided with the code.
-\todo{Code repository link (training, IO, evaluation, split, and trained weights).}
+% \todo{Code repository link (training, IO, evaluation, split, and trained weights).}
 
 \subsection*{Acknowledgments}
 F.K.\ and J.A.S.\ are partially supported by the German Federal Ministry of Research, Technology and Space (DECIPHER-M, 01KD2420G).
 A.R.\ is supported by funding from the Free State of Bavaria (StMGP) as part of the project ``KI-gestützte multi-modale Diagnostik und stratifizierte Therapie für Endometriose (EndoKI)''.
 D.M.L.\ and J.A.S.\ received funding from Helmholtz Imaging, a platform of the Helmholtz Information \& Data Science Incubator.
-\todo{Funding E.C.}
+% \todo{Funding E.C.}
 L.F.\ was partially funded by the Intramural Research Funding Grant ``AI-driven Longitudinal Lesion Tracking'' of the Faculty of Medicine, University of Augsburg, by the Bavarian Center for Cancer Research as part of the Lighthouse ``Local Therapies'', and by the Bavarian Ministry of Economic Affairs, Regional Development and Energy (StMWi) under grant number DIK-2310-0004//DIK0556/02.
 An AI assistant was used for language editing of the manuscript; the authors reviewed and take responsibility for all content.
 The use of AI tools for code generation is described in Sec.~\ref{sect:training}.
