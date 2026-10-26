@@ -4,7 +4,7 @@
 \subsection{Data and Split}
 \label{sect:data}
 
-We used the training set of the PSMAReg challenge~\cite{ref_psmareg_challenge,ref_psmaregdata}, a longitudinal whole-body PSMA PET/CT cohort.
+We used the training set of the PSMAReg challenge, a longitudinal whole-body PSMA PET/CT cohort.
 Each scan consists of a CT and a PET image (in SUV), resampled to $2.7344\times2.7344\times3.27$~mm and cropped to $192\times192\times288$ voxels.
 For every scan, the challenge provides 117 CT organ labels (the TotalSegmentator~\cite{ref_totalsegmentator} classes) and a PSMA lesion mask.
 Following the challenge, a follow-up scan is always the moving image and the corresponding baseline scan the fixed image.
@@ -37,7 +37,7 @@ As in the ConvexAdam baseline of the challenge~\cite{ref_convexadam}, the patien
 All PET quantities in the evaluation are computed on the original SUV images.
 
 \paragraph{PET measures.}
-The PSMAReg challenge uses metabolic tumor volume (MTV) and total lesion glycolysis (TLG) to measure how registration changes the moving scan's lesion volume and uptake~\cite{ref_psmareg_challenge}.
+The challenge uses MTV and TLG to measure how registration changes the moving scan's lesion volume and uptake.
 For a PET image $P$ in SUV, binary lesion mask $M$, and voxel volume $v$, they are
 \begin{equation}
   \mathrm{MTV}(M) = v\sum_x M(x), \qquad

@@ -28,7 +28,7 @@ Re-reviewed 2026-10-25 after the corrected `align_corners` evaluations, using `m
 <details open>
 <summary><strong>Design, methods, and interpretation</strong></summary>
 
-8. [ ] **#08 — Resolve PSMA biomarker terminology with nuclear-medicine coauthors.** MTV and especially “total lesion glycolysis” are challenge names, while this study measures PSMA uptake rather than FDG glucose metabolism. Explain that at first use and consider a clinically accurate parallel term while keeping challenge labels for reproducibility (`main.tex`, `methods.tex`).
+8. [x] **#08 — Resolve PSMA biomarker terminology with nuclear-medicine coauthors.** MTV and especially “total lesion glycolysis” are challenge names, while this study measures PSMA uptake rather than FDG glucose metabolism. Explain that at first use and consider a clinically accurate parallel term while keeping challenge labels for reproducibility (`main.tex`, `methods.tex`).
 
 9. [x] **#09 — Define preservation in one place.** Methods gives the challenge context, formulas, and same-moving-scan before/after error; Experiments refers back rather than redefining MTV/TLG. Preserve that division (`methods.tex`).
 

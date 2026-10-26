@@ -5,10 +5,10 @@ Prostate-specific membrane antigen (PSMA) PET/CT is now routinely used for stagi
 Longitudinal imaging provides a baseline examination and one or more follow-up examinations.
 Registering each follow-up to the baseline makes it possible to compare tumor burden voxel by voxel, track individual lesions, and accumulate dose~\cite{ref_psmareg_challenge}.
 For these uses, a registration must do two things at once: it has to align the anatomy, and it must not itself change the PET-derived quantities that are compared across time points.
-Two such quantities are the metabolic tumor volume (MTV) and the total lesion glycolysis (TLG).
+Two such quantities, under the names used by the Learn2Reg 2026 PSMAReg challenge~\cite{ref_psmareg_challenge}, are the metabolic tumor volume (MTV) and the total lesion glycolysis (TLG); for PSMA PET, they measure the PSMA-positive tumor volume and the total lesion PSMA uptake.
 A deformation that compresses or stretches a lesion changes both, so a change measured after registration can be an artifact of the registration rather than of the disease.
 When the registered follow-up is used to match lesions or compare them with baseline, such processing-induced changes could be mistaken for part of the longitudinal change and could therefore affect lesion tracking or response assessment.
-The Learn2Reg 2026 PSMAReg challenge~\cite{ref_learn2reg_hansen,ref_learn2reg_alessa,ref_psmaregdata} formalizes this setting by warping each follow-up scan to its baseline with a dense displacement field.
+The challenge, part of the Learn2Reg series~\cite{ref_learn2reg_hansen,ref_learn2reg_alessa} and based on the PSMA-PET-CT-Lesions dataset~\cite{ref_psmaregdata}, formalizes this setting by warping each follow-up scan to its baseline with a dense displacement field.
 It scores organ overlap, boundary distance, folding, and the change of MTV and TLG caused by the warp.
 The two goals can compete: limiting deformation may protect lesion measurements while leaving the anatomy misaligned, whereas improving alignment may distort the lesions being measured.
 
