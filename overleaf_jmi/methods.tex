@@ -1,7 +1,7 @@
-\section{Methods}
+\section{Materials and Methods}
 \label{sect:methods}
 
-\subsection{Data and Split}
+\subsection{PSMAReg Challenge Data and Study Split}
 \label{sect:data}
 
 We used the training set of the PSMAReg challenge, a longitudinal whole-body PSMA PET/CT cohort.
@@ -13,11 +13,13 @@ It also reports approval by the institutional data security and privacy review b
 It also reports that the ethics committee waived individual informed consent because the images were fully anonymized.
 The present study is a secondary analysis of publicly released challenge data and involved no patient recruitment or contact.
 
-We split the 146 labeled patients with at least two sessions at the patient level into training, validation, and test sets, aiming at 70/15/15\,\% of the registration pairs and balancing the sets for tumor burden and for bone- versus soft-tissue lesion location.
-Training uses all pairs of later onto earlier sessions of a patient; validation and testing use only follow-up-to-baseline pairs, as in the challenge.
-This gave 92/26/28 patients and 178/38/38 pairs.
-The split was built once with a fixed seed and frozen before any experiment of this study; all choices of settings, checkpoints, and methods were made on the validation set, and the test set was used only for the final evaluation.
-All patients were part of the challenge training data used to develop the earlier version of the method~\cite{ref_koegl_arxiv}; the test patients were not used for any decision in the present study.
+We split the 146 labeled patients with at least two sessions at the patient level into training, validation, and test sets, aiming at 70\,\%/15\,\%/15\,\% of the registration pairs and balancing the sets for tumor burden and for bone- versus soft-tissue lesion location.
+Training uses every chronologically ordered image pair for each patient, including pairs between follow-up images.
+Validation and testing register each follow-up image directly to the baseline image, as in the challenge.
+The training/validation/test sets contained 92/26/28 patients and yielded 178/38/38 registration pairs, respectively.
+The split was built once with a fixed seed and frozen before any experiments of this study.
+All settings, checkpoints, and primary method choices were selected on the validation set.
+The test set was used for the final evaluation and for analyses explicitly identified as post hoc or diagnostic.
 
 \paragraph{Labels used by the method and for evaluation.}
 Network training uses the provided organ and lesion labels of the training patients.

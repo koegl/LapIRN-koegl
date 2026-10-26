@@ -27,8 +27,7 @@ Lesions missing from this mask are therefore not directly constrained.
 In previous work, we developed a registration pipeline for the PSMAReg challenge that combines an affine pre-registration, LapIRN, and IO with PET-preservation and per-bone rigidity losses~\cite{ref_koegl_arxiv}.
 There, selected configurations were evaluated on the challenge validation cases using surrogate labels.
 In this extension, we retrain on a new patient-level split of the publicly released, labeled training data of the PSMAReg challenge~\cite{ref_psmareg_challenge,ref_psmaregdata} and reserve 28 patients for final evaluation.
-These 28 patients were among the challenge data available during development of our earlier method.
-They therefore form a held-out test set for the present analyses, not an independent external cohort.
+The 28 patients form a held-out internal test set for the present analyses, not an independent external cohort.
 
 Our research questions are:
 \begin{enumerate}
