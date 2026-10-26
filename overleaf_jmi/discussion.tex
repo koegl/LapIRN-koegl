@@ -74,7 +74,7 @@ Better lesion masks can therefore improve the reported PET metrics, while organ-
 Label overlap and MTV/TLG change remain proxies for whether registration supports lesion tracking, response assessment, or dose accumulation.
 
 The baseline comparison further shows why deformation regularity must remain a separate endpoint.
-The ranking selected NiftyReg's least-regularized setting because accuracy separated its settings more strongly than folding, but that choice produced threshold exceedances on new patients.
+The selection rule, which weighs accuracy against preservation but not folding, chose a NiftyReg setting that exceeded the folding threshold on 8 of 38 validation and 13 of 38 test pairs.
 A composite rank can therefore obscure localized failures even when its components include a regularity measure.
 
 \subsection{Bone Rigidity}

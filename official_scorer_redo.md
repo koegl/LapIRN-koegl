@@ -13,7 +13,7 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
 - [x] Stage 7: P1x10 on test -> no per-lesion effect (median MTV 13.7 -> 13.3 %, 5/26 patients better), Dice +0.6
 - [x] Stage 4: R2-R4 on test
 - [x] Choice of "Ours" (I1-I8 val, new rule) -> I7
-- [ ] (Optional) re-tune NiftyReg / ConvexAdam with the new rule
+- [x] (Optional) re-tune NiftyReg / ConvexAdam with the new rule -> NiftyReg be0.0002_sx7, ConvexAdam lambda2 (stages 8 / 9)
 
 ## Methods
 - [x] Evaluation metrics: official scorer conventions (mask and PET warped nearest, align_corners=True, official NDV mask, exact field conversion)

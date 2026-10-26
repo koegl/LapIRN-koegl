@@ -49,12 +49,12 @@ The IO-only placement with both loss groups is therefore used as our selected me
 
 To place our method in context, we compare it with CT-only registration baselines, with IO applied directly after affine pre-registration, and with our other variants (Table~\ref{tab:baselines}).
 Our method, with the losses only in IO, reached 78.3\,\% CT Dice and 6.89~mm HD95.
-Both were significantly better than NiftyReg (70.1\,\%, 8.85~mm), ConvexAdam (61.7\,\%, 9.16~mm), and the affine pre-registration (46.4\,\%, 14.00~mm).
-Its $|\Delta\mathrm{MTV}|$ (8.7\,\%) and $|\Delta\mathrm{TLG}|$ (11.3\,\%) did not differ significantly from those of NiftyReg (8.7\,\%, 10.2\,\%) or ConvexAdam (9.3\,\%, 10.8\,\%).
+Both were significantly better than NiftyReg (71.8\,\%, 7.88~mm), ConvexAdam (60.3\,\%, 9.32~mm), and the affine pre-registration (46.4\,\%, 14.00~mm).
+Its $|\Delta\mathrm{MTV}|$ (8.7\,\%) and $|\Delta\mathrm{TLG}|$ (11.3\,\%) did not differ significantly from those of NiftyReg (10.7\,\%, 12.6\,\%) or ConvexAdam (8.5\,\%, 9.3\,\%).
 Compared with the same network before IO, our method gained 2.9 Dice points (95\,\% CI 2.3 to 3.4).
 The paired changes in $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ were $-1.7$ points (95\,\% CI $-3.6$ to 0.3) and $-1.2$ points ($-3.6$ to 1.2), respectively, so an increase in image-level PET change was not detected.
 The NDV summaries in Table~\ref{tab:baselines} are means over patients, whereas threshold exceedances count individual registration pairs.
-NiftyReg, tuned on the validation set, exceeded the folding threshold on 5 of 38 validation pairs and 8 of 38 test pairs (21\,\%), with up to 0.37\,\% NDV; ConvexAdam stayed below it on every pair.
+NiftyReg, tuned on the validation set, exceeded the folding threshold on 8 of 38 validation pairs and 13 of 38 test pairs (34\,\%), with up to 0.51\,\% NDV, and folded significantly more than our method; ConvexAdam stayed below the threshold on every pair.
 Our method exceeded it on two test pairs (76 and 125~ppm), and the variant with the losses also in training on one (262~ppm).
 IO directly after the affine pre-registration reached only 56.6\,\% Dice: within the same iteration budget, IO cannot replace the network.
 Even the affine pre-registration changed MTV by 4.5\,\% and TLG by 4.4\,\%, the lowest values among the registered images.
@@ -64,10 +64,10 @@ The losses only in IO lowered these changes to 8.7\,\% and 11.3\,\% at a cost of
 Using the losses in training and IO lowered them to 7.9\,\% and 10.3\,\% at a cost of 2.9 points.
 After correction for multiple comparisons, none of these preservation differences was significant.
 By the challenge's composite score, IO without the losses ranked first, our method second, and the variant with the losses in training and IO third, with overlapping bootstrap rank intervals (1--4, 1--4, and 1--5).
-The ranking was decided by accuracy: apart from the affine pre-registration on $|\Delta\mathrm{TLG}|$, no method won a significant comparison in preservation or folding.
-The network alone needs 11~s per pair, as fast as ConvexAdam and ten times faster than NiftyReg (108~s); IO adds about 2.5~minutes.
+The ranking was decided by accuracy: apart from the affine pre-registration on $|\Delta\mathrm{TLG}|$, no method won a significant comparison in preservation, and none in folding after the ranking's equivalence threshold.
+The network alone needs 11~s per pair, as fast as ConvexAdam and more than ten times faster than NiftyReg (128~s); IO adds about 2.5~minutes.
 Figure~\ref{fig:qualitative} illustrates anatomical alignment in a test pair selected for its tenfold between-image change in lesion volume (from 2400 to 24\,191 voxels).
-The images were initially far apart (CT Dice 3.5\,\%); our method aligned them to 83.7\,\% Dice (NiftyReg 70.8\,\%, ConvexAdam 65.7\,\%), and NDV remained below the challenge threshold.
+The images were initially far apart (CT Dice 3.5\,\%); our method aligned them to 83.7\,\% Dice (NiftyReg 72.3\,\%, ConvexAdam 64.5\,\%), and NDV remained below the challenge threshold.
 Before registration, the CT overlay (Fig.~\ref{fig:qualitative}c) and label residual (e) show misalignment across the whole trunk.
 After registration (d, f), the residual is reduced to thin bands at organ boundaries and parts of the lumbar vertebrae.
 The warped lesion contours lie in the corresponding bones (h).

@@ -35,13 +35,13 @@ Unless stated otherwise, values are from the corrected official scorer on the te
 
 ## Comparison with baselines
 
-- [x] **Current draft values.** Ours reaches 78.3% CT Dice and 6.89 mm HD95, compared with NiftyReg at 70.1% and 8.85 mm and ConvexAdam at 61.7% and 9.16 mm.
-- [x] **Current preservation comparison.** No difference in MTV or TLG change was detected between ours (8.7% and 11.3%), NiftyReg (8.7% and 10.2%), and ConvexAdam (9.3% and 10.8%).
+- [x] **Current draft values.** Ours reaches 78.3% CT Dice and 6.89 mm HD95, compared with NiftyReg at 71.8% and 7.88 mm and ConvexAdam at 60.3% and 9.32 mm (re-tuned with the selection rule: NiftyReg be0.0002_sx7, ConvexAdam lambda2; ranking-chosen results kept as B3_ranking / B4_ranking).
+- [x] **Current preservation comparison.** No difference in MTV or TLG change was detected between ours (8.7% and 11.3%), NiftyReg (10.7% and 12.6%), and ConvexAdam (8.5% and 9.3%).
 - [x] **IO needs the network.** IO directly after affine pre-registration reached 56.6% Dice and did not replace the learned registration within the same iteration budget.
 - [x] **Ranking interpretation.** IO without the losses ranked first, ours second, and losses in training and IO third, with overlapping bootstrap rank intervals; accuracy largely determined the ranking.
-- [x] **Runtime.** The network requires about 11 seconds per pair, ConvexAdam about 11 seconds, NiftyReg 108 seconds, and IO adds about 2.5 minutes.
+- [x] **Runtime.** The network requires about 11 seconds per pair, ConvexAdam about 11 seconds, NiftyReg 128 seconds (A6000, val pairs), and IO adds about 2.5 minutes.
 - [x] **Qualitative case.** Case 0146 is presented as an alignment example selected for its tenfold tumor-volume change, not as evidence of PET preservation; ours changed MTV by +2.6% and TLG by +6.6%, versus −0.6% and +2.3% with unconstrained IO.
-- [ ] **Replace the baseline values after re-tuning.** Update the abstract, Results, tables, Discussion if needed, and all derived comparisons once the final NiftyReg and ConvexAdam settings are available.
+- [x] **Replace the baseline values after re-tuning.** Update the abstract, Results, tables, Discussion if needed, and all derived comparisons once the final NiftyReg and ConvexAdam settings are available.
 
 Sources: `evaluation/test/`, `journal_results/paper/table_baselines.py`, and `overleaf_jmi/tables/baselines.tex`.
 
@@ -119,8 +119,8 @@ Source: `journal_results/erosion_leakage.py`, `journal_results/erosion_leakage/`
 
 ## Deformation regularity
 
-- [x] **NiftyReg transfer.** The validation-selected NiftyReg configuration exceeded the 0.005% NDV threshold on 5 of 38 validation pairs and 8 of 38 test pairs, reaching up to 0.37% NDV.
-- [x] **Reason for selection.** The challenge ranking selected the least-regularized NiftyReg setting because accuracy separated settings more strongly than folding.
+- [x] **NiftyReg transfer.** The validation-selected NiftyReg configuration exceeded the 0.005% NDV threshold on 8 of 38 validation pairs and 13 of 38 test pairs, reaching up to 0.51% NDV; it folded significantly more than ours.
+- [x] **Reason for selection.** The selection rule weighs Dice against MTV/TLG but not folding, so it chose a NiftyReg setting that folds above the threshold.
 - [x] **Selected method.** The selected method exceeded the NDV threshold on 2 of 38 test pairs (76 and 125 ppm).
 - [x] **Training plus IO.** The variant with both loss groups in training and IO exceeded the threshold on 1 of 38 test pairs (262 ppm), the maximum among our reported variants.
 - [x] **Aggregation.** NDV means and standard deviations are calculated from patient-level averages, whereas threshold exceedances count individual registration pairs.

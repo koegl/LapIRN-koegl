@@ -44,8 +44,7 @@ We examine how PET-preservation and bone-rigidity losses trade alignment for les
 \textbf{Approach:} We trained LapIRN networks with and without the losses on the Learn2Reg 2026 PSMAReg data and applied the losses during training, IO, or both.
 We evaluated three rigidity penalties and compared the resulting method with tuned NiftyReg and ConvexAdam on 28 held-out patients using patient-level statistics and per-lesion analyses.
 
-\textbf{Results:} With the losses only in IO, our method reached 78.3\,\% CT Dice (NiftyReg 70.1\,\%, ConvexAdam 61.7\,\%); no difference in MTV or TLG change from either baseline was detected.
-\todo{Baseline numbers after re-tuning.}
+\textbf{Results:} With the losses only in IO, our method reached 78.3\,\% CT Dice (NiftyReg 71.8\,\%, ConvexAdam 60.3\,\%); no difference in MTV or TLG change from either baseline was detected.
 Without the losses, the mean MTV and TLG changes rose after IO relative to network output; with the losses, IO gained 2.9 Dice points without a detected difference in either image-level measure.
 Applying the losses only in IO gained 1.0 Dice point over applying them in both training and IO; whether preservation differs between these placements remains unresolved.
 Lesions missed by the predicted masks contributed more than half of the residual image-level change in the PET-loss IO analysis.

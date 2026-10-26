@@ -223,11 +223,10 @@ The pairwise tests, component scores, omitted metrics, aggregation formula, and 
 \label{sect:tuning}
 
 All tuning used the validation set.
-For our IO settings and the choice of our method, we use one selection rule: among the candidates of a grid whose CT Dice is within two points of the most accurate one, we keep the one with the lowest $|\Delta\mathrm{MTV}|+|\Delta\mathrm{TLG}|$.
+For our IO settings, the choice of our method, and the baselines, we use one selection rule: among the candidates of a grid whose CT Dice is within two points of the most accurate one, we keep the one with the lowest $|\Delta\mathrm{MTV}|+|\Delta\mathrm{TLG}|$.
 The two-point tolerance is a design choice that allows some alignment accuracy to be exchanged for lower PET change; it is not a clinically established threshold.
 We do not use the challenge ranking for this selection because it is decided by accuracy.
 Dice differences between candidates are consistently significant, whereas MTV and TLG differences rarely are, so the ranking almost always retains the most accurate candidate regardless of preservation.
-The baselines were tuned by applying the challenge ranking to the candidates of each method's grid.
 For IO, our selection rule selected a learning rate of 0.025, 40 iterations, and a PET-weight factor of $\times0.1$ (Table~\ref{tab:io_tuning}).
 Neither the selection rule nor the ranking rewards rigidity, which costs Dice without reducing the PET metrics or folding, so both would set $\lambda_{\mathrm{rig}}$ to zero.
 We fixed $\lambda_{\mathrm{rig}}=0.25$ so that the selected method retained the bone-rigidity constraint evaluated in this study.
@@ -258,7 +257,7 @@ Initial alignment, the affine pre-registration, NiftyReg, ConvexAdam, IO after t
 All registrations use the same follow-up-to-baseline pairs and are scored with the same provided organ and lesion labels and original-SUV PET images.
 NiftyReg and ConvexAdam use CT alone for registration, with no organ or lesion labels; both remove the patient bed, but each uses its own affine step and CT preprocessing (NiftyReg: \texttt{reg\_aladin} on bed-removed CT; ConvexAdam: ANTs with a $[-300,300]$~HU window).
 Our method uses CT and PET, the affine pre-registration described above, provided labels in network training, and predicted labels during IO.
-The NiftyReg and ConvexAdam settings were selected on the validation pairs by the challenge ranking, with candidates ranked within each method's grid (Sec.~\ref{sect:tuning}).
+The NiftyReg and ConvexAdam settings were selected on the validation pairs with the same selection rule as our settings (Sec.~\ref{sect:tuning}); the rule does not consider folding.
 Runtimes are per pair on one NVIDIA RTX A6000 GPU and include the affine step.
 
 \paragraph{Accuracy--preservation trade-off.}
