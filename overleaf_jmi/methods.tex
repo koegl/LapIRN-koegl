@@ -179,15 +179,16 @@ All generated code was reviewed and tested by the authors, who are responsible f
 \subsection{Evaluation Metrics}
 \label{sect:metrics}
 
-All metrics are computed with the provided labels of the test scans and follow the scorer of the challenge: the moving scan is warped with the voxel displacement field, sampled with corner-aligned grid coordinates, and PET and labels are warped by nearest-neighbor interpolation. The challenge submits displacement fields at half resolution and upsamples them; we evaluate the full-resolution fields directly.
+All metrics are computed with the provided labels of the test scans by evaluating the full-resolution displacement fields directly.
+The moving scan is warped with corner-aligned grid coordinates, and PET and labels are sampled by nearest-neighbor interpolation.
 Of the 28 test patients (38 pairs), 26 patients (30 pairs) have lesions in the moving scan and contribute to the PET metrics.
 
 \paragraph{Alignment.}
 CT Dice and the 95th percentile of the Hausdorff distance (HD95), averaged over the 117 organ labels.
 
 \paragraph{PET-preservation metrics.}
-We compute $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ as defined in Eq.~\eqref{eq:pet_error}, using the provided moving-scan lesion masks and the challenge scorer.
-``Initial'' denotes the unregistered scans; their MTV and TLG change is zero by construction.
+We compute $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ as defined in Eq.~\eqref{eq:pet_error}, using the provided moving-scan lesion masks.
+``Initial'' denotes the unregistered, unresampled scans; their MTV and TLG change is zero by construction and does not estimate an effect of resampling.
 
 \paragraph{Per-lesion change.}
 The aggregate errors of Eq.~\eqref{eq:pet_error} can hide large changes of individual lesions that cancel.

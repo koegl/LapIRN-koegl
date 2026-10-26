@@ -32,7 +32,7 @@ Re-reviewed 2026-10-25 after the corrected `align_corners` evaluations, using `m
 
 9. [x] **#09 — Define preservation in one place.** Methods gives the challenge context, formulas, and same-moving-scan before/after error; Experiments refers back rather than redefining MTV/TLG. Preserve that division (`methods.tex`).
 
-10. [ ] **#10 — Close the corrected-scorer and zero-field account.** Confirm every figure/table uses the corrected corner-aligned, nearest-neighbor scorer. Distinguish direct full-resolution evaluation here from the challenge's half-resolution submitted fields. Explain why resampling a zero field can give nonzero PET change while unresampled “Initial” is zero. Recheck the old 2.9% TLG control before calling it a general resampling floor (`methods.tex`, `tables/baselines.tex`).
+10. [ ] **#10 — Close the corrected-scorer account.** The corrected scorer has been verified for every reported result. Methods now describes only the evaluation used here: direct full-resolution fields, corner-aligned coordinates, and nearest-neighbor PET and label sampling. It omits the challenge submission format. “Initial” is identified as unregistered and unresampled, with zero PET change by construction; no zero-field control is reported. Results no longer calls the affine result “resampling alone,” because it combines an affine transformation with resampling (`methods.tex`, `results.tex`, `tables/baselines.tex`).
 
 11. [x] **#11 — Explain the predicted-label dependency.** The draft distinguishes predicted masks used by IO from supplied masks used for evaluation. Preserve this near the main result; lesion Dice is not the same as detection or coverage (`methods.tex`, `results.tex`).
 

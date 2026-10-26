@@ -51,7 +51,7 @@ The paired changes in $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ were $-1
 NiftyReg, tuned on the validation set, exceeded the folding threshold on 5 of 38 validation pairs and 8 of 38 test pairs (21\,\%), with up to 0.37\,\% NDV; ConvexAdam stayed below it on every pair.
 Our method exceeded it on two test pairs (76 and 125~ppm), and the variant with the losses also in training on one (262~ppm).
 IO directly after the affine pre-registration reached only 56.6\,\% Dice: within the same iteration budget, IO cannot replace the network.
-Resampling alone already changes the measurements: the affine pre-registration changed MTV by 4.5\,\% and TLG by 4.4\,\%, the lowest of all methods.
+Even the affine pre-registration changed MTV by 4.5\,\% and TLG by 4.4\,\%, the lowest values among the registered images.
 
 Among our variants, IO without the losses was the most accurate (80.2\,\% Dice, significantly higher than our method) but changed the lesions most ($|\Delta\mathrm{MTV}|$ 11.3\,\%, $|\Delta\mathrm{TLG}|$ 14.5\,\%).
 The losses only in IO lowered these changes to 8.7\,\% and 11.3\,\% at a cost of 1.9 Dice points, and the losses also in training to 7.9\,\% and 10.3\,\% at a cost of 2.9 points; after correction for multiple comparisons, none of these differences in preservation was significant.
