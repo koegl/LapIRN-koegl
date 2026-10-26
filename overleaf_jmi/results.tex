@@ -160,4 +160,10 @@ This agrees with the per-lesion analysis (Sec.~\ref{sect:res_lesions}), in which
 In the diagnostic run with provided lesion masks, the contribution of lesions that nnU-Net missed fell from 5.2 to 1.2 points of $|\Delta\mathrm{MTV}|$ and from 6.2 to 2.1 points of $|\Delta\mathrm{TLG}|$, and that of covered lesions from 3.3 to 0.9 and from 5.4 to 3.8 points.
 The near-zero overall change with provided masks does not mean that the lesions kept their volumes: if only the missed, partly covered, or covered lesions had changed, MTV would have changed by 1.2, 1.2, and 0.9 points, respectively. Some lesions therefore grew while others shrank, and their changes canceled in the scan total, which is what both the PET loss and the evaluation metric measure (see also Sec.~\ref{sect:res_lesions}).
 
+As a post-hoc attempt to increase lesion coverage, we combined the nnU-Net predictions with voxels above SUV 3 outside a 10-mm halo around predicted organs with physiological uptake, following the recall-biased approach of Dey and Dalca~\cite{dey2026registration}.
+On the moving test scans with lesions (mean over patients), lesion detection increased from 74\,\% to 91\,\%, while voxel-level precision fell from 0.71 to 0.22.
+Compared with IO using the nnU-Net mask, MTV change was 10.3\,\% instead of 9.3\,\%, TLG change was 12.5\,\% instead of 11.8\,\%, and CT Dice was 79.3\,\% instead of 78.6\,\%.
+None of these differences was significant.
+The per-lesion median was similar (13.5\,\% vs.\ 13.7\,\%).
+
 \input{figures/detection}
