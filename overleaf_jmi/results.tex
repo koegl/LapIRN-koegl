@@ -71,13 +71,15 @@ The remaining analyses examine why measured PET changes persist after loss-guide
 
 \subsection{Accuracy--Preservation Trade-off}
 \label{sect:res_tradeoff}
-We vary the PET-loss weights in IO to show how alignment and lesion preservation change together and whether stronger weights resolve the residual error.
-Figure~\ref{fig:tradeoff} varies the PET weights in IO on the network trained without the losses.
+In a post-hoc test-set sensitivity analysis, we vary the PET-loss weights in IO to show how alignment and lesion preservation change together and whether stronger weights resolve the residual error.
+Figure~\ref{fig:tradeoff} varies the PET weights in IO on the network trained without the losses without reselecting the method.
 Already the smallest factor ($\times10^{-4}$) lowered the volume change of the predicted lesion masks from 9.3\,\% (IO without the PET losses) to 2.1\,\% and that of the ground-truth lesions from 11.3\,\% to 9.3\,\%, without a loss in Dice (80.2\,\%); $|\Delta\mathrm{TLG}|$ fell from 14.5\,\% to 12.9\,\%.
 Larger factors reduced the change of the predicted masks further, to below 1\,\% from $\times0.01$ on, but not that of the ground-truth lesions (9.0 to 9.8\,\%), while Dice decreased steadily, to 78.6\,\% at $\times0.1$ and 78.0\,\% at $\times1$.
 Compared with the network output before IO (dashed), IO with the PET losses gained 3.2 Dice points and had slightly lower mean changes ($|\Delta\mathrm{MTV}|$ 9.3\,\% vs.\ 10.3\,\%, $|\Delta\mathrm{TLG}|$ 11.8\,\% vs.\ 12.5\,\% at $\times0.1$).
 Neither PET difference was significant (two-sided Wilcoxon signed-rank test, $p=0.17$ and $p=0.86$; lower for 14 and 13 of 26 patients).
-The factor chosen on the validation set ($\times0.1$) thus cost 1.6 Dice points more than $\times10^{-4}$ for the same volume change (9.3\,\%) and 1.1 points less uptake change (11.8\,\%).
+The original validation grid contained no nonzero factor below $\times0.1$.
+In this test-set sweep, the selected factor $\times0.1$ therefore cost 1.6 Dice points more than $\times10^{-4}$ for the same volume change (9.3\,\%) and 1.1 points less uptake change (11.8\,\%).
+Because this comparison was made on the test set, it does not justify replacing the validation-selected factor.
 On the predicted masks, $|\Delta\mathrm{TLG}|$ fell from 10.2\,\% to 5.2\,\% at $\times10^{-4}$ and to about 3\,\% from $\times0.1$ on.
 The same gap between the labels IO optimizes and the ground truth appeared for the organs: without the PET losses, IO reached 92.9\,\% Dice on the predicted organ labels but 80.2\,\% on the ground-truth labels, starting from 79.0\,\% and 75.5\,\% for the network output.
 

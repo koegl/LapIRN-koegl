@@ -37,7 +37,9 @@ The diagnostic run with provided lesion masks reduced the measured changes from 
 This supports mask quality as a major limit of scan-level preservation, but uptake change remains even with provided masks, and the result does not establish that segmentation explains all residual error.
 
 Because IO meets its objective on the predicted masks already at small weights, the PET weight mainly trades accuracy.
-A factor of $10^{-4}$ of the training-derived weights gave most of the preservation without a loss in Dice, whereas the factor chosen by the tuning on the validation set ($\times0.1$) cost 1.6 points more for the same volume change and 1.1 points less uptake change; the tuning grid contained no factor between 0 and $\times0.1$.
+In the post-hoc test-set sweep, a factor of $10^{-4}$ of the training-derived weights gave the same measured MTV change without a loss in Dice, whereas the validation-selected factor ($\times0.1$) cost 1.6 Dice points and gave 1.1 points lower TLG change.
+The original validation grid contained no nonzero factor below $\times0.1$, so the sweep reveals an unresolved part of the trade-off rather than a better selected setting.
+An expanded low-weight sweep on validation data, followed by independent confirmation, would be required before recommending a factor below $\times0.1$.
 Even with the ground-truth masks, a ten times larger weight hardly improved preservation.
 
 Mask coverage does not explain the second limit: aggregate MTV and TLG changes hide how individual lesions are deformed.

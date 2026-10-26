@@ -229,10 +229,16 @@ The stability of the ranks is shown by 95\,\% rank intervals over 1000 patient b
 \subsection{Tuning and Model Selection}
 \label{sect:tuning}
 
-All tuning used the validation set. For our IO settings and the choice of our method, we use one selection rule: among the candidates of a grid whose CT Dice is within two points of the most accurate one, we keep the one with the lowest $|\Delta\mathrm{MTV}|+|\Delta\mathrm{TLG}|$. We do not use the challenge ranking for this, because it is decided by accuracy: differences in Dice between candidates are consistently significant, differences in MTV and TLG rarely, so the ranking almost always keeps the most accurate candidate regardless of preservation. The baselines were tuned with the challenge ranking, ranking the candidates of each method's grid against each other.
+All tuning used the validation set.
+For our IO settings and the choice of our method, we use one selection rule: among the candidates of a grid whose CT Dice is within two points of the most accurate one, we keep the one with the lowest $|\Delta\mathrm{MTV}|+|\Delta\mathrm{TLG}|$.
+The two-point tolerance is a design choice that allows some alignment accuracy to be exchanged for lower PET change; it is not a clinically established threshold.
+We do not use the challenge ranking for this selection because it is decided by accuracy: differences in Dice between candidates are consistently significant, whereas differences in MTV and TLG rarely are, so the ranking almost always keeps the most accurate candidate regardless of preservation.
+The baselines were tuned with the challenge ranking, ranking the candidates of each method's grid against each other.
 \begin{itemize}
   \item \textbf{IO:} on the network trained with both losses, step-wise: first learning rate $\times$ iterations ($\{0.0125,0.025,0.05,0.1\}\times\{10,20,40\}$), then a common scale of the four PET weights ($\times\{0,0.1,0.25,0.5,1,2,4\}$ of the training-derived values); chosen: learning rate 0.025 with 40 iterations, and $\times0.1$ (Table~\ref{tab:io_tuning}).
-  Neither the selection rule nor the ranking rewards rigidity, which costs Dice without reducing the PET metrics or folding, so both would set $\lambda_{\mathrm{rig}}$ to zero; we fixed $\lambda_{\mathrm{rig}}=0.25$ instead.
+  Neither the selection rule nor the ranking rewards rigidity, which costs Dice without reducing the PET metrics or folding, so both would set $\lambda_{\mathrm{rig}}$ to zero.
+  We fixed $\lambda_{\mathrm{rig}}=0.25$ so that the selected method retained the bone-rigidity constraint evaluated in this study.
+  Its inclusion and numerical weight are therefore design choices rather than outputs of the selection rule.
   \item \textbf{NiftyReg}~\cite{MODAT2010,modat2014}: \texttt{reg\_aladin} followed by \texttt{reg\_f3d} on the GPU with normalized mutual information (local NCC is not available on the GPU), over the bending-energy weights $\{0.0002, 0.0005, 0.001, 0.005, 0.02\}$ and final control-point spacings of $\{3, 5, 7, 9\}$ voxels; chosen: $0.0002$ and 9 voxels.
   \item \textbf{ConvexAdam}~\cite{ref_convexadam}: after its own ANTs affine registration with a $[-300,300]$~HU CT window, over the regularization weight $\lambda\in\{0.1,0.25,0.5,1.25,2,4\}$; chosen: 0.1.
 \end{itemize}
@@ -265,7 +271,8 @@ The NiftyReg and ConvexAdam settings were selected on the validation pairs by th
 Runtimes are per pair on one NVIDIA RTX A6000 GPU and include the affine step.
 
 \paragraph{Accuracy--preservation trade-off.}
-On the network trained without the losses, IO with the PET terms (without rigidity) is run with all four PET weights scaled by $\{0,10^{-4},3\cdot10^{-4},0.001,0.003,0.01,0.03,0.1,0.3,1\}$ relative to the training-derived values; $\times0.1$ is the setting chosen by the IO tuning.
+As a post-hoc test-set sensitivity analysis, IO on the network trained without the losses is run with all four PET weights scaled by $\{0,10^{-4},3\cdot10^{-4},0.001,0.003,0.01,0.03,0.1,0.3,1\}$ relative to the training-derived values and without rigidity.
+The factor $\times0.1$ had already been selected from the original validation grid $\{0,0.1,0.25,0.5,1,2,4\}$ and is not reselected from this test-set sweep.
 Besides the evaluation on the ground-truth labels, we compute CT Dice, $|\Delta\mathrm{MTV}|$, and $|\Delta\mathrm{TLG}|$ on the predicted labels that IO optimizes, with the same definitions.
 To probe the effect of lesion-mask quality, we additionally rerun IO with the provided lesion masks instead of the predicted ones (organ labels remain predicted), at the tuned and full PET weights.
 This diagnostic run uses labels unavailable in the intended test-time setting.
