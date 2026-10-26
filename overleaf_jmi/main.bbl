@@ -86,6 +86,11 @@ Jakob Wasserthal, Hanns-Christian Breit, Manfred~T. Meyer \ldots Martin
   in {CT} images,'' {\em Radiology: Artificial Intelligence} {\bf 5}(5),
   e230024  (2023).
 
+\bibitem{ref_psma_dataset_article}
+Katharina Jeblick, Balthasar Schachtner, Andreas Mittermeier \ldots others, ``A
+  whole-body {PSMA-PET/CT} dataset with manually annotated tumor lesions,''
+  {\em Scientific Data} {\bf 13}, 1023  (2026).
+
 \bibitem{nnunet}
 Fabian Isensee, Paul~F. Jaeger, Simon A.~A. Kohl \ldots Klaus~H. Maier-Hein,
   ``nnu-net: a self-configuring method for deep learning-based biomedical image
@@ -161,5 +166,9 @@ Marc Modat, Gerard~R. Ridgway, Zeike~A. Taylor \ldots Sébastien Ourselin,
 Marc Modat, David~M. Cash, Pankaj Daga \ldots S{\'e}bastien Ourselin, ``{Global
   image registration using a symmetric block-matching approach},'' {\em Journal
   of Medical Imaging} {\bf 1}(2), 024003  (2014).
+
+\bibitem{dey2026registration}
+Neel Dey and Adrian~V. Dalca, ``Registration is a representation problem:
+  Solving whole-body pet/ct registration,''  (2026).
 
 \end{thebibliography}
