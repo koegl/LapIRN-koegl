@@ -33,7 +33,7 @@ On a held-out patient-level test set of the public PSMAReg data, with tuned Nift
   \item with the preservation losses, instance optimization improves alignment by about three Dice points without measurably increasing the lesion volume and uptake change, whereas without them it increases this change;
   \item applying the losses only during instance optimization is more accurate than also training with them, with no significant difference in preservation; without instance optimization, which is about 14 times faster, training with the losses reduces the change at a cost in accuracy;
   \item the remaining change comes mostly from lesions missed by the predicted lesion masks, and the scan-level MTV and TLG hide changes of individual lesions that neither provided masks nor per-lesion losses removed;
-  \item among three bone-rigidity penalties, a per-bone rigid fit preserves within-bone distances best, avoiding the boundary leakage and loss of skeleton of finite-difference penalties, but rigidity does not reduce the lesion change.
+  \item among three bone-rigidity penalties, a per-bone rigid fit yields the lowest within-bone distance distortion, avoiding the boundary leakage and loss of skeleton of finite-difference penalties; adding rigidity on top of the PET losses does not produce a detected further reduction in lesion-measurement change.
 \end{itemize}
 This is significant because registration can only be used for quantitative response assessment if its effect on lesion quantification is measured and controlled, not only its alignment accuracy; our results show how large this effect is, how it can be controlled without losing accuracy, and where scan-level preservation metrics fall short.
 

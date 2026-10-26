@@ -1,6 +1,9 @@
 \begin{table}[t]
 \centering
-\caption{Contribution of ground-truth lesions, grouped by how much of each lesion the predicted lesion mask seen by IO covers, to the volume and uptake change of the evaluation (test set; network trained without PET losses, IO with the PET weights scaled by the given factor). Contribution of a group: the change per scan if only the group's lesions changed and all other lesions kept their volume and uptake, in \%; mean over patients. All: the evaluation metric. Since changes of different lesions in a scan partly cancel, the contributions add up to slightly more.}
+\caption{Contribution of provided lesion components, grouped by how much of each component the predicted lesion mask seen by IO covers, to the volume and uptake change of the evaluation (test set; network trained without PET losses, IO with the PET weights scaled by the given factor).
+ Contribution of a group: the change per scan if only the group's lesions changed and all other lesions kept their volume and uptake, in \%; mean over patients.
+ All: the evaluation metric.
+ Since changes of different lesions in a scan partly cancel, the contributions add up to slightly more.}
 \label{tab:detection_contributions}
 \scriptsize
 \setlength{\tabcolsep}{3pt}

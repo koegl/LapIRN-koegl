@@ -71,7 +71,7 @@ Each sub-network has 24 base channels and a trunk of ten residual blocks with an
 \label{sect:io}
 At test time, the deformation of each pair is refined by optimizing a residual stationary velocity field, initialized at zero and integrated by scaling and squaring (seven steps), on top of the total transformation $\varphi$.
 The residual is optimized at full resolution with Adam~\cite{ref_adam} (learning rate $0.025$, 40 iterations).
-The objective is the same as in training (Sec.~\ref{sect:objective}), with the predicted labels in place of ground-truth labels.
+The objective is the same as in training (Sec.~\ref{sect:objective}), with the predicted labels in place of the provided labels.
 Of the 40 iterates, we return the one with the lowest objective, in which the interpolated (soft) MTV and TLG terms are replaced by their nearest-neighbor (hard) values, i.e.\ by how the evaluation counts them; this selection uses only predicted labels.
 
 \subsection{Registration Objective}
@@ -274,12 +274,12 @@ Runtimes are per pair on one NVIDIA RTX A6000 GPU and include the affine step.
 \paragraph{Accuracy--preservation trade-off.}
 As a post-hoc test-set sensitivity analysis, IO on the network trained without the losses is run with all four PET weights scaled by $\{0,10^{-4},3\cdot10^{-4},0.001,0.003,0.01,0.03,0.1,0.3,1\}$ relative to the training-derived values and without rigidity.
 The factor $\times0.1$ had already been selected from the original validation grid $\{0,0.1,0.25,0.5,1,2,4\}$ and is not reselected from this test-set sweep.
-Besides the evaluation on the ground-truth labels, we compute CT Dice, $|\Delta\mathrm{MTV}|$, and $|\Delta\mathrm{TLG}|$ on the predicted labels that IO optimizes, with the same definitions.
+Besides the evaluation on the provided labels, we compute CT Dice, $|\Delta\mathrm{MTV}|$, and $|\Delta\mathrm{TLG}|$ on the predicted labels that IO optimizes, with the same definitions.
 To probe the effect of lesion-mask quality, we additionally rerun IO with the provided lesion masks instead of the predicted ones (organ labels remain predicted), at the tuned and full PET weights.
 This diagnostic run uses labels unavailable in the intended test-time setting.
 
 \paragraph{Lesion coverage in predicted masks.}
-Each ground-truth lesion of the moving scan is assigned to a group by the fraction of its voxels covered by the predicted lesion mask: missed (0\,\%), partly covered ($<50\,\%$), or covered ($\geq50\,\%$).
+Each provided lesion component of the moving scan is assigned to a group by the fraction of its voxels covered by the predicted lesion mask: missed (0\,\%), partly covered ($<50\,\%$), or covered ($\geq50\,\%$).
 For each group, we report two quantities, both computed per scan as in Eq.~\eqref{eq:pet_error} and averaged over patients: the change within the group, using only the group's lesions, and the contribution of the group to the evaluation metric, i.e.\ the change if only the group's lesions changed and all other lesions kept their volume and uptake.
 Since changes of different lesions in a scan partly cancel, the contributions add up to slightly more than the evaluation metric.
 \paragraph{Per-lesion terms.}

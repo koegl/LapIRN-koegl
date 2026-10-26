@@ -6,7 +6,7 @@ Validation data are used only for choices made before test evaluation and are id
 Except where stated, IO uses predicted masks, while the reported alignment and PET-preservation metrics use the provided labels.
 We first ask whether the losses alter the balance between alignment and scan-level PET change, and whether they should act during training or only during IO.
 We then compare the selected configuration with baselines and investigate why residual scan-level and per-lesion changes remain.
-Finally, we evaluate bone-rigidity penalties as an additional PET-preservation strategy and as a constraint on anatomically plausible bone deformation.
+Finally, we evaluate bone-rigidity penalties as an additional PET-preservation strategy and as a constraint on within-bone geometry.
 
 \subsection{Effect of the PET-Preservation and Rigidity Losses}
 \label{sect:res_q1}
@@ -74,15 +74,15 @@ The remaining analyses examine why measured PET changes persist after loss-guide
 \label{sect:res_tradeoff}
 In a post-hoc test-set sensitivity analysis, we vary the PET-loss weights in IO to show how alignment and lesion preservation change together and whether stronger weights resolve the residual error.
 Figure~\ref{fig:tradeoff} varies the PET weights in IO on the network trained without the losses without reselecting the method.
-Already the smallest factor ($\times10^{-4}$) lowered the volume change of the predicted lesion masks from 9.3\,\% (IO without the PET losses) to 2.1\,\% and that of the ground-truth lesions from 11.3\,\% to 9.3\,\%, without a loss in Dice (80.2\,\%); $|\Delta\mathrm{TLG}|$ fell from 14.5\,\% to 12.9\,\%.
-Larger factors reduced the change of the predicted masks further, to below 1\,\% from $\times0.01$ on, but not that of the ground-truth lesions (9.0 to 9.8\,\%), while Dice decreased steadily, to 78.6\,\% at $\times0.1$ and 78.0\,\% at $\times1$.
+Already the smallest factor ($\times10^{-4}$) lowered the volume change of the predicted lesion masks from 9.3\,\% (IO without the PET losses) to 2.1\,\% and that of the provided lesions from 11.3\,\% to 9.3\,\%, while mean Dice remained 80.2\,\%; $|\Delta\mathrm{TLG}|$ fell from 14.5\,\% to 12.9\,\%.
+Larger factors reduced the change of the predicted masks further, to below 1\,\% from $\times0.01$ on, but not that of the provided lesions (9.0 to 9.8\,\%), while Dice decreased steadily, to 78.6\,\% at $\times0.1$ and 78.0\,\% at $\times1$.
 Compared with the network output before IO (dashed), IO with the PET losses gained 3.2 Dice points and had slightly lower mean changes ($|\Delta\mathrm{MTV}|$ 9.3\,\% vs.\ 10.3\,\%, $|\Delta\mathrm{TLG}|$ 11.8\,\% vs.\ 12.5\,\% at $\times0.1$).
 Neither PET difference was significant (two-sided Wilcoxon signed-rank test, $p=0.17$ and $p=0.86$; lower for 14 and 13 of 26 patients).
 The original validation grid contained no nonzero factor below $\times0.1$.
 In this test-set sweep, the selected factor $\times0.1$ therefore cost 1.6 Dice points more than $\times10^{-4}$ for the same volume change (9.3\,\%) and 1.1 points less uptake change (11.8\,\%).
 Because this comparison was made on the test set, it does not justify replacing the validation-selected factor.
 On the predicted masks, $|\Delta\mathrm{TLG}|$ fell from 10.2\,\% to 5.2\,\% at $\times10^{-4}$ and to about 3\,\% from $\times0.1$ on.
-The same gap between the labels IO optimizes and the ground truth appeared for the organs: without the PET losses, IO reached 92.9\,\% Dice on the predicted organ labels but 80.2\,\% on the ground-truth labels, starting from 79.0\,\% and 75.5\,\% for the network output.
+The same gap between the labels IO optimizes and the provided labels appeared for the organs: without the PET losses, IO reached 92.9\,\% Dice on the predicted organ labels but 80.2\,\% on the provided labels, starting from 79.0\,\% and 75.5\,\% for the network output.
 
 In the diagnostic run with provided lesion masks (black diamonds), the measured changes fell from 9.3\,\% to 0.1\,\% for MTV and from 11.8\,\% to 4.5\,\% for TLG at the tuned factor; Dice rose from 78.6\,\% to 79.1\,\%.
 At $\times1$, the changes were similar (0.2\,\% MTV, 4.0\,\% TLG; 78.6\,\% Dice), so a larger weight hardly reduced the remaining uptake change even with provided masks.
@@ -130,7 +130,7 @@ The PET losses (blue) acted in both locations, already without IO (squares), and
 With both groups (purple), bone-associated lesions changed by 14\,\%, 9\,\%, and 6\,\%, similar to the PET losses alone; only for large bone-associated lesions, the rigidity loss alone changed them less (5\,\%).
 With the losses, IO did not reduce the per-lesion change below that of the network output (circles vs.\ squares of the same color), while no scan-level preservation difference was detected either (Sec.~\ref{sect:res_q1}).
 The PET losses in IO penalize the change in the total volume and uptake of the predicted lesion mask, so the growth of some lesions can offset the shrinkage of others.
-Even with the ground-truth lesion masks in IO, which lowered the scan-level $|\Delta\mathrm{MTV}|$ to 0.1\,\% (Sec.~\ref{sect:res_tradeoff}), the median per-lesion change was 13.5\,\%, as with the predicted masks (13.7\,\%).
+Even with the provided lesion masks in IO, which lowered the scan-level $|\Delta\mathrm{MTV}|$ to 0.1\,\% (Sec.~\ref{sect:res_tradeoff}), the median per-lesion change was 13.5\,\%, as with the predicted masks (13.7\,\%).
 
 We next tested whether terms on individual predicted components could prevent this cancellation in the intended test-time setting.
 On the validation set, the selection chose ten times the base weight and reduced the median per-lesion $|\Delta\mathrm{MTV}|$ from 12.5\,\% to 11.3\,\%.
@@ -168,8 +168,8 @@ With erosion, the Staring penalty barely changed the distortion even at $\times1
 Within the two-point tolerance, the selection chose $\times3$ for Staring and the largest grid value, $\times100$, for the other two penalties.
 
 On the test set, Fig.~\ref{fig:rigidity_measures}a shows each rigidity measure as a percentage of its value with IO without rigidity (dashed line at 100\,\%).
-Each penalty was best on the measure it optimizes: the rigid fit lowered the rigid-fit residual to 53\,\%, Staring the Staring energy to 18\,\%.
-On the distance distortion, which neither penalty optimizes, the rigid fit was best, with 41\,\% (short) and 42\,\% (long) of the distortion without rigidity, compared with 47\,\% and 73\,\% for Staring and 69\,\% and 80\,\% for Staring with erosion.
+Each penalty produced the lowest value for the measure it optimizes: the rigid fit lowered the rigid-fit residual to 53\,\%, and Staring lowered the Staring energy to 18\,\%.
+On the distance distortion, which neither penalty optimizes, the rigid fit produced the lowest values: 41\,\% (short) and 42\,\% (long) of the distortion without rigidity, compared with 47\,\% and 73\,\% for Staring and 69\,\% and 80\,\% for Staring with erosion.
 Fig.~\ref{fig:rigidity_measures}b shows the cost in alignment: the rigid fit and Staring lowered CT Dice by 1.6 and 2.0 points and bone Dice by about 4 points, whereas soft-tissue Dice was unchanged with Staring and rose by 0.9 points with the rigid fit; Staring with erosion cost almost no Dice but also constrained the bones least.
 
 In absolute terms (Table~\ref{tab:rigidity_full}, Appendix~F), the rigid fit reduced the short-distance distortion from 13.4\,\% to 5.0\,\% and the long-distance distortion from 4.4\,\% to 1.8\,\%; all three penalties improved every rigidity measure significantly over IO without rigidity, and all pairwise differences in distortion between the penalties were significant.

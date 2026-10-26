@@ -30,7 +30,7 @@ Our contributions are:
 \begin{itemize}
   \item a controlled comparison of where PET-preservation and rigidity losses act (network training, IO, or both), showing that loss-guided IO improves alignment without a detected increase in scan-level MTV or TLG change relative to network output, and that applying the losses only in IO gives higher alignment accuracy than using them at both stages;
   \item an analysis of the remaining change, showing that missed lesions account for most of the residual scan-level PET change in the mask-coverage analysis, while scan-level MTV and TLG hide substantial changes to individual lesions even when provided masks are used;
-  \item a comparison of rigidity penalties for whole-body CT, showing that a per-bone rigid fit avoids the boundary leakage of finite-difference penalties and the loss of skeleton under erosion, and preserves within-bone distances best;
+  \item a comparison of rigidity penalties for whole-body CT, showing that a per-bone rigid fit avoids the boundary leakage of finite-difference penalties and the loss of skeleton under erosion, and yields the lowest within-bone distance distortion among the tested penalties;
   \item a patient-level evaluation with the official challenge scorer, a selection rule that weighs preservation against a fixed Dice tolerance, and tuned NiftyReg and ConvexAdam baselines.
 \end{itemize}
 

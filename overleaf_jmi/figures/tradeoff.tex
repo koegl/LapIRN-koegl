@@ -2,11 +2,11 @@
 \centering
 \includegraphics[width=\textwidth]{figures/tradeoff.pdf}
 \caption{Effect of the PET loss weight in IO (test set): network trained without PET losses (T1) followed by IO with all PET weights scaled by the given factor (0: PET losses off; 1: the PET weights of network training).
- Each metric on the predicted labels that IO optimizes (orange; organs: TotalSegmentator, lesions: nnU-Net) and on the ground-truth labels used for evaluation (blue).
+ Each metric on the predicted labels that IO optimizes (orange; organs: TotalSegmentator, lesions: nnU-Net) and on the provided labels used for evaluation (blue).
  Dice over all 28 patients, lesion volume and uptake change over the 26 patients with lesions in both label sets.
  Solid: after IO; dashed: network output before IO, the same for every factor.
  Outlined point and dotted line: operating point tuned on the validation set.
- Black diamonds: IO with the ground-truth instead of the predicted lesion masks (at $\times0.1$ and $\times1$), evaluated on the ground-truth labels.
+ Black diamonds: IO with the provided instead of the predicted lesion masks (at $\times0.1$ and $\times1$), evaluated on the provided labels.
  Points: patient means; bands: 95\,\% patient-bootstrap confidence intervals.}
 \label{fig:tradeoff}
 \end{figure}
