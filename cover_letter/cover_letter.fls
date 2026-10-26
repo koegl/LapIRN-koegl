@@ -3,7 +3,7 @@ INPUT /etc/texmf/web2c/texmf.cnf
 INPUT /usr/share/texmf/web2c/texmf.cnf
 INPUT /usr/share/texlive/texmf-dist/web2c/texmf.cnf
 INPUT /var/lib/texmf/web2c/pdftex/pdflatex.fmt
-INPUT /home/iml/fryderyk.koegl/code/LapIRN-koegl/cover_letter/cover_letter.tex
+INPUT cover_letter.tex
 OUTPUT cover_letter.log
 INPUT /usr/share/texlive/texmf-dist/tex/latex/base/letter.cls
 INPUT /usr/share/texlive/texmf-dist/tex/latex/base/letter.cls
