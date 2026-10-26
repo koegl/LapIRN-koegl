@@ -7,6 +7,7 @@ Registering each follow-up to the baseline makes it possible to compare tumor bu
 For these uses, a registration must do two things at once: it has to align the anatomy, and it must not itself change the PET-derived quantities that are compared across time points.
 Two such quantities are the metabolic tumor volume (MTV) and the total lesion glycolysis (TLG).
 A deformation that compresses or stretches a lesion changes both, so a change measured after registration can be an artifact of the registration rather than of the disease.
+When the registered follow-up is used to match lesions or compare them with baseline, such processing-induced changes could be mistaken for part of the longitudinal change and could therefore affect lesion tracking or response assessment.
 The Learn2Reg 2026 PSMAReg challenge~\cite{ref_learn2reg_hansen,ref_learn2reg_alessa,ref_psmaregdata} formalizes this setting: each follow-up scan is warped to its baseline by a dense displacement field, which is scored on organ overlap, boundary distance, folding, and the change of MTV and TLG caused by the warp.
 The two goals can compete: limiting deformation may protect lesion measurements while leaving the anatomy misaligned, whereas improving alignment may distort the lesions being measured.
 

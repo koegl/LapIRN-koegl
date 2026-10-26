@@ -6,7 +6,8 @@ Re-reviewed 2026-10-25 after the corrected `align_corners` evaluations, using `m
 
 **JMI fit.** The supplied papers use a structured Purpose / Approach / Results / Conclusions abstract and lead from an imaging problem to a gap, method, quantitative evidence, practical meaning, and limitations. This draft has those components, but many ablations, tuning details, and appendix-scale results obscure the main decision. Give the clinical measurement problem and recommended operating point priority; use the ablations and rigidity analysis to explain its limits. Check live special-issue rules separately at submission (#29).
 
-## Story and claims — highest priority
+<details open>
+<summary><strong>Story and claims — highest priority</strong></summary>
 
 1. [x] **#01 — Reopen the thesis and through-line after the scorer correction.** The earlier story was implemented, but the abstract's “without increasing” is stronger than the paired intervals establish. “Lesion masks and per-lesion evaluation limit further preservation” conflates a limitation with a way to reveal it. State one bounded thesis across Abstract, Introduction, Results, Discussion, and Conclusion: loss-guided IO improves alignment while holding *measured scan-level* PET change near network output; individual-lesion change remains. Decide whether the negative per-lesion and soft-loss results merit abstract space (`main.tex`).
 
@@ -14,7 +15,7 @@ Re-reviewed 2026-10-25 after the corrected `align_corners` evaluations, using `m
 
 3. [x] **#03 — Make the Results sequence answer a few connected questions.** The sequence now moves from Q1 (do losses change the trade-off?) to Q2 (training or IO?), the baseline comparison, and analyses of the remaining limitations: weight sweep and supplied-mask diagnostic → mask coverage and recall-biased-mask experiment → per-lesion ceiling and failed per-lesion-loss experiment → leave-one-out explanation of the surrogate mismatch. Rigidity closes the section as a separate anatomical question. The opening now distinguishes the main test results from explicitly identified validation analyses (`results.tex`).
 
-4. [ ] **#04 — Make the clinical use case concrete without claiming benefit.** Explain why registration-induced change in the same follow-up scan could matter for lesion tracking or response assessment. If no defensible consequential-error threshold exists, say so. This study measures registration-induced change and label-based alignment, not downstream decisions or outcomes (`introduction.tex`, `discussion.tex`).
+4. [x] **#04 — Make the clinical use case concrete without claiming benefit.** The Introduction now explains that deformation-induced changes in the registered follow-up could be mistaken for longitudinal change during lesion tracking or response assessment. The Discussion clarifies that the endpoints compare the same acquisition before and after warping and interprets them as technical fidelity measures rather than demonstrated clinical benefit (`introduction.tex`, `discussion.tex`).
 
 5. [x] **#05 — Distinguish the extension from the Learn2Reg paper.** The draft explains the additions and qualifies that its held-out split belonged to earlier challenge development. Keep that qualification if the experiment inventory changes (`introduction.tex`, `methods.tex`, `discussion.tex`).
 
@@ -22,7 +23,10 @@ Re-reviewed 2026-10-25 after the corrected `align_corners` evaluations, using `m
 
 7. [x] **#07 — Separate two preservation limits.** Results and Discussion now distinguish incomplete mask coverage as a limit on scan-level preservation from cancellation between lesions as a limit of scan-level aggregation. They separately identify mismatch between the optimized soft quantities and evaluated nearest-neighbor metrics. Provided masks lower scan-level MTV change to 0.1% while median per-lesion change remains 13.5%; the tested per-lesion terms change the test median only from 13.7% to 13.3% and help 5/26 patients. The recall-biased mask result is presented as a failed attempt to improve preservation by increasing coverage (`results.tex`, `discussion.tex`).
 
-## Design, methods, and interpretation
+</details>
+
+<details open>
+<summary><strong>Design, methods, and interpretation</strong></summary>
 
 8. [ ] **#08 — Resolve PSMA biomarker terminology with nuclear-medicine coauthors.** MTV and especially “total lesion glycolysis” are challenge names, while this study measures PSMA uptake rather than FDG glucose metabolism. Explain that at first use and consider a clinically accurate parallel term while keeping challenge labels for reproducibility (`main.tex`, `methods.tex`).
 
@@ -44,7 +48,10 @@ Re-reviewed 2026-10-25 after the corrected `align_corners` evaluations, using `m
 
 17. [ ] **#17 — State the practical cost of each option.** Network output takes about 11 s per pair and IO adds about 2.5 min on the stated GPU. In one concise paragraph or figure, connect runtime, Dice, scan-level PET change, and need for predicted lesion masks. The right operating point depends on per-pair time budget (`results.tex`, `discussion.tex`).
 
-## Language, figures, and presentation
+</details>
+
+<details open>
+<summary><strong>Language, figures, and presentation</strong></summary>
 
 18. [ ] **#18 — Rebuild the abstract from final comparisons and meet JMI's 250-word limit.** The current structured abstract is about 321 words, excluding the baseline TODO. Name the configuration and denominator for each number; keep comparison sets coherent and qualify PET uncertainty. Baseline numbers are flagged for re-tuning, “similar MTV and TLG change” lacks scale, and “without increasing” is too strong. Compress secondary per-lesion/rigidity details if needed after fixing the main claim (`main.tex`).
 
@@ -62,7 +69,10 @@ Re-reviewed 2026-10-25 after the corrected `align_corners` evaluations, using `m
 
 25. [ ] **#25 — Make Discussion interpret rather than replay Results.** Open with the bounded IO decision, explain the three preservation limits and clinical relevance, then treat rigidity as a separate anatomical finding. Finish with one qualified recommendation and need for downstream validation. The current conclusion has five result sentences plus a denominator sentence that belongs in Methods (`discussion.tex`).
 
-## Completion and JMI-facing checks
+</details>
+
+<details open>
+<summary><strong>Completion and JMI-facing checks</strong></summary>
 
 26. [ ] **#26 — Finish outstanding evidence and freeze the operating point.** Rigidity and per-lesion tests are now present. Finish baseline re-tuning, decide whether the chosen IO weight remains defensible after the tiny-weight sweep, and verify affected figures, tables, appendices, and qualitative panels. Include the early-stopping check only with its motivating training curves. Label post-hoc test observations as such; use validation evidence for any new recommendation.
 
@@ -84,7 +94,10 @@ Re-reviewed 2026-10-25 after the corrected `align_corners` evaluations, using `m
 
 35. [x] **#35 — Reconcile `findings.md` with the corrected paper.** The file is now a current evidence checklist using corrected values. Every bullet has a checkbox, manuscript content and resolved omissions are checked, and the final baseline update and whole-paper consistency pass remain unchecked. Historical pre-correction mask, align-corners, recall-mask, and interior-only rigidity results are identified as superseded and retained only through source references (`findings.md`).
 
-## JMI submission checklist — revisit immediately before submission
+</details>
+
+<details open>
+<summary><strong>JMI submission checklist — revisit immediately before submission</strong></summary>
 
 Source: the JMI **“Before submitting”** and **“Preparing Manuscript”** author-guideline PDFs supplied on 2026-10-26 ([JMI author guidelines](https://www.spiedigitallibrary.org/journals/journal-of-medical-imaging/author-guidelines)). The two supplied **“Manuscript Guidelines and Policies”** PDFs are identical copies of the *Proceedings of SPIE* instructions; their page lengths, margins, lack of page numbers, and other proceedings rules do not apply here. The JMI-specific webpage takes priority where it differs from the general SPIE LaTeX template. These are submission checks, not additional scientific experiments.
 
@@ -111,3 +124,5 @@ Source: the JMI **“Before submitting”** and **“Preparing Manuscript”** a
 46. [ ] **#46 — Verify disclosures, access statements, and references.** Keep a Disclosures section before Acknowledgments and a Code, Data, and Materials Availability section immediately after Disclosures. Confirm all funding bodies/grant numbers, AI-tool names and uses, repository access and license (#27). Check complete bibliographic details and DOIs where available; exact reference style will be copyedited after acceptance.
 
 47. [ ] **#47 — Complete the submission-form-only details and final policy check.** Prepare CRediT roles (#37), any optional plain-language summary (maximum 200 words; enter it in the form, not the PDF), and verify rights/permissions and final coauthor approval. Re-read the JMI guidelines, special-section call, and submission form just before submission; optional paid/free precheck services listed by JMI are not requirements.
+
+</details>

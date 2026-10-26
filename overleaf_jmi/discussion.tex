@@ -67,6 +67,9 @@ A closer surrogate or a reduced set of terms would require selection on validati
 The significance-based ranking of the challenge was decided mainly by accuracy: differences in alignment between methods are consistent across patients and reach significance, whereas differences in MTV and TLG vary strongly between patients and rarely do.
 On the validation set, the ranking would consequently have chosen our variant without any of the losses; we therefore selected our method with a rule that weighs preservation within a fixed Dice tolerance (Sec.~\ref{sect:tuning}).
 Preservation metrics should therefore be read together with anatomical alignment; neither higher CT Dice nor lower MTV/TLG change alone establishes which registration is more useful for a clinical task.
+The MTV and TLG endpoints compare the same follow-up acquisition before and after warping, so they isolate change introduced by registration rather than biological change between examinations.
+This study does not define or validate a threshold at which such change alters lesion tracking, response classification, or another clinical decision.
+The reported differences should therefore be interpreted as technical fidelity measures rather than demonstrated clinical benefit.
 The scan-level MTV and TLG changes are also an incomplete measure of preservation: they sum over all lesions of a scan, so a lesion that grows can cancel one that shrinks.
 With provided lesion masks, IO reduced the scan-level volume change to 0.1\,\%, although single lesions still changed by a median of 13.5\,\%; a near-zero scan-level change therefore does not show that each lesion was preserved.
 Per-lesion changes, which do not cancel between lesions, should complement the scan-level metrics, in particular for tasks that follow individual lesions, such as lesion-level response assessment.
