@@ -24,7 +24,7 @@ The label-guided IO studied here uses predicted organ and lesion masks for each 
 In IO, the PET-preservation losses act on the predicted lesion mask.
 Lesions missing from this mask are therefore not directly constrained.
 
-In previous work, we developed a registration pipeline for the PSMAReg challenge that combines an affine pre-registration, LapIRN, and IO with PET-preservation and per-bone rigidity losses~\cite{ref_koegl_arxiv}.
+In previous work, we developed a registration framework for the PSMAReg challenge that combines an affine pre-registration, LapIRN, and IO with PET-preservation and per-bone rigidity losses~\cite{ref_koegl_arxiv}.
 There, selected configurations were evaluated on the challenge validation cases using surrogate labels.
 In this extension, we retrain on a new patient-level split of the publicly released, labeled training data of the PSMAReg challenge~\cite{ref_psmareg_challenge,ref_psmaregdata} and reserve 28 patients for final evaluation.
 The 28 patients form a held-out internal test set for the present analyses, not an independent external cohort.
@@ -51,7 +51,7 @@ The main contributions are:
 \includegraphics[width=\linewidth]{figures/overview.png}
 \end{center}
 \caption{\label{fig:pipeline}
-Our proposed registration pipeline.
+Our proposed registration framework.
 The follow-up (moving) and baseline (fixed) PET/CT images are aligned by an affine pre-registration, then by the LapIRN network, which predicts a dense deformation.
 Instance optimization (IO) refines this deformation per pair before the moving image is resampled into the fixed frame.
 Network training and IO use the same groups of loss terms: registration accuracy, bone rigidity, PET quantification, and deformation regularization (Sec.~\ref{sect:objective}).

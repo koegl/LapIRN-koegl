@@ -51,19 +51,19 @@ For a PET image $P$ in SUV, binary lesion mask $M$, and voxel volume $v$, they a
   \mathrm{TLG}(P,M) = v\sum_x P(x)M(x).
   \label{eq:pet_measures}
 \end{equation}
-Both quantities are computed on the same moving image before and after warping it to the fixed frame.
+Both quantities are computed on the same moving image before and after warping it to the fixed-image grid.
 Following the challenge scorer, PET and the lesion mask are warped using nearest-neighbor interpolation.
-The reported preservation error for $Q\in\{\mathrm{MTV},\mathrm{TLG}\}$ is its absolute relative change,
+The reported preservation error for $Q\in\{\mathrm{MTV},\mathrm{TLG}\}$ is the absolute value of its relative change:
 \begin{equation}
   |\Delta Q| = \frac{|Q_{\mathrm{after}} - Q_{\mathrm{before}}|}{\max(Q_{\mathrm{before}},10^{-6})}.
   \label{eq:pet_error}
 \end{equation}
-This measures change induced by registration, not change in disease burden between sessions.
+This measures change induced by registration, rather than changes in disease burden between sessions.
 
-\subsection{Registration Pipeline}
+\subsection{Registration Framework}
 \label{sect:pipeline}
 
-The pipeline (Fig.~\ref{fig:pipeline}) has three stages, all estimated from the moving image $(C_m, P_m)$ and the fixed image $(C_f, P_f)$, where $C$ denotes CT and $P$ PET.
+The framework (Fig.~\ref{fig:pipeline}) has three stages, all estimated from the moving image $(C_m, P_m)$ and the fixed image $(C_f, P_f)$, where $C$ denotes CT and $P$ PET.
 We denote the affine sampling transform by $\varphi_{\mathrm{aff}}$, the network sampling transform by $\varphi_\theta$, and their composition by $\varphi$.
 For each location $x$ on the fixed grid, $\varphi(x)$ gives the location sampled in the original moving image: the warped image is $\widetilde C_m(x)=C_m(\varphi(x))$, and the same convention applies to PET and labels.
 
