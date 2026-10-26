@@ -6,7 +6,7 @@ Re-reviewed 2026-10-25 after the corrected `align_corners` evaluations, using `m
 
 **JMI fit.** The supplied papers use a structured Purpose / Approach / Results / Conclusions abstract and lead from an imaging problem to a gap, method, quantitative evidence, practical meaning, and limitations. This draft has those components, but many ablations, tuning details, and appendix-scale results obscure the main decision. Give the clinical measurement problem and recommended operating point priority; use the ablations and rigidity analysis to explain its limits. Check live special-issue rules separately at submission (#29).
 
-<details open>
+<details closed>
 <summary><strong>Story and claims — highest priority</strong></summary>
 
 1. [x] **#01 — Reopen the thesis and through-line after the scorer correction.** The earlier story was implemented, but the abstract's “without increasing” is stronger than the paired intervals establish. “Lesion masks and per-lesion evaluation limit further preservation” conflates a limitation with a way to reveal it. State one bounded thesis across Abstract, Introduction, Results, Discussion, and Conclusion: loss-guided IO improves alignment while holding *measured scan-level* PET change near network output; individual-lesion change remains. Decide whether the negative per-lesion and soft-loss results merit abstract space (`main.tex`).
@@ -46,7 +46,7 @@ Re-reviewed 2026-10-25 after the corrected `align_corners` evaluations, using `m
 
 16. [x] **#16 — Fix the bone-distance metric description.** `methods.tex` says point pairs come from an “eroded mask,” but `Code/bone_metrics.py` passes the whole bone mask to `distance_distortion`; erosion is measured separately. Correct this concrete mismatch and check rigidity captions/appendices. Keep bone-associated lesions distinct from bone-rigidity metrics.
 
-17. [ ] **#17 — State the practical cost of each option.** Network output takes about 11 s per pair and IO adds about 2.5 min on the stated GPU. In one concise paragraph or figure, connect runtime, Dice, scan-level PET change, and need for predicted lesion masks. The right operating point depends on per-pair time budget (`results.tex`, `discussion.tex`).
+17. [x] **#17 — State the practical cost of each option.** Discussion now contrasts network-only registration (about 11 s per pair and only images at inference) with loss-guided IO (predicted organ and lesion masks plus about 2.5 min). It connects that cost to the 2.9-Dice-point gain over the same network output and the unresolved paired MTV/TLG differences, then identifies network output as the faster option when masks or refinement time are unavailable (`results.tex`, `discussion.tex`).
 
 </details>
 

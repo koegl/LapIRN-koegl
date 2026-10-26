@@ -9,11 +9,15 @@ The remaining scan-level change arose largely from lesions missed by the predict
 Bone-rigidity penalties addressed a separate anatomical aim: preserving within-bone geometry.
 
 \subsection{Choosing Where to Apply the Losses}
-Which placement to choose depends on the time budget and on the availability of predicted organ and lesion masks for IO.
-If IO is affordable, about 2.5 minutes per pair on our GPU, the network can be trained for accuracy alone and the losses applied during refinement.
-Compared with training and IO with both loss groups, this gained 1.0 Dice points.
+Network-only registration takes about 11~s per pair on our GPU and requires only the image pair at inference.
+Loss-guided IO additionally requires predicted organ and lesion masks and about 2.5~minutes per pair.
+Relative to the same network output, it gained 2.9 Dice points, while the paired changes were $-1.7$ points for $|\Delta\mathrm{MTV}|$ and $-1.2$ points for $|\Delta\mathrm{TLG}|$.
+No difference was detected for either PET measure.
+Loss-guided IO therefore offers additional alignment when the masks and per-pair runtime are available, whereas network output provides the faster option.
+
+Among the IO variants, applying the losses only during refinement gained 1.0 Dice points compared with using them during training and IO.
 The paired intervals still allow worse MTV or TLG preservation with IO-only placement, so the result supports an accuracy gain but leaves the preservation trade-off uncertain.
-Without IO, the network alone registers a pair in 11~s, and training with the losses lowered the mean registration-induced changes in lesion volume and uptake; only the MTV reduction was detected after correction.
+Without IO, training with the losses lowered the mean registration-induced changes in lesion volume and uptake; only the MTV reduction was detected after correction.
 The training losses are therefore not superseded by IO, but they serve a different setting, e.g.\ fast registration of many follow-up examinations.
 
 One possible explanation for the IO-only result is how each stage locates lesions.
