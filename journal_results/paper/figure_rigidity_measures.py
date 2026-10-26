@@ -37,6 +37,7 @@ ACCURACY = {"dice_ct": "CT", "bone_dice": "Bone", "soft_dice": "Soft tissue"}
 N_BOOTSTRAP = 2000
 SEED = 0
 DODGE = 0.22
+PENALTY_MARKERS = ("o", "s", "^")
 TEXT = "#0b0b0b"
 MUTED = "#52514e"
 
@@ -80,7 +81,7 @@ def main() -> None:
                     x,
                     mean,
                     yerr=[[mean - lo], [hi - mean]],
-                    fmt="o",
+                    fmt=PENALTY_MARKERS[k],
                     markersize=4,
                     color=COLORS[run],
                     elinewidth=0.9,
@@ -116,8 +117,8 @@ def main() -> None:
     axes[1].set_title("(b) Alignment", fontsize=8, loc="left")
 
     handles = [
-        Line2D([], [], color=COLORS[r], marker="o", markersize=4, linestyle="")
-        for r in penalties
+        Line2D([], [], color=COLORS[r], marker=PENALTY_MARKERS[k], markersize=4, linestyle="")
+        for k, r in enumerate(penalties)
     ]
     handles.append(Line2D([], [], color=MUTED, linewidth=0.8, linestyle=(0, (4, 2))))
     fig.legend(
@@ -137,7 +138,11 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/rigidity_measures.pdf}}
-\caption{{Rigidity penalties evaluated with all rigidity measures ({rigidity.split_label()}, {n} patients): network trained with the PET losses, IO with the PET terms and one rigidity penalty at the weight chosen on the validation set. (a)~Rigidity of bones relative to IO without rigidity (dashed, 100\,\%), per patient: residual of a rigid fit to each bone (the quantity the rigid-fit penalty minimizes), Staring energy, i.e.\ the Staring penalty (properness, orthonormality, and affinity) on the whole bone (the quantity the Staring penalty minimizes), and the distortion of short (5--15~mm) and long ($\geq$15~mm) within-bone distances (minimized by neither). (b)~Change of CT, bone, and soft-tissue Dice relative to IO without rigidity. Points: patient means; bars: 95\,\% patient-bootstrap confidence intervals.}}
+\caption{{Rigidity penalties evaluated with all rigidity measures on the test set ({n} patients, 38 pairs): network trained with the PET losses, followed by instance optimization (IO) with the PET terms and one rigidity penalty at the weight chosen on the validation set.
+(a)~Rigidity of bones relative to IO without rigidity (dashed, 100\,\%): residual of a rigid fit to each bone, Staring energy (properness, orthonormality, and affinity) on the whole bone, and distortion of short (5--15~mm) and long ($\geq15$~mm) within-bone distances.
+(b)~Change of CT, bone, and soft-tissue Dice relative to IO without rigidity.
+Color and marker shape identify the rigidity penalty.
+Points are means over patients after averaging each patient's pairs; bars are 95\,\% patient-bootstrap confidence intervals.}}
 \label{{fig:rigidity_measures}}
 \end{{figure}}
 """

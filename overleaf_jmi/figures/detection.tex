@@ -1,8 +1,10 @@
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/detection.pdf}
-\caption{Lesion volume and uptake change of all 1435 lesions in 26 test patients (30 pairs), including components smaller than five voxels, grouped by how much of each lesion the predicted lesion mask seen by IO covers: missed (214 lesions, 6\,\% of volume), partly covered (155 lesions, 6\,\% of volume), covered (1066 lesions, 88\,\% of volume).
- Network trained without PET losses; IO with the PET weights scaled by the given factor. Left: change within each group (per scan, the change of the summed volume or uptake of the group's lesions; mean over the patients with lesions in the group); gray dashed: all lesions, i.e.\ the evaluation metric.
- Right: contribution of each group to the evaluation metric (the change per scan if only the group's lesions changed; mean over patients); gray ticks: the evaluation metric, below the stacked total because changes of different lesions in a scan partly cancel.}
+\caption{Registration-induced metabolic tumor volume (MTV) and total lesion glycolysis (TLG) change of all 1435 provided lesion components in 26 test patients (30 pairs), including components smaller than five voxels, grouped by coverage from the predicted lesion mask used by instance optimization (IO): missed (214 lesions, 6\,\% of volume), partly covered (155 lesions, 6\,\%), and covered (1066 lesions, 88\,\%).
+ The network is trained without PET losses; IO uses the PET weights scaled by the stated factor.
+ Colors identify coverage groups.
+ Left: absolute change within each group, computed per scan from the group's summed volume or uptake and averaged over patients with lesions in that group; gray dashed: all lesions, the evaluation metric.
+ Right: contribution of each group to the scan-level evaluation metric, averaged over patients; gray ticks show the evaluation metric and lie below the stacked total when opposing lesion changes cancel.}
 \label{fig:detection}
 \end{figure}

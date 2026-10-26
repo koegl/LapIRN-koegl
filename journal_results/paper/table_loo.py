@@ -56,9 +56,15 @@ def main() -> None:
 
     n = len(patients[REFERENCE[0]])
     n_pet = patients[REFERENCE[0]]["mtv_bias"].notna().sum()
+    pair_rows = common.load_run(REFERENCE[0])
+    n_pairs = len(pair_rows)
+    n_pet_pairs = pair_rows["mtv_bias"].notna().sum()
     tex = rf"""\begin{{table}}[t]
 \centering
-\caption{{Contribution of each PET term in IO (test set; CT Dice: {n} patients, PET: {n_pet} patients): network trained without PET losses (T1), IO with all PET terms or with one term removed. Mean$\pm$SD over patients. $^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than with all terms (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over four comparisons within each column, $p<0.05$).}}
+\caption{{Diagnostic contribution analysis of each PET term in instance optimization (IO) on the test set (CT Dice: {n} patients, {n_pairs} pairs; metabolic tumor volume [MTV] and total lesion glycolysis [TLG]: {n_pet} patients, {n_pet_pairs} pairs): network trained without PET losses (T1), followed by IO with all PET terms or with one term removed.
+Mean$\pm$SD over patients.
+$^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than with all terms (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over four comparisons within each column, $p<0.05$).
+This test-set analysis was not used to select a reduced loss.}}
 \label{{tab:loo}}
 \scriptsize
 \setlength{{\tabcolsep}}{{3pt}}

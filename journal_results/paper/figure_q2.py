@@ -261,10 +261,17 @@ def main() -> None:
     (out_dir / "q2_effects.txt").write_text(text + "\n")
     n = len(patients["T1"])
     n_pet = patients["T1"]["mtv_bias"].notna().sum()
+    pair_rows = common.load_run("T1")
+    n_pairs = len(pair_rows)
+    n_pet_pairs = pair_rows["mtv_bias"].notna().sum()
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/q2.pdf}}
-\caption{{Effect of the PET-preservation and rigidity losses and of where they act (test set; CT Dice: {n} patients, PET: {n_pet} patients). Color: losses used; marker: where they act (square: only in network training, network output without IO; filled circle: in training and IO; hollow circle: only in IO, on the network trained without losses). Without losses: network output ($\times$) and with IO ($+$). Dashed lines connect the variants of a loss group. Points: patient means; the significance tests are reported in the text and in Table~\ref{{tab:ablations}}.}}
+\caption{{Effect of the PET-preservation and rigidity losses and of where they act on the test set (CT Dice: {n} patients, {n_pairs} pairs; metabolic tumor volume [MTV] and total lesion glycolysis [TLG]: {n_pet} patients, {n_pet_pairs} pairs).
+Color identifies the loss group; markers identify where the losses act (square: only in network training, shown before IO; filled circle: in training and IO; hollow circle: only in IO, on the network trained without losses).
+Without losses: network output ($\times$) and with IO ($+$).
+Lines connect configurations of the same loss group.
+Each point is the mean over patients after averaging each patient's eligible pairs; uncertainty and significance tests are reported in Table~\ref{{tab:ablations}}.}}
 \label{{fig:q2}}
 \end{{figure}}
 """

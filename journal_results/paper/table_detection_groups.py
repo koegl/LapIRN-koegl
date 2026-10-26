@@ -24,9 +24,10 @@ def main() -> None:
             )
         print(run, "  ".join(f"{g}: {cells[run, g][0]:.1f} / {cells[run, g][1]:.1f}" for g, _ in groups))
     caption = (
-        "Volume and uptake change of ground-truth lesions, grouped by how much of each lesion "
-        "the predicted lesion mask seen by IO covers (test set; network trained without PET "
-        "losses, IO with the PET weights scaled by the given factor). Per scan, the change of the "
+        "Metabolic tumor volume (MTV) and total lesion glycolysis (TLG) change of all 1435 provided "
+        "lesion components in 26 test patients (30 pairs), grouped by how much of each component the "
+        "predicted lesion mask used by instance optimization (IO) covers; the network is trained "
+        "without PET losses and IO uses the PET weights scaled by the stated factor. Per scan, the change of the "
         "summed volume or uptake of the group's lesions relative to the unwarped moving scan, "
         r"in \%; mean over the patients with lesions in the group."
     )

@@ -1,6 +1,10 @@
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/rigidity_preservation.pdf}
-\caption{Effect of the rigidity weight on lesion preservation (validation set): network trained with the PET losses, IO with the PET terms and one rigidity penalty at $0.1$ to $100$ times its calibrated reference weight. (a)~Lesion volume change, (b)~uptake change. Star and dashed line: IO without rigidity (weight 0), dotted: link to the smallest weight; outlined: weight chosen for the test set. Points: patient means.}
+\caption{Effect of rigidity weight on lesion preservation on the validation set (26 patients, 32 lesion-positive pairs): network trained with the PET losses, followed by instance optimization (IO) with the PET terms and one rigidity penalty at $0.1$ to $100$ times its calibrated reference weight.
+ (a)~Absolute metabolic tumor volume (MTV) change; (b)~absolute total lesion glycolysis (TLG) change.
+ Color identifies the rigidity penalty.
+ Star and dashed line: IO without rigidity (weight 0); dotted segment: connection to the smallest nonzero weight; outlined marker: weight chosen for the test set.
+ Points are means over patients after averaging each patient's lesion-positive pairs.}
 \label{fig:rigidity_preservation}
 \end{figure}

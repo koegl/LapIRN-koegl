@@ -31,10 +31,11 @@ def main() -> None:
         assert abs(cells[run, "all"][1] - pair["tlg_bias"]) < 0.01, run
         print(run, "  ".join(f"{g}: {cells[run, g][0]:.1f} / {cells[run, g][1]:.1f}" for g, _ in GROUPS))
     caption = (
-        "Contribution of ground-truth lesions, grouped by how much of each lesion the predicted "
-        "lesion mask seen by IO covers, to the volume and uptake change of the evaluation (test "
-        "set; network trained without PET losses, IO with the PET weights scaled by the given "
-        "factor). Contribution of a group: the change per scan if only the group's lesions changed "
+        "Contribution of all 1435 provided lesion components in 26 test patients (30 pairs), grouped by "
+        "how much of each component the predicted lesion mask used by instance optimization (IO) covers, "
+        "to the evaluated metabolic tumor volume (MTV) and total lesion glycolysis (TLG) change; the network "
+        "is trained without PET losses and IO uses the PET weights scaled by the stated factor. "
+        "Contribution of a group: the change per scan if only the group's lesions changed "
         r"and all other lesions kept their volume and uptake, in \%; mean over patients. "
         "All: the evaluation metric. Since changes of different lesions in a scan partly cancel, "
         "the contributions add up to slightly more."

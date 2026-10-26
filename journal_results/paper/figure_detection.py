@@ -114,7 +114,13 @@ def main() -> None:
         for i, (g, (_, color)) in enumerate(GROUP_STYLE.items()):
             values = np.array(contribution[m, g])
             ax_c.bar(
-                x, values, bottom=bottom, width=0.6, color=color, linewidth=0, zorder=3
+                x,
+                values,
+                bottom=bottom,
+                width=0.6,
+                color=color,
+                linewidth=0,
+                zorder=3,
             )
             if i > 0:
                 # white gap between stacked segments only (not at the baseline)
@@ -188,7 +194,11 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/detection.pdf}}
-\caption{{Lesion volume and uptake change of all {shares["all"]} in {n_patients} test patients ({n_pairs} pairs), including components smaller than five voxels, grouped by how much of each lesion the predicted lesion mask seen by IO covers: missed ({shares["missed"]}), partly covered ({shares["partial"]}), covered ({shares["covered"]}). Network trained without PET losses; IO with the PET weights scaled by the given factor. Left: change within each group (per scan, the change of the summed volume or uptake of the group's lesions; mean over the patients with lesions in the group); gray dashed: all lesions, i.e.\ the evaluation metric. Right: contribution of each group to the evaluation metric (the change per scan if only the group's lesions changed; mean over patients); gray ticks: the evaluation metric, below the stacked total because changes of different lesions in a scan partly cancel.}}
+\caption{{Registration-induced metabolic tumor volume (MTV) and total lesion glycolysis (TLG) change of all {shares["all"]} provided lesion components in {n_patients} test patients ({n_pairs} pairs), including components smaller than five voxels, grouped by coverage from the predicted lesion mask used by instance optimization (IO): missed ({shares["missed"]}), partly covered ({shares["partial"]}), and covered ({shares["covered"]}).
+The network is trained without PET losses; IO uses the PET weights scaled by the stated factor.
+Colors identify coverage groups.
+Left: absolute change within each group, computed per scan from the group's summed volume or uptake and averaged over patients with lesions in that group; gray dashed: all lesions, the evaluation metric.
+Right: contribution of each group to the scan-level evaluation metric, averaged over patients; gray ticks show the evaluation metric and lie below the stacked total when opposing lesion changes cancel.}}
 \label{{fig:detection}}
 \end{{figure}}
 """

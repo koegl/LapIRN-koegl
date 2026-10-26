@@ -114,7 +114,10 @@ def full_table(patients) -> str:
     n = len(patients["R1"])
     return rf"""\begin{{table}}[t]
 \centering
-\caption{{All measures of the rigidity comparison ({rigidity.split_label()}, {n} patients; network trained with the PET losses, IO with the PET terms and one rigidity penalty at the weight chosen on the validation set). Rigidity of bones: residual of a rigid fit to each bone (minimized by the rigid-fit penalty), Staring energy (minimized by the Staring penalty), and distortion of short (5--15~mm) and long ($\geq$15~mm) within-bone distances (minimized by neither). HD95 over bones and soft-tissue organs; near-bone soft tissue: soft-tissue organs within three voxels of a bone; Staring energy: sum of its properness, orthonormality, and affinity terms on the whole bone; NDV in bone band: in a three-voxel band around the bones. Mean$\pm$SD over patients; $^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than without rigidity (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over the three penalties per row, $p<0.05$).}}
+\caption{{All measures of the rigidity comparison on the test set (alignment and rigidity: {n} patients, 38 pairs; PET preservation: 26 patients, 30 pairs), using the network trained with the PET losses followed by instance optimization (IO) with the PET terms and one rigidity penalty at the weight chosen on the validation set.
+Rigidity of bones: residual of a rigid fit to each bone (minimized by the rigid-fit penalty), Staring energy (minimized by the Staring penalty), and distortion of short (5--15~mm) and long ($\geq15$~mm) within-bone distances (minimized by neither).
+HD95: 95th-percentile Hausdorff distance over bones and soft-tissue organs; near-bone soft tissue: soft-tissue organs within three voxels of a bone; Staring energy: sum of its properness, orthonormality, and affinity terms on the whole bone; NDV: non-diffeomorphic volume; NDV in bone band: in a three-voxel band around the bones.
+Mean$\pm$SD over patients; $^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than without rigidity (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over the three penalties per row, $p<0.05$).}}
 \label{{tab:rigidity_full}}
 \resizebox{{\textwidth}}{{!}}{{%
 \begin{{tabular}}{{l{"c" * len(RUNS)}}}

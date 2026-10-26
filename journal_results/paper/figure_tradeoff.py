@@ -124,26 +124,27 @@ def main() -> None:
     )
     fig, axes = plt.subplots(1, 3, figsize=(6.5, 2.1))
 
-    def curve(ax, x, stats, color):
+    def curve(ax, x, stats, color, marker):
         """After IO: solid line with CI band."""
         mean, lo, hi = stats.T
         ax.fill_between(x, lo, hi, color=color, alpha=0.12, linewidth=0, zorder=2)
         ax.plot(x, mean, color=color, linewidth=1.5, zorder=3)
-        ax.scatter(x, mean, s=12, color=color, edgecolors="white", linewidths=0.6, zorder=4)
+        ax.scatter(x, mean, s=12, marker=marker, color=color, edgecolors="white", linewidths=0.6, zorder=4)
         if xpos[OPERATING_POINT] in x:
             i = x.index(xpos[OPERATING_POINT])
-            ax.scatter(x[i], mean[i], s=30, color=color, edgecolors=TEXT, linewidths=1.0, zorder=5)
+            ax.scatter(x[i], mean[i], s=30, marker=marker, color=color, edgecolors=TEXT, linewidths=1.0, zorder=5)
 
     def network_line(ax, value, color):
         """Before IO (network output): dashed, the same for every scale."""
         ax.axhline(value, color=color, linewidth=1.0, linestyle=(0, (4, 2)), zorder=1)
 
+    kind_marker = {"gt": "o", "pred": "s"}
     first_dice = next(iter(dice.values()))
     for kind in ("gt", "pred"):
         before = (first_dice.groupby("case_id")[f"{kind}_dice_0"].mean() * 100).mean()
         network_line(axes[0], before, COLORS[kind])
         x, stats = series(dice, f"{kind}_dice_1")
-        curve(axes[0], x, stats, COLORS[kind])
+        curve(axes[0], x, stats, COLORS[kind], kind_marker[kind])
     axes[0].set_title(r"CT Dice (\%) $\uparrow$", fontsize=8, color=TEXT)
 
     first = next(iter(masks.values()))
@@ -155,7 +156,7 @@ def main() -> None:
             before = (first.groupby("case_id")[f"{kind}_{metric}_0"].mean() * 100).mean()
             network_line(ax, before, COLORS[kind])
             x, stats = series(masks, f"{kind}_{metric}_1")
-            curve(ax, x, stats, COLORS[kind])
+            curve(ax, x, stats, COLORS[kind], kind_marker[kind])
         ax.set_title(title, fontsize=8, color=TEXT)
         ax.set_ylim(bottom=0)
 
@@ -182,14 +183,14 @@ def main() -> None:
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
     handles, names = [], []
-    for kind, mask in (("gt", "ground-truth labels"), ("pred", "predicted labels (seen by IO)")):
+    for kind, mask in (("gt", "provided labels"), ("pred", "predicted labels (seen by IO)")):
         handles += [
             plt.Line2D([], [], color=COLORS[kind], linewidth=1.0, linestyle=(0, (4, 2))),
-            plt.Line2D([], [], color=COLORS[kind], linewidth=1.5, marker="o", markersize=3),
+            plt.Line2D([], [], color=COLORS[kind], linewidth=1.5, marker=kind_marker[kind], markersize=3),
         ]
         names += [f"{mask}, network output", f"{mask}, after IO"]
     handles.append(plt.Line2D([], [], color=GT_MASK_COLOR, marker="D", markersize=4, linestyle=""))
-    names.append("IO with ground-truth\nlesion masks")
+    names.append("IO with provided\nlesion masks")
     fig.legend(handles, names, loc="upper center", ncol=3, frameon=False, bbox_to_anchor=(0.5, 1.16), handlelength=2.5, fontsize=7)
     fig.tight_layout(w_pad=1.0, rect=(0, 0.06, 1, 1))
     fig.supxlabel(r"PET IO weight scale", fontsize=8, color=TEXT, y=0.0)
@@ -199,10 +200,18 @@ def main() -> None:
     fig.savefig(out_dir / "tradeoff.pdf", bbox_inches="tight", pad_inches=0)
     n_dice = next(iter(dice.values()))["case_id"].nunique()
     n_masks = first["case_id"].nunique()
+    n_dice_pairs = len(next(iter(dice.values())))
+    n_mask_pairs = len(first)
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/tradeoff.pdf}}
-\caption{{Effect of the PET loss weight in IO (test set): network trained without PET losses (T1) followed by IO with all PET weights scaled by the given factor (0: PET losses off; 1: the PET weights of network training). Each metric on the predicted labels that IO optimizes (orange; organs: TotalSegmentator, lesions: nnU-Net) and on the ground-truth labels used for evaluation (blue). Dice over all {n_dice} patients, lesion volume and uptake change over the {n_masks} patients with lesions in both label sets. Solid: after IO; dashed: network output before IO, the same for every factor. Outlined point and dotted line: operating point tuned on the validation set. Black diamonds: IO with the ground-truth instead of the predicted lesion masks (at $\times0.1$ and $\times1$), evaluated on the ground-truth labels. Points: patient means; bands: 95\,\% patient-bootstrap confidence intervals.}}
+\caption{{Effect of the PET-loss weight in instance optimization (IO) on the test set: the network trained without PET losses (T1) is followed by IO with all PET weights scaled by the given factor (0: PET losses off; 1: training-derived weights).
+Metrics are computed on the predicted labels optimized by IO (orange squares; organs: TotalSegmentator, lesions: nnU-Net) and on the provided evaluation labels (blue circles).
+CT Dice includes {n_dice} patients and {n_dice_pairs} pairs; metabolic tumor volume (MTV) and total lesion glycolysis (TLG) change include {n_masks} patients and {n_mask_pairs} pairs with lesions in both label sets.
+Solid: after IO; dashed: network output before IO, the same for every factor.
+Outlined point and dotted line: operating point tuned on the validation set.
+Black diamonds: IO with the provided instead of the predicted lesion masks (at $\times0.1$ and $\times1$), evaluated on the provided labels.
+Curves show means over patients after averaging eligible pairs; bands show 95\,\% patient-bootstrap confidence intervals.}}
 \label{{fig:tradeoff}}
 \end{{figure}}
 """

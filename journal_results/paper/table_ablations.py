@@ -101,7 +101,10 @@ def main() -> None:
     )
     tex = rf"""\begin{{table}}[t]
 \centering
-\caption{{Effect of the PET and rigidity losses and of where they act, on the test set (CT Dice: {n} patients, {n_pairs} pairs; PET: {n_pet} patients, {n_pet_pairs} pairs); values of Fig.~\ref{{fig:q2}}. Left: network trained with the losses, without IO; middle: the same network followed by IO with the same losses; right: the network trained without losses followed by IO with the losses. Mean$\pm$SD over patients. $^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than without losses in the same block (for the right block: the network without losses with IO); $^{{*}}$: significantly different from the same losses in training and IO (two-sided Wilcoxon signed-rank tests on patient values, Holm-corrected over three comparisons within each column, $p<0.05$).}}
+\caption{{Effect of the PET-preservation and rigidity losses and of where they act on the test set (CT Dice: {n} patients, {n_pairs} pairs; metabolic tumor volume [MTV] and total lesion glycolysis [TLG]: {n_pet} patients, {n_pet_pairs} pairs); numerical values from Fig.~\ref{{fig:q2}}.
+Left: network trained with the losses, without instance optimization (IO); middle: the same network followed by IO with the same losses; right: the network trained without losses followed by IO with the losses.
+Values are mean$\pm$SD over patients after averaging each patient's eligible pairs.
+$^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than without losses in the same block (for the right block: the network without losses with IO); $^{{*}}$: significantly different from the same losses in training and IO (two-sided Wilcoxon signed-rank tests on patient values, Holm-corrected over three comparisons within each column, $p<0.05$).}}
 \label{{tab:ablations}}
 \resizebox{{\textwidth}}{{!}}{{%
 \begin{{tabular}}{{l{"c" * (len(BLOCKS) * n_cols)}}}

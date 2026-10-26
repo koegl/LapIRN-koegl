@@ -210,10 +210,17 @@ def main(metric: str) -> None:
     n_lesions = len(lesions["T1"])
     n_excluded = len(pd.read_csv(common.EVAL_DIR / "T1_lesions.csv")) - n_lesions
     n_patients = lesions["T1"]["case_id"].nunique()
+    n_pairs = lesions["T1"][["case_id", "tp_moving"]].drop_duplicates().shape[0]
     if metric == "MTV":
-        caption = rf"Per-lesion volume change on the test set ({n_lesions} lesions of {n_patients} patients after excluding {n_excluded} components smaller than five voxels), by location (soft tissue / bone-associated, $\geq$50\,\% of the lesion on bone) and size (small $<$0.5\,ml, medium $<$5\,ml, large). Median $|\Delta\mathrm{{MTV}}|$ per lesion; left: network output, right: with instance optimization (IO) using the same losses (squares / $\times$: without IO; circles / $+$: with IO; colors as in Fig.~\ref{{fig:q2}}). Error bars: 95\,\% confidence intervals from a patient-cluster bootstrap."
+        caption = rf"""Per-lesion absolute volume change on the test set ({n_lesions} lesions from {n_patients} patients and {n_pairs} pairs after excluding {n_excluded} components smaller than five voxels), stratified by location (soft tissue or bone-associated, with $\geq$50\,\% of the lesion on bone) and size (small $<0.5$~ml, medium $0.5$ to $<5$~ml, large $\geq5$~ml).
+Points show the median $|\Delta\mathrm{{MTV}}|$ per lesion; left: network output, right: instance optimization (IO) with the same losses.
+Within each size stratum, the loss groups are ordered PET, rigidity, and PET plus rigidity; squares and circles denote without and with IO, while $\times$ and $+$ denote the corresponding configurations without losses.
+Error bars: 95\,\% confidence intervals from a patient-cluster bootstrap."""
     else:
-        caption = r"Per-lesion uptake change on the test set: median $|\Delta\mathrm{TLG}|$ per lesion, otherwise as Fig.~\ref{fig:lesions}."
+        caption = rf"""Per-lesion absolute total lesion glycolysis (TLG) change on the test set ({n_lesions} lesions from {n_patients} patients and {n_pairs} pairs after excluding {n_excluded} components smaller than five voxels), stratified by location (soft tissue or bone-associated, with $\geq$50\,\% of the lesion on bone) and size (small $<0.5$~ml, medium $0.5$ to $<5$~ml, large $\geq5$~ml).
+Points show the median $|\Delta\mathrm{{TLG}}|$ per lesion; left: network output, right: instance optimization (IO) with the same losses.
+Within each size stratum, the loss groups are ordered PET, rigidity, and PET plus rigidity; squares and circles denote without and with IO, while $\times$ and $+$ denote the corresponding configurations without losses.
+Error bars: 95\,\% confidence intervals from a patient-cluster bootstrap."""
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/{name_out}.pdf}}
