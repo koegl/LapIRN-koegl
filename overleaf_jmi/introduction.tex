@@ -1,8 +1,8 @@
 \section{Introduction}
 \label{sect:intro}
 
-Prostate-specific membrane antigen (PSMA) PET/CT is now routinely used for staging prostate cancer, for planning and following radioligand therapy, and for assessing response~\cite{ref_psma_clinical}.
-Longitudinal imaging provides a baseline examination and one or more follow-up examinations.
+Prostate-specific membrane antigen (PSMA) PET/CT is now routinely used for staging prostate cancer, for planning and following radioligand therapy, and for assessing treatment response~\cite{ref_psma_clinical}.
+In such longitudinal imaging, patients are scanned before therapy (baseline) and again at one or more follow-up time points.
 Registering each follow-up to the baseline makes it possible to compare tumor burden voxel by voxel, track individual lesions, and accumulate dose~\cite{ref_psmareg_challenge}.
 For these uses, a registration must do two things at once: it has to align the anatomy, and it must not itself change the PET-derived quantities that are compared across time points.
 Two such quantities, under the names used by the Learn2Reg 2026 PSMAReg challenge~\cite{ref_psmareg_challenge}, are the metabolic tumor volume (MTV) and the total lesion glycolysis (TLG); for PSMA PET, they measure the PSMA-positive tumor volume and the total lesion PSMA uptake.
