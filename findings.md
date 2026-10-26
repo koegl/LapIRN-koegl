@@ -88,6 +88,12 @@ official scorer (`evaluation_official_scorer/`).
      median MTV 12.5 -> 11.3 %); test: 13.7 -> 13.3 %, better for 5/26
      patients, small lesions worse (16.7 -> 20.0 %), scan level unchanged,
      Dice +0.6 -> negative result (in results + discussion).
+   - **Recall-biased masks (test, M1 = I5 with SUV>3-outside-organ-halo OR
+     nnU-Net, stage 10):** lesions detected 91 vs. 74 %, precision 0.22 vs.
+     0.71 (moving test scans with lesions, patient mean); |ΔMTV| / |ΔTLG| 10.3 / 12.5 % vs. I5 9.3 / 11.8 % and I1 11.3 /
+     14.5 % (all n.s.), Dice 79.3; per-lesion median 13.5 %. Old val claim
+     ("worse than IO without PET losses") does not hold; recall masks just
+     do not help (discussion updated).
    - **Rigidity (test, R1-R4):** per-bone rigid fit best on within-bone
      distances (short 13.4 -> 5.0 %, long 4.4 -> 1.8 %), Staring best on its own
      energy, erosion weakest; rigid fit / Staring cost 1.6 / 2.0 CT Dice. No
@@ -133,8 +139,12 @@ Source: `evaluation/test/B3.csv`, `journal_results/baselines/niftyreg/eval/val/`
 
 ## [ ] IO PET terms work on their mask; predicted lesion labels limit them
 
-**Status:** confirmed on val (38 pairs, 26 patients), T4 + IO (lr 0.05, 20 it),
-scored against ground-truth lesions; p = patient-level one-sided Wilcoxon vs. PET off.
+**Status:** historical validation diagnostic using the pre-correction scorer.
+The recall-mask conclusion from this analysis is obsolete and has been superseded
+by the corrected test-set stage-10 result summarized above.
+Retain these values only as a record of the earlier diagnostic, not as manuscript evidence.
+The experiment used 38 validation pairs from 26 patients, T4 + IO
+(lr 0.05, 20 it), and patient-level one-sided Wilcoxon tests against PET off.
 
 | IO lesion labels | MTV bias | TLG bias | CT Dice |
 |---|---|---|---|
@@ -145,10 +155,9 @@ scored against ground-truth lesions; p = patient-level one-sided Wilcoxon vs. PE
 
 - PET weight ×1 and ×4 give identical results: the terms are satisfied on the
   mask IO sees, so the remaining MTV error comes from label errors, not weights.
-- The recall-biased mask (SUV > 3 minus dilated physiological organs, ∪ nnU-Net;
-  challenge winner's approach) makes it worse: preserving false-positive
-  regions shrinks the true lesions (signed MTV −6 %). Its lesion detection is
-  0.89 vs. 0.78 for nnU-Net, but precision 0.18 vs. 0.62.
+- The obsolete validation result suggested that the recall-biased mask made
+  preservation worse. This claim did not hold in the corrected test-set
+  evaluation and must not be used in the manuscript.
 - IO tuning (round 2) settles on PET ×0.1; ×0.1 to ×4 are flat.
 
 Source: `journal_results/io_pet_check.py` → `io_pet_check/summary.csv`;

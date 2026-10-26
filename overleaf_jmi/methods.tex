@@ -256,14 +256,6 @@ Each is evaluated as network output and with IO using the same losses as in its 
 The network trained without the losses is combined with IO using PET preservation, rigidity, or both, and compared with the networks trained with these losses (and IO with the same losses).
 To measure what the network contributes, IO with both losses is also run directly after the affine pre-registration.
 
-\paragraph{Contribution of each PET term.}
-On the network trained without the losses, IO with all four PET terms is compared with IO in which one term at a time is switched off.
-
-\paragraph{Per-lesion terms.}
-Because the PET losses constrain the total volume and uptake of a scan, we test per-lesion versions of the volume, uptake, and mean-Jacobian terms in IO, added to the PET terms on the network trained without the losses.
-The predicted lesion mask is split into connected components; each of the eight largest components with at least 20 voxels gets its own relative volume and uptake change and mean Jacobian determinant, and the terms are averaged over the components weighted by size, so that changes of different lesions cannot cancel.
-Their weight is selected on the validation set among $\{1,10,100\}$ times a base value scaled like the other PET weights, with the selection rule of Sec.~\ref{sect:tuning} applied to the median per-lesion $|\Delta\mathrm{MTV}|+|\Delta\mathrm{TLG}|$, the quantity these terms target.
-
 \paragraph{Comparison with baselines.}
 Initial alignment, the affine pre-registration, NiftyReg, ConvexAdam, IO after the affine, and our variants are compared on the test set.
 All registrations use the same follow-up-to-baseline pairs and are scored with the same provided organ and lesion labels and original-SUV PET images.
@@ -271,12 +263,6 @@ NiftyReg and ConvexAdam use CT alone for registration, with no organ or lesion l
 Our method uses CT and PET, the affine pre-registration described above, provided labels in network training, and predicted labels during IO.
 The NiftyReg and ConvexAdam settings were selected on the validation pairs by the challenge ranking, with candidates ranked within each method's grid (Sec.~\ref{sect:tuning}).
 Runtimes are per pair on one NVIDIA RTX A6000 GPU and include the affine step.
-
-\paragraph{Rigidity penalties.}
-On the network trained with the PET losses, IO with the PET terms is combined with no rigidity, Staring, Staring with erosion, or the per-bone rigid fit.
-Because the penalties have different units, a reference weight is first calibrated for each so that its initial value on five validation pairs equals that of the rigid fit at $\lambda_{\mathrm{rig}}=0.25$ (Staring 0.66, Staring with erosion 1.03).
-Each method is then evaluated on the validation set at $\{0.1,0.3,1,3,10,30,100\}$ times its reference weight, giving a curve of CT Dice against within-bone distance distortion.
-For the test set, we choose for each method the largest weight whose validation Dice is within two Dice points of the variant without rigidity, the same tolerance as in the selection rule above, with the grid capped at $\times100$: $\times3$ for Staring, and $\times100$ for Staring with erosion and the rigid fit.
 
 \paragraph{Accuracy--preservation trade-off.}
 On the network trained without the losses, IO with the PET terms (without rigidity) is run with all four PET weights scaled by $\{0,10^{-4},3\cdot10^{-4},0.001,0.003,0.01,0.03,0.1,0.3,1\}$ relative to the training-derived values; $\times0.1$ is the setting chosen by the IO tuning.
@@ -288,3 +274,18 @@ This diagnostic intervention uses labels unavailable in the intended test-time s
 Each ground-truth lesion of the moving scan is assigned to a group by the fraction of its voxels covered by the predicted lesion mask: missed (0\,\%), partly covered ($<50\,\%$), or covered ($\geq50\,\%$).
 For each group, we report two quantities, both computed per scan as in Eq.~\eqref{eq:pet_error} and averaged over patients: the change within the group, using only the group's lesions, and the contribution of the group to the evaluation metric, i.e.\ the change if only the group's lesions changed and all other lesions kept their volume and uptake.
 Since changes of different lesions in a scan partly cancel, the contributions add up to slightly more than the evaluation metric.
+\paragraph{Per-lesion terms.}
+Because the PET losses constrain the total volume and uptake of a scan, we test per-lesion versions of the volume, uptake, and mean-Jacobian terms in IO, added to the PET terms on the network trained without the losses.
+The predicted lesion mask is split into connected components; each of the eight largest components with at least 20 voxels gets its own relative volume and uptake change and mean Jacobian determinant, and the terms are averaged over the components weighted by size, so that changes of different lesions cannot cancel.
+Their weight is selected on the validation set among $\{1,10,100\}$ times a base value scaled like the other PET weights, with the selection rule of Sec.~\ref{sect:tuning} applied to the median per-lesion $|\Delta\mathrm{MTV}|+|\Delta\mathrm{TLG}|$, the quantity these terms target.
+
+\paragraph{Contribution of each PET term.}
+On the network trained without the losses, IO with all four PET terms is compared with IO in which one term at a time is switched off.
+
+\paragraph{Rigidity penalties.}
+This comparison tests whether the penalties preserve bone geometry and whether they provide additional PET preservation beyond the PET-specific terms.
+On the network trained with the PET losses, IO with the PET terms is combined with no rigidity, Staring, Staring with erosion, or the per-bone rigid fit.
+Because the penalties have different units, a reference weight is first calibrated for each so that its initial value on five validation pairs equals that of the rigid fit at $\lambda_{\mathrm{rig}}=0.25$ (Staring 0.66, Staring with erosion 1.03).
+Each method is then evaluated on the validation set at $\{0.1,0.3,1,3,10,30,100\}$ times its reference weight, giving a curve of CT Dice against within-bone distance distortion.
+For the test set, we choose for each method the largest weight whose validation Dice is within two Dice points of the variant without rigidity, the same tolerance as in the selection rule above, with the grid capped at $\times100$: $\times3$ for Staring, and $\times100$ for Staring with erosion and the rigid fit.
+

@@ -1,15 +1,17 @@
 \section{Results}
 \label{sect:results}
 
-All results are on the test set (28 patients, 38 pairs); values are mean$\pm$SD over patients, and differences are given in percentage points.
+Unless stated otherwise, results are reported on the test set (28 patients, 38 pairs); values are mean$\pm$SD over patients, and differences are given in percentage points.
+Validation data are used only for choices made before test evaluation and are identified explicitly.
 Except where stated, IO uses predicted masks, while the reported alignment and PET-preservation metrics use the provided labels.
 We first ask whether the losses alter the balance between alignment and scan-level PET change, and whether they should act during training or only during IO.
-We then test whether that scan-level result extends to individual lesions, compare the selected method with baselines, and examine the effects of PET-loss weights and predicted-mask coverage.
-The rigidity comparison separately tests how well the penalties preserve bone geometry.
+We then compare the selected configuration with baselines and investigate why residual scan-level and per-lesion changes remain.
+Finally, we evaluate bone-rigidity penalties as an additional PET-preservation strategy and as a constraint on anatomically plausible bone deformation.
 
 \subsection{Effect of the PET-Preservation and Rigidity Losses}
 \label{sect:res_q1}
 
+We first test whether the PET-preservation and bone-rigidity losses reduce registration-induced changes in MTV and TLG and what they cost in alignment accuracy.
 Figure~\ref{fig:q2} compares four configurations (the full results with significance tests are in Table~\ref{tab:ablations}, Appendix~A): no PET-preservation or bone-rigidity loss, PET preservation alone, rigidity alone, and both.
 Each network is evaluated before IO (squares; $\times$ without losses) and after IO (filled circles; $+$ without losses).
 In IO, the PET-preservation and bone-rigidity losses are enabled or disabled to match that network's training configuration.
@@ -35,9 +37,80 @@ With PET losses alone (blue), the Dice gain was 0.9 points (0.1 to 1.7), while $
 With rigidity alone (red), the paired differences were 0.0 ($-0.0$ to 0.1) Dice points, $+0.7$ ($-0.0$ to 1.8) MTV points, and $+0.8$ (0.0 to 1.9) TLG points.
 None of the preservation differences was significant after Holm correction; the intervals do not establish equivalent preservation.
 Without IO, training with the losses reduced registration-induced PET changes in the network-only variants tested (Fig.~\ref{fig:q2}, squares; Table~\ref{tab:ablations}).
+The IO-only placement with both loss groups is therefore used as our selected method in the comparison with baselines.
 
 
 
+\subsection{Comparison with Baselines}
+\label{sect:res_baselines}
+
+To place our method in context, we compare it with CT-only registration baselines, with IO applied directly after affine pre-registration, and with our other variants (Table~\ref{tab:baselines}).
+Our method, with the losses only in IO, reached 78.3\,\% CT Dice and 6.89~mm HD95, significantly better than NiftyReg (70.1\,\%, 8.85~mm), ConvexAdam (61.7\,\%, 9.16~mm), and the affine pre-registration (46.4\,\%, 14.00~mm); its $|\Delta\mathrm{MTV}|$ (8.7\,\%) and $|\Delta\mathrm{TLG}|$ (11.3\,\%) did not differ significantly from those of NiftyReg (8.7\,\%, 10.2\,\%) and ConvexAdam (9.3\,\%, 10.8\,\%).
+Compared with the same network before IO, our method gained 2.9 Dice points (95\,\% CI 2.3 to 3.4).
+The paired changes in $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ were $-1.7$ points (95\,\% CI $-3.6$ to 0.3) and $-1.2$ points ($-3.6$ to 1.2), respectively, so an increase in scan-level PET change was not detected.
+NiftyReg, tuned on the validation set, exceeded the folding threshold on 5 of 38 validation pairs and 8 of 38 test pairs (21\,\%), with up to 0.37\,\% NDV; ConvexAdam stayed below it on every pair.
+Our method exceeded it on two test pairs (76 and 125~ppm), and the variant with the losses also in training on one (262~ppm).
+IO directly after the affine pre-registration reached only 56.6\,\% Dice: within the same iteration budget, IO cannot replace the network.
+Resampling alone already changes the measurements: the affine pre-registration changed MTV by 4.5\,\% and TLG by 4.4\,\%, the lowest of all methods.
+
+Among our variants, IO without the losses was the most accurate (80.2\,\% Dice, significantly higher than our method) but changed the lesions most ($|\Delta\mathrm{MTV}|$ 11.3\,\%, $|\Delta\mathrm{TLG}|$ 14.5\,\%).
+The losses only in IO lowered these changes to 8.7\,\% and 11.3\,\% at a cost of 1.9 Dice points, and the losses also in training to 7.9\,\% and 10.3\,\% at a cost of 2.9 points; after correction for multiple comparisons, none of these differences in preservation was significant.
+By the challenge's composite score, IO without the losses ranked first, our method second, and the variant with the losses in training and IO third, with overlapping bootstrap rank intervals (1--4, 1--4, and 1--5).
+The ranking was decided by accuracy: apart from the affine pre-registration on $|\Delta\mathrm{TLG}|$, no method won a significant comparison in preservation or folding.
+The network alone needs 11~s per pair, as fast as ConvexAdam and ten times faster than NiftyReg (108~s); IO adds about 2.5~minutes.
+Figure~\ref{fig:qualitative} shows a test pair whose lesion volume grew tenfold between baseline and follow-up (from 2400 to 24\,191 voxels); it was chosen for this change, not for its registration result, and illustrates alignment.
+The scans were initially far apart (CT Dice 3.5\,\%); our method aligned them to 83.7\,\% Dice (NiftyReg 70.8\,\%, ConvexAdam 65.7\,\%), and NDV remained below the challenge threshold.
+The volume and uptake of the 163 follow-up lesions changed by $+2.6\,\%$ and $+6.6\,\%$, more than with IO without the losses ($-0.6\,\%$ and $+2.3\,\%$).
+Before registration, the CT overlay (Fig.~\ref{fig:qualitative}c) and the label residual (e) show misalignment across the whole trunk; after registration (d, f), the residual is reduced to thin bands at organ boundaries and to parts of the lumbar vertebrae, and the warped lesion contours lie in the corresponding bones (h).
+The Jacobian determinant (g) shows fine-grained changes in the local volume scale of the sampling transform throughout the body, which IO adds to the smooth network field because it has no smoothness term ($\lambda_{\mathrm{smooth}}=0$).
+
+\input{tables/baselines}
+\input{figures/qualitative}
+
+The remaining analyses examine why measured PET changes persist after loss-guided IO.
+
+\subsection{Accuracy--Preservation Trade-off}
+\label{sect:res_tradeoff}
+We vary the PET-loss weights in IO to show how alignment and lesion preservation change together and whether stronger weights resolve the residual error.
+Figure~\ref{fig:tradeoff} varies the PET weights in IO on the network trained without the losses.
+Already the smallest factor ($\times10^{-4}$) lowered the volume change of the predicted lesion masks from 9.3\,\% (IO without the PET losses) to 2.1\,\% and that of the ground-truth lesions from 11.3\,\% to 9.3\,\%, without a loss in Dice (80.2\,\%); $|\Delta\mathrm{TLG}|$ fell from 14.5\,\% to 12.9\,\%.
+Larger factors reduced the change of the predicted masks further, to below 1\,\% from $\times0.01$ on, but not that of the ground-truth lesions (9.0 to 9.8\,\%), while Dice decreased steadily, to 78.6\,\% at $\times0.1$ and 78.0\,\% at $\times1$.
+Compared with the network output before IO (dashed), IO with the PET losses thus canceled the increase that IO otherwise causes and ended slightly below it ($|\Delta\mathrm{MTV}|$ 9.3\,\% vs.\ 10.3\,\%, $|\Delta\mathrm{TLG}|$ 11.8\,\% vs.\ 12.5\,\% at $\times0.1$), but not significantly (two-sided Wilcoxon signed-rank test, $p=0.17$ and $p=0.86$; lower for 14 and 13 of 26 patients), while gaining 3.2 Dice points.
+The factor chosen on the validation set ($\times0.1$) thus cost 1.6 Dice points more than $\times10^{-4}$ for the same volume change (9.3\,\%) and 1.1 points less uptake change (11.8\,\%).
+On the predicted masks, $|\Delta\mathrm{TLG}|$ fell from 10.2\,\% to 5.2\,\% at $\times10^{-4}$ and to about 3\,\% from $\times0.1$ on.
+The same gap between the labels IO optimizes and the ground truth appeared for the organs: without the PET losses, IO reached 92.9\,\% Dice on the predicted organ labels but 80.2\,\% on the ground-truth labels, starting from 79.0\,\% and 75.5\,\% for the network output.
+
+In the diagnostic run with provided lesion masks (black diamonds), the measured changes fell from 9.3\,\% to 0.1\,\% for MTV and from 11.8\,\% to 4.5\,\% for TLG at the tuned factor; Dice rose from 78.6\,\% to 79.1\,\%.
+At $\times1$, the changes were similar (0.2\,\% MTV, 4.0\,\% TLG; 78.6\,\% Dice), so a larger weight hardly reduced the remaining uptake change even with provided masks.
+The near-zero volume change is that of the scan total, which this run optimizes directly; the change of individual lesions remained (Sec.~\ref{sect:res_lesions}).
+This gap between optimization on predicted masks and evaluation on provided labels motivates an analysis of lesion coverage.
+
+\input{figures/tradeoff}
+
+\subsection{Lesion Coverage in Predicted Masks}
+\label{sect:res_detection}
+
+To locate the remaining registration-induced change, we group all 1435 provided lesions, including the 108 smaller than five voxels, by how much each overlaps the mask used by IO (Fig.~\ref{fig:detection}): 214 had no overlap (missed; 6\,\% of lesion volume), 155 had less than 50\,\% overlap (partly covered; 6\,\%), and 1066 had at least 50\,\% overlap (covered; 88\,\%).
+
+PET IO reduced the change of covered lesions below that of the network output, from 9.1\,\% to 6.0\,\% for $|\Delta\mathrm{MTV}|$ and from 11.0\,\% to 8.4\,\% for $|\Delta\mathrm{TLG}|$ (IO without and with the PET losses at the tuned weights; network output 7.9\,\% and 9.2\,\%).
+Partly covered lesions changed as much with the PET losses as without them (12.5\,\% and 12.0\,\%), and missed lesions less (14.4\,\% and 17.0\,\%) but still more than at the network output (12.4\,\%).
+The loss has no direct target for a missed lesion and only a partial target for a partly covered lesion.
+After PET IO, missed lesions therefore contributed more than half of the remaining change: 5.2 of 9.3 points of $|\Delta\mathrm{MTV}|$ and 6.2 of 11.8 points of $|\Delta\mathrm{TLG}|$, although they make up only 6\,\% of the lesion volume.
+Covered lesions contributed 3.3 and 5.4 points.
+Scaling the PET weights from $\times0.1$ to $\times1$ changed none of these values by more than 0.3 points.
+
+Without the PET losses, IO increased the change of every group over the network output, for covered lesions from 7.9\,\% to 9.1\,\% ($|\Delta\mathrm{MTV}|$) and from 9.2\,\% to 11.0\,\% ($|\Delta\mathrm{TLG}|$), and the overall change from 10.3\,\% to 11.3\,\% and from 12.5\,\% to 14.5\,\%.
+This agrees with the per-lesion analysis (Sec.~\ref{sect:res_lesions}), in which IO without the losses increased the volume change of lesions.
+In the diagnostic run with provided lesion masks, the contribution of lesions that nnU-Net missed fell from 5.2 to 1.2 points of $|\Delta\mathrm{MTV}|$ and from 6.2 to 2.1 points of $|\Delta\mathrm{TLG}|$, and that of covered lesions from 3.3 to 0.9 and from 5.4 to 3.8 points.
+The near-zero overall change with provided masks does not mean that the lesions kept their volumes: if only the missed, partly covered, or covered lesions had changed, MTV would have changed by 1.2, 1.2, and 0.9 points, respectively. Some lesions therefore grew while others shrank, and their changes canceled in the scan total, which is what both the PET loss and the evaluation metric measure (see also Sec.~\ref{sect:res_lesions}).
+
+As a post-hoc attempt to increase lesion coverage, we combined the nnU-Net predictions with voxels above SUV 3 outside a 10-mm halo around predicted organs with physiological uptake, following the recall-biased approach of Dey and Dalca~\cite{dey2026registration}.
+On the moving test scans with lesions (mean over patients), lesion detection increased from 74\,\% to 91\,\%, while voxel-level precision fell from 0.71 to 0.22.
+Compared with IO using the nnU-Net mask, MTV change was 10.3\,\% instead of 9.3\,\%, TLG change was 12.5\,\% instead of 11.8\,\%, and CT Dice was 79.3\,\% instead of 78.6\,\%.
+None of these differences was significant.
+The per-lesion median was similar (13.5\,\% vs.\ 13.7\,\%).
+
+\input{figures/detection}
 \subsection{Per-Lesion Volume Change}
 \label{sect:res_lesions}
 
@@ -73,32 +146,6 @@ Both terms measure the change on the linearly warped, soft mask and PET (Eq.~\re
 
 \input{tables/loo}
 
-\subsection{Comparison with Baselines}
-\label{sect:res_baselines}
-
-To place our method in context, we compare it with CT-only registration baselines, with IO applied directly after affine pre-registration, and with our other variants (Table~\ref{tab:baselines}).
-Our method, with the losses only in IO, reached 78.3\,\% CT Dice and 6.89~mm HD95, significantly better than NiftyReg (70.1\,\%, 8.85~mm), ConvexAdam (61.7\,\%, 9.16~mm), and the affine pre-registration (46.4\,\%, 14.00~mm); its $|\Delta\mathrm{MTV}|$ (8.7\,\%) and $|\Delta\mathrm{TLG}|$ (11.3\,\%) did not differ significantly from those of NiftyReg (8.7\,\%, 10.2\,\%) and ConvexAdam (9.3\,\%, 10.8\,\%).
-Compared with the same network before IO, our method gained 2.9 Dice points (95\,\% CI 2.3 to 3.4).
-The paired changes in $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ were $-1.7$ points (95\,\% CI $-3.6$ to 0.3) and $-1.2$ points ($-3.6$ to 1.2), respectively, so an increase in scan-level PET change was not detected.
-NiftyReg, tuned on the validation set, exceeded the folding threshold on 5 of 38 validation pairs and 8 of 38 test pairs (21\,\%), with up to 0.37\,\% NDV; ConvexAdam stayed below it on every pair.
-Our method exceeded it on two test pairs (76 and 125~ppm), and the variant with the losses also in training on one (262~ppm).
-IO directly after the affine pre-registration reached only 56.6\,\% Dice: within the same iteration budget, IO cannot replace the network.
-Resampling alone already changes the measurements: the affine pre-registration changed MTV by 4.5\,\% and TLG by 4.4\,\%, the lowest of all methods.
-
-Among our variants, IO without the losses was the most accurate (80.2\,\% Dice, significantly higher than our method) but changed the lesions most ($|\Delta\mathrm{MTV}|$ 11.3\,\%, $|\Delta\mathrm{TLG}|$ 14.5\,\%).
-The losses only in IO lowered these changes to 8.7\,\% and 11.3\,\% at a cost of 1.9 Dice points, and the losses also in training to 7.9\,\% and 10.3\,\% at a cost of 2.9 points; after correction for multiple comparisons, none of these differences in preservation was significant.
-By the challenge's composite score, IO without the losses ranked first, our method second, and the variant with the losses in training and IO third, with overlapping bootstrap rank intervals (1--4, 1--4, and 1--5).
-The ranking was decided by accuracy: apart from the affine pre-registration on $|\Delta\mathrm{TLG}|$, no method won a significant comparison in preservation or folding.
-The network alone needs 11~s per pair, as fast as ConvexAdam and ten times faster than NiftyReg (108~s); IO adds about 2.5~minutes.
-Figure~\ref{fig:qualitative} shows a test pair whose lesion volume grew tenfold between baseline and follow-up (from 2400 to 24\,191 voxels); it was chosen for this change, not for its registration result, and illustrates alignment.
-The scans were initially far apart (CT Dice 3.5\,\%); our method aligned them to 83.7\,\% Dice (NiftyReg 70.8\,\%, ConvexAdam 65.7\,\%), and NDV remained below the challenge threshold.
-The volume and uptake of the 163 follow-up lesions changed by $+2.6\,\%$ and $+6.6\,\%$, more than with IO without the losses ($-0.6\,\%$ and $+2.3\,\%$).
-Before registration, the CT overlay (Fig.~\ref{fig:qualitative}c) and the label residual (e) show misalignment across the whole trunk; after registration (d, f), the residual is reduced to thin bands at organ boundaries and to parts of the lumbar vertebrae, and the warped lesion contours lie in the corresponding bones (h).
-The Jacobian determinant (g) shows fine-grained changes in the local volume scale of the sampling transform throughout the body, which IO adds to the smooth network field because it has no smoothness term ($\lambda_{\mathrm{smooth}}=0$).
-
-\input{tables/baselines}
-\input{figures/qualitative}
-
 \subsection{Rigidity Penalties}
 \label{sect:res_rigidity}
 Bones should retain their internal geometry during registration even when they move relative to one another.
@@ -125,45 +172,3 @@ Per lesion, the penalties lowered the median volume change of bone-associated le
 \input{figures/rigidity}
 \input{figures/rigidity_measures}
 \input{figures/rigidity_preservation}
-
-\subsection{Accuracy--Preservation Trade-off}
-\label{sect:res_tradeoff}
-We vary the PET-loss weights in IO to show how alignment and lesion preservation change together and whether stronger weights resolve the residual error.
-Figure~\ref{fig:tradeoff} varies the PET weights in IO on the network trained without the losses.
-Already the smallest factor ($\times10^{-4}$) lowered the volume change of the predicted lesion masks from 9.3\,\% (IO without the PET losses) to 2.1\,\% and that of the ground-truth lesions from 11.3\,\% to 9.3\,\%, without a loss in Dice (80.2\,\%); $|\Delta\mathrm{TLG}|$ fell from 14.5\,\% to 12.9\,\%.
-Larger factors reduced the change of the predicted masks further, to below 1\,\% from $\times0.01$ on, but not that of the ground-truth lesions (9.0 to 9.8\,\%), while Dice decreased steadily, to 78.6\,\% at $\times0.1$ and 78.0\,\% at $\times1$.
-Compared with the network output before IO (dashed), IO with the PET losses thus canceled the increase that IO otherwise causes and ended slightly below it ($|\Delta\mathrm{MTV}|$ 9.3\,\% vs.\ 10.3\,\%, $|\Delta\mathrm{TLG}|$ 11.8\,\% vs.\ 12.5\,\% at $\times0.1$), but not significantly (two-sided Wilcoxon signed-rank test, $p=0.17$ and $p=0.86$; lower for 14 and 13 of 26 patients), while gaining 3.2 Dice points.
-The factor chosen on the validation set ($\times0.1$) thus cost 1.6 Dice points more than $\times10^{-4}$ for the same volume change (9.3\,\%) and 1.1 points less uptake change (11.8\,\%).
-On the predicted masks, $|\Delta\mathrm{TLG}|$ fell from 10.2\,\% to 5.2\,\% at $\times10^{-4}$ and to about 3\,\% from $\times0.1$ on.
-The same gap between the labels IO optimizes and the ground truth appeared for the organs: without the PET losses, IO reached 92.9\,\% Dice on the predicted organ labels but 80.2\,\% on the ground-truth labels, starting from 79.0\,\% and 75.5\,\% for the network output.
-
-In the diagnostic run with provided lesion masks (black diamonds), the measured changes fell from 9.3\,\% to 0.1\,\% for MTV and from 11.8\,\% to 4.5\,\% for TLG at the tuned factor; Dice rose from 78.6\,\% to 79.1\,\%.
-At $\times1$, the changes were similar (0.2\,\% MTV, 4.0\,\% TLG; 78.6\,\% Dice), so a larger weight hardly reduced the remaining uptake change even with provided masks.
-The near-zero volume change is that of the scan total, which this run optimizes directly; the change of individual lesions remained (Sec.~\ref{sect:res_lesions}).
-
-\input{figures/tradeoff}
-
-\subsection{Lesion Coverage in Predicted Masks}
-\label{sect:res_detection}
-
-To locate the remaining registration-induced change, we group all 1435 provided lesions, including the 108 smaller than five voxels, by how much each overlaps the mask used by IO (Fig.~\ref{fig:detection}): 214 had no overlap (missed; 6\,\% of lesion volume), 155 had less than 50\,\% overlap (partly covered; 6\,\%), and 1066 had at least 50\,\% overlap (covered; 88\,\%).
-
-PET IO reduced the change of covered lesions below that of the network output, from 9.1\,\% to 6.0\,\% for $|\Delta\mathrm{MTV}|$ and from 11.0\,\% to 8.4\,\% for $|\Delta\mathrm{TLG}|$ (IO without and with the PET losses at the tuned weights; network output 7.9\,\% and 9.2\,\%).
-Partly covered lesions changed as much with the PET losses as without them (12.5\,\% and 12.0\,\%), and missed lesions less (14.4\,\% and 17.0\,\%) but still more than at the network output (12.4\,\%).
-The loss has no direct target for a missed lesion and only a partial target for a partly covered lesion.
-After PET IO, missed lesions therefore contributed more than half of the remaining change: 5.2 of 9.3 points of $|\Delta\mathrm{MTV}|$ and 6.2 of 11.8 points of $|\Delta\mathrm{TLG}|$, although they make up only 6\,\% of the lesion volume.
-Covered lesions contributed 3.3 and 5.4 points.
-Scaling the PET weights from $\times0.1$ to $\times1$ changed none of these values by more than 0.3 points.
-
-Without the PET losses, IO increased the change of every group over the network output, for covered lesions from 7.9\,\% to 9.1\,\% ($|\Delta\mathrm{MTV}|$) and from 9.2\,\% to 11.0\,\% ($|\Delta\mathrm{TLG}|$), and the overall change from 10.3\,\% to 11.3\,\% and from 12.5\,\% to 14.5\,\%.
-This agrees with the per-lesion analysis (Sec.~\ref{sect:res_lesions}), in which IO without the losses increased the volume change of lesions.
-In the diagnostic run with provided lesion masks, the contribution of lesions that nnU-Net missed fell from 5.2 to 1.2 points of $|\Delta\mathrm{MTV}|$ and from 6.2 to 2.1 points of $|\Delta\mathrm{TLG}|$, and that of covered lesions from 3.3 to 0.9 and from 5.4 to 3.8 points.
-The near-zero overall change with provided masks does not mean that the lesions kept their volumes: if only the missed, partly covered, or covered lesions had changed, MTV would have changed by 1.2, 1.2, and 0.9 points, respectively. Some lesions therefore grew while others shrank, and their changes canceled in the scan total, which is what both the PET loss and the evaluation metric measure (see also Sec.~\ref{sect:res_lesions}).
-
-As a post-hoc attempt to increase lesion coverage, we combined the nnU-Net predictions with voxels above SUV 3 outside a 10-mm halo around predicted organs with physiological uptake, following the recall-biased approach of Dey and Dalca~\cite{dey2026registration}.
-On the moving test scans with lesions (mean over patients), lesion detection increased from 74\,\% to 91\,\%, while voxel-level precision fell from 0.71 to 0.22.
-Compared with IO using the nnU-Net mask, MTV change was 10.3\,\% instead of 9.3\,\%, TLG change was 12.5\,\% instead of 11.8\,\%, and CT Dice was 79.3\,\% instead of 78.6\,\%.
-None of these differences was significant.
-The per-lesion median was similar (13.5\,\% vs.\ 13.7\,\%).
-
-\input{figures/detection}

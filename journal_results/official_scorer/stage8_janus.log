@@ -108,4 +108,388 @@ Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
 [lambda4] 0294 01->00: dice_ct_before=0.2674 dice_ct=0.6479 hd95_before=21.1536 hd95=7.3035 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5747 bone_hd95=8.4942 soft_dice=0.7409 soft_hd95=5.9805 near_bone_soft_dice=0.6845 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2027 stencil_leakage_staring_eroded=0.0000 bre_mm=1.1595 staring_energy_bone=0.0302 staring_properness_bone=0.0041 staring_orthonormality_bone=0.0260 staring_affinity_bone=0.0001 jac_det_dev_bone=0.0369 jac_ortho_dev_bone=0.1543 dist_distortion_short=0.0227 dist_distortion_long=0.0203 erosion_bones_retained=0.7213 erosion_voxels_retained=0.3736 lesion_voxels=464.0000 mtv_change=0.0345 mtv_bias=0.0345 tlg_change=0.0434 tlg_bias=0.0434 n_lesions=4.0000
 [lambda4] 0294 02->00: dice_ct_before=0.2648 dice_ct=0.5344 hd95_before=27.3322 hd95=18.6599 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.4354 bone_hd95=27.2710 soft_dice=0.6540 soft_hd95=8.9324 near_bone_soft_dice=0.6332 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2027 stencil_leakage_staring_eroded=0.0000 bre_mm=1.3884 staring_energy_bone=0.0622 staring_properness_bone=0.0081 staring_orthonormality_bone=0.0540 staring_affinity_bone=0.0002 jac_det_dev_bone=0.0649 jac_ortho_dev_bone=0.2239 dist_distortion_short=0.0313 dist_distortion_long=0.0232 erosion_bones_retained=0.7213 erosion_voxels_retained=0.3736 lesion_voxels=477.0000 mtv_change=0.1342 mtv_bias=0.1342 tlg_change=0.1376 tlg_bias=0.1376 n_lesions=3.0000
 [lambda4] 0294 03->00: dice_ct_before=0.1750 dice_ct=0.6442 hd95_before=23.6666 hd95=8.1135 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6089 bone_hd95=8.4559 soft_dice=0.6951 soft_hd95=7.7266 near_bone_soft_dice=0.6970 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2027 stencil_leakage_staring_eroded=0.0000 bre_mm=1.4805 staring_energy_bone=0.0481 staring_properness_bone=0.0067 staring_orthonormality_bone=0.0413 staring_affinity_bone=0.0002 jac_det_dev_bone=0.0693 jac_ortho_dev_bone=0.2147 dist_distortion_short=0.0304 dist_distortion_long=0.0243 erosion_bones_retained=0.7213 erosion_voxels_retained=0.3736 lesion_voxels=182.0000 mtv_change=0.1484 mtv_bias=0.1484 tlg_change=0.1176 tlg_bias=0.1176 n_lesions=2.0000
-[lambda4] 0319 01->00: dice_ct_before=0.2738 dice_ct=0.5482 hd95_before=17.0857 hd95=10.0082 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.4738 bone_hd95=10.6877 soft_dice=0.6525 soft_hd95=9.2407 near_bone_soft_dice=0.5053 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2158 stencil_leakage_staring_eroded=0.0000 bre_mm=2.8193 staring_energy_bone=0.1016 staring_properness_bone=0.0322 staring_orthonormality_bone=0.0693 staring_affinity_bone=0.0001 jac_det_dev_bone=0.1508 jac_ortho_dev_bone=0.2491 dist_distortion_short=0.0535 dist_distortion_long=0.0527 erosion_bones_retained=0.8361 erosion_voxels_retained=0.3451 lesion_voxels=33984.0000 mtv_change=0.1505 mtv_bias=0.1505 tlg_change=0.1558 tlg_bias=0.1558 n_lesions=107.0000lambda4:  84%|████████▍ | 32/38 [21:48<03:54, 39.01s/it]lambda4:  87%|████████▋ | 33/38 [21:48<03:15, 39.11s/it]                                                        lambda4:  87%|████████▋ | 33/38 [22:28<03:15, 39.11s/it]lambda4:  89%|████████▉ | 34/38 [22:28<02:37, 39.49s/it]                                                        lambda4:  89%|████████▉ | 34/38 [23:07<02:37, 39.49s/it]lambda4:  92%|█████████▏| 35/38 [23:07<01:57, 39.30s/it]                                                        lambda4:  92%|█████████▏| 35/38 [23:47<01:57, 39.30s/it]lambda4:  95%|█████████▍| 36/38 [23:47<01:18, 39.49s/it]
+[lambda4] 0319 01->00: dice_ct_before=0.2738 dice_ct=0.5482 hd95_before=17.0857 hd95=10.0082 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.4738 bone_hd95=10.6877 soft_dice=0.6525 soft_hd95=9.2407 near_bone_soft_dice=0.5053 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2158 stencil_leakage_staring_eroded=0.0000 bre_mm=2.8193 staring_energy_bone=0.1016 staring_properness_bone=0.0322 staring_orthonormality_bone=0.0693 staring_affinity_bone=0.0001 jac_det_dev_bone=0.1508 jac_ortho_dev_bone=0.2491 dist_distortion_short=0.0535 dist_distortion_long=0.0527 erosion_bones_retained=0.8361 erosion_voxels_retained=0.3451 lesion_voxels=33984.0000 mtv_change=0.1505 mtv_bias=0.1505 tlg_change=0.1558 tlg_bias=0.1558 n_lesions=107.0000lambda4:  84%|████████▍ | 32/38 [21:48<03:54, 39.01s/it]lambda4:  87%|████████▋ | 33/38 [21:48<03:15, 39.11s/it]                                                        lambda4:  87%|████████▋ | 33/38 [22:28<03:15, 39.11s/it]lambda4:  89%|████████▉ | 34/38 [22:28<02:37, 39.49s/it]                                                        lambda4:  89%|████████▉ | 34/38 [23:07<02:37, 39.49s/it]lambda4:  92%|█████████▏| 35/38 [23:07<01:57, 39.30s/it]                                                        lambda4:  92%|█████████▏| 35/38 [23:47<01:57, 39.30s/it]lambda4:  95%|█████████▍| 36/38 [23:47<01:18, 39.49s/it]                                                        lambda4:  95%|█████████▍| 36/38 [24:27<01:18, 39.49s/it]lambda4:  97%|█████████▋| 37/38 [24:27<00:39, 39.63s/it]                                                        lambda4:  97%|█████████▋| 37/38 [25:05<00:39, 39.63s/it]lambda4: 100%|██████████| 38/38 [25:05<00:00, 39.21s/it]lambda4: 100%|██████████| 38/38 [25:05<00:00, 39.62s/it]
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+
+[lambda4] 0327 01->00: dice_ct_before=0.0475 dice_ct=0.6003 hd95_before=44.9596 hd95=8.8717 ndv_percent=0.0000 n_bones=60.0000 bone_dice=0.5782 bone_hd95=7.7221 soft_dice=0.6418 soft_hd95=10.1703 near_bone_soft_dice=0.6175 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2122 stencil_leakage_staring_eroded=0.0000 bre_mm=1.3282 staring_energy_bone=0.0465 staring_properness_bone=0.0044 staring_orthonormality_bone=0.0417 staring_affinity_bone=0.0004 jac_det_dev_bone=0.0545 jac_ortho_dev_bone=0.1344 dist_distortion_short=0.0244 dist_distortion_long=0.0239 erosion_bones_retained=0.7833 erosion_voxels_retained=0.3626 lesion_voxels=14116.0000 mtv_change=0.0465 mtv_bias=0.0465 tlg_change=0.0408 tlg_bias=0.0408 n_lesions=119.0000
+[lambda4] 0328 01->00: dice_ct_before=0.1883 dice_ct=0.5105 hd95_before=19.8558 hd95=8.6392 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.4131 bone_hd95=8.7158 soft_dice=0.6393 soft_hd95=8.5527 near_bone_soft_dice=0.5071 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2275 stencil_leakage_staring_eroded=0.0000 bre_mm=2.2095 staring_energy_bone=0.1043 staring_properness_bone=0.0196 staring_orthonormality_bone=0.0844 staring_affinity_bone=0.0003 jac_det_dev_bone=0.1334 jac_ortho_dev_bone=0.2240 dist_distortion_short=0.0467 dist_distortion_long=0.0463 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3191 lesion_voxels=72763.0000 mtv_change=0.1072 mtv_bias=0.1072 tlg_change=0.1087 tlg_bias=0.1087 n_lesions=97.0000
+[lambda4] 0331 01->00: dice_ct_before=0.2936 dice_ct=0.6242 hd95_before=17.2301 hd95=9.3574 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6131 bone_hd95=7.8176 soft_dice=0.6598 soft_hd95=11.0967 near_bone_soft_dice=0.5727 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2197 stencil_leakage_staring_eroded=0.0000 bre_mm=1.4548 staring_energy_bone=0.0519 staring_properness_bone=0.0067 staring_orthonormality_bone=0.0448 staring_affinity_bone=0.0003 jac_det_dev_bone=0.0510 jac_ortho_dev_bone=0.1476 dist_distortion_short=0.0247 dist_distortion_long=0.0229 erosion_bones_retained=0.7869 erosion_voxels_retained=0.3392 lesion_voxels=10385.0000 mtv_change=0.0804 mtv_bias=0.0804 tlg_change=0.0859 tlg_bias=0.0859 n_lesions=13.0000
+[lambda4] 0356 01->00: dice_ct_before=0.0601 dice_ct=0.5901 hd95_before=45.3292 hd95=9.1774 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5171 bone_hd95=11.1037 soft_dice=0.6945 soft_hd95=7.0014 near_bone_soft_dice=0.6147 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2102 stencil_leakage_staring_eroded=0.0000 bre_mm=1.5370 staring_energy_bone=0.0482 staring_properness_bone=0.0093 staring_orthonormality_bone=0.0388 staring_affinity_bone=0.0002 jac_det_dev_bone=0.0821 jac_ortho_dev_bone=0.1657 dist_distortion_short=0.0318 dist_distortion_long=0.0275 erosion_bones_retained=0.8197 erosion_voxels_retained=0.3605 lesion_voxels=931.0000 mtv_change=0.0999 mtv_bias=0.0999 tlg_change=0.1059 tlg_bias=0.1059 n_lesions=13.0000
+[lambda4] 0370 01->00: dice_ct_before=0.0314 dice_ct=0.6226 hd95_before=51.9767 hd95=7.9157 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5922 bone_hd95=7.3522 soft_dice=0.6800 soft_hd95=8.5523 near_bone_soft_dice=0.6143 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2330 stencil_leakage_staring_eroded=0.0000 bre_mm=1.4440 staring_energy_bone=0.0548 staring_properness_bone=0.0080 staring_orthonormality_bone=0.0466 staring_affinity_bone=0.0002 jac_det_dev_bone=0.0596 jac_ortho_dev_bone=0.1821 dist_distortion_short=0.0281 dist_distortion_long=0.0228 erosion_bones_retained=0.6230 erosion_voxels_retained=0.3223 lesion_voxels=22.0000 mtv_change=0.0000 mtv_bias=0.0000 tlg_change=-0.0000 tlg_bias=0.0000 n_lesions=1.0000
+[lambda4] wrote /home/iml/fryderyk.koegl/code/LapIRN-koegl/evaluation_official_scorer/baselines/convexadam/eval/val/lambda4.csv
+runtime_s                           10.053889
+dice_ct_before                       0.135594
+dice_ct                              0.594630
+hd95_before                         34.964101
+hd95                                 9.327696
+ndv_percent                          0.000000
+n_bones                             60.947368
+bone_dice                            0.538103
+bone_hd95                           10.223187
+soft_dice                            0.679516
+soft_hd95                            8.305126
+near_bone_soft_dice                  0.610760
+ndv_bone_percent                     0.000000
+ndv_band_percent                     0.000000
+stencil_leakage_staring              0.212909
+stencil_leakage_staring_eroded       0.000000
+bre_mm                               1.761276
+staring_energy_bone                  0.081358
+staring_properness_bone              0.010946
+staring_orthonormality_bone          0.069994
+staring_affinity_bone                0.000418
+jac_det_dev_bone                     0.073773
+jac_ortho_dev_bone                   0.192531
+dist_distortion_short                0.033186
+dist_distortion_long                 0.030270
+erosion_bones_retained               0.755170
+erosion_voxels_retained              0.352741
+lesion_voxels                     7684.236842
+mtv_change                           0.056069
+mtv_bias                             0.057590
+tlg_change                           0.053881
+tlg_bias                             0.058036
+n_lesions                           24.605263
+dtype: float64
+[lambda4] wrote /home/iml/fryderyk.koegl/code/LapIRN-koegl/evaluation_official_scorer/baselines/convexadam/eval/val/lambda4_lesions.csv
+per-lesion |MTV change|:
+                          count      mean  ...       95%       max
+bone_associated size_bin                   ...                    
+False           large      27.0  0.125747  ...  0.264104  0.289210
+                medium    138.0  0.099916  ...  0.339955  0.466667
+                small      27.0  0.146614  ...  0.500000  0.714286
+True            large     151.0  0.094949  ...  0.243839  0.538905
+                medium    441.0  0.102205  ...  0.307692  1.000000
+                small      96.0  0.117882  ...  0.400000  0.764706
+
+[6 rows x 7 columns]
+=== run base/convexadam/lambda2
+[convexadam/lambda2] 1/38 0071 01->00: 11s
+[convexadam/lambda2] 2/38 0071 02->00: 11s
+[convexadam/lambda2] 3/38 0071 03->00: 11s
+[convexadam/lambda2] 4/38 0071 04->00: 11s
+[convexadam/lambda2] 5/38 0071 05->00: 11s
+[convexadam/lambda2] 6/38 0078 01->00: 12s
+[convexadam/lambda2] 7/38 0113 01->00: 11s
+[convexadam/lambda2] 8/38 0124 01->00: 11s
+[convexadam/lambda2] 9/38 0125 01->00: 11s
+[convexadam/lambda2] 10/38 0134 01->00: 11s
+[convexadam/lambda2] 11/38 0138 01->00: 11s
+[convexadam/lambda2] 12/38 0140 01->00: 11s
+[convexadam/lambda2] 13/38 0148 01->00: 12s
+[convexadam/lambda2] 14/38 0159 01->00: 11s
+[convexadam/lambda2] 15/38 0162 01->00: 12s
+[convexadam/lambda2] 16/38 0181 01->00: 12s
+[convexadam/lambda2] 17/38 0200 01->00: 11s
+[convexadam/lambda2] 18/38 0200 02->00: 11s
+[convexadam/lambda2] 19/38 0203 01->00: 11s
+[convexadam/lambda2] 20/38 0211 01->00: 11s
+[convexadam/lambda2] 21/38 0219 01->00: 11s
+[convexadam/lambda2] 22/38 0236 01->00: 11s
+[convexadam/lambda2] 23/38 0236 02->00: 11s
+[convexadam/lambda2] 24/38 0236 03->00: 10s
+[convexadam/lambda2] 25/38 0236 04->00: 11s
+[convexadam/lambda2] 26/38 0236 05->00: 11s
+[convexadam/lambda2] 27/38 0236 06->00: 11s
+[convexadam/lambda2] 28/38 0291 01->00: 12s
+[convexadam/lambda2] 29/38 0292 01->00: 12s
+[convexadam/lambda2] 30/38 0294 01->00: 10s
+[convexadam/lambda2] 31/38 0294 02->00: 11s
+[convexadam/lambda2] 32/38 0294 03->00: 11s
+[convexadam/lambda2] 33/38 0319 01->00: 12s
+[convexadam/lambda2] 34/38 0327 01->00: 11s
+[convexadam/lambda2] 35/38 0328 01->00: 12s
+[convexadam/lambda2] 36/38 0331 01->00: 11s
+[convexadam/lambda2] 37/38 0356 01->00: 11s
+[convexadam/lambda2] 38/38 0370 01->00: 11s
+lambda2:   0%|          | 0/38 [00:00<?, ?it/s]                                               lambda2:   0%|          | 0/38 [00:40<?, ?it/s]lambda2:   3%|▎         | 1/38 [00:40<24:56, 40.43s/it]                                                       lambda2:   3%|▎         | 1/38 [01:21<24:56, 40.43s/it]lambda2:   5%|▌         | 2/38 [01:21<24:21, 40.59s/it]                                                       lambda2:   5%|▌         | 2/38 [02:01<24:21, 40.59s/it]lambda2:   8%|▊         | 3/38 [02:01<23:31, 40.34s/it]                                                       lambda2:   8%|▊         | 3/38 [02:41<23:31, 40.34s/it]lambda2:  11%|█         | 4/38 [02:41<22:52, 40.38s/it]                                                       lambda2:  11%|█         | 4/38 [03:22<22:52, 40.38s/it]lambda2:  13%|█▎        | 5/38 [03:22<22:12, 40.39s/it]                                                       lambda2:  13%|█▎        | 5/38 [04:02<22:12, 40.39s/it]lambda2:  16%|█▌        | 6/38 [04:02<21:35, 40.50s/it]                                                       lambda2:  16%|█▌        | 6/38 [04:41<21:35, 40.50s/it]lambda2:  18%|█▊        | 7/38 [04:41<20:41, 40.04s/it]                                                       lambda2:  18%|█▊        | 7/38 [05:21<20:41, 40.04s/it]lambda2:  21%|██        | 8/38 [05:21<19:59, 39.97s/it]                                                       lambda2:  21%|██        | 8/38 [06:01<19:59, 39.97s/it]lambda2:  24%|██▎       | 9/38 [06:01<19:20, 40.00s/it]                                                       lambda2:  24%|██▎       | 9/38 [06:42<19:20, 40.00s/it]lambda2:  26%|██▋       | 10/38 [06:42<18:46, 40.23s/it]                                                        [lambda2] 0071 01->00: dice_ct_before=0.0819 dice_ct=0.6158 hd95_before=45.6354 hd95=7.0218 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5674 bone_hd95=6.9390 soft_dice=0.6933 soft_hd95=7.1153 near_bone_soft_dice=0.6145 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2113 stencil_leakage_staring_eroded=0.0000 bre_mm=2.4961 staring_energy_bone=1.3691 staring_properness_bone=0.0656 staring_orthonormality_bone=1.2932 staring_affinity_bone=0.0104 jac_det_dev_bone=0.0750 jac_ortho_dev_bone=0.2260 dist_distortion_short=0.0384 dist_distortion_long=0.0382 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3575 lesion_voxels=48.0000 mtv_change=0.0417 mtv_bias=0.0417 tlg_change=0.0406 tlg_bias=0.0406 n_lesions=1.0000
+[lambda2] 0071 02->00: dice_ct_before=0.1167 dice_ct=0.6127 hd95_before=29.1242 hd95=6.5367 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5580 bone_hd95=6.5897 soft_dice=0.6971 soft_hd95=6.4769 near_bone_soft_dice=0.6104 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2113 stencil_leakage_staring_eroded=0.0000 bre_mm=1.6444 staring_energy_bone=0.1093 staring_properness_bone=0.0115 staring_orthonormality_bone=0.0966 staring_affinity_bone=0.0012 jac_det_dev_bone=0.0699 jac_ortho_dev_bone=0.2039 dist_distortion_short=0.0330 dist_distortion_long=0.0287 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3575 lesion_voxels=0.0000 mtv_change=nan mtv_bias=nan tlg_change=nan tlg_bias=nan n_lesions=0.0000
+[lambda2] 0071 03->00: dice_ct_before=0.2031 dice_ct=0.6121 hd95_before=28.7630 hd95=6.8449 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5425 bone_hd95=7.3537 soft_dice=0.7133 soft_hd95=6.2702 near_bone_soft_dice=0.6043 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2113 stencil_leakage_staring_eroded=0.0000 bre_mm=2.6426 staring_energy_bone=0.3875 staring_properness_bone=0.0305 staring_orthonormality_bone=0.3528 staring_affinity_bone=0.0042 jac_det_dev_bone=0.0947 jac_ortho_dev_bone=0.2519 dist_distortion_short=0.0428 dist_distortion_long=0.0389 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3575 lesion_voxels=0.0000 mtv_change=nan mtv_bias=nan tlg_change=nan tlg_bias=nan n_lesions=0.0000
+[lambda2] 0071 04->00: dice_ct_before=0.0743 dice_ct=0.5969 hd95_before=37.0173 hd95=7.8775 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5142 bone_hd95=9.0555 soft_dice=0.7125 soft_hd95=6.5467 near_bone_soft_dice=0.6228 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2113 stencil_leakage_staring_eroded=0.0000 bre_mm=2.9712 staring_energy_bone=0.6749 staring_properness_bone=0.0344 staring_orthonormality_bone=0.6356 staring_affinity_bone=0.0050 jac_det_dev_bone=0.1081 jac_ortho_dev_bone=0.3122 dist_distortion_short=0.0511 dist_distortion_long=0.0442 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3575 lesion_voxels=0.0000 mtv_change=nan mtv_bias=nan tlg_change=nan tlg_bias=nan n_lesions=0.0000
+[lambda2] 0071 05->00: dice_ct_before=0.0427 dice_ct=0.5908 hd95_before=44.9095 hd95=7.6485 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5155 bone_hd95=8.4174 soft_dice=0.6979 soft_hd95=6.7799 near_bone_soft_dice=0.5973 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2113 stencil_leakage_staring_eroded=0.0000 bre_mm=2.4605 staring_energy_bone=0.8724 staring_properness_bone=0.0459 staring_orthonormality_bone=0.8181 staring_affinity_bone=0.0083 jac_det_dev_bone=0.0939 jac_ortho_dev_bone=0.2597 dist_distortion_short=0.0437 dist_distortion_long=0.0388 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3575 lesion_voxels=0.0000 mtv_change=nan mtv_bias=nan tlg_change=nan tlg_bias=nan n_lesions=0.0000
+[lambda2] 0078 01->00: dice_ct_before=0.0311 dice_ct=0.6287 hd95_before=71.2274 hd95=10.2296 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5568 bone_hd95=9.8609 soft_dice=0.7198 soft_hd95=10.6394 near_bone_soft_dice=0.5673 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2198 stencil_leakage_staring_eroded=0.0000 bre_mm=2.3070 staring_energy_bone=0.0846 staring_properness_bone=0.0197 staring_orthonormality_bone=0.0640 staring_affinity_bone=0.0009 jac_det_dev_bone=0.1190 jac_ortho_dev_bone=0.2159 dist_distortion_short=0.0429 dist_distortion_long=0.0404 erosion_bones_retained=0.8197 erosion_voxels_retained=0.3338 lesion_voxels=113.0000 mtv_change=0.1062 mtv_bias=0.1062 tlg_change=0.1126 tlg_bias=0.1126 n_lesions=3.0000
+[lambda2] 0113 01->00: dice_ct_before=0.1328 dice_ct=0.6092 hd95_before=25.4441 hd95=7.7136 ndv_percent=0.0000 n_bones=60.0000 bone_dice=0.5801 bone_hd95=7.1556 soft_dice=0.6882 soft_hd95=8.3454 near_bone_soft_dice=0.6576 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2035 stencil_leakage_staring_eroded=0.0000 bre_mm=1.9268 staring_energy_bone=0.0472 staring_properness_bone=0.0067 staring_orthonormality_bone=0.0403 staring_affinity_bone=0.0002 jac_det_dev_bone=0.0731 jac_ortho_dev_bone=0.1980 dist_distortion_short=0.0358 dist_distortion_long=0.0359 erosion_bones_retained=0.7000 erosion_voxels_retained=0.3720 lesion_voxels=62.0000 mtv_change=0.0000 mtv_bias=0.0000 tlg_change=0.0000 tlg_bias=0.0000 n_lesions=1.0000
+[lambda2] 0124 01->00: dice_ct_before=0.0201 dice_ct=0.6322 hd95_before=53.3267 hd95=5.5318 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5998 bone_hd95=4.8296 soft_dice=0.6922 soft_hd95=6.3251 near_bone_soft_dice=0.6244 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2408 stencil_leakage_staring_eroded=0.0000 bre_mm=1.4692 staring_energy_bone=0.2095 staring_properness_bone=0.0193 staring_orthonormality_bone=0.1898 staring_affinity_bone=0.0004 jac_det_dev_bone=0.0506 jac_ortho_dev_bone=0.1566 dist_distortion_short=0.0257 dist_distortion_long=0.0263 erosion_bones_retained=0.6885 erosion_voxels_retained=0.3028 lesion_voxels=5889.0000 mtv_change=0.0282 mtv_bias=0.0282 tlg_change=0.0351 tlg_bias=0.0351 n_lesions=35.0000
+[lambda2] 0125 01->00: dice_ct_before=0.1557 dice_ct=0.6014 hd95_before=24.8794 hd95=9.8206 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5432 bone_hd95=11.9257 soft_dice=0.6893 soft_hd95=7.4426 near_bone_soft_dice=0.6255 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2271 stencil_leakage_staring_eroded=0.0000 bre_mm=1.6416 staring_energy_bone=0.0972 staring_properness_bone=0.0111 staring_orthonormality_bone=0.0857 staring_affinity_bone=0.0004 jac_det_dev_bone=0.0410 jac_ortho_dev_bone=0.2029 dist_distortion_short=0.0310 dist_distortion_long=0.0244 erosion_bones_retained=0.7213 erosion_voxels_retained=0.3286 lesion_voxels=6326.0000 mtv_change=0.0128 mtv_bias=0.0128 tlg_change=0.0257 tlg_bias=0.0257 n_lesions=46.0000
+[lambda2] 0134 01->00: dice_ct_before=0.3272 dice_ct=0.5965 hd95_before=17.8010 hd95=11.6057 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5522 bone_hd95=12.8607 soft_dice=0.6812 soft_hd95=10.1611 near_bone_soft_dice=0.6259 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2004 stencil_leakage_staring_eroded=0.0000 bre_mm=1.9610 staring_energy_bone=0.0924 staring_properness_bone=0.0127 staring_orthonormality_bone=0.0793 staring_affinity_bone=0.0004 jac_det_dev_bone=0.0613 jac_ortho_dev_bone=0.2394 dist_distortion_short=0.0342 dist_distortion_long=0.0282 erosion_bones_retained=0.6557 erosion_voxels_retained=0.3890 lesion_voxels=2519.0000 mtv_change=-0.0087 mtv_bias=0.0087 tlg_change=-0.0470 tlg_bias=0.0470 n_lesions=20.0000
+[lambda2] 0138 01->00: dice_ct_before=0.1363 dice_ct=0.6339 hd95_before=29.6954 hd95=8.6303 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6025 bone_hd95=7.3928 soft_dice=0.6680 soft_hd95=10.0029 near_bone_soft_dice=0.6019 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2005 stencil_leakage_staring_eroded=0.0000 bre_mm=1.7429 staring_energy_bone=0.0699 staring_properness_bone=0.0091 staring_orthonormality_bone=0.0607 staring_affinity_bone=0.0002 jac_det_dev_bone=0.0534 jac_ortho_dev_bone=0.2261 dist_distortion_short=0.0340 dist_distortion_long=0.0275 erosion_bones_retained=0.8689 erosion_voxels_retained=0.3721 lesion_voxels=126.0000 mtv_change=0.0079 mtv_bias=0.0079 tlg_change=0.0071 tlg_bias=0.0071 n_lesions=2.0000lambda2:  26%|██▋       | 10/38 [07:23<18:46, 40.23s/it]lambda2:  29%|██▉       | 11/38 [07:23<18:08, 40.33s/it]                                                        lambda2:  29%|██▉       | 11/38 [08:03<18:08, 40.33s/it]lambda2:  32%|███▏      | 12/38 [08:03<17:28, 40.31s/it]                                                        lambda2:  32%|███▏      | 12/38 [08:43<17:28, 40.31s/it]lambda2:  34%|███▍      | 13/38 [08:43<16:46, 40.25s/it]                                                        lambda2:  34%|███▍      | 13/38 [09:22<16:46, 40.25s/it]lambda2:  37%|███▋      | 14/38 [09:22<15:58, 39.94s/it]                                                        lambda2:  37%|███▋      | 14/38 [10:03<15:58, 39.94s/it]lambda2:  39%|███▉      | 15/38 [10:03<15:24, 40.19s/it]                                                        lambda2:  39%|███▉      | 15/38 [10:43<15:24, 40.19s/it]lambda2:  42%|████▏     | 16/38 [10:43<14:42, 40.12s/it]                                                        lambda2:  42%|████▏     | 16/38 [11:23<14:42, 40.12s/it]lambda2:  45%|████▍     | 17/38 [11:23<14:03, 40.16s/it]                                                        lambda2:  45%|████▍     | 17/38 [12:03<14:03, 40.16s/it]lambda2:  47%|████▋     | 18/38 [12:03<13:21, 40.09s/it]                                                        lambda2:  47%|████▋     | 18/38 [12:44<13:21, 40.09s/it]lambda2:  50%|█████     | 19/38 [12:44<12:48, 40.46s/it]                                                        lambda2:  50%|█████     | 19/38 [13:24<12:48, 40.46s/it]lambda2:  53%|█████▎    | 20/38 [13:24<12:03, 40.18s/it]                                                        lambda2:  53%|█████▎    | 20/38 [14:05<12:03, 40.18s/it]lambda2:  55%|█████▌    | 21/38 [14:05<11:26, 40.38s/it]                                                        
+[lambda2] 0140 01->00: dice_ct_before=0.0256 dice_ct=0.5710 hd95_before=55.8821 hd95=9.4042 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5122 bone_hd95=9.4684 soft_dice=0.6466 soft_hd95=9.3317 near_bone_soft_dice=0.5606 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2421 stencil_leakage_staring_eroded=0.0000 bre_mm=2.3363 staring_energy_bone=0.0782 staring_properness_bone=0.0122 staring_orthonormality_bone=0.0657 staring_affinity_bone=0.0003 jac_det_dev_bone=0.0963 jac_ortho_dev_bone=0.2409 dist_distortion_short=0.0432 dist_distortion_long=0.0417 erosion_bones_retained=0.7049 erosion_voxels_retained=0.2956 lesion_voxels=61883.0000 mtv_change=0.0772 mtv_bias=0.0772 tlg_change=0.0729 tlg_bias=0.0729 n_lesions=129.0000
+[lambda2] 0148 01->00: dice_ct_before=0.0907 dice_ct=0.6309 hd95_before=32.8498 hd95=6.9638 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5472 bone_hd95=8.4090 soft_dice=0.7490 soft_hd95=5.3005 near_bone_soft_dice=0.6505 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.1963 stencil_leakage_staring_eroded=0.0000 bre_mm=1.5492 staring_energy_bone=0.0585 staring_properness_bone=0.0124 staring_orthonormality_bone=0.0459 staring_affinity_bone=0.0001 jac_det_dev_bone=0.0688 jac_ortho_dev_bone=0.1891 dist_distortion_short=0.0316 dist_distortion_long=0.0277 erosion_bones_retained=0.8689 erosion_voxels_retained=0.3785 lesion_voxels=4272.0000 mtv_change=0.0602 mtv_bias=0.0602 tlg_change=0.0813 tlg_bias=0.0813 n_lesions=4.0000
+[lambda2] 0159 01->00: dice_ct_before=0.1575 dice_ct=0.6182 hd95_before=21.6052 hd95=6.4689 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5889 bone_hd95=5.3062 soft_dice=0.6620 soft_hd95=7.7585 near_bone_soft_dice=0.5705 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2247 stencil_leakage_staring_eroded=0.0000 bre_mm=1.4261 staring_energy_bone=0.0489 staring_properness_bone=0.0046 staring_orthonormality_bone=0.0442 staring_affinity_bone=0.0002 jac_det_dev_bone=0.0421 jac_ortho_dev_bone=0.1644 dist_distortion_short=0.0259 dist_distortion_long=0.0228 erosion_bones_retained=0.8033 erosion_voxels_retained=0.3305 lesion_voxels=7470.0000 mtv_change=0.0112 mtv_bias=0.0112 tlg_change=0.0027 tlg_bias=0.0027 n_lesions=38.0000
+[lambda2] 0162 01->00: dice_ct_before=0.5657 dice_ct=0.6625 hd95_before=9.4796 hd95=7.0247 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6336 bone_hd95=7.1629 soft_dice=0.7066 soft_hd95=6.8686 near_bone_soft_dice=0.6470 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2155 stencil_leakage_staring_eroded=0.0000 bre_mm=1.4914 staring_energy_bone=0.0427 staring_properness_bone=0.0063 staring_orthonormality_bone=0.0362 staring_affinity_bone=0.0002 jac_det_dev_bone=0.0605 jac_ortho_dev_bone=0.1662 dist_distortion_short=0.0288 dist_distortion_long=0.0243 erosion_bones_retained=0.7869 erosion_voxels_retained=0.3440 lesion_voxels=170.0000 mtv_change=0.0118 mtv_bias=0.0118 tlg_change=0.0058 tlg_bias=0.0058 n_lesions=3.0000
+[lambda2] 0181 01->00: dice_ct_before=0.0886 dice_ct=0.4582 hd95_before=40.3894 hd95=18.0586 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.3338 bone_hd95=24.1567 soft_dice=0.6044 soft_hd95=11.1699 near_bone_soft_dice=0.5363 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2311 stencil_leakage_staring_eroded=0.0000 bre_mm=1.8778 staring_energy_bone=0.1048 staring_properness_bone=0.0194 staring_orthonormality_bone=0.0850 staring_affinity_bone=0.0004 jac_det_dev_bone=0.0962 jac_ortho_dev_bone=0.2309 dist_distortion_short=0.0404 dist_distortion_long=0.0346 erosion_bones_retained=0.7213 erosion_voxels_retained=0.3197 lesion_voxels=8500.0000 mtv_change=0.1861 mtv_bias=0.1861 tlg_change=0.2082 tlg_bias=0.2082 n_lesions=35.0000
+[lambda2] 0200 01->00: dice_ct_before=0.0390 dice_ct=0.6114 hd95_before=56.9939 hd95=9.8643 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5382 bone_hd95=13.3752 soft_dice=0.7302 soft_hd95=5.8236 near_bone_soft_dice=0.6148 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2047 stencil_leakage_staring_eroded=0.0000 bre_mm=2.0062 staring_energy_bone=0.1143 staring_properness_bone=0.0123 staring_orthonormality_bone=0.1016 staring_affinity_bone=0.0004 jac_det_dev_bone=0.0743 jac_ortho_dev_bone=0.2941 dist_distortion_short=0.0444 dist_distortion_long=0.0344 erosion_bones_retained=0.8033 erosion_voxels_retained=0.3628 lesion_voxels=0.0000 mtv_change=nan mtv_bias=nan tlg_change=nan tlg_bias=nan n_lesions=0.0000
+[lambda2] 0200 02->00: dice_ct_before=0.0380 dice_ct=0.6231 hd95_before=52.9957 hd95=9.3740 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5550 bone_hd95=12.1475 soft_dice=0.7369 soft_hd95=6.1819 near_bone_soft_dice=0.6247 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2047 stencil_leakage_staring_eroded=0.0000 bre_mm=1.5246 staring_energy_bone=0.0833 staring_properness_bone=0.0095 staring_orthonormality_bone=0.0734 staring_affinity_bone=0.0004 jac_det_dev_bone=0.0575 jac_ortho_dev_bone=0.2313 dist_distortion_short=0.0337 dist_distortion_long=0.0252 erosion_bones_retained=0.8033 erosion_voxels_retained=0.3628 lesion_voxels=30.0000 mtv_change=0.0667 mtv_bias=0.0667 tlg_change=0.0635 tlg_bias=0.0635 n_lesions=1.0000
+[lambda2] 0203 01->00: dice_ct_before=0.0567 dice_ct=0.6423 hd95_before=41.0214 hd95=8.1687 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6167 bone_hd95=7.0960 soft_dice=0.6824 soft_hd95=9.3805 near_bone_soft_dice=0.6127 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2017 stencil_leakage_staring_eroded=0.0000 bre_mm=1.7178 staring_energy_bone=0.2780 staring_properness_bone=0.0201 staring_orthonormality_bone=0.2562 staring_affinity_bone=0.0017 jac_det_dev_bone=0.0550 jac_ortho_dev_bone=0.1788 dist_distortion_short=0.0283 dist_distortion_long=0.0261 erosion_bones_retained=0.9016 erosion_voxels_retained=0.3697 lesion_voxels=3464.0000 mtv_change=0.0280 mtv_bias=0.0280 tlg_change=0.0223 tlg_bias=0.0223 n_lesions=24.0000
+[lambda2] 0211 01->00: dice_ct_before=0.0833 dice_ct=0.5852 hd95_before=36.3078 hd95=10.2450 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5013 bone_hd95=11.4509 soft_dice=0.6888 soft_hd95=8.8571 near_bone_soft_dice=0.5913 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.1976 stencil_leakage_staring_eroded=0.0000 bre_mm=2.2790 staring_energy_bone=0.0951 staring_properness_bone=0.0095 staring_orthonormality_bone=0.0852 staring_affinity_bone=0.0004 jac_det_dev_bone=0.0881 jac_ortho_dev_bone=0.3338 dist_distortion_short=0.0481 dist_distortion_long=0.0388 erosion_bones_retained=0.8197 erosion_voxels_retained=0.3754 lesion_voxels=90.0000 mtv_change=0.0000 mtv_bias=0.0000 tlg_change=0.0000 tlg_bias=0.0000 n_lesions=2.0000
+[lambda2] 0219 01->00: dice_ct_before=0.1679 dice_ct=0.6625 hd95_before=21.6948 hd95=5.7120 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6432 bone_hd95=5.1507 soft_dice=0.7088 soft_hd95=6.3460 near_bone_soft_dice=0.6269 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2200 stencil_leakage_staring_eroded=0.0000 bre_mm=1.2038 staring_energy_bone=0.0308 staring_properness_bone=0.0038 staring_orthonormality_bone=0.0268 staring_affinity_bone=0.0001 jac_det_dev_bone=0.0396 jac_ortho_dev_bone=0.1423 dist_distortion_short=0.0225 dist_distortion_long=0.0212 erosion_bones_retained=0.8033 erosion_voxels_retained=0.3407 lesion_voxels=21785.0000 mtv_change=0.0219 mtv_bias=0.0219 tlg_change=0.0243 tlg_bias=0.0243 n_lesions=62.0000
+[lambda2] 0236 01->00: dice_ct_before=0.1763 dice_ct=0.6134 hd95_before=25.6175 hd95=7.8387 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5663 bone_hd95=7.7581 soft_dice=0.7023 soft_hd95=7.9315 near_bone_soft_dice=0.6803 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2060 stencil_leakage_staring_eroded=0.0000 bre_mm=1.9374 staring_energy_bone=0.0367 staring_properness_bone=0.0046 staring_orthonormality_bone=0.0319 staring_affinity_bone=0.0002 jac_det_dev_bone=0.0764 jac_ortho_dev_bone=0.1915 dist_distortion_short=0.0348 dist_distortion_long=0.0346 erosion_bones_retained=0.6721 erosion_voxels_retained=0.3631 lesion_voxels=87.0000 mtv_change=0.0920 mtv_bias=0.0920 tlg_change=0.0918 tlg_bias=0.0918 n_lesions=1.0000lambda2:  55%|█████▌    | 21/38 [14:44<11:26, 40.38s/it]lambda2:  58%|█████▊    | 22/38 [14:44<10:42, 40.14s/it]                                                        lambda2:  58%|█████▊    | 22/38 [15:24<10:42, 40.14s/it]lambda2:  61%|██████    | 23/38 [15:24<10:01, 40.11s/it]                                                        lambda2:  61%|██████    | 23/38 [16:04<10:01, 40.11s/it]lambda2:  63%|██████▎   | 24/38 [16:04<09:19, 39.98s/it]                                                        lambda2:  63%|██████▎   | 24/38 [16:44<09:19, 39.98s/it]lambda2:  66%|██████▌   | 25/38 [16:44<08:41, 40.12s/it]                                                        lambda2:  66%|██████▌   | 25/38 [17:25<08:41, 40.12s/it]lambda2:  68%|██████▊   | 26/38 [17:25<08:01, 40.16s/it]                                                        lambda2:  68%|██████▊   | 26/38 [18:05<08:01, 40.16s/it]lambda2:  71%|███████   | 27/38 [18:05<07:20, 40.06s/it]                                                        lambda2:  71%|███████   | 27/38 [18:46<07:20, 40.06s/it]lambda2:  74%|███████▎  | 28/38 [18:46<06:43, 40.37s/it]                                                        lambda2:  74%|███████▎  | 28/38 [19:26<06:43, 40.37s/it]lambda2:  76%|███████▋  | 29/38 [19:26<06:04, 40.45s/it]                                                        lambda2:  76%|███████▋  | 29/38 [20:06<06:04, 40.45s/it]lambda2:  79%|███████▉  | 30/38 [20:06<05:21, 40.16s/it]                                                        lambda2:  79%|███████▉  | 30/38 [20:46<05:21, 40.16s/it]lambda2:  82%|████████▏ | 31/38 [20:46<04:41, 40.28s/it]                                                        lambda2:  82%|████████▏ | 31/38 [21:26<04:41, 40.28s/it]lambda2:  84%|████████▍ | 32/38 [21:26<04:00, 40.03s/it]                                                        
+[lambda2] 0236 02->00: dice_ct_before=0.0778 dice_ct=0.6013 hd95_before=37.5956 hd95=9.8103 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5515 bone_hd95=10.1121 soft_dice=0.6925 soft_hd95=9.4629 near_bone_soft_dice=0.6412 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2060 stencil_leakage_staring_eroded=0.0000 bre_mm=2.8065 staring_energy_bone=0.0781 staring_properness_bone=0.0151 staring_orthonormality_bone=0.0628 staring_affinity_bone=0.0003 jac_det_dev_bone=0.1004 jac_ortho_dev_bone=0.2517 dist_distortion_short=0.0447 dist_distortion_long=0.0452 erosion_bones_retained=0.6721 erosion_voxels_retained=0.3631 lesion_voxels=128.0000 mtv_change=0.0000 mtv_bias=0.0000 tlg_change=0.0000 tlg_bias=0.0000 n_lesions=1.0000
+[lambda2] 0236 03->00: dice_ct_before=0.1233 dice_ct=0.6351 hd95_before=29.4019 hd95=7.7846 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5998 bone_hd95=7.7973 soft_dice=0.7115 soft_hd95=7.7700 near_bone_soft_dice=0.6510 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2060 stencil_leakage_staring_eroded=0.0000 bre_mm=2.0765 staring_energy_bone=0.0444 staring_properness_bone=0.0073 staring_orthonormality_bone=0.0369 staring_affinity_bone=0.0002 jac_det_dev_bone=0.0850 jac_ortho_dev_bone=0.1886 dist_distortion_short=0.0357 dist_distortion_long=0.0356 erosion_bones_retained=0.6721 erosion_voxels_retained=0.3631 lesion_voxels=0.0000 mtv_change=nan mtv_bias=nan tlg_change=nan tlg_bias=nan n_lesions=0.0000
+[lambda2] 0236 04->00: dice_ct_before=0.0434 dice_ct=0.5712 hd95_before=47.5921 hd95=9.4819 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.4903 bone_hd95=10.4760 soft_dice=0.6965 soft_hd95=8.3378 near_bone_soft_dice=0.6648 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2060 stencil_leakage_staring_eroded=0.0000 bre_mm=2.5951 staring_energy_bone=0.0752 staring_properness_bone=0.0168 staring_orthonormality_bone=0.0581 staring_affinity_bone=0.0002 jac_det_dev_bone=0.1211 jac_ortho_dev_bone=0.2530 dist_distortion_short=0.0488 dist_distortion_long=0.0450 erosion_bones_retained=0.6721 erosion_voxels_retained=0.3631 lesion_voxels=34.0000 mtv_change=0.0294 mtv_bias=0.0294 tlg_change=0.0220 tlg_bias=0.0220 n_lesions=1.0000
+[lambda2] 0236 05->00: dice_ct_before=0.0238 dice_ct=0.6190 hd95_before=58.2974 hd95=8.4379 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5727 bone_hd95=8.8921 soft_dice=0.7072 soft_hd95=7.9051 near_bone_soft_dice=0.6504 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2060 stencil_leakage_staring_eroded=0.0000 bre_mm=2.1402 staring_energy_bone=0.0673 staring_properness_bone=0.0124 staring_orthonormality_bone=0.0547 staring_affinity_bone=0.0002 jac_det_dev_bone=0.1023 jac_ortho_dev_bone=0.2167 dist_distortion_short=0.0420 dist_distortion_long=0.0386 erosion_bones_retained=0.6721 erosion_voxels_retained=0.3631 lesion_voxels=108.0000 mtv_change=0.1944 mtv_bias=0.1944 tlg_change=0.2232 tlg_bias=0.2232 n_lesions=2.0000
+[lambda2] 0236 06->00: dice_ct_before=0.0683 dice_ct=0.6370 hd95_before=36.9380 hd95=7.6322 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5953 bone_hd95=8.2228 soft_dice=0.7210 soft_hd95=6.9395 near_bone_soft_dice=0.6422 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2060 stencil_leakage_staring_eroded=0.0000 bre_mm=2.2589 staring_energy_bone=0.0528 staring_properness_bone=0.0090 staring_orthonormality_bone=0.0435 staring_affinity_bone=0.0003 jac_det_dev_bone=0.0966 jac_ortho_dev_bone=0.2008 dist_distortion_short=0.0396 dist_distortion_long=0.0399 erosion_bones_retained=0.6721 erosion_voxels_retained=0.3631 lesion_voxels=60.0000 mtv_change=0.0833 mtv_bias=0.0833 tlg_change=0.0713 tlg_bias=0.0713 n_lesions=1.0000
+[lambda2] 0291 01->00: dice_ct_before=0.2128 dice_ct=0.4938 hd95_before=22.0986 hd95=10.5997 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.3828 bone_hd95=12.3177 soft_dice=0.6259 soft_hd95=8.6590 near_bone_soft_dice=0.5267 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2116 stencil_leakage_staring_eroded=0.0000 bre_mm=2.0019 staring_energy_bone=0.1095 staring_properness_bone=0.0174 staring_orthonormality_bone=0.0912 staring_affinity_bone=0.0010 jac_det_dev_bone=0.1234 jac_ortho_dev_bone=0.2516 dist_distortion_short=0.0468 dist_distortion_long=0.0377 erosion_bones_retained=0.7869 erosion_voxels_retained=0.3645 lesion_voxels=21470.0000 mtv_change=0.0875 mtv_bias=0.0875 tlg_change=0.0852 tlg_bias=0.0852 n_lesions=48.0000
+[lambda2] 0292 01->00: dice_ct_before=0.1903 dice_ct=0.5339 hd95_before=25.4621 hd95=14.9257 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.4443 bone_hd95=20.4199 soft_dice=0.6429 soft_hd95=8.6021 near_bone_soft_dice=0.5652 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2298 stencil_leakage_staring_eroded=0.0000 bre_mm=2.3428 staring_energy_bone=0.1712 staring_properness_bone=0.0218 staring_orthonormality_bone=0.1489 staring_affinity_bone=0.0004 jac_det_dev_bone=0.0932 jac_ortho_dev_bone=0.2470 dist_distortion_short=0.0407 dist_distortion_long=0.0370 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3254 lesion_voxels=14043.0000 mtv_change=0.0814 mtv_bias=0.0814 tlg_change=0.0787 tlg_bias=0.0787 n_lesions=116.0000
+[lambda2] 0294 01->00: dice_ct_before=0.2674 dice_ct=0.6521 hd95_before=21.1536 hd95=7.2440 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5811 bone_hd95=8.3594 soft_dice=0.7427 soft_hd95=6.0047 near_bone_soft_dice=0.6787 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2027 stencil_leakage_staring_eroded=0.0000 bre_mm=1.3319 staring_energy_bone=0.0381 staring_properness_bone=0.0053 staring_orthonormality_bone=0.0327 staring_affinity_bone=0.0002 jac_det_dev_bone=0.0429 jac_ortho_dev_bone=0.1736 dist_distortion_short=0.0257 dist_distortion_long=0.0231 erosion_bones_retained=0.7213 erosion_voxels_retained=0.3736 lesion_voxels=464.0000 mtv_change=0.0323 mtv_bias=0.0323 tlg_change=0.0453 tlg_bias=0.0453 n_lesions=4.0000
+[lambda2] 0294 02->00: dice_ct_before=0.2648 dice_ct=0.5532 hd95_before=27.3322 hd95=18.4942 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.4614 bone_hd95=27.4014 soft_dice=0.6649 soft_hd95=8.4323 near_bone_soft_dice=0.6357 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2027 stencil_leakage_staring_eroded=0.0000 bre_mm=1.9176 staring_energy_bone=0.1211 staring_properness_bone=0.0176 staring_orthonormality_bone=0.1032 staring_affinity_bone=0.0004 jac_det_dev_bone=0.0857 jac_ortho_dev_bone=0.2852 dist_distortion_short=0.0410 dist_distortion_long=0.0308 erosion_bones_retained=0.7213 erosion_voxels_retained=0.3736 lesion_voxels=477.0000 mtv_change=0.0964 mtv_bias=0.0964 tlg_change=0.0828 tlg_bias=0.0828 n_lesions=3.0000
+[lambda2] 0294 03->00: dice_ct_before=0.1750 dice_ct=0.6493 hd95_before=23.6666 hd95=7.7630 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6101 bone_hd95=8.3007 soft_dice=0.7046 soft_hd95=7.1555 near_bone_soft_dice=0.6892 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2027 stencil_leakage_staring_eroded=0.0000 bre_mm=1.6198 staring_energy_bone=0.0657 staring_properness_bone=0.0088 staring_orthonormality_bone=0.0566 staring_affinity_bone=0.0003 jac_det_dev_bone=0.0794 jac_ortho_dev_bone=0.2552 dist_distortion_short=0.0363 dist_distortion_long=0.0271 erosion_bones_retained=0.7213 erosion_voxels_retained=0.3736 lesion_voxels=182.0000 mtv_change=0.1538 mtv_bias=0.1538 tlg_change=0.1187 tlg_bias=0.1187 n_lesions=2.0000
+[lambda2] 0319 01->00: dice_ct_before=0.2738 dice_ct=0.5670 hd95_before=17.0857 hd95=9.5933 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.4950 bone_hd95=10.4175 soft_dice=0.6692 soft_hd95=8.6622 near_bone_soft_dice=0.5259 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2158 stencil_leakage_staring_eroded=0.0000 bre_mm=2.6048 staring_energy_bone=0.1033 staring_properness_bone=0.0305 staring_orthonormality_bone=0.0726 staring_affinity_bone=0.0002 jac_det_dev_bone=0.1427 jac_ortho_dev_bone=0.2583 dist_distortion_short=0.0520 dist_distortion_long=0.0475 erosion_bones_retained=0.8361 erosion_voxels_retained=0.3451 lesion_voxels=33984.0000 mtv_change=0.1329 mtv_bias=0.1329 tlg_change=0.1394 tlg_bias=0.1394 n_lesions=107.0000lambda2:  84%|████████▍ | 32/38 [22:06<04:00, 40.03s/it]lambda2:  87%|████████▋ | 33/38 [22:06<03:20, 40.11s/it]                                                        lambda2:  87%|████████▋ | 33/38 [22:47<03:20, 40.11s/it]lambda2:  89%|████████▉ | 34/38 [22:47<02:41, 40.38s/it]                                                        lambda2:  89%|████████▉ | 34/38 [23:27<02:41, 40.38s/it]lambda2:  92%|█████████▏| 35/38 [23:27<02:00, 40.16s/it]                                                        lambda2:  92%|█████████▏| 35/38 [24:07<02:00, 40.16s/it]lambda2:  95%|█████████▍| 36/38 [24:07<01:20, 40.31s/it]                                                        lambda2:  95%|█████████▍| 36/38 [24:48<01:20, 40.31s/it]lambda2:  97%|█████████▋| 37/38 [24:48<00:40, 40.42s/it]                                                        lambda2:  97%|█████████▋| 37/38 [25:27<00:40, 40.42s/it]lambda2: 100%|██████████| 38/38 [25:27<00:00, 39.94s/it]lambda2: 100%|██████████| 38/38 [25:27<00:00, 40.19s/it]
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+
+[lambda2] 0327 01->00: dice_ct_before=0.0475 dice_ct=0.5992 hd95_before=44.9596 hd95=8.9657 ndv_percent=0.0000 n_bones=60.0000 bone_dice=0.5765 bone_hd95=7.7595 soft_dice=0.6413 soft_hd95=10.3283 near_bone_soft_dice=0.6062 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2122 stencil_leakage_staring_eroded=0.0000 bre_mm=1.4769 staring_energy_bone=0.0608 staring_properness_bone=0.0053 staring_orthonormality_bone=0.0550 staring_affinity_bone=0.0006 jac_det_dev_bone=0.0607 jac_ortho_dev_bone=0.1551 dist_distortion_short=0.0276 dist_distortion_long=0.0260 erosion_bones_retained=0.7833 erosion_voxels_retained=0.3626 lesion_voxels=14116.0000 mtv_change=0.0447 mtv_bias=0.0447 tlg_change=0.0394 tlg_bias=0.0394 n_lesions=119.0000
+[lambda2] 0328 01->00: dice_ct_before=0.1883 dice_ct=0.5311 hd95_before=19.8558 hd95=7.9256 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.4388 bone_hd95=7.8108 soft_dice=0.6551 soft_hd95=8.0552 near_bone_soft_dice=0.5335 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2275 stencil_leakage_staring_eroded=0.0000 bre_mm=2.1988 staring_energy_bone=0.1415 staring_properness_bone=0.0217 staring_orthonormality_bone=0.1192 staring_affinity_bone=0.0006 jac_det_dev_bone=0.1325 jac_ortho_dev_bone=0.2454 dist_distortion_short=0.0481 dist_distortion_long=0.0451 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3191 lesion_voxels=72763.0000 mtv_change=0.1019 mtv_bias=0.1019 tlg_change=0.1021 tlg_bias=0.1021 n_lesions=97.0000
+[lambda2] 0331 01->00: dice_ct_before=0.2936 dice_ct=0.6312 hd95_before=17.2301 hd95=9.1246 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6172 bone_hd95=7.6137 soft_dice=0.6705 soft_hd95=10.8313 near_bone_soft_dice=0.5708 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2197 stencil_leakage_staring_eroded=0.0000 bre_mm=1.5647 staring_energy_bone=0.0570 staring_properness_bone=0.0074 staring_orthonormality_bone=0.0492 staring_affinity_bone=0.0004 jac_det_dev_bone=0.0540 jac_ortho_dev_bone=0.1625 dist_distortion_short=0.0272 dist_distortion_long=0.0246 erosion_bones_retained=0.7869 erosion_voxels_retained=0.3392 lesion_voxels=10385.0000 mtv_change=0.0772 mtv_bias=0.0772 tlg_change=0.0845 tlg_bias=0.0845 n_lesions=13.0000
+[lambda2] 0356 01->00: dice_ct_before=0.0601 dice_ct=0.6006 hd95_before=45.3292 hd95=8.9167 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5280 bone_hd95=10.7730 soft_dice=0.7049 soft_hd95=6.8199 near_bone_soft_dice=0.6177 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2102 stencil_leakage_staring_eroded=0.0000 bre_mm=1.6197 staring_energy_bone=0.0602 staring_properness_bone=0.0112 staring_orthonormality_bone=0.0488 staring_affinity_bone=0.0003 jac_det_dev_bone=0.0824 jac_ortho_dev_bone=0.1768 dist_distortion_short=0.0333 dist_distortion_long=0.0289 erosion_bones_retained=0.8197 erosion_voxels_retained=0.3605 lesion_voxels=931.0000 mtv_change=0.0784 mtv_bias=0.0784 tlg_change=0.0777 tlg_bias=0.0777 n_lesions=13.0000
+[lambda2] 0370 01->00: dice_ct_before=0.0314 dice_ct=0.6264 hd95_before=51.9767 hd95=7.6946 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5873 bone_hd95=7.3060 soft_dice=0.6937 soft_hd95=8.1335 near_bone_soft_dice=0.6102 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2330 stencil_leakage_staring_eroded=0.0000 bre_mm=1.7610 staring_energy_bone=0.0750 staring_properness_bone=0.0123 staring_orthonormality_bone=0.0624 staring_affinity_bone=0.0003 jac_det_dev_bone=0.0702 jac_ortho_dev_bone=0.2126 dist_distortion_short=0.0332 dist_distortion_long=0.0273 erosion_bones_retained=0.6230 erosion_voxels_retained=0.3223 lesion_voxels=22.0000 mtv_change=0.0000 mtv_bias=0.0000 tlg_change=-0.0000 tlg_bias=0.0000 n_lesions=1.0000
+[lambda2] wrote /home/iml/fryderyk.koegl/code/LapIRN-koegl/evaluation_official_scorer/baselines/convexadam/eval/val/lambda2.csv
+runtime_s                           10.052923
+dice_ct_before                       0.135594
+dice_ct                              0.602892
+hd95_before                         34.964101
+hd95                                 9.025740
+ndv_percent                          0.000000
+n_bones                             60.947368
+bone_dice                            0.544761
+bone_hd95                            9.943214
+soft_dice                            0.689871
+soft_hd95                            7.977755
+near_bone_soft_dice                  0.612546
+ndv_bone_percent                     0.000000
+ndv_band_percent                     0.000000
+stencil_leakage_staring              0.212909
+stencil_leakage_staring_eroded       0.000000
+bre_mm                               1.971838
+staring_energy_bone                  0.165958
+staring_properness_bone              0.015814
+staring_orthonormality_bone          0.149049
+staring_affinity_bone                0.001094
+jac_det_dev_bone                     0.080724
+jac_ortho_dev_bone                   0.220801
+dist_distortion_short                0.037296
+dist_distortion_long                 0.033216
+erosion_bones_retained               0.755170
+erosion_voxels_retained              0.352741
+lesion_voxels                     7684.236842
+mtv_change                           0.060528
+mtv_bias                             0.061073
+tlg_change                           0.059910
+tlg_bias                             0.062849
+n_lesions                           24.605263
+dtype: float64
+[lambda2] wrote /home/iml/fryderyk.koegl/code/LapIRN-koegl/evaluation_official_scorer/baselines/convexadam/eval/val/lambda2_lesions.csv
+per-lesion |MTV change|:
+                          count      mean  ...       95%       max
+bone_associated size_bin                   ...                    
+False           large      27.0  0.111996  ...  0.240335  0.321300
+                medium    138.0  0.114488  ...  0.330319  0.491803
+                small      27.0  0.098108  ...  0.411667  0.428571
+True            large     151.0  0.093221  ...  0.250320  0.524496
+                medium    441.0  0.114467  ...  0.379679  0.857143
+                small      96.0  0.148931  ...  0.600000  0.888889
+
+[6 rows x 7 columns]
+=== run base/convexadam/lambda1.25
+[convexadam/lambda1.25] 1/38 0071 01->00: 11s
+[convexadam/lambda1.25] 2/38 0071 02->00: 11s
+[convexadam/lambda1.25] 3/38 0071 03->00: 12s
+[convexadam/lambda1.25] 4/38 0071 04->00: 11s
+[convexadam/lambda1.25] 5/38 0071 05->00: 11s
+[convexadam/lambda1.25] 6/38 0078 01->00: 11s
+[convexadam/lambda1.25] 7/38 0113 01->00: 11s
+[convexadam/lambda1.25] 8/38 0124 01->00: 11s
+[convexadam/lambda1.25] 9/38 0125 01->00: 11s
+[convexadam/lambda1.25] 10/38 0134 01->00: 12s
+[convexadam/lambda1.25] 11/38 0138 01->00: 11s
+[convexadam/lambda1.25] 12/38 0140 01->00: 11s
+[convexadam/lambda1.25] 13/38 0148 01->00: 10s
+[convexadam/lambda1.25] 14/38 0159 01->00: 11s
+[convexadam/lambda1.25] 15/38 0162 01->00: 11s
+[convexadam/lambda1.25] 16/38 0181 01->00: 12s
+[convexadam/lambda1.25] 17/38 0200 01->00: 11s
+[convexadam/lambda1.25] 18/38 0200 02->00: 11s
+[convexadam/lambda1.25] 19/38 0203 01->00: 11s
+[convexadam/lambda1.25] 20/38 0211 01->00: 11s
+[convexadam/lambda1.25] 21/38 0219 01->00: 11s
+[convexadam/lambda1.25] 22/38 0236 01->00: 11s
+[convexadam/lambda1.25] 23/38 0236 02->00: 11s
+[convexadam/lambda1.25] 24/38 0236 03->00: 11s
+[convexadam/lambda1.25] 25/38 0236 04->00: 11s
+[convexadam/lambda1.25] 26/38 0236 05->00: 11s
+[convexadam/lambda1.25] 27/38 0236 06->00: 11s
+[convexadam/lambda1.25] 28/38 0291 01->00: 12s
+[convexadam/lambda1.25] 29/38 0292 01->00: 13s
+[convexadam/lambda1.25] 30/38 0294 01->00: 10s
+[convexadam/lambda1.25] 31/38 0294 02->00: 11s
+[convexadam/lambda1.25] 32/38 0294 03->00: 10s
+[convexadam/lambda1.25] 33/38 0319 01->00: 11s
+[convexadam/lambda1.25] 34/38 0327 01->00: 11s
+[convexadam/lambda1.25] 35/38 0328 01->00: 12s
+[convexadam/lambda1.25] 36/38 0331 01->00: 11s
+[convexadam/lambda1.25] 37/38 0356 01->00: 10s
+[convexadam/lambda1.25] 38/38 0370 01->00: 11s
+lambda1.25:   0%|          | 0/38 [00:00<?, ?it/s]                                                  lambda1.25:   0%|          | 0/38 [00:40<?, ?it/s]lambda1.25:   3%|▎         | 1/38 [00:40<24:45, 40.15s/it]                                                          lambda1.25:   3%|▎         | 1/38 [01:21<24:45, 40.15s/it]lambda1.25:   5%|▌         | 2/38 [01:21<24:27, 40.75s/it]                                                          lambda1.25:   5%|▌         | 2/38 [02:02<24:27, 40.75s/it]lambda1.25:   8%|▊         | 3/38 [02:02<23:45, 40.73s/it]                                                          lambda1.25:   8%|▊         | 3/38 [02:42<23:45, 40.73s/it]lambda1.25:  11%|█         | 4/38 [02:42<23:05, 40.76s/it]                                                          lambda1.25:  11%|█         | 4/38 [03:23<23:05, 40.76s/it]lambda1.25:  13%|█▎        | 5/38 [03:23<22:26, 40.80s/it]                                                          lambda1.25:  13%|█▎        | 5/38 [04:05<22:26, 40.80s/it]lambda1.25:  16%|█▌        | 6/38 [04:05<21:55, 41.12s/it]                                                          lambda1.25:  16%|█▌        | 6/38 [04:45<21:55, 41.12s/it]lambda1.25:  18%|█▊        | 7/38 [04:45<21:01, 40.68s/it]                                                          lambda1.25:  18%|█▊        | 7/38 [05:26<21:01, 40.68s/it]lambda1.25:  21%|██        | 8/38 [05:26<20:22, 40.76s/it]                                                          lambda1.25:  21%|██        | 8/38 [06:07<20:22, 40.76s/it]lambda1.25:  24%|██▎       | 9/38 [06:07<19:45, 40.89s/it]                                                          lambda1.25:  24%|██▎       | 9/38 [06:49<19:45, 40.89s/it]lambda1.25:  26%|██▋       | 10/38 [06:49<19:11, 41.14s/it]                                                           [lambda1.25] 0071 01->00: dice_ct_before=0.0819 dice_ct=0.6186 hd95_before=45.6354 hd95=6.8444 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5698 bone_hd95=6.5497 soft_dice=0.6966 soft_hd95=7.1772 near_bone_soft_dice=0.6142 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2113 stencil_leakage_staring_eroded=0.0000 bre_mm=2.7096 staring_energy_bone=3.0547 staring_properness_bone=0.0873 staring_orthonormality_bone=2.9448 staring_affinity_bone=0.0226 jac_det_dev_bone=0.0769 jac_ortho_dev_bone=0.2450 dist_distortion_short=0.0403 dist_distortion_long=0.0400 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3575 lesion_voxels=48.0000 mtv_change=0.0625 mtv_bias=0.0625 tlg_change=0.0563 tlg_bias=0.0563 n_lesions=1.0000
+[lambda1.25] 0071 02->00: dice_ct_before=0.1167 dice_ct=0.6139 hd95_before=29.1242 hd95=6.4057 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5571 bone_hd95=6.4427 soft_dice=0.7008 soft_hd95=6.3638 near_bone_soft_dice=0.6076 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2113 stencil_leakage_staring_eroded=0.0000 bre_mm=1.7531 staring_energy_bone=0.1375 staring_properness_bone=0.0136 staring_orthonormality_bone=0.1223 staring_affinity_bone=0.0016 jac_det_dev_bone=0.0727 jac_ortho_dev_bone=0.2209 dist_distortion_short=0.0356 dist_distortion_long=0.0306 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3575 lesion_voxels=0.0000 mtv_change=nan mtv_bias=nan tlg_change=nan tlg_bias=nan n_lesions=0.0000
+[lambda1.25] 0071 03->00: dice_ct_before=0.2031 dice_ct=0.6091 hd95_before=28.7630 hd95=6.9637 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5335 bone_hd95=7.5630 soft_dice=0.7171 soft_hd95=6.2868 near_bone_soft_dice=0.6117 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2113 stencil_leakage_staring_eroded=0.0000 bre_mm=2.9009 staring_energy_bone=0.5714 staring_properness_bone=0.0381 staring_orthonormality_bone=0.5263 staring_affinity_bone=0.0070 jac_det_dev_bone=0.1018 jac_ortho_dev_bone=0.2765 dist_distortion_short=0.0469 dist_distortion_long=0.0417 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3575 lesion_voxels=0.0000 mtv_change=nan mtv_bias=nan tlg_change=nan tlg_bias=nan n_lesions=0.0000
+[lambda1.25] 0071 04->00: dice_ct_before=0.0743 dice_ct=0.5950 hd95_before=37.0173 hd95=7.8707 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5104 bone_hd95=9.1561 soft_dice=0.7126 soft_hd95=6.4186 near_bone_soft_dice=0.6108 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2113 stencil_leakage_staring_eroded=0.0000 bre_mm=3.2694 staring_energy_bone=1.5357 staring_properness_bone=0.0478 staring_orthonormality_bone=1.4746 staring_affinity_bone=0.0133 jac_det_dev_bone=0.1172 jac_ortho_dev_bone=0.3417 dist_distortion_short=0.0561 dist_distortion_long=0.0483 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3575 lesion_voxels=0.0000 mtv_change=nan mtv_bias=nan tlg_change=nan tlg_bias=nan n_lesions=0.0000
+[lambda1.25] 0071 05->00: dice_ct_before=0.0427 dice_ct=0.5950 hd95_before=44.9095 hd95=7.4389 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5169 bone_hd95=8.0900 soft_dice=0.7054 soft_hd95=6.7035 near_bone_soft_dice=0.6001 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2113 stencil_leakage_staring_eroded=0.0000 bre_mm=2.7217 staring_energy_bone=1.7803 staring_properness_bone=0.0654 staring_orthonormality_bone=1.6981 staring_affinity_bone=0.0168 jac_det_dev_bone=0.1031 jac_ortho_dev_bone=0.2905 dist_distortion_short=0.0480 dist_distortion_long=0.0422 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3575 lesion_voxels=0.0000 mtv_change=nan mtv_bias=nan tlg_change=nan tlg_bias=nan n_lesions=0.0000
+[lambda1.25] 0078 01->00: dice_ct_before=0.0311 dice_ct=0.6334 hd95_before=71.2274 hd95=10.1985 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5633 bone_hd95=9.8746 soft_dice=0.7227 soft_hd95=10.5584 near_bone_soft_dice=0.5724 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2198 stencil_leakage_staring_eroded=0.0000 bre_mm=2.3907 staring_energy_bone=0.0936 staring_properness_bone=0.0215 staring_orthonormality_bone=0.0711 staring_affinity_bone=0.0009 jac_det_dev_bone=0.1208 jac_ortho_dev_bone=0.2246 dist_distortion_short=0.0440 dist_distortion_long=0.0413 erosion_bones_retained=0.8197 erosion_voxels_retained=0.3338 lesion_voxels=113.0000 mtv_change=0.1416 mtv_bias=0.1416 tlg_change=0.1582 tlg_bias=0.1582 n_lesions=3.0000
+[lambda1.25] 0113 01->00: dice_ct_before=0.1328 dice_ct=0.6089 hd95_before=25.4441 hd95=7.6168 ndv_percent=0.0000 n_bones=60.0000 bone_dice=0.5745 bone_hd95=7.1730 soft_dice=0.6938 soft_hd95=8.1192 near_bone_soft_dice=0.6515 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2035 stencil_leakage_staring_eroded=0.0000 bre_mm=2.0101 staring_energy_bone=0.0550 staring_properness_bone=0.0077 staring_orthonormality_bone=0.0470 staring_affinity_bone=0.0003 jac_det_dev_bone=0.0774 jac_ortho_dev_bone=0.2144 dist_distortion_short=0.0381 dist_distortion_long=0.0372 erosion_bones_retained=0.7000 erosion_voxels_retained=0.3720 lesion_voxels=62.0000 mtv_change=0.0000 mtv_bias=0.0000 tlg_change=0.0000 tlg_bias=0.0000 n_lesions=1.0000
+[lambda1.25] 0124 01->00: dice_ct_before=0.0201 dice_ct=0.6274 hd95_before=53.3267 hd95=5.5713 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5931 bone_hd95=4.8978 soft_dice=0.6895 soft_hd95=6.3321 near_bone_soft_dice=0.6253 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2408 stencil_leakage_staring_eroded=0.0000 bre_mm=1.5122 staring_energy_bone=0.2387 staring_properness_bone=0.0227 staring_orthonormality_bone=0.2155 staring_affinity_bone=0.0004 jac_det_dev_bone=0.0550 jac_ortho_dev_bone=0.1614 dist_distortion_short=0.0270 dist_distortion_long=0.0273 erosion_bones_retained=0.6885 erosion_voxels_retained=0.3028 lesion_voxels=5889.0000 mtv_change=0.0316 mtv_bias=0.0316 tlg_change=0.0432 tlg_bias=0.0432 n_lesions=35.0000
+[lambda1.25] 0125 01->00: dice_ct_before=0.1557 dice_ct=0.6017 hd95_before=24.8794 hd95=9.6595 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5440 bone_hd95=11.7092 soft_dice=0.6893 soft_hd95=7.3440 near_bone_soft_dice=0.6238 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2271 stencil_leakage_staring_eroded=0.0000 bre_mm=1.7244 staring_energy_bone=0.1182 staring_properness_bone=0.0138 staring_orthonormality_bone=0.1039 staring_affinity_bone=0.0005 jac_det_dev_bone=0.0470 jac_ortho_dev_bone=0.2166 dist_distortion_short=0.0332 dist_distortion_long=0.0256 erosion_bones_retained=0.7213 erosion_voxels_retained=0.3286 lesion_voxels=6326.0000 mtv_change=0.0008 mtv_bias=0.0008 tlg_change=0.0103 tlg_bias=0.0103 n_lesions=46.0000
+[lambda1.25] 0134 01->00: dice_ct_before=0.3272 dice_ct=0.6024 hd95_before=17.8010 hd95=11.3295 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5551 bone_hd95=12.8550 soft_dice=0.6908 soft_hd95=9.5738 near_bone_soft_dice=0.6390 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2004 stencil_leakage_staring_eroded=0.0000 bre_mm=2.1999 staring_energy_bone=0.1054 staring_properness_bone=0.0129 staring_orthonormality_bone=0.0920 staring_affinity_bone=0.0005 jac_det_dev_bone=0.0659 jac_ortho_dev_bone=0.2685 dist_distortion_short=0.0374 dist_distortion_long=0.0310 erosion_bones_retained=0.6557 erosion_voxels_retained=0.3890 lesion_voxels=2519.0000 mtv_change=0.0095 mtv_bias=0.0095 tlg_change=-0.0292 tlg_bias=0.0292 n_lesions=20.0000
+[lambda1.25] 0138 01->00: dice_ct_before=0.1363 dice_ct=0.6399 hd95_before=29.6954 hd95=8.3660 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6074 bone_hd95=7.3128 soft_dice=0.6752 soft_hd95=9.5342 near_bone_soft_dice=0.6015 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2005 stencil_leakage_staring_eroded=0.0000 bre_mm=1.8301 staring_energy_bone=0.0797 staring_properness_bone=0.0100 staring_orthonormality_bone=0.0695 staring_affinity_bone=0.0003 jac_det_dev_bone=0.0582 jac_ortho_dev_bone=0.2449 dist_distortion_short=0.0365 dist_distortion_long=0.0284 erosion_bones_retained=0.8689 erosion_voxels_retained=0.3721 lesion_voxels=126.0000 mtv_change=0.0000 mtv_bias=0.0000 tlg_change=-0.0000 tlg_bias=0.0000 n_lesions=2.0000lambda1.25:  26%|██▋       | 10/38 [07:30<19:11, 41.14s/it]lambda1.25:  29%|██▉       | 11/38 [07:30<18:34, 41.27s/it]                                                           lambda1.25:  29%|██▉       | 11/38 [08:12<18:34, 41.27s/it]lambda1.25:  32%|███▏      | 12/38 [08:12<17:54, 41.32s/it]                                                           lambda1.25:  32%|███▏      | 12/38 [08:53<17:54, 41.32s/it]lambda1.25:  34%|███▍      | 13/38 [08:53<17:10, 41.22s/it]                                                           lambda1.25:  34%|███▍      | 13/38 [09:32<17:10, 41.22s/it]lambda1.25:  37%|███▋      | 14/38 [09:32<16:18, 40.77s/it]                                                           lambda1.25:  37%|███▋      | 14/38 [10:14<16:18, 40.77s/it]lambda1.25:  39%|███▉      | 15/38 [10:14<15:42, 41.00s/it]                                                           lambda1.25:  39%|███▉      | 15/38 [10:54<15:42, 41.00s/it]lambda1.25:  42%|████▏     | 16/38 [10:54<14:59, 40.87s/it]
