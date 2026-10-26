@@ -21,17 +21,20 @@ The split was built once with a fixed seed and frozen before any experiments of 
 All settings, checkpoints, and primary method choices were selected on the validation set.
 The test set was used for the final evaluation and for analyses explicitly identified as post hoc or diagnostic.
 
-\paragraph{Labels used by the method and for evaluation.}
+\paragraph{Segmentation labels in training, IO, and evaluation.}
 Network training uses the provided organ and lesion labels of the training patients.
-Instance optimization (Sec.~\ref{sect:io}) also needs organ and lesion labels of the images being registered.
-In the main experiments, IO uses only predicted labels, while the provided validation and test labels are used for evaluation (Sec.~\ref{sect:metrics}).
-Organ labels are predicted from the CT by TotalSegmentator~\cite{ref_totalsegmentator}.
-Lesion masks are predicted from PET/CT by an nnU-Net~\cite{nnunet} configured as the winning autoPET~III solution~\cite{rokuss2024fdgpsmahitchhikersguide}.
-It is a residual-encoder U-Net (ResEnc-L) with $192^3$ patches, initialized from their pretrained weights, with an auxiliary organ-segmentation head and misalignment augmentation.
-It was trained with patient-grouped five-fold cross-validation on all 494 images of the non-test patients, including patients with a single session.
-Validation images are segmented by the fold model that did not see the patient, and test images by the ensemble of the five fold models.
-For validation, this prevents registration and IO tuning from relying on lesion predictions made by a model trained on the same patient.
-The predicted lesion masks reach a mean Dice of 0.56 on the validation images and 0.51 on the test images (medians 0.69 and 0.67).
+In the main experiments, IO requires labels for each image pair but uses only predicted labels.
+The provided validation and test labels are reserved for evaluation (Sec.~\ref{sect:metrics}).
+
+Organ labels are predicted from CT with TotalSegmentator~\cite{ref_totalsegmentator}.
+Lesion masks are predicted from PET/CT with a residual-encoder nnU-Net (ResEnc-L)~\cite{nnunet} configured according to the winning autoPET~III solution~\cite{rokuss2024fdgpsmahitchhikersguide}.
+The network uses $192^3$ patches, the pretrained weights released by the winning team, an auxiliary organ-segmentation head, and misalignment augmentation.
+
+The lesion model was trained by patient-grouped five-fold cross-validation on all 494 images from the non-test patients, including patients with a single session.
+Each validation image is segmented by the fold model for which its patient was held out, preventing IO tuning from using a prediction produced by a model trained on the same patient.
+Each test image is segmented by an ensemble of the five fold models.
+The resulting lesion masks achieve mean Dice scores of 0.56 on the validation images and 0.51 on the test images, with corresponding medians of 0.69 and 0.67.
+
 
 \paragraph{Preprocessing.}
 For the network and IO, CT was clipped to $[-1000,1500]$~HU and PET to $[0,20]$~SUV, and both were rescaled to $[0,1]$.
