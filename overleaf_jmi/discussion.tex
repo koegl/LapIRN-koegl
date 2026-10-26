@@ -1,7 +1,8 @@
 \section{Discussion}
 \label{sect:discussion}
 
-Compared with network output, IO with the PET-preservation and bone-rigidity losses improved alignment by about three Dice points without a detected increase in scan-level MTV or TLG change; IO without those losses increased both changes.
+Compared with network output, IO with the PET-preservation and bone-rigidity losses improved alignment by about three Dice points without a detected difference in scan-level MTV or TLG change.
+Without those losses, the mean MTV and TLG changes rose after IO.
 This result supports loss-guided IO when predicted lesion masks and time for per-pair refinement are available.
 Applying the losses only during IO gave higher alignment accuracy than using them in both training and IO, although the paired intervals do not establish equivalent PET preservation.
 The remaining scan-level change arose largely from lesions missed by the predicted masks, while individual lesions still changed substantially even with provided masks.
@@ -12,13 +13,13 @@ Which placement to choose depends on the time budget and on the availability of 
 If IO is affordable, about 2.5 minutes per pair on our GPU, the network can be trained for accuracy alone and the losses applied during refinement.
 Compared with training and IO with both loss groups, this gained 1.0 Dice points.
 The paired intervals still allow worse MTV or TLG preservation with IO-only placement, so the result supports an accuracy gain but leaves the preservation trade-off uncertain.
-Without IO, the network alone registers a pair in 11~s, and training with the losses reduced registration-induced change to lesion volume and uptake.
+Without IO, the network alone registers a pair in 11~s, and training with the losses lowered the mean registration-induced changes in lesion volume and uptake; only the MTV reduction was detected after correction.
 The training losses are therefore not superseded by IO, but they serve a different setting, e.g.\ fast registration of many follow-up examinations.
 
 One possible explanation for the IO-only result is how each stage locates lesions.
 During network training, lesion labels define the preservation losses, but the trained registration network receives only images at inference and must respond to lesion-related image cues without a mask.
 IO instead uses an explicit mask from a separately trained lesion-segmentation model, which can direct preservation to the predicted lesions in each pair.
-This could explain why adding the preservation losses during training provides little further measured preservation once IO is applied.
+This could explain why the test did not detect a preservation benefit from adding the losses during training once IO was applied.
 The comparison does not test what lesion information the registration network learns, and the segmentation model cannot by itself explain the Dice advantage of IO-only placement: both IO variants use the same predicted masks.
 
 \subsection{Limits of Lesion Preservation}
@@ -43,7 +44,7 @@ Mask coverage does not explain the second limit: aggregate MTV and TLG changes h
 Small lesions changed most in every condition, partly because a change of one or two voxels is already a large relative change.
 Without the losses, IO increased the distortion of lesions, most of all of small bone-associated lesions, which tended to grow.
 The rigidity loss acted mainly on bone-associated lesions, as intended, and the PET losses on both bone-associated and soft-tissue lesions; with both groups of losses, bone-associated lesions changed about as little as with the PET losses alone.
-IO with the losses kept the scan-level measurements of the network output while improving alignment, but did not reduce the change of individual lesions, not even with the ground-truth lesion masks.
+IO with the losses improved alignment without a detected difference in scan-level change from the network output, but did not reduce the change of individual lesions, not even with the ground-truth lesion masks.
 The PET losses constrain the total volume and uptake of a scan, which can be preserved while single lesions grow or shrink.
 Indeed, provided masks reduced scan-level MTV change to 0.1\,\%, while the median per-lesion change remained 13.5\,\%.
 
@@ -103,9 +104,10 @@ We studied one network architecture, and we measured the change caused by regist
 \section{Conclusion}
 \label{sect:conclusion}
 
-With predicted lesion masks, instance optimization with PET-preservation and bone-rigidity losses improved anatomical alignment without a detected increase in scan-level MTV or TLG change relative to network output; instance optimization without those losses increased both changes.
+With predicted lesion masks, instance optimization with PET-preservation and bone-rigidity losses improved anatomical alignment without a detected difference in scan-level MTV or TLG change relative to network output.
+Without those losses, the mean MTV and TLG changes rose after instance optimization.
 Applied only during instance optimization, the losses gave higher alignment accuracy than when they were also used in training; the present test set did not resolve whether preservation differs between these placements.
-Without instance optimization, training with the losses reduced the change of lesion measurements at a cost in alignment, which suits fast registration of many examinations.
+Without instance optimization, training with the losses lowered the mean MTV and TLG changes at a cost in alignment; only the MTV reduction was detected after correction.
 Missed lesions accounted for much of the residual scan-level change in the mask-coverage analysis.
 Even with provided masks, substantial changes to individual lesions remained despite a near-zero scan-level MTV change.
 Better lesion masks may reduce scan-level error, while per-lesion evaluation is needed to reveal changes that whole-scan metrics hide.
