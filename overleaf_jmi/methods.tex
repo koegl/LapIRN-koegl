@@ -8,7 +8,8 @@ We used the training set of the PSMAReg challenge~\cite{ref_psmareg_challenge,re
 Each scan consists of a CT and a PET image (in SUV), resampled to $2.7344\times2.7344\times3.27$~mm and cropped to $192\times192\times288$ voxels.
 For every scan, the challenge provides 117 CT organ labels (the TotalSegmentator~\cite{ref_totalsegmentator} classes) and a PSMA lesion mask.
 Following the challenge, a follow-up scan is always the moving image and the corresponding baseline scan the fixed image.
-The original dataset publication reports that release of the anonymized retrospective imaging data was approved by the Ethics Committee of the Medical Faculty, LMU Munich (applications 21-1230 and 21-0098), and by the institutional data security and privacy review board~\cite{ref_psma_dataset_article}.
+The original dataset publication reports that release of the anonymized retrospective imaging data was approved by the Ethics Committee of the Medical Faculty, LMU Munich (applications 21-1230 and 21-0098)~\cite{ref_psma_dataset_article}.
+It also reports approval by the institutional data security and privacy review board.
 It also reports that the ethics committee waived individual informed consent because the images were fully anonymized.
 The present study is a secondary analysis of publicly released challenge data and involved no patient recruitment or contact.
 
@@ -20,9 +21,11 @@ All patients were part of the challenge training data used to develop the earlie
 
 \paragraph{Labels used by the method and for evaluation.}
 Network training uses the provided organ and lesion labels of the training patients.
-Instance optimization (Sec.~\ref{sect:io}) also needs organ and lesion labels of the scans being registered; in the main experiments, IO uses only predicted labels, while the provided labels of validation and test scans are used for evaluation (Sec.~\ref{sect:metrics}).
+Instance optimization (Sec.~\ref{sect:io}) also needs organ and lesion labels of the scans being registered.
+In the main experiments, IO uses only predicted labels, while the provided validation and test labels are used for evaluation (Sec.~\ref{sect:metrics}).
 Organ labels are predicted from the CT by TotalSegmentator~\cite{ref_totalsegmentator}.
-Lesion masks are predicted from PET/CT by an nnU-Net~\cite{nnunet} set up as the winning autoPET~III solution~\cite{rokuss2024fdgpsmahitchhikersguide}: a residual-encoder U-Net (ResEnc-L) with $192^3$ patches, initialized from their pretrained weights, with an auxiliary organ-segmentation head and misalignment augmentation.
+Lesion masks are predicted from PET/CT by an nnU-Net~\cite{nnunet} configured as the winning autoPET~III solution~\cite{rokuss2024fdgpsmahitchhikersguide}.
+It is a residual-encoder U-Net (ResEnc-L) with $192^3$ patches, initialized from their pretrained weights, with an auxiliary organ-segmentation head and misalignment augmentation.
 It was trained with patient-grouped five-fold cross-validation on all 494 scans of the non-test patients, including patients with a single examination.
 Validation scans are segmented by the fold model that did not see the patient, and test scans by the ensemble of the five fold models.
 For validation, this prevents registration and IO tuning from relying on lesion predictions made by a model trained on the same patient.
@@ -72,7 +75,8 @@ Each sub-network has 24 base channels and a trunk of ten residual blocks with an
 At test time, the deformation of each pair is refined by optimizing a residual stationary velocity field, initialized at zero and integrated by scaling and squaring (seven steps), on top of the total transformation $\varphi$.
 The residual is optimized at full resolution with Adam~\cite{ref_adam} (learning rate $0.025$, 40 iterations).
 The objective is the same as in training (Sec.~\ref{sect:objective}), with the predicted labels in place of the provided labels.
-Of the 40 iterates, we return the one with the lowest objective, in which the interpolated (soft) MTV and TLG terms are replaced by their nearest-neighbor (hard) values, i.e.\ by how the evaluation counts them; this selection uses only predicted labels.
+Of the 40 iterates, we return the one with the lowest objective after replacing the interpolated (soft) MTV and TLG terms with their nearest-neighbor (hard) values used by the evaluation.
+This selection uses only predicted labels.
 
 \subsection{Registration Objective}
 \label{sect:objective}
@@ -122,7 +126,8 @@ The mask $W_s$ is held fixed when differentiating $\mathcal{L}_{\overline{J}}$, 
 
 \paragraph{Bone rigidity.}
 Many PSMA lesions lie in bone, which moves rigidly between examinations.
-For each of the 61 skeletal labels of the fixed scan (in IO: the predicted labels), we fit a rigid transformation to the displacement of the structure in closed form~\cite{ref_kabsch,ref_umeyama} and penalize the mean squared residual of its voxels; $\mathcal{L}_{\mathrm{rig}}$ is the mean over structures with at least 50 voxels.
+For each of the 61 skeletal labels of the fixed scan (in IO: the predicted labels), we fit a rigid transformation to the displacement of the structure in closed form~\cite{ref_kabsch,ref_umeyama}.
+We penalize the mean squared residual of its voxels, and $\mathcal{L}_{\mathrm{rig}}$ is the mean over structures with at least 50 voxels.
 Each bone is fitted independently, so neighboring bones may move relative to each other, and the term involves no finite differences, so it does not constrain the tissue around a bone.
 
 \paragraph{Deformation regularization.}
@@ -199,8 +204,11 @@ Erosion does not restrict the point pairs used for distance distortion.
 
 A patient may contribute several pairs and many lesions.
 We average each metric over a patient's eligible pairs before analysis: CT Dice, HD95, and NDV comparisons include 28 test patients, whereas MTV and TLG comparisons include the 26 patients with moving-scan lesions.
-Paired comparisons use only patients with values for both methods and a two-sided Wilcoxon signed-rank test~\cite{ref_wilcoxon}; the implementation doubles the smaller one-sided $p$-value, drops zero paired differences, assigns average ranks to tied nonzero magnitudes, and returns $p=1$ when all differences are zero.
-Holm correction~\cite{ref_holm} is applied separately per metric to three comparisons against ``None'' (no losses) in each ablation block, three IO-only versus training-plus-IO comparisons, four leave-one-out comparisons, and comparisons of our method against the other baseline-table methods (nine for CT, HD95, and NDV; eight for MTV and TLG, because ``Initial'' has zero PET change by construction).
+Paired comparisons use only patients with values for both methods and a two-sided Wilcoxon signed-rank test~\cite{ref_wilcoxon}.
+The implementation doubles the smaller one-sided $p$-value, drops zero paired differences, assigns average ranks to tied nonzero magnitudes, and returns $p=1$ when all differences are zero.
+Holm correction~\cite{ref_holm} is applied separately per metric within each family.
+The families comprise three comparisons against ``None'' (no losses) in each ablation block, three IO-only versus training-plus-IO comparisons, four leave-one-out comparisons, and comparisons of our method against the other baseline-table methods.
+The last family contains nine comparisons for CT, HD95, and NDV and eight for MTV and TLG because ``Initial'' has zero PET change by construction.
 We call a difference significant if its adjusted $p<0.05$.
 Confidence intervals are 95\,\% percentile patient-bootstrap intervals~\cite{ref_bootstrap}: scan-level plots show intervals for method means, whereas intervals stated for IO-only minus training-plus-IO are for paired patient-mean differences.
 For per-lesion medians, patients are resampled together with all their lesions (cluster bootstrap).
@@ -214,7 +222,8 @@ The pairwise tests, component scores, omitted metrics, aggregation formula, and 
 All tuning used the validation set.
 For our IO settings and the choice of our method, we use one selection rule: among the candidates of a grid whose CT Dice is within two points of the most accurate one, we keep the one with the lowest $|\Delta\mathrm{MTV}|+|\Delta\mathrm{TLG}|$.
 The two-point tolerance is a design choice that allows some alignment accuracy to be exchanged for lower PET change; it is not a clinically established threshold.
-We do not use the challenge ranking for this selection because it is decided by accuracy: differences in Dice between candidates are consistently significant, whereas differences in MTV and TLG rarely are, so the ranking almost always keeps the most accurate candidate regardless of preservation.
+We do not use the challenge ranking for this selection because it is decided by accuracy.
+Dice differences between candidates are consistently significant, whereas MTV and TLG differences rarely are, so the ranking almost always retains the most accurate candidate regardless of preservation.
 The baselines were tuned by applying the challenge ranking to the candidates of each method's grid.
 For IO, our selection rule selected a learning rate of 0.025, 40 iterations, and a PET-weight factor of $\times0.1$ (Table~\ref{tab:io_tuning}).
 Neither the selection rule nor the ranking rewards rigidity, which costs Dice without reducing the PET metrics or folding, so both would set $\lambda_{\mathrm{rig}}$ to zero.
@@ -224,7 +233,8 @@ The full IO and baseline grids, selected baseline settings, and edge-of-grid che
 
 \paragraph{Choice of our method.}
 Before the experiments, we defined our full method as the network trained with both losses followed by IO with both losses.
-Instead, we select our method on the validation set among the IO variants of Sec.~\ref{sect:ablations} and IO directly after the affine pre-registration, with the same rule as for the IO settings: the variant with the lowest $|\Delta\mathrm{MTV}|+|\Delta\mathrm{TLG}|$ among those within two Dice points of the most accurate one.
+Instead, we select our method on the validation set among the IO variants of Sec.~\ref{sect:ablations} and IO directly after the affine pre-registration.
+We use the same rule as for the IO settings: the variant with the lowest $|\Delta\mathrm{MTV}|+|\Delta\mathrm{TLG}|$ among those within two Dice points of the most accurate one.
 This selected the network trained without the losses followed by IO with both losses (79.2\,\% Dice, $|\Delta\mathrm{MTV}|$ 6.9\,\%, $|\Delta\mathrm{TLG}|$ 8.9\,\%; the most accurate variant, IO without the losses, reached 80.8\,\%).
 The variants with the losses in training and IO changed the lesions slightly less (e.g.\ 5.8\,\% and 7.9\,\% with both losses) but were 2.6 points less accurate than the most accurate variant.
 We refer to the selected variant as our method and report the predefined full method and IO without the losses alongside it in the comparison with baselines.
@@ -258,7 +268,9 @@ This diagnostic run uses labels unavailable in the intended test-time setting.
 
 \paragraph{Lesion coverage in predicted masks.}
 Each provided lesion component of the moving scan is assigned to a group by the fraction of its voxels covered by the predicted lesion mask: missed (0\,\%), partly covered ($<50\,\%$), or covered ($\geq50\,\%$).
-For each group, we report two quantities, both computed per scan as in Eq.~\eqref{eq:pet_error} and averaged over patients: the change within the group, using only the group's lesions, and the contribution of the group to the evaluation metric, i.e.\ the change if only the group's lesions changed and all other lesions kept their volume and uptake.
+For each group, we report two quantities computed per scan as in Eq.~\eqref{eq:pet_error} and averaged over patients.
+The first is the change within the group using only its lesions.
+The second is the group's contribution to the evaluation metric: the change if only its lesions changed while all other lesions kept their volume and uptake.
 Since changes of different lesions in a scan partly cancel, the contributions add up to slightly more than the evaluation metric.
 \paragraph{Per-lesion terms.}
 Because the PET losses constrain the total volume and uptake of a scan, we test whether per-lesion terms can prevent changes in different lesions from canceling.
@@ -278,5 +290,6 @@ This comparison tests whether the penalties preserve bone geometry and whether t
 On the network trained with the PET losses, IO with the PET terms is combined with no rigidity, Staring, Staring with erosion, or the per-bone rigid fit.
 Because the penalties have different units, a reference weight is first calibrated for each on five validation pairs so that its initial penalty value equals that of the rigid fit at $\lambda_{\mathrm{rig}}=0.25$.
 Each method is then evaluated on the validation set over a common range of factors, giving a curve of CT Dice against within-bone distance distortion.
-For the test set, we choose for each method the largest weight whose validation Dice is within two Dice points of the variant without rigidity, the same tolerance as in the selection rule above, with the grid capped at $\times100$: $\times3$ for Staring, and $\times100$ for Staring with erosion and the rigid fit.
+For the test set, we choose the largest weight whose validation Dice is within two points of the variant without rigidity, using the same tolerance as above and capping the grid at $\times100$.
+This gives $\times3$ for Staring and $\times100$ for Staring with erosion and the rigid fit.
 The calibrated reference weights and full sweep are listed in Appendix~\ref{sect:app_implementation}.

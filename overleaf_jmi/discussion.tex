@@ -29,7 +29,9 @@ Second, scan-level aggregation allows growth and shrinkage of different lesions 
 Third, the soft quantities optimized by the losses differ from the nearest-neighbor quantities used for evaluation.
 The contrast between near-zero volume change on the predicted masks and substantial change on the provided masks shows that IO can satisfy its objective without controlling the evaluation endpoint.
 Missed lesions were the largest measured contributor to the residual, although they represented only 6\,\% of lesion volume; covered lesions also contributed, so incomplete coverage is not the sole explanation.
-Their weight comes from patients with little tumor volume: the metric is relative per scan and averaged over patients, and in the third of patients with the smallest lesion volume, missed lesions made up 33\,\% of the volume (23\,\% and 3\,\% in the other thirds) and caused 72\,\% of the missed-lesion contribution.
+Their weight comes from patients with little tumor volume because the metric is relative per scan and averaged over patients.
+In the third of patients with the smallest lesion volume, missed lesions made up 33\,\% of the volume, compared with 23\,\% and 3\,\% in the other thirds.
+This group caused 72\,\% of the missed-lesion contribution.
 The post-hoc recall-biased mask increased lesion detection but sharply reduced precision and did not improve measured preservation (Sec.~\ref{sect:res_detection}).
 The additional false-positive regions may dilute the preservation constraints over voxels outside the lesions being evaluated, so this experiment does not show that recall gains are ineffective when precision can be retained.
 Conversely, the diagnostic run with provided lesion masks nearly eliminated scan-level MTV change while improving alignment.

@@ -156,6 +156,10 @@ Sture Holm, ``A simple sequentially rejective multiple test procedure,'' {\em
 Bradley Efron and Robert~J. Tibshirani, {\em An Introduction to the Bootstrap},
   Chapman \& Hall, New York  (1993).
 
+\bibitem{dey2026registration}
+Neel Dey and Adrian~V. Dalca, ``Registration is a representation problem:
+  Solving whole-body pet/ct registration,''  (2026).
+
 \bibitem{MODAT2010}
 Marc Modat, Gerard~R. Ridgway, Zeike~A. Taylor \ldots Sébastien Ourselin,
   ``Fast free-form deformation using graphics processing units,'' {\em Computer
@@ -166,9 +170,5 @@ Marc Modat, Gerard~R. Ridgway, Zeike~A. Taylor \ldots Sébastien Ourselin,
 Marc Modat, David~M. Cash, Pankaj Daga \ldots S{\'e}bastien Ourselin, ``{Global
   image registration using a symmetric block-matching approach},'' {\em Journal
   of Medical Imaging} {\bf 1}(2), 024003  (2014).
-
-\bibitem{dey2026registration}
-Neel Dey and Adrian~V. Dalca, ``Registration is a representation problem:
-  Solving whole-body pet/ct registration,''  (2026).
 
 \end{thebibliography}

@@ -40,7 +40,8 @@
 \textbf{Purpose:} Registering follow-up to baseline PSMA PET/CT scans enables voxel-wise comparison of tumor burden, but the deformation can itself change the metabolic tumor volume (MTV) and total lesion glycolysis (TLG) of lesions.
 We examine how PET-preservation and bone-rigidity losses trade alignment for less registration-induced change, and whether they belong in network training or instance optimization (IO).
 
-\textbf{Approach:} We trained LapIRN networks with and without the losses on the Learn2Reg 2026 PSMAReg data, applied them in training, IO, or both, compared three rigidity penalties, and evaluated on 28 held-out patients against tuned NiftyReg and ConvexAdam, with patient-level statistics and per-lesion analyses.
+\textbf{Approach:} We trained LapIRN networks with and without the losses on the Learn2Reg 2026 PSMAReg data and applied the losses during training, IO, or both.
+We evaluated three rigidity penalties and compared the resulting method with tuned NiftyReg and ConvexAdam on 28 held-out patients using patient-level statistics and per-lesion analyses.
 
 \textbf{Results:} With the losses only in IO, our method reached 78.3\,\% CT Dice (NiftyReg 70.1\,\%, ConvexAdam 61.7\,\%); no difference in MTV or TLG change from either baseline was detected.
 \todo{Baseline numbers after re-tuning.}
@@ -82,7 +83,8 @@ The code is available at \url{https://github.com/koegl/psmareg-extended}.
 F.K.\ and J.A.S.\ are partially supported by the German Federal Ministry of Research, Technology and Space (DECIPHER-M, 01KD2420G).
 A.R.\ is supported by funding from the Free State of Bavaria (StMGP) as part of the project ``KI-gestützte multi-modale Diagnostik und stratifizierte Therapie für Endometriose (EndoKI)''.
 D.M.L.\ and J.A.S.\ received funding from Helmholtz Imaging, a platform of the Helmholtz Information \& Data Science Incubator.
-L.F.\ was partially funded by the Intramural Research Funding Grant ``AI-driven Longitudinal Lesion Tracking'' of the Faculty of Medicine, University of Augsburg, by the Bavarian Center for Cancer Research as part of the Lighthouse ``Local Therapies'', and by the Bavarian Ministry of Economic Affairs, Regional Development and Energy (StMWi) under grant number DIK-2310-0004//DIK0556/02.
+L.F.\ was partially funded by the Intramural Research Funding Grant ``AI-driven Longitudinal Lesion Tracking'' of the Faculty of Medicine, University of Augsburg, and by the Bavarian Center for Cancer Research as part of the Lighthouse ``Local Therapies''.
+Additional funding came from the Bavarian Ministry of Economic Affairs, Regional Development and Energy (StMWi) under grant number DIK-2310-0004//DIK0556/02.
 An AI assistant was used for language editing of the manuscript; the authors reviewed and take responsibility for all content.
 The use of AI tools for code generation is described in Sec.~\ref{sect:training}.
 

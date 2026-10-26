@@ -31,7 +31,9 @@ The losses therefore change the accuracy--preservation balance; the next questio
 \subsection{Losses in Training or Only in IO}
 \label{sect:res_q2}
 
-To test whether the losses need to act during training, Fig.~\ref{fig:q2} compares, for each loss group, the network trained with the losses followed by IO with them (filled circles) with the network trained without them followed by the same IO (hollow circles); the second dashed segment of each color connects the two.
+To test whether the losses need to act during training, Fig.~\ref{fig:q2} compares two variants for each loss group.
+Filled circles denote the network trained with the losses followed by IO with them, while hollow circles denote the network trained without them followed by the same IO.
+The second dashed segment of each color connects these variants.
 With both loss groups (purple), applying them only in IO increased Dice by 1.0 points (95\,\% CI 0.4 to 1.6) compared with using them in training and IO.
 The paired differences (IO only minus training and IO) were $+0.8$ points in $|\Delta\mathrm{MTV}|$ (95\,\% CI $-0.4$ to 2.0) and $+1.0$ points in $|\Delta\mathrm{TLG}|$ ($-0.3$ to 2.6).
 With PET losses alone (blue), the Dice gain was 0.9 points (0.1 to 1.7), while $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ increased by 1.1 ($-0.3$ to 2.6) and 1.5 ($-0.0$ to 3.4) points.
@@ -46,7 +48,9 @@ The IO-only placement with both loss groups is therefore used as our selected me
 \label{sect:res_baselines}
 
 To place our method in context, we compare it with CT-only registration baselines, with IO applied directly after affine pre-registration, and with our other variants (Table~\ref{tab:baselines}).
-Our method, with the losses only in IO, reached 78.3\,\% CT Dice and 6.89~mm HD95, significantly better than NiftyReg (70.1\,\%, 8.85~mm), ConvexAdam (61.7\,\%, 9.16~mm), and the affine pre-registration (46.4\,\%, 14.00~mm); its $|\Delta\mathrm{MTV}|$ (8.7\,\%) and $|\Delta\mathrm{TLG}|$ (11.3\,\%) did not differ significantly from those of NiftyReg (8.7\,\%, 10.2\,\%) and ConvexAdam (9.3\,\%, 10.8\,\%).
+Our method, with the losses only in IO, reached 78.3\,\% CT Dice and 6.89~mm HD95.
+Both were significantly better than NiftyReg (70.1\,\%, 8.85~mm), ConvexAdam (61.7\,\%, 9.16~mm), and the affine pre-registration (46.4\,\%, 14.00~mm).
+Its $|\Delta\mathrm{MTV}|$ (8.7\,\%) and $|\Delta\mathrm{TLG}|$ (11.3\,\%) did not differ significantly from those of NiftyReg (8.7\,\%, 10.2\,\%) or ConvexAdam (9.3\,\%, 10.8\,\%).
 Compared with the same network before IO, our method gained 2.9 Dice points (95\,\% CI 2.3 to 3.4).
 The paired changes in $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ were $-1.7$ points (95\,\% CI $-3.6$ to 0.3) and $-1.2$ points ($-3.6$ to 1.2), respectively, so an increase in scan-level PET change was not detected.
 The NDV summaries in Table~\ref{tab:baselines} are means over patients, whereas threshold exceedances count individual registration pairs.
@@ -56,13 +60,17 @@ IO directly after the affine pre-registration reached only 56.6\,\% Dice: within
 Even the affine pre-registration changed MTV by 4.5\,\% and TLG by 4.4\,\%, the lowest values among the registered images.
 
 Among our variants, IO without the losses was the most accurate (80.2\,\% Dice, significantly higher than our method) but changed the lesions most ($|\Delta\mathrm{MTV}|$ 11.3\,\%, $|\Delta\mathrm{TLG}|$ 14.5\,\%).
-The losses only in IO lowered these changes to 8.7\,\% and 11.3\,\% at a cost of 1.9 Dice points, and the losses also in training to 7.9\,\% and 10.3\,\% at a cost of 2.9 points; after correction for multiple comparisons, none of these differences in preservation was significant.
+The losses only in IO lowered these changes to 8.7\,\% and 11.3\,\% at a cost of 1.9 Dice points.
+Using the losses in training and IO lowered them to 7.9\,\% and 10.3\,\% at a cost of 2.9 points.
+After correction for multiple comparisons, none of these preservation differences was significant.
 By the challenge's composite score, IO without the losses ranked first, our method second, and the variant with the losses in training and IO third, with overlapping bootstrap rank intervals (1--4, 1--4, and 1--5).
 The ranking was decided by accuracy: apart from the affine pre-registration on $|\Delta\mathrm{TLG}|$, no method won a significant comparison in preservation or folding.
 The network alone needs 11~s per pair, as fast as ConvexAdam and ten times faster than NiftyReg (108~s); IO adds about 2.5~minutes.
 Figure~\ref{fig:qualitative} illustrates anatomical alignment in a test pair selected for its tenfold between-scan change in lesion volume (from 2400 to 24\,191 voxels).
 The scans were initially far apart (CT Dice 3.5\,\%); our method aligned them to 83.7\,\% Dice (NiftyReg 70.8\,\%, ConvexAdam 65.7\,\%), and NDV remained below the challenge threshold.
-Before registration, the CT overlay (Fig.~\ref{fig:qualitative}c) and the label residual (e) show misalignment across the whole trunk; after registration (d, f), the residual is reduced to thin bands at organ boundaries and to parts of the lumbar vertebrae, and the warped lesion contours lie in the corresponding bones (h).
+Before registration, the CT overlay (Fig.~\ref{fig:qualitative}c) and label residual (e) show misalignment across the whole trunk.
+After registration (d, f), the residual is reduced to thin bands at organ boundaries and parts of the lumbar vertebrae.
+The warped lesion contours lie in the corresponding bones (h).
 The Jacobian determinant (g) shows fine-grained changes in the local volume scale of the sampling transform throughout the body, which IO adds to the smooth network field because it has no smoothness term ($\lambda_{\mathrm{smooth}}=0$).
 
 \input{tables/baselines}
@@ -74,7 +82,8 @@ The remaining analyses examine why measured PET changes persist after loss-guide
 \label{sect:res_tradeoff}
 In a post-hoc test-set sensitivity analysis, we vary the PET-loss weights in IO to show how alignment and lesion preservation change together and whether stronger weights resolve the residual error.
 Figure~\ref{fig:tradeoff} varies the PET weights in IO on the network trained without the losses without reselecting the method.
-Already the smallest factor ($\times10^{-4}$) lowered the volume change of the predicted lesion masks from 9.3\,\% (IO without the PET losses) to 2.1\,\% and that of the provided lesions from 11.3\,\% to 9.3\,\%, while mean Dice remained 80.2\,\%; $|\Delta\mathrm{TLG}|$ fell from 14.5\,\% to 12.9\,\%.
+The smallest factor ($\times10^{-4}$) lowered the volume change of the predicted lesion masks from 9.3\,\% (IO without the PET losses) to 2.1\,\% and that of the provided lesions from 11.3\,\% to 9.3\,\%.
+Mean Dice remained 80.2\,\%, while $|\Delta\mathrm{TLG}|$ fell from 14.5\,\% to 12.9\,\%.
 Larger factors reduced the change of the predicted masks further, to below 1\,\% from $\times0.01$ on, but not that of the provided lesions (9.0 to 9.8\,\%), while Dice decreased steadily, to 78.6\,\% at $\times0.1$ and 78.0\,\% at $\times1$.
 Compared with the network output before IO (dashed), IO with the PET losses gained 3.2 Dice points and had slightly lower mean changes ($|\Delta\mathrm{MTV}|$ 9.3\,\% vs.\ 10.3\,\%, $|\Delta\mathrm{TLG}|$ 11.8\,\% vs.\ 12.5\,\% at $\times0.1$).
 Neither PET difference was significant (two-sided Wilcoxon signed-rank test, $p=0.17$ and $p=0.86$; lower for 14 and 13 of 26 patients).
@@ -94,7 +103,9 @@ This gap between optimization on predicted masks and evaluation on provided labe
 \subsection{Lesion Coverage in Predicted Masks}
 \label{sect:res_detection}
 
-To locate the remaining registration-induced change, we group all 1435 provided lesions, including the 108 smaller than five voxels, by how much each overlaps the mask used by IO (Fig.~\ref{fig:detection}): 214 had no overlap (missed; 6\,\% of lesion volume), 155 had less than 50\,\% overlap (partly covered; 6\,\%), and 1066 had at least 50\,\% overlap (covered; 88\,\%).
+To locate the remaining registration-induced change, we group all 1435 provided lesions by their overlap with the mask used by IO (Fig.~\ref{fig:detection}).
+This analysis includes the 108 lesions smaller than five voxels.
+Of all lesions, 214 had no overlap (missed; 6\,\% of lesion volume), 155 had less than 50\,\% overlap (partly covered; 6\,\%), and 1066 had at least 50\,\% overlap (covered; 88\,\%).
 
 PET IO reduced the change of covered lesions below that of the network output, from 9.1\,\% to 6.0\,\% for $|\Delta\mathrm{MTV}|$ and from 11.0\,\% to 8.4\,\% for $|\Delta\mathrm{TLG}|$ (IO without and with the PET losses at the tuned weights; network output 7.9\,\% and 9.2\,\%).
 Partly covered lesions changed as much with the PET losses as without them (12.5\,\% and 12.0\,\%), and missed lesions less (14.4\,\% and 17.0\,\%) but still more than at the network output (12.4\,\%).
@@ -106,7 +117,9 @@ Scaling the PET weights from $\times0.1$ to $\times1$ changed none of these valu
 Without the PET losses, IO increased the change of every group over the network output, for covered lesions from 7.9\,\% to 9.1\,\% ($|\Delta\mathrm{MTV}|$) and from 9.2\,\% to 11.0\,\% ($|\Delta\mathrm{TLG}|$), and the overall change from 10.3\,\% to 11.3\,\% and from 12.5\,\% to 14.5\,\%.
 This agrees with the per-lesion analysis (Sec.~\ref{sect:res_lesions}), in which lesions had higher volume changes after IO without the losses.
 In the diagnostic run with provided lesion masks, the contribution of lesions that nnU-Net missed fell from 5.2 to 1.2 points of $|\Delta\mathrm{MTV}|$ and from 6.2 to 2.1 points of $|\Delta\mathrm{TLG}|$, and that of covered lesions from 3.3 to 0.9 and from 5.4 to 3.8 points.
-The near-zero overall change with provided masks does not mean that the lesions kept their volumes: if only the missed, partly covered, or covered lesions had changed, MTV would have changed by 1.2, 1.2, and 0.9 points, respectively. Some lesions therefore grew while others shrank, and their changes canceled in the scan total, which is what both the PET loss and the evaluation metric measure (see also Sec.~\ref{sect:res_lesions}).
+The near-zero overall change with provided masks does not mean that individual lesions kept their volumes.
+If only the missed, partly covered, or covered lesions had changed, MTV would have changed by 1.2, 1.2, and 0.9 points, respectively.
+Some lesions therefore grew while others shrank, and their changes canceled in the scan total measured by both the PET loss and the evaluation metric (see also Sec.~\ref{sect:res_lesions}).
 
 As a post-hoc attempt to increase lesion coverage, we combined the nnU-Net predictions with voxels above SUV 3 outside a 10-mm halo around predicted organs with physiological uptake, following the recall-biased approach of Dey and Dalca~\cite{dey2026registration}.
 On the moving test scans with lesions (mean over patients), lesion detection increased from 74\,\% to 91\,\%, while voxel-level precision fell from 0.71 to 0.22.
@@ -124,8 +137,11 @@ To reveal these changes, Fig.~\ref{fig:lesions} shows the volume change of 1327 
 Small lesions changed most in every condition: for bone-associated lesions with IO and without the losses ($+$), the median change was 30\,\% (small), 19\,\% (medium), and 10\,\% (large).
 A small lesion has fewer than about 20 voxels, so gaining or losing one or two voxels is already a large relative change.
 The per-lesion uptake change followed the volume change in all strata (Fig.~\ref{fig:lesions_tlg}, Appendix~B).
-Without the losses, IO increased the distortion of lesions ($\times$ to $+$), most of all of small lesions (soft tissue from 17\,\% to 33\,\%, bone-associated from 25\,\% to 30\,\%); bone-associated lesions tended to grow (median signed change $+1$ to $+5$\,\%) and soft-tissue lesions to shrink ($-3$ to $-14$\,\%).
-The rigidity loss (red) acted mainly on bone-associated lesions, as expected from its construction: with IO, it lowered their median change for small, medium, and large lesions from 30\,\% to 20\,\%, 19\,\% to 12\,\%, and 10\,\% to 5\,\%, and left medium and large soft-tissue lesions unchanged (19\,\% and 17\,\%).
+Without the losses, IO increased lesion distortion ($\times$ to $+$), especially for small lesions (soft tissue from 17\,\% to 33\,\%, bone-associated from 25\,\% to 30\,\%).
+Bone-associated lesions tended to grow (median signed change $+1$ to $+5$\,\%), whereas soft-tissue lesions tended to shrink ($-3$ to $-14$\,\%).
+The rigidity loss (red) acted mainly on bone-associated lesions, as expected from its construction.
+With IO, it lowered their median change for small, medium, and large lesions from 30\,\% to 20\,\%, 19\,\% to 12\,\%, and 10\,\% to 5\,\%.
+It left medium and large soft-tissue lesions unchanged at 19\,\% and 17\,\%.
 The PET losses (blue) acted in both locations, already without IO (squares), and with IO, for example from 19\,\% to 10\,\% for medium soft-tissue lesions and from 30\,\% to 16\,\% for small bone-associated lesions.
 With both groups (purple), bone-associated lesions changed by 14\,\%, 9\,\%, and 6\,\%, similar to the PET losses alone; only for large bone-associated lesions, the rigidity loss alone changed them less (5\,\%).
 With the losses, IO did not reduce the per-lesion change below that of the network output (circles vs.\ squares of the same color), while no scan-level preservation difference was detected either (Sec.~\ref{sect:res_q1}).
@@ -161,7 +177,9 @@ Because the four-term configuration was fixed before test evaluation, this diagn
 \label{sect:res_rigidity}
 Bones should retain their internal geometry during registration even when they move relative to one another.
 Because label overlap does not measure this property, we compare rigidity penalties by how well they preserve within-bone distances and report the accompanying changes in bone and soft-tissue alignment.
-In the finite-difference Staring penalty, 21.2\,\% of the stencil reads leave the bone of the center voxel (all 560 labeled challenge scans); eroding the bones removes this leakage but keeps only 35.5\,\% of the bone voxels and removes 23\,\% of the bones entirely (ribs: 2.4\,\% of the voxels kept, 58\,\% of the ribs removed).
+In the finite-difference Staring penalty, 21.2\,\% of the stencil reads leave the bone of the center voxel across all 560 labeled challenge scans.
+Eroding the bones removes this leakage but retains only 35.5\,\% of the bone voxels and removes 23\,\% of the bones entirely.
+For ribs, it retains 2.4\,\% of the voxels and removes 58\,\% of the structures.
 
 On the validation set (Fig.~\ref{fig:rigidity}), the per-bone rigid fit reached a lower within-bone distortion than the Staring penalty at every Dice level, most clearly for long distances, where Staring did not get below 2.8\,\% while the rigid fit reached 1.8\,\%.
 With erosion, the Staring penalty barely changed the distortion even at $\times100$ (short distances 8.7\,\% vs.\ 12.7\,\% without rigidity), and Dice stayed almost constant, because most of the skeleton is no longer constrained.
@@ -169,15 +187,23 @@ Within the two-point tolerance, the selection chose $\times3$ for Staring and th
 
 On the test set, Fig.~\ref{fig:rigidity_measures}a shows each rigidity measure as a percentage of its value with IO without rigidity (dashed line at 100\,\%).
 Each penalty produced the lowest value for the measure it optimizes: the rigid fit lowered the rigid-fit residual to 53\,\%, and Staring lowered the Staring energy to 18\,\%.
-On the distance distortion, which neither penalty optimizes, the rigid fit produced the lowest values: 41\,\% (short) and 42\,\% (long) of the distortion without rigidity, compared with 47\,\% and 73\,\% for Staring and 69\,\% and 80\,\% for Staring with erosion.
-Fig.~\ref{fig:rigidity_measures}b shows the cost in alignment: the rigid fit and Staring lowered CT Dice by 1.6 and 2.0 points and bone Dice by about 4 points, whereas soft-tissue Dice was unchanged with Staring and rose by 0.9 points with the rigid fit; Staring with erosion cost almost no Dice but also constrained the bones least.
+Neither penalty directly optimizes distance distortion.
+The rigid fit nevertheless produced the lowest values: 41\,\% (short) and 42\,\% (long) of the distortion without rigidity, compared with 47\,\% and 73\,\% for Staring and 69\,\% and 80\,\% for Staring with erosion.
+Fig.~\ref{fig:rigidity_measures}b shows the cost in alignment.
+The rigid fit and Staring lowered CT Dice by 1.6 and 2.0 points and bone Dice by about 4 points.
+Soft-tissue Dice was unchanged with Staring and rose by 0.9 points with the rigid fit.
+Staring with erosion cost almost no Dice but also constrained the bones least.
 
-In absolute terms (Table~\ref{tab:rigidity_full}, Appendix~F), the rigid fit reduced the short-distance distortion from 13.4\,\% to 5.0\,\% and the long-distance distortion from 4.4\,\% to 1.8\,\%; all three penalties improved every rigidity measure significantly over IO without rigidity, and all pairwise differences in distortion between the penalties were significant.
+In absolute terms (Table~\ref{tab:rigidity_full}, Appendix~F), the rigid fit reduced the short-distance distortion from 13.4\,\% to 5.0\,\% and the long-distance distortion from 4.4\,\% to 1.8\,\%.
+All three penalties improved every rigidity measure significantly over IO without rigidity.
+All pairwise distortion differences between the penalties were also significant.
 Staring also removed folding inside bones (NDV in bone from 6.5 to 0.3~ppm), whereas the rigid fit, which constrains only the displacement, left it unchanged (9.6~ppm, not significant).
 
 When added on top of the PET losses, none of the three rigidity penalties produced a detected additional change in lesion volume or uptake preservation on the test set (Table~\ref{tab:rigidity_full}).
 This comparison differs from Fig.~\ref{fig:q2}, where rigidity used without the PET losses significantly reduced network-output $|\Delta\mathrm{MTV}|$ and IO $|\Delta\mathrm{TLG}|$ relative to the corresponding unconstrained variants.
-On the validation set (Fig.~\ref{fig:rigidity_preservation}), every penalty and weight changed the lesions less than IO without rigidity, but the change did not decrease with the weight; the drop from weight 0 to the smallest weight came mostly from two patients whose volume change fell by 27 and 10 points already with the rigid fit at $\times0.1$; without these two patients, all weights stayed within about one point of IO without rigidity ($|\Delta\mathrm{MTV}|$ 3.7 to 4.9\,\% vs.\ 4.4\,\%).
+On the validation set (Fig.~\ref{fig:rigidity_preservation}), every penalty and weight changed the lesions less than IO without rigidity, but the change did not decrease with increasing weight.
+The drop between weight 0 and the smallest weight came mostly from two patients whose volume change fell by 27 and 10 points with the rigid fit at $\times0.1$.
+Without these patients, all weights remained within about one point of IO without rigidity ($|\Delta\mathrm{MTV}|$ 3.7 to 4.9\,\% vs.\ 4.4\,\%).
 Per lesion, the penalties lowered the median volume change of bone-associated lesions only from 9.3\,\% to 7.7--8.8\,\%, whereas an exactly affine transformation (the affine pre-registration) changed them by a median of 1.0\,\%.
 
 \input{figures/rigidity}
