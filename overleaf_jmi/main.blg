@@ -3,44 +3,44 @@ Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: main.aux
 The style file: spiejour.bst
 Database file #1: references.bib
-You've used 31 entries,
+You've used 32 entries,
             2159 wiz_defined-function locations,
-            745 strings with 13823 characters,
-and the built_in function-call counts, 12541 in all, are:
-= -- 1298
-> -- 819
-< -- 213
-+ -- 290
-- -- 259
-* -- 790
-:= -- 1769
-add.period$ -- 37
-call.type$ -- 31
-change.case$ -- 30
+            751 strings with 13957 characters,
+and the built_in function-call counts, 12963 in all, are:
+= -- 1344
+> -- 835
+< -- 217
++ -- 296
+- -- 264
+* -- 824
+:= -- 1823
+add.period$ -- 38
+call.type$ -- 32
+change.case$ -- 31
 chr.to.int$ -- 0
-cite$ -- 31
-duplicate$ -- 460
-empty$ -- 868
-format.name$ -- 259
-if$ -- 3209
+cite$ -- 32
+duplicate$ -- 478
+empty$ -- 901
+format.name$ -- 264
+if$ -- 3314
 int.to.chr$ -- 0
-int.to.str$ -- 31
-missing$ -- 27
-newline$ -- 102
-num.names$ -- 37
-pop$ -- 84
+int.to.str$ -- 32
+missing$ -- 28
+newline$ -- 105
+num.names$ -- 38
+pop$ -- 85
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 0
-skip$ -- 535
+skip$ -- 553
 stack$ -- 0
-substring$ -- 662
-swap$ -- 288
+substring$ -- 702
+swap$ -- 301
 text.length$ -- 0
 text.prefix$ -- 0
 top$ -- 0
 type$ -- 0
 warning$ -- 0
-while$ -- 88
-width$ -- 33
-write$ -- 290
+while$ -- 92
+width$ -- 34
+write$ -- 299

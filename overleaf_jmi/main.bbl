@@ -54,6 +54,12 @@ Guha Balakrishnan, Amy Zhao, Mert~R. Sabuncu \ldots Adrian~V. Dalca, ``An
   {\em Proceedings of the IEEE Conference on Computer Vision and Pattern
   Recognition (CVPR)},  9252--9260  (2018).
 
+\bibitem{ref_voxelmorph_tmi}
+Guha Balakrishnan, Amy Zhao, Mert~R. Sabuncu \ldots Adrian~V. Dalca,
+  ``{VoxelMorph}: A learning framework for deformable medical image
+  registration,'' {\em IEEE Transactions on Medical Imaging} {\bf 38}(8),
+  1788--1800  (2019).
+
 \bibitem{ref_svf_voxelmorph}
 Adrian~V. Dalca, Guha Balakrishnan, John Guttag \ldots Mert~R. Sabuncu,
   ``Unsupervised learning for fast probabilistic diffeomorphic registration,''
