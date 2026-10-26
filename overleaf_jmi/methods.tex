@@ -30,16 +30,17 @@ Organ labels are predicted from CT with TotalSegmentator~\cite{ref_totalsegmenta
 Lesion masks are predicted from PET/CT with a residual-encoder nnU-Net (ResEnc-L)~\cite{nnunet} configured according to the winning autoPET~III solution~\cite{rokuss2024fdgpsmahitchhikersguide}.
 The network uses $192^3$ patches, the pretrained weights released by the winning team, an auxiliary organ-segmentation head, and misalignment augmentation.
 
-The lesion model was trained by patient-grouped five-fold cross-validation on all 494 images from the non-test patients, including patients with a single session.
+The lesion model was trained by patient-grouped five-fold cross-validation on all 494 images from the non-test patients, including patients who underwent only one imaging session.
 Each validation image is segmented by the fold model for which its patient was held out, preventing IO tuning from using a prediction produced by a model trained on the same patient.
 Each test image is segmented by an ensemble of the five fold models.
 The resulting lesion masks achieve mean Dice scores of 0.56 on the validation images and 0.51 on the test images, with corresponding medians of 0.69 and 0.67.
 
 
 \paragraph{Preprocessing.}
-For the network and IO, CT was clipped to $[-1000,1500]$~HU and PET to $[0,20]$~SUV, and both were rescaled to $[0,1]$.
-As in the ConvexAdam baseline of the challenge~\cite{ref_convexadam}, the patient bed was removed from the CT.
-All PET quantities in the evaluation are computed on the original SUV images.
+For the network and IO, CT intensities were clipped to $[-1000,1500]$ Hounsfield units (HU), and PET intensities were clipped to $[0,20]$ standardized uptake values (SUV).
+Both were rescaled to $[0,1]$.
+As in the ConvexAdam baseline of the challenge~\cite{ref_convexadam}, the patient bed was algorithmically removed from the CT images during preprocessing.
+All PET quantities in the evaluation are computed on the original SUV maps.
 
 \paragraph{PET measures.}
 The challenge uses MTV and TLG to measure how registration changes the moving image's lesion volume and uptake.
