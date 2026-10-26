@@ -1,0 +1,67 @@
+{
+  "config": "lambda2",
+  "chosen": "lambda2",
+  "rule": "lowest |MTV| + |TLG| within 2 Dice points of the most accurate",
+  "table": [
+    {
+      "candidate": "lambda0.1",
+      "dice_ct": 0.6184248335179352,
+      "hd95": 8.767623627007193,
+      "mtv_bias": 0.06939298883752082,
+      "tlg_bias": 0.07125074111100774,
+      "ndv_percent": 0.0,
+      "preservation": 0.14064372994852856,
+      "within_tolerance": true
+    },
+    {
+      "candidate": "lambda0.25",
+      "dice_ct": 0.6167883764086948,
+      "hd95": 8.833421256635999,
+      "mtv_bias": 0.07315510118955691,
+      "tlg_bias": 0.07318740755972049,
+      "ndv_percent": 0.0,
+      "preservation": 0.1463425087492774,
+      "within_tolerance": true
+    },
+    {
+      "candidate": "lambda0.5",
+      "dice_ct": 0.6123331968107413,
+      "hd95": 8.806862959499094,
+      "mtv_bias": 0.06876693694881558,
+      "tlg_bias": 0.06757585825854763,
+      "ndv_percent": 0.0,
+      "preservation": 0.1363427952073632,
+      "within_tolerance": true
+    },
+    {
+      "candidate": "lambda1.25",
+      "dice_ct": 0.6043916103416034,
+      "hd95": 9.02733555834823,
+      "mtv_bias": 0.05557254118644242,
+      "tlg_bias": 0.058697471146867436,
+      "ndv_percent": 0.0,
+      "preservation": 0.11427001233330986,
+      "within_tolerance": true
+    },
+    {
+      "candidate": "lambda2",
+      "dice_ct": 0.5988300293076544,
+      "hd95": 9.222815949884396,
+      "mtv_bias": 0.055639503057097826,
+      "tlg_bias": 0.05845862351845122,
+      "ndv_percent": 0.0,
+      "preservation": 0.11409812657554905,
+      "within_tolerance": true
+    },
+    {
+      "candidate": "lambda4",
+      "dice_ct": 0.5895032845150392,
+      "hd95": 9.555241348039074,
+      "mtv_bias": 0.06000492896499405,
+      "tlg_bias": 0.061742450845314385,
+      "ndv_percent": 0.0,
+      "preservation": 0.12174737981030843,
+      "within_tolerance": false
+    }
+  ]
+}

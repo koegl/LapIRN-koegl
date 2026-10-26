@@ -24,7 +24,20 @@ EVAL_DIR = REPO / "evaluation_official_scorer" / "test"
 # IO (40 iterations, same weights; only the lr differed), whereas the official
 # scorer runs were spread over janus and cluster GPUs
 RUNTIME_DIR = REPO / "evaluation" / "test"
-BASELINE_DIR = REPO / "journal_results" / "baselines"
+# baselines re-tuned with the official scorer and the selection rule
+BASELINE_DIR = REPO / "evaluation_official_scorer" / "baselines"
+# runtimes on the RTX A6000 (janus), as for our methods: ConvexAdam's test
+# registration ran there; NiftyReg's test registration ran on the cluster, so its
+# A6000 timings come from the first tuning round (same config, val pairs)
+A6000_TIMINGS = {
+    "niftyreg": REPO
+    / "journal_results"
+    / "baselines"
+    / "niftyreg"
+    / "{config}"
+    / "timings_val.csv",
+    "convexadam": BASELINE_DIR / "convexadam" / "{config}" / "timings_test.csv",
+}
 OUT_DIR = Path(__file__).resolve().parent / "out"
 
 
@@ -121,9 +134,7 @@ def runtimes(method_id: str) -> Optional[pd.Series]:
         config = json.loads((BASELINE_DIR / method / "chosen.json").read_text())[
             "config"
         ]
-        return pd.read_csv(BASELINE_DIR / method / config / "timings_test.csv")[
-            "seconds"
-        ]
+        return pd.read_csv(str(A6000_TIMINGS[method]).format(config=config))["seconds"]
     run = BASELINES[method_id].run
     return pd.read_csv(RUNTIME_DIR / f"{run}.csv")["runtime_s"]
 

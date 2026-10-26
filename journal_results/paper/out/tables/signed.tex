@@ -1,6 +1,8 @@
 \begin{table}[t]
 \centering
-\caption{Signed change of lesion volume and uptake caused by registration (test set, 26 patients with lesions): positive values mean that the warped lesions are larger or take up more. Methods as in Table~\ref{tab:baselines} (Training / IO: losses used; PET + rig.: PET-preservation and rigidity losses). Mean$\pm$SD and median over patients.}
+\caption{Signed change in metabolic tumor volume (MTV) and total lesion glycolysis (TLG) caused by registration on the test set (26 patients, 30 lesion-positive pairs): positive values mean that the warped lesions are larger or have greater total uptake.
+Methods are as in Table~\ref{tab:baselines}; Training / IO indicates where losses are used, and PET + rig. denotes PET-preservation and rigidity losses.
+Values are mean$\pm$SD and median over patients after averaging each patient's eligible pairs.}
 \label{tab:signed}
 \small
 \begin{tabular}{lllcccc}
@@ -10,8 +12,8 @@
 Method & Training & IO & Mean$\pm$SD & Median & Mean$\pm$SD & Median \\
 \midrule
 Affine & -- & -- & $+2.9\pm5.8$ & $+1.3$ & $+2.8\pm5.7$ & $+1.7$ \\
-NiftyReg & -- & -- & $+4.6\pm14.7$ & $+0.5$ & $+6.3\pm18.7$ & $+0.3$ \\
-ConvexAdam & -- & -- & $+8.2\pm12.8$ & $+5.8$ & $+9.6\pm17.2$ & $+5.7$ \\
+NiftyReg & -- & -- & $+4.7\pm18.9$ & $-0.6$ & $+7.1\pm23.8$ & $-0.1$ \\
+ConvexAdam & -- & -- & $+8.0\pm8.1$ & $+7.1$ & $+8.8\pm10.3$ & $+5.8$ \\
 Affine + IO & -- & PET + rig. & $+3.5\pm5.8$ & $+3.8$ & $+5.7\pm5.6$ & $+6.7$ \\
 \midrule
 Ours & -- & -- & $+5.3\pm13.1$ & $+4.5$ & $+7.9\pm14.9$ & $+7.0$ \\
