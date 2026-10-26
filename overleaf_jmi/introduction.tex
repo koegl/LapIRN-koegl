@@ -10,9 +10,9 @@ A deformation that compresses or stretches a lesion would change both these quan
 When the registered follow-up is used to match lesions or compare them with baseline, such processing-induced changes could be mistaken for part of the longitudinal change and could therefore affect lesion tracking or response assessment.
 The challenge, part of the Learn2Reg series~\cite{ref_learn2reg_hansen,ref_learn2reg_alessa} and based on the PSMA-PET-CT-Lesions dataset~\cite{ref_psmaregdata}, formalizes this setting by registering each follow-up image to its baseline image with a dense deformation field.
 It scores organ overlap, boundary distance, folding of the deformation field, and the change of MTV and TLG caused by the deformations.
-The two goals can compete: limiting deformation may protect lesion measurements while leaving the anatomy misaligned, whereas improving alignment may distort the lesions being measured.
+Anatomical alignment and the preservation of these quantities can compete: limiting deformation may protect lesion measurements while leaving the anatomy misaligned, whereas improving alignment may distort the lesions being measured.
 
-Classical registration solves an optimization problem per image pair~\cite{ref_demons,ref_syn,bspline}; this is accurate but slow for whole-body images.
+Classical registration solves an optimization problem per image pair~\cite{ref_demons,ref_syn,bspline}; this can be accurate~\cite{ref_learn2reg_alessa,ref_learn2reg_hansen}, but it is often computationally expensive, in particular for large three-dimensional whole-body images~\cite{ref_voxelmorph_cvpr}.
 Learning-based registration replaces the per-pair optimization with one forward pass of a trained network~\cite{ref_voxelmorph_cvpr,ref_svf_voxelmorph,ref_transmorph}, and instance optimization (IO) can refine the network output per pair at test time.
 The coarse-to-fine Laplacian pyramid network LapIRN~\cite{ref_lapirn} recovers the large deformations between whole-body images while keeping the transformation smooth and invertible.
 With a network and optional IO, preservation constraints can act during training, during per-pair refinement, or at both stages; the choice affects both registration quality and runtime.
