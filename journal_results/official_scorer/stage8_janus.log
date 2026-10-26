@@ -1,0 +1,89 @@
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+=== run base/convexadam/lambda4
+[convexadam/lambda4] 1/38 0071 01->00: 12s
+[convexadam/lambda4] 2/38 0071 02->00: 11s
+[convexadam/lambda4] 3/38 0071 03->00: 11s
+[convexadam/lambda4] 4/38 0071 04->00: 11s
+[convexadam/lambda4] 5/38 0071 05->00: 11s
+[convexadam/lambda4] 6/38 0078 01->00: 10s
+[convexadam/lambda4] 7/38 0113 01->00: 11s
+[convexadam/lambda4] 8/38 0124 01->00: 10s
+[convexadam/lambda4] 9/38 0125 01->00: 11s
+[convexadam/lambda4] 10/38 0134 01->00: 11s
+[convexadam/lambda4] 11/38 0138 01->00: 11s
+[convexadam/lambda4] 12/38 0140 01->00: 11s
+[convexadam/lambda4] 13/38 0148 01->00: 10s
+[convexadam/lambda4] 14/38 0159 01->00: 11s
+[convexadam/lambda4] 15/38 0162 01->00: 11s
+[convexadam/lambda4] 16/38 0181 01->00: 11s
+[convexadam/lambda4] 17/38 0200 01->00: 11s
+[convexadam/lambda4] 18/38 0200 02->00: 11s
+[convexadam/lambda4] 19/38 0203 01->00: 11s
+[convexadam/lambda4] 20/38 0211 01->00: 11s
+[convexadam/lambda4] 21/38 0219 01->00: 12s
+[convexadam/lambda4] 22/38 0236 01->00: 10s
+[convexadam/lambda4] 23/38 0236 02->00: 11s
+[convexadam/lambda4] 24/38 0236 03->00: 11s
+[convexadam/lambda4] 25/38 0236 04->00: 11s
+[convexadam/lambda4] 26/38 0236 05->00: 11s
+[convexadam/lambda4] 27/38 0236 06->00: 10s
+[convexadam/lambda4] 28/38 0291 01->00: 12s
+[convexadam/lambda4] 29/38 0292 01->00: 11s
+[convexadam/lambda4] 30/38 0294 01->00: 11s
+[convexadam/lambda4] 31/38 0294 02->00: 11s
+[convexadam/lambda4] 32/38 0294 03->00: 10s
+[convexadam/lambda4] 33/38 0319 01->00: 12s
+[convexadam/lambda4] 34/38 0327 01->00: 12s
+[convexadam/lambda4] 35/38 0328 01->00: 12s
+[convexadam/lambda4] 36/38 0331 01->00: 11s
+[convexadam/lambda4] 37/38 0356 01->00: 11s
+[convexadam/lambda4] 38/38 0370 01->00: 11s
+lambda4:   0%|          | 0/38 [00:00<?, ?it/s]                                               lambda4:   0%|          | 0/38 [00:41<?, ?it/s]lambda4:   3%|▎         | 1/38 [00:41<25:28, 41.32s/it]                                                       lambda4:   3%|▎         | 1/38 [01:21<25:28, 41.32s/it]lambda4:   5%|▌         | 2/38 [01:21<24:22, 40.63s/it]                                                       lambda4:   5%|▌         | 2/38 [02:01<24:22, 40.63s/it]lambda4:   8%|▊         | 3/38 [02:01<23:28, 40.25s/it]                                                       lambda4:   8%|▊         | 3/38 [02:41<23:28, 40.25s/it]lambda4:  11%|█         | 4/38 [02:41<22:42, 40.08s/it]                                                       lambda4:  11%|█         | 4/38 [03:21<22:42, 40.08s/it]lambda4:  13%|█▎        | 5/38 [03:21<22:01, 40.04s/it]                                                       lambda4:  13%|█▎        | 5/38 [04:01<22:01, 40.04s/it]lambda4:  16%|█▌        | 6/38 [04:01<21:24, 40.15s/it]                                                       lambda4:  16%|█▌        | 6/38 [04:40<21:24, 40.15s/it]lambda4:  18%|█▊        | 7/38 [04:40<20:31, 39.71s/it]                                                       lambda4:  18%|█▊        | 7/38 [05:19<20:31, 39.71s/it]lambda4:  21%|██        | 8/38 [05:19<19:49, 39.64s/it]                                                       lambda4:  21%|██        | 8/38 [05:59<19:49, 39.64s/it]lambda4:  24%|██▎       | 9/38 [05:59<19:09, 39.64s/it]                                                       lambda4:  24%|██▎       | 9/38 [06:39<19:09, 39.64s/it]lambda4:  26%|██▋       | 10/38 [06:39<18:35, 39.83s/it]                                                        [lambda4] 0071 01->00: dice_ct_before=0.0819 dice_ct=0.6099 hd95_before=45.6354 hd95=7.6136 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5627 bone_hd95=8.0168 soft_dice=0.6858 soft_hd95=7.1582 near_bone_soft_dice=0.6099 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2113 stencil_leakage_staring_eroded=0.0000 bre_mm=2.0670 staring_energy_bone=0.2263 staring_properness_bone=0.0244 staring_orthonormality_bone=0.2001 staring_affinity_bone=0.0018 jac_det_dev_bone=0.0666 jac_ortho_dev_bone=0.1908 dist_distortion_short=0.0338 dist_distortion_long=0.0338 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3575 lesion_voxels=48.0000 mtv_change=0.1250 mtv_bias=0.1250 tlg_change=0.1032 tlg_bias=0.1032 n_lesions=1.0000
+[lambda4] 0071 02->00: dice_ct_before=0.1167 dice_ct=0.6092 hd95_before=29.1242 hd95=6.6793 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5574 bone_hd95=6.6720 soft_dice=0.6902 soft_hd95=6.6876 near_bone_soft_dice=0.6105 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2113 stencil_leakage_staring_eroded=0.0000 bre_mm=1.4376 staring_energy_bone=0.0755 staring_properness_bone=0.0087 staring_orthonormality_bone=0.0661 staring_affinity_bone=0.0007 jac_det_dev_bone=0.0637 jac_ortho_dev_bone=0.1807 dist_distortion_short=0.0294 dist_distortion_long=0.0256 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3575 lesion_voxels=0.0000 mtv_change=nan mtv_bias=nan tlg_change=nan tlg_bias=nan n_lesions=0.0000
+[lambda4] 0071 03->00: dice_ct_before=0.2031 dice_ct=0.6163 hd95_before=28.7630 hd95=7.0293 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5527 bone_hd95=7.4970 soft_dice=0.7110 soft_hd95=6.5009 near_bone_soft_dice=0.6190 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2113 stencil_leakage_staring_eroded=0.0000 bre_mm=2.2328 staring_energy_bone=0.1282 staring_properness_bone=0.0150 staring_orthonormality_bone=0.1123 staring_affinity_bone=0.0010 jac_det_dev_bone=0.0808 jac_ortho_dev_bone=0.2137 dist_distortion_short=0.0365 dist_distortion_long=0.0337 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3575 lesion_voxels=0.0000 mtv_change=nan mtv_bias=nan tlg_change=nan tlg_bias=nan n_lesions=0.0000
+[lambda4] 0071 04->00: dice_ct_before=0.0743 dice_ct=0.5974 hd95_before=37.0173 hd95=8.1261 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5249 bone_hd95=9.1428 soft_dice=0.7014 soft_hd95=6.9777 near_bone_soft_dice=0.6276 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2113 stencil_leakage_staring_eroded=0.0000 bre_mm=2.5569 staring_energy_bone=0.2315 staring_properness_bone=0.0205 staring_orthonormality_bone=0.2093 staring_affinity_bone=0.0017 jac_det_dev_bone=0.0914 jac_ortho_dev_bone=0.2619 dist_distortion_short=0.0431 dist_distortion_long=0.0382 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3575 lesion_voxels=0.0000 mtv_change=nan mtv_bias=nan tlg_change=nan tlg_bias=nan n_lesions=0.0000
+[lambda4] 0071 05->00: dice_ct_before=0.0427 dice_ct=0.5967 hd95_before=44.9095 hd95=7.7978 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5280 bone_hd95=8.6264 soft_dice=0.6964 soft_hd95=6.8618 near_bone_soft_dice=0.6066 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2113 stencil_leakage_staring_eroded=0.0000 bre_mm=2.0835 staring_energy_bone=0.3254 staring_properness_bone=0.0264 staring_orthonormality_bone=0.2961 staring_affinity_bone=0.0029 jac_det_dev_bone=0.0789 jac_ortho_dev_bone=0.2180 dist_distortion_short=0.0370 dist_distortion_long=0.0334 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3575 lesion_voxels=0.0000 mtv_change=nan mtv_bias=nan tlg_change=nan tlg_bias=nan n_lesions=0.0000
+[lambda4] 0078 01->00: dice_ct_before=0.0311 dice_ct=0.6259 hd95_before=71.2274 hd95=10.4430 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5554 bone_hd95=10.1349 soft_dice=0.7155 soft_hd95=10.7853 near_bone_soft_dice=0.5607 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2198 stencil_leakage_staring_eroded=0.0000 bre_mm=2.0877 staring_energy_bone=0.0644 staring_properness_bone=0.0149 staring_orthonormality_bone=0.0488 staring_affinity_bone=0.0007 jac_det_dev_bone=0.1145 jac_ortho_dev_bone=0.1996 dist_distortion_short=0.0403 dist_distortion_long=0.0382 erosion_bones_retained=0.8197 erosion_voxels_retained=0.3338 lesion_voxels=113.0000 mtv_change=0.0796 mtv_bias=0.0796 tlg_change=0.0661 tlg_bias=0.0661 n_lesions=3.0000
+[lambda4] 0113 01->00: dice_ct_before=0.1328 dice_ct=0.6104 hd95_before=25.4441 hd95=7.8504 ndv_percent=0.0000 n_bones=60.0000 bone_dice=0.5844 bone_hd95=7.1603 soft_dice=0.6859 soft_hd95=8.6316 near_bone_soft_dice=0.6578 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2035 stencil_leakage_staring_eroded=0.0000 bre_mm=1.7676 staring_energy_bone=0.0353 staring_properness_bone=0.0051 staring_orthonormality_bone=0.0301 staring_affinity_bone=0.0001 jac_det_dev_bone=0.0652 jac_ortho_dev_bone=0.1718 dist_distortion_short=0.0318 dist_distortion_long=0.0329 erosion_bones_retained=0.7000 erosion_voxels_retained=0.3720 lesion_voxels=62.0000 mtv_change=0.0000 mtv_bias=0.0000 tlg_change=0.0000 tlg_bias=0.0000 n_lesions=1.0000
+[lambda4] 0124 01->00: dice_ct_before=0.0201 dice_ct=0.6304 hd95_before=53.3267 hd95=5.6973 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6053 bone_hd95=4.8864 soft_dice=0.6821 soft_hd95=6.6132 near_bone_soft_dice=0.6172 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2408 stencil_leakage_staring_eroded=0.0000 bre_mm=1.3600 staring_energy_bone=0.1467 staring_properness_bone=0.0146 staring_orthonormality_bone=0.1319 staring_affinity_bone=0.0002 jac_det_dev_bone=0.0466 jac_ortho_dev_bone=0.1458 dist_distortion_short=0.0237 dist_distortion_long=0.0243 erosion_bones_retained=0.6885 erosion_voxels_retained=0.3028 lesion_voxels=5889.0000 mtv_change=0.0326 mtv_bias=0.0326 tlg_change=0.0353 tlg_bias=0.0353 n_lesions=35.0000
+[lambda4] 0125 01->00: dice_ct_before=0.1557 dice_ct=0.5959 hd95_before=24.8794 hd95=10.1961 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5418 bone_hd95=12.2433 soft_dice=0.6791 soft_hd95=7.8836 near_bone_soft_dice=0.6205 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2271 stencil_leakage_staring_eroded=0.0000 bre_mm=1.4129 staring_energy_bone=0.0607 staring_properness_bone=0.0062 staring_orthonormality_bone=0.0543 staring_affinity_bone=0.0002 jac_det_dev_bone=0.0318 jac_ortho_dev_bone=0.1739 dist_distortion_short=0.0262 dist_distortion_long=0.0210 erosion_bones_retained=0.7213 erosion_voxels_retained=0.3286 lesion_voxels=6326.0000 mtv_change=-0.0055 mtv_bias=0.0055 tlg_change=-0.0025 tlg_bias=0.0025 n_lesions=46.0000
+[lambda4] 0134 01->00: dice_ct_before=0.3272 dice_ct=0.5838 hd95_before=17.8010 hd95=12.0410 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5404 bone_hd95=13.1681 soft_dice=0.6668 soft_hd95=10.7439 near_bone_soft_dice=0.5989 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2004 stencil_leakage_staring_eroded=0.0000 bre_mm=1.8415 staring_energy_bone=0.0719 staring_properness_bone=0.0107 staring_orthonormality_bone=0.0610 staring_affinity_bone=0.0002 jac_det_dev_bone=0.0561 jac_ortho_dev_bone=0.2128 dist_distortion_short=0.0311 dist_distortion_long=0.0270 erosion_bones_retained=0.6557 erosion_voxels_retained=0.3890 lesion_voxels=2519.0000 mtv_change=-0.0060 mtv_bias=0.0060 tlg_change=-0.0426 tlg_bias=0.0426 n_lesions=20.0000
+[lambda4] 0138 01->00: dice_ct_before=0.1363 dice_ct=0.6262 hd95_before=29.6954 hd95=8.9406 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5964 bone_hd95=7.4633 soft_dice=0.6586 soft_hd95=10.5791 near_bone_soft_dice=0.5976 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2005 stencil_leakage_staring_eroded=0.0000 bre_mm=1.6508 staring_energy_bone=0.0553 staring_properness_bone=0.0073 staring_orthonormality_bone=0.0479 staring_affinity_bone=0.0001 jac_det_dev_bone=0.0464 jac_ortho_dev_bone=0.1966 dist_distortion_short=0.0301 dist_distortion_long=0.0264 erosion_bones_retained=0.8689 erosion_voxels_retained=0.3721 lesion_voxels=126.0000 mtv_change=0.0238 mtv_bias=0.0238 tlg_change=0.0225 tlg_bias=0.0225 n_lesions=2.0000lambda4:  26%|██▋       | 10/38 [07:19<18:35, 39.83s/it]lambda4:  29%|██▉       | 11/38 [07:19<17:59, 39.97s/it]                                                        lambda4:  29%|██▉       | 11/38 [07:59<17:59, 39.97s/it]lambda4:  32%|███▏      | 12/38 [07:59<17:18, 39.94s/it]                                                        lambda4:  32%|███▏      | 12/38 [08:39<17:18, 39.94s/it]lambda4:  34%|███▍      | 13/38 [08:39<16:38, 39.94s/it]                                                        lambda4:  34%|███▍      | 13/38 [09:18<16:38, 39.94s/it]lambda4:  37%|███▋      | 14/38 [09:18<15:51, 39.65s/it]                                                        lambda4:  37%|███▋      | 14/38 [09:59<15:51, 39.65s/it]lambda4:  39%|███▉      | 15/38 [09:59<15:19, 40.00s/it]                                                        lambda4:  39%|███▉      | 15/38 [10:39<15:19, 40.00s/it]lambda4:  42%|████▏     | 16/38 [10:39<14:38, 39.92s/it]                                                        lambda4:  42%|████▏     | 16/38 [11:18<14:38, 39.92s/it]lambda4:  45%|████▍     | 17/38 [11:18<13:57, 39.86s/it]                                                        lambda4:  45%|████▍     | 17/38 [11:58<13:57, 39.86s/it]lambda4:  47%|████▋     | 18/38 [11:58<13:14, 39.72s/it]                                                        lambda4:  47%|████▋     | 18/38 [12:39<13:14, 39.72s/it]lambda4:  50%|█████     | 19/38 [12:39<12:43, 40.18s/it]

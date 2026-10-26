@@ -86,6 +86,7 @@ STAGES: Dict[int, List[str]] = {
     8: [f"base/niftyreg/{c}" for c in NIFTYREG_CONFIGS]
     + [f"base/convexadam/{c}" for c in CONVEXADAM_CONFIGS],
     9: ["basetest/niftyreg", "basetest/convexadam"],
+    10: ["eval/test/M1"],  # PET IO with recall-biased lesion masks
 }
 BASELINE_RUN = {"niftyreg": "B3", "convexadam": "B4"}
 STAGE_WORKSTATION_FIRST = {3: WORKSTATION_ONLY}

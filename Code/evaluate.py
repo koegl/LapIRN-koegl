@@ -171,6 +171,16 @@ EVAL_RUNS: Dict[str, EvalRun] = {
             pet_label_dir=DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr",
         ),
     ),
+    # PET IO with recall-biased lesion masks (journal_results/recall_masks.py:
+    # SUV > 3 outside physiological organs, or nnU-Net): I5 with these masks
+    "M1": EvalRun(
+        "T1",
+        IOSpec(
+            pet=True,
+            rigidity=False,
+            pet_label_dir=DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr_pred_recall",
+        ),
+    ),
     # val sweep of the per-lesion weight (P1 = x1): x10, x100 of CC_WEIGHTS;
     # the chosen scale is then run on test
     **{
