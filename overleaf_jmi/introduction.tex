@@ -15,7 +15,8 @@ Anatomical alignment and the preservation of these quantities can compete: limit
 Classical registration solves an optimization problem per image pair~\cite{ref_demons,ref_syn,bspline}; this can be accurate~\cite{ref_learn2reg_alessa,ref_learn2reg_hansen}, but it is often computationally expensive, in particular for large three-dimensional whole-body images~\cite{ref_voxelmorph_cvpr}.
 Learning-based registration amortizes this optimization: a network is trained once on many image pairs and then registers a new pair in a single forward pass~\cite{ref_voxelmorph_tmi,ref_svf_voxelmorph,ref_transmorph}.
 Instance optimization (IO) refines the network's deformation field for each image pair by classical iterative optimization at test time.
-The coarse-to-fine Laplacian pyramid network LapIRN~\cite{ref_lapirn} recovers the large deformations between whole-body images while keeping the transformation smooth and invertible.
+Whole-body images of the same patient can differ by large deformations, for example through different positioning of the arms, spine, and bowel.
+We therefore build on LapIRN~\cite{ref_lapirn}, a learning-based method that estimates the deformation coarse to fine on a Laplacian image pyramid, which allows it to recover large deformations while keeping the transformation smooth and invertible.
 With a network and optional IO, preservation constraints can act during training, during per-pair refinement, or at both stages; the choice affects both registration quality and runtime.
 The label-guided IO studied here uses predicted organ and lesion masks for each pair; we evaluate its output against the provided labels.
 Its PET-preservation losses act on the predicted lesion mask, so a lesion absent from that mask receives no direct preservation constraint.
