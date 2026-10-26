@@ -60,9 +60,8 @@ The losses only in IO lowered these changes to 8.7\,\% and 11.3\,\% at a cost of
 By the challenge's composite score, IO without the losses ranked first, our method second, and the variant with the losses in training and IO third, with overlapping bootstrap rank intervals (1--4, 1--4, and 1--5).
 The ranking was decided by accuracy: apart from the affine pre-registration on $|\Delta\mathrm{TLG}|$, no method won a significant comparison in preservation or folding.
 The network alone needs 11~s per pair, as fast as ConvexAdam and ten times faster than NiftyReg (108~s); IO adds about 2.5~minutes.
-Figure~\ref{fig:qualitative} shows a test pair whose lesion volume grew tenfold between baseline and follow-up (from 2400 to 24\,191 voxels); it was chosen for this change, not for its registration result, and illustrates alignment.
+Figure~\ref{fig:qualitative} illustrates anatomical alignment in a test pair selected for its tenfold between-scan change in lesion volume (from 2400 to 24\,191 voxels).
 The scans were initially far apart (CT Dice 3.5\,\%); our method aligned them to 83.7\,\% Dice (NiftyReg 70.8\,\%, ConvexAdam 65.7\,\%), and NDV remained below the challenge threshold.
-The volume and uptake of the 163 follow-up lesions changed by $+2.6\,\%$ and $+6.6\,\%$, more than with IO without the losses ($-0.6\,\%$ and $+2.3\,\%$).
 Before registration, the CT overlay (Fig.~\ref{fig:qualitative}c) and the label residual (e) show misalignment across the whole trunk; after registration (d, f), the residual is reduced to thin bands at organ boundaries and to parts of the lumbar vertebrae, and the warped lesion contours lie in the corresponding bones (h).
 The Jacobian determinant (g) shows fine-grained changes in the local volume scale of the sampling transform throughout the body, which IO adds to the smooth network field because it has no smoothness term ($\lambda_{\mathrm{smooth}}=0$).
 
