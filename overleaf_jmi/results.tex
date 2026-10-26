@@ -86,7 +86,7 @@ The smallest factor ($\times10^{-4}$) lowered the volume change of the predicted
 Mean Dice remained 80.2\,\%, while $|\Delta\mathrm{TLG}|$ fell from 14.5\,\% to 12.9\,\%.
 Larger factors reduced the change of the predicted masks further, to below 1\,\% from $\times0.01$ on, but not that of the provided lesions (9.0 to 9.8\,\%), while Dice decreased steadily, to 78.6\,\% at $\times0.1$ and 78.0\,\% at $\times1$.
 Compared with the network output before IO (dashed), IO with the PET losses gained 3.2 Dice points and had slightly lower mean changes ($|\Delta\mathrm{MTV}|$ 9.3\,\% vs.\ 10.3\,\%, $|\Delta\mathrm{TLG}|$ 11.8\,\% vs.\ 12.5\,\% at $\times0.1$).
-Neither PET difference was significant (two-sided Wilcoxon signed-rank test, $p=0.17$ and $p=0.86$; lower for 14 and 13 of 26 patients).
+Neither PET difference was significant (two-sided Wilcoxon signed-rank test, uncorrected $p=0.17$ and $p=0.86$; lower for 14 and 13 of 26 patients).
 The original validation grid contained no nonzero factor below $\times0.1$.
 In this test-set sweep, the selected factor $\times0.1$ therefore cost 1.6 Dice points more than $\times10^{-4}$ for the same volume change (9.3\,\%) and 1.1 points less uptake change (11.8\,\%).
 Because this comparison was made on the test set, it does not justify replacing the validation-selected factor.
@@ -124,7 +124,7 @@ Some lesions therefore grew while others shrank, and their changes canceled in t
 As a post-hoc attempt to increase lesion coverage, we combined the nnU-Net predictions with voxels above SUV 3 outside a 10-mm halo around predicted organs with physiological uptake, following the recall-biased approach of Dey and Dalca~\cite{dey2026registration}.
 On the moving test scans with lesions (mean over patients), lesion detection increased from 74\,\% to 91\,\%, while voxel-level precision fell from 0.71 to 0.22.
 Compared with IO using the nnU-Net mask, MTV change was 10.3\,\% instead of 9.3\,\%, TLG change was 12.5\,\% instead of 11.8\,\%, and CT Dice was 79.3\,\% instead of 78.6\,\%.
-None of these differences was significant.
+None of these differences was significant (two-sided Wilcoxon signed-rank test, uncorrected $p\geq0.09$).
 The per-lesion median was similar (13.5\,\% vs.\ 13.7\,\%).
 Thus, the tested recall-biased mask produced no detected reduction in either scan-level or per-lesion change despite detecting more lesions.
 

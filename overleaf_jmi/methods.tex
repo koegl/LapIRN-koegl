@@ -210,8 +210,10 @@ The implementation doubles the smaller one-sided $p$-value, drops zero paired di
 Holm correction~\cite{ref_holm} is applied separately per metric within each family.
 The families comprise three comparisons against ``None'' (no losses) in each ablation block, three IO-only versus training-plus-IO comparisons, four leave-one-out comparisons, and comparisons of our method against the other baseline-table methods.
 The last family contains nine comparisons for CT, HD95, and NDV and eight for MTV and TLG because ``Initial'' has zero PET change by construction.
+In the rigidity comparison, the three penalties are compared with IO without rigidity, and separately with each other (three pairs), each as one family per metric.
+Single post-hoc comparisons (the trade-off and recall-mask runs against their reference) are reported with uncorrected $p$-values; per-lesion medians are descriptive.
 We call a difference significant if its adjusted $p<0.05$.
-Confidence intervals are 95\,\% percentile patient-bootstrap intervals~\cite{ref_bootstrap}: scan-level plots show intervals for method means, whereas intervals stated for IO-only minus training-plus-IO are for paired patient-mean differences.
+Confidence intervals are 95\,\% percentile patient-bootstrap intervals~\cite{ref_bootstrap}: scan-level plots show intervals for method means, whereas intervals stated for differences between two methods are for paired patient-mean differences.
 For per-lesion medians, patients are resampled together with all their lesions (cluster bootstrap).
 
 For the comparison with baselines, we additionally apply the challenge's significance-based composite ranking and report 95\,\% patient-bootstrap rank intervals.
