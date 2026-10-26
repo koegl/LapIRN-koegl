@@ -101,7 +101,8 @@ The Jacobian determinant (g) shows fine-grained changes in the local volume scal
 
 \subsection{Rigidity Penalties}
 \label{sect:res_rigidity}
-We compare rigidity penalties by how well they preserve within-bone distances without sacrificing anatomical alignment or deforming tissue near bone boundaries.
+Bones should retain their internal geometry during registration even when they move relative to one another.
+Because label overlap does not measure this property, we compare rigidity penalties by how well they preserve within-bone distances and report the accompanying changes in bone and soft-tissue alignment.
 In the finite-difference Staring penalty, 21.2\,\% of the stencil reads leave the bone of the center voxel (all 560 labeled challenge scans); eroding the bones removes this leakage but keeps only 35.5\,\% of the bone voxels and removes 23\,\% of the bones entirely (ribs: 2.4\,\% of the voxels kept, 58\,\% of the ribs removed).
 
 On the validation set (Fig.~\ref{fig:rigidity}), the per-bone rigid fit reached a lower within-bone distortion than the Staring penalty at every Dice level, most clearly for long distances, where Staring did not get below 2.8\,\% while the rigid fit reached 1.8\,\%.
@@ -116,7 +117,8 @@ Fig.~\ref{fig:rigidity_measures}b shows the cost in alignment: the rigid fit and
 In absolute terms (Table~\ref{tab:rigidity_full}, Appendix~F), the rigid fit reduced the short-distance distortion from 13.4\,\% to 5.0\,\% and the long-distance distortion from 4.4\,\% to 1.8\,\%; all three penalties improved every rigidity measure significantly over IO without rigidity, and all pairwise differences in distortion between the penalties were significant.
 Staring also removed folding inside bones (NDV in bone from 6.5 to 0.3~ppm), whereas the rigid fit, which constrains only the displacement, left it unchanged (9.6~ppm, not significant).
 
-No penalty changed the lesion volume or uptake change significantly on the test set (Table~\ref{tab:rigidity_full}).
+When added on top of the PET losses, none of the three rigidity penalties produced a detected additional change in lesion volume or uptake preservation on the test set (Table~\ref{tab:rigidity_full}).
+This comparison differs from Fig.~\ref{fig:q2}, where rigidity used without the PET losses significantly reduced network-output $|\Delta\mathrm{MTV}|$ and IO $|\Delta\mathrm{TLG}|$ relative to the corresponding unconstrained variants.
 On the validation set (Fig.~\ref{fig:rigidity_preservation}), every penalty and weight changed the lesions less than IO without rigidity, but the change did not decrease with the weight; the drop from weight 0 to the smallest weight came mostly from two patients whose volume change fell by 27 and 10 points already with the rigid fit at $\times0.1$; without these two patients, all weights stayed within about one point of IO without rigidity ($|\Delta\mathrm{MTV}|$ 3.7 to 4.9\,\% vs.\ 4.4\,\%).
 Per lesion, the penalties lowered the median volume change of bone-associated lesions only from 9.3\,\% to 7.7--8.8\,\%, whereas an exactly affine transformation (the affine pre-registration) changed them by a median of 1.0\,\%.
 

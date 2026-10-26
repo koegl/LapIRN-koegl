@@ -75,13 +75,17 @@ Finite-difference rigidity penalties face a trade-off at bone boundaries: their 
 The per-bone rigid fit avoids both, because it compares each bone's displacement with its best rigid motion and needs no derivatives.
 It preserved within-bone distances best, although it does not optimize them, and kept soft-tissue alignment, whereas Staring with erosion constrained the bones least.
 The cost of rigid bones is lower bone Dice, possibly because a rigid bone cannot follow differences between the automatic bone labels of the two examinations as closely as a freely deforming one.
-Whether this lower overlap reflects worse alignment or more plausible bone motion cannot be decided with label overlap alone; the distance distortion indicates the latter.
+Whether this lower overlap reflects worse alignment or an inability of a rigid bone to follow inconsistencies between the automatic bone labels cannot be decided from label overlap alone.
+The lower within-bone distance distortion shows better preservation of bone shape, but it does not determine whether the bone is placed correctly.
 
-Although about two thirds of the lesion voxels lie on bone labels (63\,\% in the training and 67\,\% in the test scans), the penalties did not measurably reduce the change of lesion volume and uptake in this comparison, for three likely reasons.
-First, they were added on top of the PET losses, which already constrain the predicted lesions; used alone, the rigidity loss did reduce the change (Sec.~\ref{sect:res_q1}).
+Although about two thirds of the lesion voxels lie on bone labels (63\,\% in the training and 67\,\% in the test scans), adding a rigidity penalty on top of the PET losses did not measurably improve lesion volume or uptake preservation in this comparison.
+Rigidity alone did improve particular PET endpoints in Fig.~\ref{fig:q2}: it reduced network-output $|\Delta\mathrm{MTV}|$ and IO $|\Delta\mathrm{TLG}|$ relative to the corresponding unconstrained variants.
+The absence of a detected additional benefit on top of the PET losses has three likely explanations.
+First, the PET losses already constrain the predicted lesions.
 Second, the bones were not made rigid at the scale of the lesions: the remaining rigid-fit residual of 1.4 to 2.3~mm is about half a voxel, enough to move the boundary voxels of lesions that span only a few voxels, whereas an exactly affine transformation changed bone-associated lesions by a median of only 1.0\,\%.
 Third, the scan-level metrics are dominated by missed lesions, by cancellation between lesions, and by a few patients with large changes (Sec.~\ref{sect:res_detection}).
-Rigidity can therefore be chosen for anatomical plausibility; a measurable benefit for lesion preservation would require bones that are rigid to within a fraction of a voxel.
+The per-bone rigid fit is therefore useful when preserving internal bone geometry is an objective, with a measured cost in bone Dice.
+The present measures do not establish whether it improves bone placement, and a further PET-preservation benefit may require bones that are rigid to within a fraction of a voxel.
 
 \subsection{Limitations}
 The study uses a single cohort with 28 test patients, so small differences, in particular in MTV and TLG, could not be resolved, and generalization to other scanners and tracers is untested.
@@ -99,4 +103,5 @@ Without instance optimization, training with the losses reduced the change of le
 Missed lesions accounted for much of the residual scan-level change in the mask-coverage analysis.
 Even with provided masks, substantial changes to individual lesions remained despite a near-zero scan-level MTV change.
 Better lesion masks may reduce scan-level error, while per-lesion evaluation is needed to reveal changes that whole-scan metrics hide.
-For bones, a per-bone rigid fit preserved within-bone distances best, but rigidity did not reduce the change of lesion measurements.
+For bones, a per-bone rigid fit preserved within-bone distances best at a cost in bone Dice.
+Adding rigidity on top of the PET losses did not produce a detected further reduction in lesion-measurement change, although rigidity alone improved particular PET endpoints relative to the unconstrained variants.

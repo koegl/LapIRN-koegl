@@ -48,7 +48,8 @@ IO without the losses increased the MTV and TLG change relative to network outpu
 Applying the losses only in IO gained 1.0 Dice point over applying them in both training and IO; whether preservation differs between these placements remains unresolved.
 Lesions missed by the predicted masks contributed more than half of the residual scan-level change in the PET-loss IO analysis.
 With provided masks, the scan-level MTV change fell to 0.1\,\%, but individual lesions still changed by a median of 13.5\,\%.
-A per-bone rigid fit preserved within-bone distances best (distortion 13.4\,\% to 5.0\,\%) but did not reduce lesion change.
+A per-bone rigid fit preserved within-bone distances best (distortion 13.4\,\% to 5.0\,\%).
+When added to the PET losses, it produced no detected further reduction in lesion change.
 
 \textbf{Conclusions:} With predicted lesion masks, IO with PET-preservation and bone-rigidity losses improved anatomical alignment without a detected increase in scan-level MTV or TLG change relative to network output.
 This option requires time for per-pair refinement; when IO is omitted, training with the losses reduces registration-induced PET change.
