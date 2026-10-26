@@ -170,6 +170,7 @@ All generated code was reviewed and tested by the authors, and all text edits we
 
 All metrics are computed with the provided labels of the test scans by evaluating the full-resolution displacement fields directly.
 The moving scan is warped with corner-aligned grid coordinates, and PET and labels are sampled by nearest-neighbor interpolation.
+Displacement fields of the baselines are converted to the same convention; ConvexAdam's fields, which its implementation computes with edge-aligned coordinates, are converted exactly before evaluation.
 Of the 28 test patients (38 pairs), 26 patients (30 pairs) have lesions in the moving scan and contribute to the PET metrics.
 
 \paragraph{Alignment.}
