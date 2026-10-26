@@ -43,14 +43,16 @@ As in the ConvexAdam baseline of the challenge~\cite{ref_convexadam}, the patien
 All PET quantities in the evaluation are computed on the original SUV maps.
 
 \paragraph{PET measures.}
+We use the \href{https://github.com/JHU-MedImage-Reg/Learn2Reg26_PSMA/tree/main/psmareg_scoring_program}{official PSMAReg evaluation software}, hereafter referred to as the challenge scorer, to define the PET-preservation metrics and interpolation procedure.
 The challenge uses MTV and TLG to measure how registration changes the moving image's lesion volume and uptake.
-For a PET image $P$ in SUV, binary lesion mask $M$, and voxel volume $v$, they are
+For a PET image $P$ in SUV, binary lesion mask $M$, and voxel volume $v$, they are defined as:
 \begin{equation}
   \mathrm{MTV}(M) = v\sum_x M(x), \qquad
   \mathrm{TLG}(P,M) = v\sum_x P(x)M(x).
   \label{eq:pet_measures}
 \end{equation}
-Both quantities are computed on the same moving image before and after warping it to the fixed frame; as in the challenge scorer, both PET and the lesion mask are warped by nearest-neighbor interpolation.
+Both quantities are computed on the same moving image before and after warping it to the fixed frame.
+Following the challenge scorer, PET and the lesion mask are warped using nearest-neighbor interpolation.
 The reported preservation error for $Q\in\{\mathrm{MTV},\mathrm{TLG}\}$ is its absolute relative change,
 \begin{equation}
   |\Delta Q| = \frac{|Q_{\mathrm{after}} - Q_{\mathrm{before}}|}{\max(Q_{\mathrm{before}},10^{-6})}.
