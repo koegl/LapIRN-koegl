@@ -1112,4 +1112,388 @@ True            large     151.0  0.107041  ...  0.300123  0.843990
 [lambda0.1] 0203 01->00: dice_ct_before=0.0567 dice_ct=0.6687 hd95_before=41.0214 hd95=7.0368 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6420 bone_hd95=5.8740 soft_dice=0.7105 soft_hd95=8.3503 near_bone_soft_dice=0.6085 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2017 stencil_leakage_staring_eroded=0.0000 bre_mm=2.4093 staring_energy_bone=1.3047 staring_properness_bone=0.0541 staring_orthonormality_bone=1.2354 staring_affinity_bone=0.0152 jac_det_dev_bone=0.0766 jac_ortho_dev_bone=0.3003 dist_distortion_short=0.0446 dist_distortion_long=0.0358 erosion_bones_retained=0.9016 erosion_voxels_retained=0.3697 lesion_voxels=3464.0000 mtv_change=-0.0012 mtv_bias=0.0012 tlg_change=-0.0173 tlg_bias=0.0173 n_lesions=24.0000
 [lambda0.1] 0211 01->00: dice_ct_before=0.0833 dice_ct=0.6260 hd95_before=36.3078 hd95=7.7588 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5541 bone_hd95=8.0144 soft_dice=0.7172 soft_hd95=7.4646 near_bone_soft_dice=0.5898 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.1976 stencil_leakage_staring_eroded=0.0000 bre_mm=3.1667 staring_energy_bone=0.3384 staring_properness_bone=0.0214 staring_orthonormality_bone=0.3148 staring_affinity_bone=0.0022 jac_det_dev_bone=0.1140 jac_ortho_dev_bone=0.5700 dist_distortion_short=0.0755 dist_distortion_long=0.0513 erosion_bones_retained=0.8197 erosion_voxels_retained=0.3754 lesion_voxels=90.0000 mtv_change=0.0000 mtv_bias=0.0000 tlg_change=0.0000 tlg_bias=0.0000 n_lesions=2.0000
 [lambda0.1] 0219 01->00: dice_ct_before=0.1679 dice_ct=0.6704 hd95_before=21.6948 hd95=5.6192 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6452 bone_hd95=5.3782 soft_dice=0.7237 soft_hd95=5.8914 near_bone_soft_dice=0.6370 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2200 stencil_leakage_staring_eroded=0.0000 bre_mm=1.7645 staring_energy_bone=0.0770 staring_properness_bone=0.0080 staring_orthonormality_bone=0.0683 staring_affinity_bone=0.0007 jac_det_dev_bone=0.0607 jac_ortho_dev_bone=0.2249 dist_distortion_short=0.0363 dist_distortion_long=0.0301 erosion_bones_retained=0.8033 erosion_voxels_retained=0.3407 lesion_voxels=21785.0000 mtv_change=0.0336 mtv_bias=0.0336 tlg_change=0.0351 tlg_bias=0.0351 n_lesions=62.0000
-[lambda0.1] 0236 01->00: dice_ct_before=0.1763 dice_ct=0.6522 hd95_before=25.6175 hd95=7.3356 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6129 bone_hd95=7.2931 soft_dice=0.7345 soft_hd95=7.3845 near_bone_soft_dice=0.6889 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2060 stencil_leakage_staring_eroded=0.0000 bre_mm=2.5158 staring_energy_bone=0.0919 staring_properness_bone=0.0086 staring_orthonormality_bone=0.0823 staring_affinity_bone=0.0010 jac_det_dev_bone=0.0869 jac_ortho_dev_bone=0.3068 dist_distortion_short=0.0499 dist_distortion_long=0.0419 erosion_bones_retained=0.6721 erosion_voxels_retained=0.3631 lesion_voxels=87.0000 mtv_change=0.1149 mtv_bias=0.1149 tlg_change=0.1083 tlg_bias=0.1083 n_lesions=1.0000lambda0.1:  55%|█████▌    | 21/38 [15:13<11:51, 41.87s/it]lambda0.1:  58%|█████▊    | 22/38 [15:13<11:06, 41.64s/it]                                                          lambda0.1:  58%|█████▊    | 22/38 [15:53<11:06, 41.64s/it]lambda0.1:  61%|██████    | 23/38 [15:53<10:19, 41.27s/it]                                                          lambda0.1:  61%|██████    | 23/38 [16:34<10:19, 41.27s/it]lambda0.1:  63%|██████▎   | 24/38 [16:34<09:33, 40.99s/it]                                                          lambda0.1:  63%|██████▎   | 24/38 [17:16<09:33, 40.99s/it]lambda0.1:  66%|██████▌   | 25/38 [17:16<08:55, 41.22s/it]                                                          lambda0.1:  66%|██████▌   | 25/38 [17:57<08:55, 41.22s/it]lambda0.1:  68%|██████▊   | 26/38 [17:57<08:16, 41.41s/it]
+[lambda0.1] 0236 01->00: dice_ct_before=0.1763 dice_ct=0.6522 hd95_before=25.6175 hd95=7.3356 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6129 bone_hd95=7.2931 soft_dice=0.7345 soft_hd95=7.3845 near_bone_soft_dice=0.6889 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2060 stencil_leakage_staring_eroded=0.0000 bre_mm=2.5158 staring_energy_bone=0.0919 staring_properness_bone=0.0086 staring_orthonormality_bone=0.0823 staring_affinity_bone=0.0010 jac_det_dev_bone=0.0869 jac_ortho_dev_bone=0.3068 dist_distortion_short=0.0499 dist_distortion_long=0.0419 erosion_bones_retained=0.6721 erosion_voxels_retained=0.3631 lesion_voxels=87.0000 mtv_change=0.1149 mtv_bias=0.1149 tlg_change=0.1083 tlg_bias=0.1083 n_lesions=1.0000lambda0.1:  55%|█████▌    | 21/38 [15:13<11:51, 41.87s/it]lambda0.1:  58%|█████▊    | 22/38 [15:13<11:06, 41.64s/it]                                                          lambda0.1:  58%|█████▊    | 22/38 [15:53<11:06, 41.64s/it]lambda0.1:  61%|██████    | 23/38 [15:53<10:19, 41.27s/it]                                                          lambda0.1:  61%|██████    | 23/38 [16:34<10:19, 41.27s/it]lambda0.1:  63%|██████▎   | 24/38 [16:34<09:33, 40.99s/it]                                                          lambda0.1:  63%|██████▎   | 24/38 [17:16<09:33, 40.99s/it]lambda0.1:  66%|██████▌   | 25/38 [17:16<08:55, 41.22s/it]                                                          lambda0.1:  66%|██████▌   | 25/38 [17:57<08:55, 41.22s/it]lambda0.1:  68%|██████▊   | 26/38 [17:57<08:16, 41.41s/it]                                                          lambda0.1:  68%|██████▊   | 26/38 [18:39<08:16, 41.41s/it]lambda0.1:  71%|███████   | 27/38 [18:39<07:34, 41.35s/it]                                                          lambda0.1:  71%|███████   | 27/38 [19:21<07:34, 41.35s/it]lambda0.1:  74%|███████▎  | 28/38 [19:21<06:56, 41.63s/it]                                                          lambda0.1:  74%|███████▎  | 28/38 [20:03<06:56, 41.63s/it]lambda0.1:  76%|███████▋  | 29/38 [20:03<06:15, 41.74s/it]                                                          lambda0.1:  76%|███████▋  | 29/38 [20:44<06:15, 41.74s/it]lambda0.1:  79%|███████▉  | 30/38 [20:44<05:31, 41.43s/it]                                                          lambda0.1:  79%|███████▉  | 30/38 [21:25<05:31, 41.43s/it]lambda0.1:  82%|████████▏ | 31/38 [21:25<04:50, 41.52s/it]                                                          lambda0.1:  82%|████████▏ | 31/38 [22:06<04:50, 41.52s/it]lambda0.1:  84%|████████▍ | 32/38 [22:06<04:08, 41.38s/it]                                                          
+[lambda0.1] 0236 02->00: dice_ct_before=0.0778 dice_ct=0.6310 hd95_before=37.5956 hd95=9.1554 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5941 bone_hd95=9.3476 soft_dice=0.7092 soft_hd95=8.9341 near_bone_soft_dice=0.6427 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2060 stencil_leakage_staring_eroded=0.0000 bre_mm=3.4699 staring_energy_bone=0.1659 staring_properness_bone=0.0252 staring_orthonormality_bone=0.1394 staring_affinity_bone=0.0013 jac_det_dev_bone=0.1090 jac_ortho_dev_bone=0.3562 dist_distortion_short=0.0581 dist_distortion_long=0.0528 erosion_bones_retained=0.6721 erosion_voxels_retained=0.3631 lesion_voxels=128.0000 mtv_change=0.0547 mtv_bias=0.0547 tlg_change=0.0575 tlg_bias=0.0575 n_lesions=1.0000
+[lambda0.1] 0236 03->00: dice_ct_before=0.1233 dice_ct=0.6502 hd95_before=29.4019 hd95=7.4318 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6155 bone_hd95=7.5289 soft_dice=0.7270 soft_hd95=7.3200 near_bone_soft_dice=0.6589 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2060 stencil_leakage_staring_eroded=0.0000 bre_mm=2.4895 staring_energy_bone=0.1051 staring_properness_bone=0.0135 staring_orthonormality_bone=0.0906 staring_affinity_bone=0.0009 jac_det_dev_bone=0.0948 jac_ortho_dev_bone=0.2788 dist_distortion_short=0.0473 dist_distortion_long=0.0406 erosion_bones_retained=0.6721 erosion_voxels_retained=0.3631 lesion_voxels=0.0000 mtv_change=nan mtv_bias=nan tlg_change=nan tlg_bias=nan n_lesions=0.0000
+[lambda0.1] 0236 04->00: dice_ct_before=0.0434 dice_ct=0.6018 hd95_before=47.5921 hd95=8.8842 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5253 bone_hd95=9.9245 soft_dice=0.7238 soft_hd95=7.6869 near_bone_soft_dice=0.6617 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2060 stencil_leakage_staring_eroded=0.0000 bre_mm=3.4296 staring_energy_bone=0.2224 staring_properness_bone=0.0321 staring_orthonormality_bone=0.1888 staring_affinity_bone=0.0015 jac_det_dev_bone=0.1317 jac_ortho_dev_bone=0.3768 dist_distortion_short=0.0634 dist_distortion_long=0.0523 erosion_bones_retained=0.6721 erosion_voxels_retained=0.3631 lesion_voxels=34.0000 mtv_change=0.1765 mtv_bias=0.1765 tlg_change=0.1773 tlg_bias=0.1773 n_lesions=1.0000
+[lambda0.1] 0236 05->00: dice_ct_before=0.0238 dice_ct=0.6354 hd95_before=58.2974 hd95=7.9145 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5865 bone_hd95=8.7285 soft_dice=0.7276 soft_hd95=6.9595 near_bone_soft_dice=0.6527 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2060 stencil_leakage_staring_eroded=0.0000 bre_mm=2.6932 staring_energy_bone=0.1624 staring_properness_bone=0.0204 staring_orthonormality_bone=0.1409 staring_affinity_bone=0.0011 jac_det_dev_bone=0.1146 jac_ortho_dev_bone=0.3158 dist_distortion_short=0.0549 dist_distortion_long=0.0454 erosion_bones_retained=0.6721 erosion_voxels_retained=0.3631 lesion_voxels=108.0000 mtv_change=0.1852 mtv_bias=0.1852 tlg_change=0.2145 tlg_bias=0.2145 n_lesions=2.0000
+[lambda0.1] 0236 06->00: dice_ct_before=0.0683 dice_ct=0.6492 hd95_before=36.9380 hd95=7.2532 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6014 bone_hd95=7.8389 soft_dice=0.7409 soft_hd95=6.5660 near_bone_soft_dice=0.6412 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2060 stencil_leakage_staring_eroded=0.0000 bre_mm=2.6525 staring_energy_bone=0.1067 staring_properness_bone=0.0150 staring_orthonormality_bone=0.0908 staring_affinity_bone=0.0010 jac_det_dev_bone=0.1064 jac_ortho_dev_bone=0.2861 dist_distortion_short=0.0502 dist_distortion_long=0.0446 erosion_bones_retained=0.6721 erosion_voxels_retained=0.3631 lesion_voxels=60.0000 mtv_change=0.1167 mtv_bias=0.1167 tlg_change=0.1113 tlg_bias=0.1113 n_lesions=1.0000
+[lambda0.1] 0291 01->00: dice_ct_before=0.2128 dice_ct=0.5327 hd95_before=22.0986 hd95=12.6849 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.4419 bone_hd95=16.6060 soft_dice=0.6430 soft_hd95=8.2556 near_bone_soft_dice=0.5631 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2116 stencil_leakage_staring_eroded=0.0000 bre_mm=2.9126 staring_energy_bone=0.1744 staring_properness_bone=0.0229 staring_orthonormality_bone=0.1488 staring_affinity_bone=0.0026 jac_det_dev_bone=0.1355 jac_ortho_dev_bone=0.3539 dist_distortion_short=0.0635 dist_distortion_long=0.0506 erosion_bones_retained=0.7869 erosion_voxels_retained=0.3645 lesion_voxels=21470.0000 mtv_change=0.0493 mtv_bias=0.0493 tlg_change=0.0535 tlg_bias=0.0535 n_lesions=48.0000
+[lambda0.1] 0292 01->00: dice_ct_before=0.1903 dice_ct=0.5558 hd95_before=25.4621 hd95=17.1373 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.4822 bone_hd95=24.8661 soft_dice=0.6475 soft_hd95=8.2418 near_bone_soft_dice=0.5815 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2298 stencil_leakage_staring_eroded=0.0000 bre_mm=5.0174 staring_energy_bone=0.6847 staring_properness_bone=0.0870 staring_orthonormality_bone=0.5938 staring_affinity_bone=0.0039 jac_det_dev_bone=0.1381 jac_ortho_dev_bone=0.4925 dist_distortion_short=0.0788 dist_distortion_long=0.0664 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3254 lesion_voxels=14043.0000 mtv_change=0.0642 mtv_bias=0.0642 tlg_change=0.0658 tlg_bias=0.0658 n_lesions=116.0000
+[lambda0.1] 0294 01->00: dice_ct_before=0.2674 dice_ct=0.6537 hd95_before=21.1536 hd95=7.0733 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5848 bone_hd95=8.2087 soft_dice=0.7419 soft_hd95=5.8118 near_bone_soft_dice=0.6629 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2027 stencil_leakage_staring_eroded=0.0000 bre_mm=1.8808 staring_energy_bone=0.0808 staring_properness_bone=0.0105 staring_orthonormality_bone=0.0695 staring_affinity_bone=0.0008 jac_det_dev_bone=0.0644 jac_ortho_dev_bone=0.2564 dist_distortion_short=0.0382 dist_distortion_long=0.0305 erosion_bones_retained=0.7213 erosion_voxels_retained=0.3736 lesion_voxels=464.0000 mtv_change=0.0302 mtv_bias=0.0302 tlg_change=0.0246 tlg_bias=0.0246 n_lesions=4.0000
+[lambda0.1] 0294 02->00: dice_ct_before=0.2648 dice_ct=0.5807 hd95_before=27.3322 hd95=15.5262 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.4850 bone_hd95=22.4848 soft_dice=0.6975 soft_hd95=7.6657 near_bone_soft_dice=0.6479 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2027 stencil_leakage_staring_eroded=0.0000 bre_mm=4.5253 staring_energy_bone=0.7045 staring_properness_bone=0.0639 staring_orthonormality_bone=0.6362 staring_affinity_bone=0.0043 jac_det_dev_bone=0.1283 jac_ortho_dev_bone=0.5570 dist_distortion_short=0.0856 dist_distortion_long=0.0662 erosion_bones_retained=0.7213 erosion_voxels_retained=0.3736 lesion_voxels=477.0000 mtv_change=0.0629 mtv_bias=0.0629 tlg_change=0.0688 tlg_bias=0.0688 n_lesions=3.0000
+[lambda0.1] 0294 03->00: dice_ct_before=0.1750 dice_ct=0.6529 hd95_before=23.6666 hd95=7.4061 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5980 bone_hd95=8.2117 soft_dice=0.7256 soft_hd95=6.4962 near_bone_soft_dice=0.6903 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2027 stencil_leakage_staring_eroded=0.0000 bre_mm=2.2628 staring_energy_bone=0.1542 staring_properness_bone=0.0171 staring_orthonormality_bone=0.1358 staring_affinity_bone=0.0012 jac_det_dev_bone=0.1115 jac_ortho_dev_bone=0.3932 dist_distortion_short=0.0590 dist_distortion_long=0.0408 erosion_bones_retained=0.7213 erosion_voxels_retained=0.3736 lesion_voxels=182.0000 mtv_change=0.1703 mtv_bias=0.1703 tlg_change=0.1045 tlg_bias=0.1045 n_lesions=2.0000
+[lambda0.1] 0319 01->00: dice_ct_before=0.2738 dice_ct=0.6076 hd95_before=17.0857 hd95=8.9498 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5406 bone_hd95=9.9138 soft_dice=0.7057 soft_hd95=7.8609 near_bone_soft_dice=0.5794 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2158 stencil_leakage_staring_eroded=0.0000 bre_mm=2.8116 staring_energy_bone=0.1439 staring_properness_bone=0.0302 staring_orthonormality_bone=0.1128 staring_affinity_bone=0.0010 jac_det_dev_bone=0.1335 jac_ortho_dev_bone=0.3333 dist_distortion_short=0.0584 dist_distortion_long=0.0463 erosion_bones_retained=0.8361 erosion_voxels_retained=0.3451 lesion_voxels=33984.0000 mtv_change=0.1115 mtv_bias=0.1115 tlg_change=0.1118 tlg_bias=0.1118 n_lesions=107.0000lambda0.1:  84%|████████▍ | 32/38 [22:48<04:08, 41.38s/it]lambda0.1:  87%|████████▋ | 33/38 [22:48<03:27, 41.48s/it]                                                          lambda0.1:  87%|████████▋ | 33/38 [23:31<03:27, 41.48s/it]lambda0.1:  89%|████████▉ | 34/38 [23:31<02:47, 41.90s/it]                                                          lambda0.1:  89%|████████▉ | 34/38 [24:12<02:47, 41.90s/it]lambda0.1:  92%|█████████▏| 35/38 [24:12<02:04, 41.66s/it]                                                          lambda0.1:  92%|█████████▏| 35/38 [24:54<02:04, 41.66s/it]lambda0.1:  95%|█████████▍| 36/38 [24:54<01:23, 41.84s/it]                                                          lambda0.1:  95%|█████████▍| 36/38 [25:37<01:23, 41.84s/it]lambda0.1:  97%|█████████▋| 37/38 [25:37<00:41, 41.98s/it]                                                          lambda0.1:  97%|█████████▋| 37/38 [26:17<00:41, 41.98s/it]lambda0.1: 100%|██████████| 38/38 [26:17<00:00, 41.56s/it]lambda0.1: 100%|██████████| 38/38 [26:17<00:00, 41.52s/it]
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+
+[lambda0.1] 0327 01->00: dice_ct_before=0.0475 dice_ct=0.6020 hd95_before=44.9596 hd95=8.7488 ndv_percent=0.0000 n_bones=60.0000 bone_dice=0.5737 bone_hd95=7.6374 soft_dice=0.6502 soft_hd95=10.0043 near_bone_soft_dice=0.6238 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2122 stencil_leakage_staring_eroded=0.0000 bre_mm=2.2626 staring_energy_bone=0.4935 staring_properness_bone=0.0216 staring_orthonormality_bone=0.4639 staring_affinity_bone=0.0080 jac_det_dev_bone=0.0791 jac_ortho_dev_bone=0.2495 dist_distortion_short=0.0413 dist_distortion_long=0.0363 erosion_bones_retained=0.7833 erosion_voxels_retained=0.3626 lesion_voxels=14116.0000 mtv_change=0.0465 mtv_bias=0.0465 tlg_change=0.0452 tlg_bias=0.0452 n_lesions=119.0000
+[lambda0.1] 0328 01->00: dice_ct_before=0.1883 dice_ct=0.5752 hd95_before=19.8558 hd95=7.1877 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.4978 bone_hd95=7.2672 soft_dice=0.6839 soft_hd95=7.0979 near_bone_soft_dice=0.5674 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2275 stencil_leakage_staring_eroded=0.0000 bre_mm=2.7394 staring_energy_bone=0.3745 staring_properness_bone=0.0300 staring_orthonormality_bone=0.3421 staring_affinity_bone=0.0024 jac_det_dev_bone=0.1414 jac_ortho_dev_bone=0.3598 dist_distortion_short=0.0628 dist_distortion_long=0.0515 erosion_bones_retained=0.7705 erosion_voxels_retained=0.3191 lesion_voxels=72763.0000 mtv_change=0.0913 mtv_bias=0.0913 tlg_change=0.0909 tlg_bias=0.0909 n_lesions=97.0000
+[lambda0.1] 0331 01->00: dice_ct_before=0.2936 dice_ct=0.6407 hd95_before=17.2301 hd95=8.6418 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.6150 bone_hd95=7.1096 soft_dice=0.6936 soft_hd95=10.3726 near_bone_soft_dice=0.5727 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2197 stencil_leakage_staring_eroded=0.0000 bre_mm=2.0287 staring_energy_bone=0.1339 staring_properness_bone=0.0127 staring_orthonormality_bone=0.1197 staring_affinity_bone=0.0015 jac_det_dev_bone=0.0738 jac_ortho_dev_bone=0.2477 dist_distortion_short=0.0414 dist_distortion_long=0.0317 erosion_bones_retained=0.7869 erosion_voxels_retained=0.3392 lesion_voxels=10385.0000 mtv_change=0.0405 mtv_bias=0.0405 tlg_change=0.0337 tlg_bias=0.0337 n_lesions=13.0000
+[lambda0.1] 0356 01->00: dice_ct_before=0.0601 dice_ct=0.6134 hd95_before=45.3292 hd95=8.6368 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5449 bone_hd95=10.4493 soft_dice=0.7136 soft_hd95=6.5893 near_bone_soft_dice=0.6265 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2102 stencil_leakage_staring_eroded=0.0000 bre_mm=2.0004 staring_energy_bone=0.1116 staring_properness_bone=0.0161 staring_orthonormality_bone=0.0945 staring_affinity_bone=0.0009 jac_det_dev_bone=0.0884 jac_ortho_dev_bone=0.2409 dist_distortion_short=0.0424 dist_distortion_long=0.0346 erosion_bones_retained=0.8197 erosion_voxels_retained=0.3605 lesion_voxels=931.0000 mtv_change=0.0440 mtv_bias=0.0440 tlg_change=0.0343 tlg_bias=0.0343 n_lesions=13.0000
+[lambda0.1] 0370 01->00: dice_ct_before=0.0314 dice_ct=0.6209 hd95_before=51.9767 hd95=7.4413 ndv_percent=0.0000 n_bones=61.0000 bone_dice=0.5776 bone_hd95=6.9150 soft_dice=0.6928 soft_hd95=8.0358 near_bone_soft_dice=0.5895 ndv_bone_percent=0.0000 ndv_band_percent=0.0000 stencil_leakage_staring=0.2330 stencil_leakage_staring_eroded=0.0000 bre_mm=2.6833 staring_energy_bone=0.1489 staring_properness_bone=0.0280 staring_orthonormality_bone=0.1196 staring_affinity_bone=0.0013 jac_det_dev_bone=0.0978 jac_ortho_dev_bone=0.3069 dist_distortion_short=0.0499 dist_distortion_long=0.0423 erosion_bones_retained=0.6230 erosion_voxels_retained=0.3223 lesion_voxels=22.0000 mtv_change=-0.0455 mtv_bias=0.0455 tlg_change=-0.0340 tlg_bias=0.0340 n_lesions=1.0000
+[lambda0.1] wrote /home/iml/fryderyk.koegl/code/LapIRN-koegl/evaluation_official_scorer/baselines/convexadam/eval/val/lambda0.1.csv
+runtime_s                            9.990210
+dice_ct_before                       0.135594
+dice_ct                              0.621385
+hd95_before                         34.964101
+hd95                                 8.528311
+ndv_percent                          0.000000
+n_bones                             60.947368
+bone_dice                            0.564007
+bone_hd95                            9.555502
+soft_dice                            0.708171
+soft_hd95                            7.354791
+near_bone_soft_dice                  0.620964
+ndv_bone_percent                     0.000000
+ndv_band_percent                     0.000000
+stencil_leakage_staring              0.212909
+stencil_leakage_staring_eroded       0.000000
+bre_mm                               2.784462
+staring_energy_bone                  0.468703
+staring_properness_bone              0.035041
+staring_orthonormality_bone          0.428562
+staring_affinity_bone                0.005099
+jac_det_dev_bone                     0.102702
+jac_ortho_dev_bone                   0.341518
+dist_distortion_short                0.054811
+dist_distortion_long                 0.044154
+erosion_bones_retained               0.755170
+erosion_voxels_retained              0.352741
+lesion_voxels                     7684.236842
+mtv_change                           0.065273
+mtv_bias                             0.078068
+tlg_change                           0.066098
+tlg_bias                             0.078736
+n_lesions                           24.605263
+dtype: float64
+[lambda0.1] wrote /home/iml/fryderyk.koegl/code/LapIRN-koegl/evaluation_official_scorer/baselines/convexadam/eval/val/lambda0.1_lesions.csv
+per-lesion |MTV change|:
+                          count      mean  ...       95%       max
+bone_associated size_bin                   ...                    
+False           large      27.0  0.124441  ...  0.329669  0.411552
+                medium    138.0  0.130830  ...  0.400938  0.540541
+                small      27.0  0.194858  ...  0.675000  0.800000
+True            large     151.0  0.118171  ...  0.322618  0.933504
+                medium    441.0  0.130696  ...  0.428571  1.180000
+                small      96.0  0.141203  ...  0.500000  0.812500
+
+[6 rows x 7 columns]
+skip base/niftyreg/be0.02_sx9 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.02_sx7 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.02_sx5 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.02_sx3 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.005_sx9 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.005_sx7 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.005_sx5 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.005_sx3 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.001_sx9 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.001_sx7 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.001_sx5 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.001_sx3 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.0005_sx9 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.0005_sx7 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.0005_sx5 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.0005_sx3 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.0002_sx9 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.0002_sx7 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.0002_sx5 (done or claimed)
+============================================================================
+Welcome to the High-Performance Computing (HPC), aka Scientific Computing
+Hosted by the HPC Department, Scientific IT, Helmholtz Munich.
+============================================================================
+## Important HPC Guidelines ##
+# Do NOT run jobs on Submit/Login Nodes - hpc-submit[01-04]
+# Use Slurm to run compute intensive apps/jobs on Compute Nodes
+# HPC Wiki / Docs: https://rb.gy/0mwq58
+# Clean up unnecessary data in /lustre/* /home to maintain Lustre performance
+# HPC Best Practices: https://tinyurl.com/43p5bu36
+# HPC User Group (Teams): https://rb.gy/531wh
+# Protocol for HPC issue handling: https://shorturl.at/NrhRH
+============================================================================
+skip base/niftyreg/be0.0002_sx3 (done or claimed)
+stage 8: janus finished its part
