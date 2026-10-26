@@ -82,7 +82,7 @@ Re-reviewed 2026-10-25 after the corrected `align_corners` evaluations, using `m
 
 34. [ ] **#34 — Present the per-lesion-loss experiment as a negative test.** Methods now define the test-time configuration as terms on the eight largest predicted components with at least 20 voxels and state that its weight was selected on validation data. Results and Discussion report that this validation benefit did not transfer consistently (13.7% to 13.3%; 5/26 patients improved; higher median change for small lesions) and distinguish it from the separate diagnostic using provided masks, which are unavailable in the intended setting (`methods.tex`, `results.tex`, `discussion.tex`).
 
-35. [ ] **#35 — Reconcile `findings.md` with the corrected paper.** Its leading story uses corrected values, but later checked sections retain pre-fix results, zero-field interpretations, and an old rigidity sweep. The recall-biased-mask IO result also predates the scorer fix; keep it out of the manuscript unless rerun. Mark obsolete analyses clearly or replace them so checked boxes cannot be mistaken for current evidence. Cross-check manuscript claims against corrected outputs rather than old checked notes.
+35. [x] **#35 — Reconcile `findings.md` with the corrected paper.** The file is now a current evidence checklist using corrected values. Every bullet has a checkbox, manuscript content and resolved omissions are checked, and the final baseline update and whole-paper consistency pass remain unchecked. Historical pre-correction mask, align-corners, recall-mask, and interior-only rigidity results are identified as superseded and retained only through source references (`findings.md`).
 
 ## JMI submission checklist — revisit immediately before submission
 
