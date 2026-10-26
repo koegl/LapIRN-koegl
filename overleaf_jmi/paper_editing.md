@@ -100,7 +100,7 @@ Source: the JMI **“Before submitting”** and **“Preparing Manuscript”** a
 
 41. [x] **#41 — Follow JMI's spacing instruction.** The manuscript body is single-spaced, single-column, and 12 point, with line and page numbers, as required by JMI's “Preparing Manuscript” page. Retain this setting for submission and inspect the final layout under #28 (`main.tex`).
 
-42. [ ] **#42 — Complete title-page details and biographies.** The current author names, corresponding-author email, and five keywords are present. JMI asks for full affiliations including departments, street addresses, postal codes, cities, and countries; the current affiliations omit some of these. Add the requested brief professional author biographies (at most 75 words each), which are currently absent. Check title style and author-name spelling with the coauthors.
+42. [ ] **#42 — Complete title-page details and biographies.** Fryderyk Kögl is explicitly identified as the corresponding author in the footnote-style line below the keywords, with the matching asterisk and email address. Affiliations **a–f** now include the relevant organizational units and full postal addresses. Add the requested brief professional author biographies (at most 75 words each), which are currently absent. Check every affiliation and author-name spelling with the coauthors.
 
 43. [ ] **#43 — Recheck abstract and manuscript language.** The structured Purpose/Approach/Results/Conclusions abstract must be self-contained and at most 250 words (#18); retain 3–6 keywords. Use American English, define acronyms at first use, use metric units, and avoid bold/italic solely for emphasis in the body. Check that there are no ordinary footnotes; the corresponding-author marker is expressly requested.
 
