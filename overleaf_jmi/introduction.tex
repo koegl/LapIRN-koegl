@@ -21,7 +21,8 @@ Its coarse levels recover large deformations and its finer levels add smaller on
 With a network and optional IO, constraints that preserve MTV and TLG can act during training, during per-pair refinement, or at both stages.
 IO generally improves registration accuracy but adds runtime for every image pair~\cite{ref_learn2reg_alessa}.
 The label-guided IO studied here uses predicted organ and lesion masks for each pair; we evaluate its output against the provided labels.
-Its PET-preservation losses act on the predicted lesion mask, so a lesion absent from that mask receives no direct preservation constraint.
+In IO, the PET-preservation losses act on the predicted lesion mask.
+Lesions missing from this mask are therefore not directly constrained.
 
 Our earlier Learn2Reg submission introduced the affine--LapIRN--IO pipeline with PET-preservation and per-bone rigidity losses~\cite{ref_koegl_arxiv}.
 It evaluated selected configurations on challenge validation cases using surrogate labels.
