@@ -21,7 +21,8 @@ With the PET losses in training and IO (blue filled circle vs.\ $+$), $|\Delta\m
 The rigidity loss alone (red) did not change the Dice of the network and cost 0.6 points with IO; it lowered $|\Delta\mathrm{MTV}|$ significantly for the network output (10.3\,\% to 8.9\,\%) and $|\Delta\mathrm{TLG}|$ significantly with IO (14.5\,\% to 10.6\,\%).
 Combining both groups (purple) gave mean MTV and TLG changes close to those with the PET losses alone and was the least accurate variant (73.6\,\% and 77.3\,\% Dice).
 HD95 followed the Dice in every case (network 7.2 to 7.4~mm, with IO 6.6 to 7.1~mm).
-All network outputs and the IO variants without the PET losses stayed below the challenge's NDV threshold of 0.005\,\% (50~ppm) on every pair; with the PET losses in IO, one pair each exceeded it (150 and 262~ppm), and the variant means were at most 10~ppm.
+Among the matched configurations in this comparison, all network outputs and the IO variants without the PET losses stayed below the NDV threshold of 0.005\,\% (50~ppm) on every pair.
+With the PET losses in IO, the PET-only and combined configurations each exceeded it on one pair (150 and 262~ppm), while their patient-mean NDV values were at most 10~ppm.
 
 The losses therefore change the accuracy--preservation balance; the next question is whether they need to shape the trained network or can act only during per-pair refinement.
 
@@ -48,6 +49,7 @@ To place our method in context, we compare it with CT-only registration baseline
 Our method, with the losses only in IO, reached 78.3\,\% CT Dice and 6.89~mm HD95, significantly better than NiftyReg (70.1\,\%, 8.85~mm), ConvexAdam (61.7\,\%, 9.16~mm), and the affine pre-registration (46.4\,\%, 14.00~mm); its $|\Delta\mathrm{MTV}|$ (8.7\,\%) and $|\Delta\mathrm{TLG}|$ (11.3\,\%) did not differ significantly from those of NiftyReg (8.7\,\%, 10.2\,\%) and ConvexAdam (9.3\,\%, 10.8\,\%).
 Compared with the same network before IO, our method gained 2.9 Dice points (95\,\% CI 2.3 to 3.4).
 The paired changes in $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ were $-1.7$ points (95\,\% CI $-3.6$ to 0.3) and $-1.2$ points ($-3.6$ to 1.2), respectively, so an increase in scan-level PET change was not detected.
+The NDV summaries in Table~\ref{tab:baselines} are means over patients, whereas threshold exceedances count individual registration pairs.
 NiftyReg, tuned on the validation set, exceeded the folding threshold on 5 of 38 validation pairs and 8 of 38 test pairs (21\,\%), with up to 0.37\,\% NDV; ConvexAdam stayed below it on every pair.
 Our method exceeded it on two test pairs (76 and 125~ppm), and the variant with the losses also in training on one (262~ppm).
 IO directly after the affine pre-registration reached only 56.6\,\% Dice: within the same iteration budget, IO cannot replace the network.
