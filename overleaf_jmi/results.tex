@@ -142,10 +142,13 @@ The medians of small lesions take only a few distinct values (e.g.\ 12.5\,\%, 14
 To identify which constraints account for preservation in IO, we remove one PET term at a time from IO on the network trained without the losses (Table~\ref{tab:loo}).
 The mean-Jacobian term $\mathcal{L}_{\overline{J}}$ carried the preservation: without it, $|\Delta\mathrm{MTV}|$ increased from 9.3\,\% to 10.4\,\% and $|\Delta\mathrm{TLG}|$ from 11.8\,\% to 13.5\,\% (both significant).
 Without the voxel-wise term $\mathcal{L}_{J}$, $|\Delta\mathrm{TLG}|$ increased to 12.3\,\% (significant), whereas $|\Delta\mathrm{MTV}|$ was unchanged (9.3\,\%).
-The volume and uptake terms worked against preservation.
+The two direct measurement terms did not improve the evaluated endpoints in this test-set ablation.
 Without $\mathcal{L}_{\mathrm{MTV}}$, Dice increased from 78.6\,\% to 79.3\,\% and $|\Delta\mathrm{TLG}|$ decreased to 10.7\,\% (both significant; $|\Delta\mathrm{MTV}|$ 8.6\,\%, not significant).
 Without $\mathcal{L}_{\mathrm{TLG}}$, $|\Delta\mathrm{TLG}|$ decreased to 9.8\,\% (significant), while Dice (78.7\,\%) and $|\Delta\mathrm{MTV}|$ (8.6\,\%) did not change significantly.
-Both terms measure the change on the linearly warped, soft mask and PET (Eq.~\ref{eq:mtv_tlg}), whereas the evaluation warps both by nearest neighbor; lowering the soft change therefore need not lower the evaluated one.
+Thus, the test-set results do not support a claim that every PET term improves the evaluated preservation metrics.
+One possible explanation is that both direct terms measure change on the linearly warped, soft mask and PET (Eq.~\ref{eq:mtv_tlg}), whereas the evaluation warps both by nearest neighbor.
+The ablation is consistent with this surrogate mismatch but does not establish it as the cause.
+Because the four-term configuration was fixed before test evaluation, this diagnostic ablation was not used to select a reduced loss.
 
 \input{tables/loo}
 

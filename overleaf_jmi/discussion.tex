@@ -55,8 +55,9 @@ A per-lesion constraint may therefore require constraints for small lesions and 
 The leave-one-out experiment exposes the third mechanism: the optimized surrogate does not always track the evaluated endpoint.
 In IO, the Jacobian terms carried the preservation, whereas removing the volume term $\mathcal{L}_{\mathrm{MTV}}$ or the uptake term $\mathcal{L}_{\mathrm{TLG}}$ improved $|\Delta\mathrm{TLG}|$ by 1.1 and 2.0 points, respectively, and removing $\mathcal{L}_{\mathrm{MTV}}$ also gained 0.6 Dice points.
 Both terms act on the soft, linearly warped mask, whose change differs from the nearest-neighbor change that is evaluated.
-A closer surrogate or the Jacobian terms alone could agree better with the evaluated endpoints, but this requires validation before changing the method.
-We kept all four terms because they were chosen before the test set was evaluated.
+This provides a plausible explanation for the result but does not show that interpolation mismatch caused it.
+We retained all four terms because this leave-one-out analysis used the test set and the configuration had been fixed beforehand.
+A closer surrogate or a reduced set of terms would require selection on validation data and confirmation on independent data.
 
 \subsection{Interpreting the Evaluation}
 The significance-based ranking of the challenge was decided mainly by accuracy: differences in alignment between methods are consistent across patients and reach significance, whereas differences in MTV and TLG vary strongly between patients and rarely do.

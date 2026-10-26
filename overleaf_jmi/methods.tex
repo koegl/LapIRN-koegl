@@ -281,6 +281,7 @@ Their weight is selected on the validation set among $\{1,10,100\}$ times a base
 
 \paragraph{Contribution of each PET term.}
 On the network trained without the losses, IO with all four PET terms is compared with IO in which one term at a time is switched off.
+This test-set comparison is a diagnostic analysis and is not used to select a new loss configuration.
 
 \paragraph{Rigidity penalties.}
 This comparison tests whether the penalties preserve bone geometry and whether they provide additional PET preservation beyond the PET-specific terms.
@@ -288,4 +289,3 @@ On the network trained with the PET losses, IO with the PET terms is combined wi
 Because the penalties have different units, a reference weight is first calibrated for each so that its initial value on five validation pairs equals that of the rigid fit at $\lambda_{\mathrm{rig}}=0.25$ (Staring 0.66, Staring with erosion 1.03).
 Each method is then evaluated on the validation set at $\{0.1,0.3,1,3,10,30,100\}$ times its reference weight, giving a curve of CT Dice against within-bone distance distortion.
 For the test set, we choose for each method the largest weight whose validation Dice is within two Dice points of the variant without rigidity, the same tolerance as in the selection rule above, with the grid capped at $\times100$: $\times3$ for Staring, and $\times100$ for Staring with erosion and the rigid fit.
-
