@@ -56,3 +56,11 @@ overleaf_jmi/main.aux
 overleaf_jmi/main.synctex.gz
 overleaf_jmi/main.fls
 overleaf_jmi/main.out
+
+# LaTeX build files (cover letter)
+cover_letter/*.aux
+cover_letter/*.fdb_latexmk
+cover_letter/*.fls
+cover_letter/*.log
+cover_letter/*.out
+cover_letter/*.synctex.gz
