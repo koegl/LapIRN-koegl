@@ -121,7 +121,7 @@ Source: the JMI **“Before submitting”** and **“Preparing Manuscript”** a
 
 45. [x] **#45 — Keep all appendices in the manuscript.** Appendices A--G remain part of the manuscript because they directly support the reported experiments and reproducibility. No separate supplementary-material PDF is planned. Their figures and tables continue the manuscript numbering.
 
-46. [ ] **#46 — Verify disclosures, access statements, and references.** Keep a Disclosures section before Acknowledgments and a Code, Data, and Materials Availability section immediately after Disclosures. Confirm all funding bodies/grant numbers, AI-tool names and uses, repository access and license (#27). Check complete bibliographic details and DOIs where available; exact reference style will be copyedited after acceptance.
+46. [x] **#46 — Verify disclosures, access statements, and references.** Keep a Disclosures section before Acknowledgments and a Code, Data, and Materials Availability section immediately after Disclosures. Confirm all funding bodies/grant numbers, AI-tool names and uses, repository access and license (#27). Check complete bibliographic details and DOIs where available; exact reference style will be copyedited after acceptance.
 
 47. [ ] **#47 — Complete the submission-form-only details and final policy check.** Prepare CRediT roles (#37), any optional plain-language summary (maximum 200 words; enter it in the form, not the PDF), and verify rights/permissions and final coauthor approval. Re-read the JMI guidelines, special-section call, and submission form just before submission; optional paid/free precheck services listed by JMI are not requirements.
 

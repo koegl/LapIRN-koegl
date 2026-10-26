@@ -52,7 +52,7 @@ D.~Rueckert, L.I. Sonoda, C.~Hayes \ldots D.J. Hawkes, ``Nonrigid registration
 Guha Balakrishnan, Amy Zhao, Mert~R. Sabuncu \ldots Adrian~V. Dalca, ``An
   unsupervised learning model for deformable medical image registration,'' in
   {\em Proceedings of the IEEE Conference on Computer Vision and Pattern
-  Recognition (CVPR)},   (2018).
+  Recognition (CVPR)},  9252--9260  (2018).
 
 \bibitem{ref_svf_voxelmorph}
 Adrian~V. Dalca, Guha Balakrishnan, John Guttag \ldots Mert~R. Sabuncu,
@@ -99,7 +99,7 @@ Fabian Isensee, Paul~F. Jaeger, Simon A.~A. Kohl \ldots Klaus~H. Maier-Hein,
 \bibitem{rokuss2024fdgpsmahitchhikersguide}
 Maximilian Rokuss, Balint Kovacs, Yannick Kirchhoff \ldots Fabian Isensee,
   ``From fdg to psma: A hitchhiker's guide to multitracer, multicenter lesion
-  segmentation in pet/ct imaging,'' {\em ArXiv}   (2024).
+  segmentation in pet/ct imaging.'' arXiv:2409.09478  (2024).
 
 \bibitem{ref_convexadam}
 Hanna Siebert, Lasse Hansen, and Mattias~P. Heinrich, ``Fast 3d registration
@@ -123,10 +123,11 @@ Vincent Arsigny, Olivier Commowick, Xavier Pennec \ldots Nicholas Ayache, ``A
 Diederik~P. Kingma and Jimmy Ba, ``Adam: A method for stochastic
   optimization,'' in {\em International Conference on Learning Representations
   (ICLR)},   (2015).
+\newblock arXiv:1412.6980.
 
 \bibitem{ref_kabsch}
 Wolfgang Kabsch, ``A solution for the best rotation to relate two sets of
-  vectors,'' {\em Foundations of Crystallography} {\bf 32}(5), 922--923
+  vectors,'' {\em Acta Crystallographica Section A} {\bf 32}(5), 922--923
   (1976).
 
 \bibitem{ref_umeyama}

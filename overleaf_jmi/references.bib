@@ -116,7 +116,8 @@ publisher="Springer International Publishing",
 address="Cham",
 pages="211--221",
 abstract="Deep learning-based methods have recently demonstrated promising results in deformable image registration for a wide range of medical image analysis tasks. However, existing deep learning-based methods are usually limited to small deformation settings, and desirable properties of the transformation including bijective mapping and topology preservation are often being ignored by these approaches. In this paper, we propose a deep Laplacian Pyramid Image Registration Network, which can solve the image registration optimization problem in a coarse-to-fine fashion within the space of diffeomorphic maps. Extensive quantitative and qualitative evaluations on two MR brain scan datasets show that our method outperforms the existing methods by a significant margin while maintaining desirable diffeomorphic properties and promising registration speed.",
-isbn="978-3-030-59716-0"
+isbn="978-3-030-59716-0",
+  doi="10.1007/978-3-030-59716-0_21"
 }
 
 
@@ -204,7 +205,8 @@ publisher="Springer International Publishing",
 address="Cham",
 pages="729--738",
 abstract="Traditional deformable registration techniques achieve impressive results and offer a rigorous theoretical treatment, but are computationally intensive since they solve an optimization problem for each image pair. Recently, learning-based methods have facilitated fast registration by learning spatial deformation functions. However, these approaches use restricted deformation models, require supervised labels, or do not guarantee a diffeomorphic (topology-preserving) registration. Furthermore, learning-based registration tools have not been derived from a probabilistic framework that can offer uncertainty estimates. In this paper, we present a probabilistic generative model and derive an unsupervised learning-based inference algorithm that makes use of recent developments in convolutional neural networks (CNNs). We demonstrate our method on a 3D brain registration task, and provide an empirical analysis of the algorithm. Our approach results in state of the art accuracy and very fast runtimes, while providing diffeomorphic guarantees and uncertainty estimates. Our implementation is available online at http://voxelmorph.csail.mit.edu.",
-isbn="978-3-030-00928-1"
+isbn="978-3-030-00928-1",
+  doi="10.1007/978-3-030-00928-1_82"
 }
 
 
@@ -213,7 +215,9 @@ author = {Balakrishnan, Guha and Zhao, Amy and Sabuncu, Mert R. and Guttag, John
 title = {An Unsupervised Learning Model for Deformable Medical Image Registration},
 booktitle = {Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
 month = {June},
-year = {2018}
+year = {2018},
+  pages = {9252--9260},
+  doi = {10.1109/CVPR.2018.00964}
 }
 
 @misc{ref_psmareg_challenge,
@@ -227,15 +231,15 @@ year = {2018}
 
 
 
-@article{rokuss2024fdgpsmahitchhikersguide,
+@misc{rokuss2024fdgpsmahitchhikersguide,
       title={From FDG to PSMA: A Hitchhiker's Guide to Multitracer, Multicenter Lesion Segmentation in PET/CT Imaging}, 
       author={Maximilian Rokuss and Balint Kovacs and Yannick Kirchhoff and Shuhan Xiao and Constantin Ulrich and Klaus H. Maier-Hein and Fabian Isensee},
-      journal={ArXiv},
+      howpublished={arXiv:2409.09478},
       year={2024},
-      publisher={arXiv},
       eprint={2409.09478},
       archivePrefix={arXiv},
-      url={https://arxiv.org/abs/2409.09478}, 
+      url={https://arxiv.org/abs/2409.09478},
+      doi={10.48550/arXiv.2409.09478}
 }
 
 @misc{dey2026registration,
@@ -331,12 +335,13 @@ url={https://doi.org/10.1007/s11263-024-02047-1}
 @article{ref_kabsch,
   title={A solution for the best rotation to relate two sets of vectors},
   author={Kabsch, Wolfgang},
-  journal={Foundations of Crystallography},
+  journal={Acta Crystallographica Section A},
   volume={32},
   number={5},
   pages={922--923},
   year={1976},
-  publisher={International Union of Crystallography}
+  publisher={International Union of Crystallography},
+  doi={10.1107/S0567739476001873}
 }
 @ARTICLE{ref_umeyama,
   author={Umeyama, S.},
@@ -445,7 +450,8 @@ publisher="Springer International Publishing",
 address="Cham",
 pages="174--179",
 abstract="Current approaches for deformable medical image registration often struggle to fulfill all of the following criteria: versatile applicability, small computation or training times, and the being able to estimate large deformations. Furthermore, end-to-end networks for supervised training of registration often become overly complex and difficult to train. For the Learn2Reg2021 challenge, we aim to address these issues by decoupling feature learning and geometric alignment. First, we introduce a new very fast and accurate optimisation method. By using discretised displacements and a coupled convex optimisation procedure, we are able to robustly cope with large deformations. With the help of an Adam-based instance optimisation, we achieve very accurate registration performances and by using regularisation, we obtain smooth and plausible deformation fields. Second, to be versatile for different registration tasks, we extract hand-crafted features that are modality and contrast invariant and complement them with semantic features from a task-specific segmentation U-Net. With our results we were able to achieve the overall Learn2Reg2021 challenge's second place, winning Task 1 and being second and third in the other two tasks.",
-isbn="978-3-030-97281-3"
+isbn="978-3-030-97281-3",
+  doi="10.1007/978-3-030-97281-3_25"
 }
 
 
@@ -486,7 +492,8 @@ url={https://doi.org/10.1038/s41592-020-01008-z}
   volume  = {1},
   number  = {6},
   pages   = {80--83},
-  year    = {1945}
+  year    = {1945},
+  doi     = {10.2307/3001968}
 }
 
 @article{ref_holm,
@@ -504,7 +511,8 @@ url={https://doi.org/10.1038/s41592-020-01008-z}
   title     = {An Introduction to the Bootstrap},
   publisher = {Chapman \& Hall},
   address   = {New York},
-  year      = {1993}
+  year      = {1993},
+  doi       = {10.1201/9780429246593}
 }
 
 @inproceedings{ref_arsigny,
@@ -515,12 +523,14 @@ url={https://doi.org/10.1038/s41592-020-01008-z}
   volume    = {4190},
   pages     = {924--931},
   publisher = {Springer},
-  year      = {2006}
+  year      = {2006},
+  doi       = {10.1007/11866565_113}
 }
 
 @inproceedings{ref_adam,
   author    = {Kingma, Diederik P. and Ba, Jimmy},
   title     = {Adam: A Method for Stochastic Optimization},
   booktitle = {International Conference on Learning Representations (ICLR)},
-  year      = {2015}
+  year      = {2015},
+  note      = {arXiv:1412.6980}
 }
