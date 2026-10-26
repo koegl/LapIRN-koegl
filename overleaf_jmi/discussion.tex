@@ -22,6 +22,10 @@ This could explain why adding the preservation losses during training provides l
 The comparison does not test what lesion information the registration network learns, and the segmentation model cannot by itself explain the Dice advantage of IO-only placement: both IO variants use the same predicted masks.
 
 \subsection{Limits of Lesion Preservation}
+Three mechanisms must be distinguished.
+First, incomplete lesion-mask coverage limits how well IO can preserve scan-level measurements.
+Second, scan-level aggregation allows growth and shrinkage of different lesions to cancel.
+Third, the soft quantities optimized by the losses differ from the nearest-neighbor quantities used for evaluation.
 On the predicted lesion masks that IO optimizes, the PET losses reduced volume change from 9.3\,\% to 0.8\,\%; on the provided masks, 9.3\,\% MTV and 11.8\,\% TLG change remained.
 Increasing the PET weights tenfold had little effect on those measured changes.
 Missed lesions were the largest measured contributor to the residual (5.2 of 9.3 MTV points and 6.2 of 11.8 TLG points), although they make up only 6\,\% of lesion volume; covered lesions still contributed 3.3 and 5.4 points.
@@ -29,26 +33,29 @@ Their weight comes from patients with little tumor volume: the metric is relativ
 The post-hoc recall-biased mask increased lesion detection but sharply reduced precision and did not improve measured preservation (Sec.~\ref{sect:res_detection}).
 The additional false-positive regions may dilute the preservation constraints over voxels outside the lesions being evaluated, so this experiment does not show that recall gains are ineffective when precision can be retained.
 The diagnostic run with provided lesion masks reduced the measured changes from 9.3\,\% to 0.1\,\% for MTV and from 11.8\,\% to 4.5\,\% for TLG, while improving Dice from 78.6\,\% to 79.1\,\%.
-This supports mask quality as a major limit of the scan-level change, but uptake change remains even with provided masks, and individual lesions still change (below); the intervention does not establish that segmentation explains all residual error.
+This supports mask quality as a major limit of scan-level preservation, but uptake change remains even with provided masks, and the intervention does not establish that segmentation explains all residual error.
 
 Because IO meets its objective on the predicted masks already at small weights, the PET weight mainly trades accuracy.
 A factor of $10^{-4}$ of the training-derived weights gave most of the preservation without a loss in Dice, whereas the factor chosen by the tuning on the validation set ($\times0.1$) cost 1.6 points more for the same volume change and 1.1 points less uptake change; the tuning grid contained no factor between 0 and $\times0.1$.
 Even with the ground-truth masks, a ten times larger weight hardly improved preservation.
 
-In IO, the Jacobian terms carried the preservation, whereas removing the volume term $\mathcal{L}_{\mathrm{MTV}}$ or the uptake term $\mathcal{L}_{\mathrm{TLG}}$ improved $|\Delta\mathrm{TLG}|$ by 1.1 and 2.0 points, respectively, and removing $\mathcal{L}_{\mathrm{MTV}}$ also gained 0.6 Dice points.
-Both terms act on the soft, linearly warped mask, whose change differs from the nearest-neighbor change that is evaluated; a surrogate closer to the evaluated quantity, or the Jacobian terms alone, would likely preserve more.
-We kept all four terms because they were chosen before the test set was evaluated.
-
-Aggregate MTV and TLG changes hide how individual lesions are deformed.
+Mask coverage does not explain the second limit: aggregate MTV and TLG changes hide how individual lesions are deformed.
 Small lesions changed most in every condition, partly because a change of one or two voxels is already a large relative change.
 Without the losses, IO increased the distortion of lesions, most of all of small bone-associated lesions, which tended to grow.
 The rigidity loss acted mainly on bone-associated lesions, as intended, and the PET losses on both bone-associated and soft-tissue lesions; with both groups of losses, bone-associated lesions changed about as little as with the PET losses alone.
 IO with the losses kept the scan-level measurements of the network output while improving alignment, but did not reduce the change of individual lesions, not even with the ground-truth lesion masks.
 The PET losses constrain the total volume and uptake of a scan, which can be preserved while single lesions grow or shrink.
+Indeed, provided masks reduced scan-level MTV change to 0.1\,\%, while the median per-lesion change remained 13.5\,\%.
 
 Per-lesion terms on the connected components of the predicted mask did not solve this: they reduced the per-lesion change on the validation set but not on the test set.
 They leave the small lesions, which change most, unconstrained (components below 20 voxels and beyond the eight largest), they act on the predicted components, which miss lesions and merge or split others, and they use the same soft, linearly warped masks as the scan-level terms, whose change differs from the evaluated one (Sec.~\ref{sect:res_loo}).
-A per-lesion constraint would likely need a closer surrogate of the nearest-neighbor evaluation and constraints for small lesions.
+A per-lesion constraint may therefore require constraints for small lesions and a closer surrogate of the nearest-neighbor evaluation.
+
+The leave-one-out experiment exposes the third mechanism: the optimized surrogate does not always track the evaluated endpoint.
+In IO, the Jacobian terms carried the preservation, whereas removing the volume term $\mathcal{L}_{\mathrm{MTV}}$ or the uptake term $\mathcal{L}_{\mathrm{TLG}}$ improved $|\Delta\mathrm{TLG}|$ by 1.1 and 2.0 points, respectively, and removing $\mathcal{L}_{\mathrm{MTV}}$ also gained 0.6 Dice points.
+Both terms act on the soft, linearly warped mask, whose change differs from the nearest-neighbor change that is evaluated.
+A closer surrogate or the Jacobian terms alone could agree better with the evaluated endpoints, but this requires validation before changing the method.
+We kept all four terms because they were chosen before the test set was evaluated.
 
 \subsection{Interpreting the Evaluation}
 The significance-based ranking of the challenge was decided mainly by accuracy: differences in alignment between methods are consistent across patients and reach significance, whereas differences in MTV and TLG vary strongly between patients and rarely do.

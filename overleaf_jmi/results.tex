@@ -109,12 +109,14 @@ On the moving test scans with lesions (mean over patients), lesion detection inc
 Compared with IO using the nnU-Net mask, MTV change was 10.3\,\% instead of 9.3\,\%, TLG change was 12.5\,\% instead of 11.8\,\%, and CT Dice was 79.3\,\% instead of 78.6\,\%.
 None of these differences was significant.
 The per-lesion median was similar (13.5\,\% vs.\ 13.7\,\%).
+Thus, the tested recall-biased mask produced no detected reduction in either scan-level or per-lesion change despite detecting more lesions.
 
 \input{figures/detection}
 \subsection{Per-Lesion Volume Change}
 \label{sect:res_lesions}
 
-To reveal changes hidden by scan-level aggregation, Fig.~\ref{fig:lesions} shows the volume change of 1327 lesions from 26 patients, after excluding 108 components smaller than five voxels.
+Mask coverage explains part of the residual scan-level change, but scan totals can also hide opposing changes in different lesions.
+To reveal these changes, Fig.~\ref{fig:lesions} shows the volume change of 1327 lesions from 26 patients, after excluding 108 components smaller than five voxels.
 Small lesions changed most in every condition: for bone-associated lesions with IO and without the losses ($+$), the median change was 30\,\% (small), 19\,\% (medium), and 10\,\% (large).
 A small lesion has fewer than about 20 voxels, so gaining or losing one or two voxels is already a large relative change.
 The per-lesion uptake change followed the volume change in all strata (Fig.~\ref{fig:lesions_tlg}, Appendix~B).
