@@ -41,7 +41,7 @@ The main contributions are:
 \begin{itemize}
   \item We systematically compare applying the PET-preservation and bone-rigidity losses during network training only, during IO only, or during both stages.
   Applying the losses only during IO gives higher alignment accuracy than applying them during both stages.
-  Relative to network output, IO with the losses improves alignment without a detected increase in image-level MTV or TLG change.
+  Relative to network output, IO with the PET-preservation and bone-rigidity losses improves alignment without a detected increase in image-level MTV or TLG change.
   \item A mask-coverage and per-lesion analysis identifies two limits: missed lesions dominate the residual image-level error, while image totals conceal substantial changes to individual lesions even when provided masks are used.
   \item We compare three bone-rigidity penalties: the local Staring penalty, the same penalty applied to eroded bone masks, and a per-bone rigid-fit penalty that estimates one rigid motion for each labeled bone.
   The per-bone rigid fit avoids constraining tissue across bone boundaries or discarding most bone voxels through mask erosion, and it best preserves distances between points within the same bone.
