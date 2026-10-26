@@ -16,7 +16,8 @@ Classical registration solves an optimization problem per image pair~\cite{ref_d
 Learning-based registration amortizes this optimization: a network is trained once on many image pairs and then registers a new pair in a single forward pass~\cite{ref_voxelmorph_tmi,ref_svf_voxelmorph,ref_transmorph}.
 Instance optimization (IO) refines the network's deformation field for each image pair by classical iterative optimization at test time.
 Whole-body images of the same patient can differ by large deformations, for example through different positioning of the arms, spine, and bowel.
-We therefore build on LapIRN~\cite{ref_lapirn}, a learning-based method that estimates the deformation coarse to fine on a Laplacian image pyramid, which allows it to recover large deformations while keeping the transformation smooth and invertible.
+We therefore build on LapIRN~\cite{ref_lapirn}, a learning-based method that estimates the deformation coarse to fine on a Laplacian image pyramid.
+Its coarse levels recover large deformations and its finer levels add smaller ones, while the transformation remains smooth and invertible.
 With a network and optional IO, preservation constraints can act during training, during per-pair refinement, or at both stages; the choice affects both registration quality and runtime.
 The label-guided IO studied here uses predicted organ and lesion masks for each pair; we evaluate its output against the provided labels.
 Its PET-preservation losses act on the predicted lesion mask, so a lesion absent from that mask receives no direct preservation constraint.
