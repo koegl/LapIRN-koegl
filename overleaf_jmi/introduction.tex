@@ -2,7 +2,7 @@
 \label{sect:intro}
 
 Prostate-specific membrane antigen (PSMA) PET/CT is now routinely used for staging prostate cancer, for planning and following radioligand therapy, and for assessing treatment response~\cite{ref_psma_clinical}.
-In such longitudinal imaging, patients are scanned before therapy (baseline) and again at one or more follow-up time points.
+In such longitudinal imaging, patients are scanned in a baseline session before therapy and in one or more follow-up sessions.
 Registering each follow-up image to the baseline image makes it possible to compare tumor burden voxel by voxel or track individual lesions over time~\cite{ref_psmareg_challenge}.
 For these uses, a registration has to align the anatomy while preserving the PET-derived quantities of the warped image.
 Two such quantities, under the names used by the Learn2Reg 2026 PSMAReg challenge~\cite{ref_psmareg_challenge}, are the metabolic tumor volume (MTV) and the total lesion glycolysis (TLG); for PSMA PET, they measure the PSMA-positive tumor volume and the total lesion PSMA uptake.
@@ -24,16 +24,20 @@ The label-guided IO studied here uses predicted organ and lesion masks for each 
 In IO, the PET-preservation losses act on the predicted lesion mask.
 Lesions missing from this mask are therefore not directly constrained.
 
-Our earlier Learn2Reg submission introduced the affine--LapIRN--IO pipeline with PET-preservation and per-bone rigidity losses~\cite{ref_koegl_arxiv}.
-It evaluated selected configurations on challenge validation cases using surrogate labels.
-In this extension, we retrain on a new patient-level split of the released labeled cohort and reserve 28 patients for final evaluation.
+In previous work, we developed a registration pipeline for the PSMAReg challenge that combines an affine pre-registration, LapIRN, and IO with PET-preservation and per-bone rigidity losses~\cite{ref_koegl_arxiv}.
+There, selected configurations were evaluated on the challenge validation cases using surrogate labels.
+In this extension, we retrain on a new patient-level split of the publicly released, labeled training data of the PSMAReg challenge~\cite{ref_psmareg_challenge,ref_psmaregdata} and reserve 28 patients for final evaluation.
 We add controlled loss-placement comparisons, tuned baselines, patient-level statistics, and per-lesion analyses.
-These 28 patients were among the challenge data available during development of the earlier method, so the split provides a holdout for the present analyses rather than an independent external cohort.
+These 28 patients were among the challenge data available during development of our earlier method.
+They therefore form a held-out test set for the present analyses, not an independent external cohort.
 
-First, we ask whether the PET-preservation and bone-rigidity losses reduce registration-induced change and what alignment accuracy they cost, both with and without IO.
-We then ask whether applying the losses only during IO can recover the preservation obtained by also using them in training, and compare that choice with the faster network-only setting.
-Finally, we analyze changes to individual lesions and the coverage of the predicted lesion masks used by IO to understand what limits preservation.
-Because many PSMA lesions lie in bone, we also compare rigidity penalties for low-resolution whole-body CT, where thin skeletal structures make local constraints difficult to apply.
+Our research questions are as follows:
+\begin{enumerate}
+  \item Do the PET-preservation and bone-rigidity losses reduce registration-induced change, and what is their impact on the accuracy of the alignment, both with and without IO?
+  \item Can applying the losses only during IO recover the preservation obtained by also using them in training, and how does this compare with the faster network-only setting?
+  \item What limits preservation, judged by the changes of individual lesions and by the coverage of the predicted lesion masks used by IO?
+  \item Since many PSMA lesions are within bone, which penalty on the deformation of bones keeps them rigid in low-resolution whole-body CT, where thin skeletal structures make local constraints difficult to apply?
+\end{enumerate}
 Our contributions are:
 \begin{itemize}
   \item We compare PET-preservation and rigidity losses during network training, IO, or both.

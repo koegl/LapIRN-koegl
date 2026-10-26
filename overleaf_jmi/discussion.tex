@@ -14,7 +14,7 @@ The network output remains the practical choice when masks or per-pair runtime a
 
 Among the IO variants, applying the losses only during refinement supports an accuracy gain, but the paired intervals still allow worse MTV or TLG preservation than when the losses are also used in training.
 Without IO, training with the losses lowered the mean registration-induced changes in lesion volume and uptake; only the MTV reduction was detected after correction.
-Training with the losses may therefore remain relevant when many follow-up examinations must be registered without per-pair refinement.
+Training with the losses may therefore remain relevant when many follow-up sessions must be registered without per-pair refinement.
 
 One possible explanation for the IO-only result is how each stage locates lesions.
 During network training, lesion labels define the preservation losses, but the trained registration network receives only images at inference and must respond to lesion-related image cues without a mask.
@@ -64,7 +64,7 @@ A closer surrogate or a reduced set of terms would require selection on validati
 The significance-based ranking favored accuracy because alignment differences were more consistent across patients than differences in MTV and TLG.
 Our selection rule instead considered preservation among candidates within a fixed Dice tolerance (Sec.~\ref{sect:tuning}).
 This makes the trade-off explicit, but it does not establish which balance is preferable for a clinical task.
-The MTV and TLG endpoints compare the same follow-up acquisition before and after warping, so they isolate change introduced by registration rather than biological change between examinations.
+The MTV and TLG endpoints compare the same follow-up acquisition before and after warping, so they isolate change introduced by registration rather than biological change between sessions.
 This study does not define or validate a threshold at which such change alters lesion tracking, response classification, or another clinical decision.
 The reported differences should therefore be interpreted as technical fidelity measures rather than demonstrated clinical benefit.
 Because image-level changes allow cancellation between lesions, per-lesion changes should accompany them when the intended application follows individual lesions.
@@ -81,7 +81,7 @@ A composite rank can therefore obscure localized failures even when its componen
 Finite-difference rigidity penalties face a trade-off at bone boundaries: their stencils also constrain surrounding tissue, whereas eroding the masks to avoid this leaves most of the low-resolution skeleton unconstrained.
 The per-bone rigid fit avoids both, because it compares each bone's displacement with its best rigid motion and needs no derivatives.
 It produced the lowest within-bone distance distortion among the tested penalties while maintaining soft-tissue alignment.
-The cost of rigid bones is lower bone Dice, possibly because a rigid bone cannot follow differences between the automatic bone labels of the two examinations as closely as a freely deforming one.
+The cost of rigid bones is lower bone Dice, possibly because a rigid bone cannot follow differences between the automatic bone labels of the two sessions as closely as a freely deforming one.
 Whether this lower overlap reflects worse alignment or an inability of a rigid bone to follow inconsistencies between the automatic bone labels cannot be decided from label overlap alone.
 The lower within-bone distance distortion shows better preservation of bone shape, but it does not determine whether the bone is placed correctly.
 

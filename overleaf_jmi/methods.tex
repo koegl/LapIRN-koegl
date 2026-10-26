@@ -5,16 +5,16 @@
 \label{sect:data}
 
 We used the training set of the PSMAReg challenge, a longitudinal whole-body PSMA PET/CT cohort.
-Each image consists of a CT and a PET image (in SUV), resampled to $2.7344\times2.7344\times3.27$~mm and cropped to $192\times192\times288$ voxels.
-For every image, the challenge provides 117 CT organ labels (the TotalSegmentator~\cite{ref_totalsegmentator} classes) and a PSMA lesion mask.
+Each session consists of a CT and a PET image (in SUV), resampled to $2.7344\times2.7344\times3.27$~mm and cropped to $192\times192\times288$ voxels.
+For every session, the challenge provides 117 CT organ labels (the TotalSegmentator~\cite{ref_totalsegmentator} classes) and a PSMA lesion mask.
 Following the challenge, a follow-up image is always the moving image and the corresponding baseline image the fixed image.
 The original dataset publication reports that release of the anonymized retrospective imaging data was approved by the Ethics Committee of the Medical Faculty, LMU Munich (applications 21-1230 and 21-0098)~\cite{ref_psma_dataset_article}.
 It also reports approval by the institutional data security and privacy review board.
 It also reports that the ethics committee waived individual informed consent because the images were fully anonymized.
 The present study is a secondary analysis of publicly released challenge data and involved no patient recruitment or contact.
 
-We split the 146 labeled patients with at least two images at the patient level into training, validation, and test sets, aiming at 70/15/15\,\% of the registration pairs and balancing the sets for tumor burden and for bone- versus soft-tissue lesion location.
-Training uses all pairs of later onto earlier examinations of a patient; validation and testing use only follow-up-to-baseline pairs, as in the challenge.
+We split the 146 labeled patients with at least two sessions at the patient level into training, validation, and test sets, aiming at 70/15/15\,\% of the registration pairs and balancing the sets for tumor burden and for bone- versus soft-tissue lesion location.
+Training uses all pairs of later onto earlier sessions of a patient; validation and testing use only follow-up-to-baseline pairs, as in the challenge.
 This gave 92/26/28 patients and 178/38/38 pairs.
 The split was built once with a fixed seed and frozen before any experiment of this study; all choices of settings, checkpoints, and methods were made on the validation set, and the test set was used only for the final evaluation.
 All patients were part of the challenge training data used to develop the earlier version of the method~\cite{ref_koegl_arxiv}; the test patients were not used for any decision in the present study.
@@ -26,7 +26,7 @@ In the main experiments, IO uses only predicted labels, while the provided valid
 Organ labels are predicted from the CT by TotalSegmentator~\cite{ref_totalsegmentator}.
 Lesion masks are predicted from PET/CT by an nnU-Net~\cite{nnunet} configured as the winning autoPET~III solution~\cite{rokuss2024fdgpsmahitchhikersguide}.
 It is a residual-encoder U-Net (ResEnc-L) with $192^3$ patches, initialized from their pretrained weights, with an auxiliary organ-segmentation head and misalignment augmentation.
-It was trained with patient-grouped five-fold cross-validation on all 494 images of the non-test patients, including patients with a single examination.
+It was trained with patient-grouped five-fold cross-validation on all 494 images of the non-test patients, including patients with a single session.
 Validation images are segmented by the fold model that did not see the patient, and test images by the ensemble of the five fold models.
 For validation, this prevents registration and IO tuning from relying on lesion predictions made by a model trained on the same patient.
 The predicted lesion masks reach a mean Dice of 0.56 on the validation images and 0.51 on the test images (medians 0.69 and 0.67).
@@ -50,7 +50,7 @@ The reported preservation error for $Q\in\{\mathrm{MTV},\mathrm{TLG}\}$ is its a
   |\Delta Q| = \frac{|Q_{\mathrm{after}} - Q_{\mathrm{before}}|}{\max(Q_{\mathrm{before}},10^{-6})}.
   \label{eq:pet_error}
 \end{equation}
-This measures change induced by registration, not change in disease burden between examinations.
+This measures change induced by registration, not change in disease burden between sessions.
 
 \subsection{Registration Pipeline}
 \label{sect:pipeline}
@@ -97,7 +97,7 @@ The two coarse network levels never use them, because lesions and thin bones spa
 
 \paragraph{Registration accuracy.}
 $\mathcal{L}_{\mathrm{NCC}}$ is the negative local normalized cross-correlation of the CTs, summed over one to three scales depending on the pyramid level.
-PET is not used for similarity, because uptake changes between examinations with disease and therapy and a PET similarity would reward matching these changes.
+PET is not used for similarity, because uptake changes between sessions with disease and therapy and a PET similarity would reward matching these changes.
 $\mathcal{L}_{\mathrm{DSC}}$ is a soft Dice loss on the CT organ labels.
 
 \paragraph{PET quantification.}
@@ -125,7 +125,7 @@ $\mathcal{L}_{\overline{J}}$ constrains the mean volume scale over all lesions, 
 The mask $W_s$ is held fixed when differentiating $\mathcal{L}_{\overline{J}}$, and the hard mask $W_h$ is not differentiable with respect to displacement; both losses differentiate through the determinant.
 
 \paragraph{Bone rigidity.}
-Many PSMA lesions lie in bone, which moves rigidly between examinations.
+Many PSMA lesions lie in bone, which moves rigidly between sessions.
 For each of the 61 skeletal labels of the fixed image (in IO: the predicted labels), we fit a rigid transformation to the displacement of the structure in closed form~\cite{ref_kabsch,ref_umeyama}.
 We penalize the mean squared residual of its voxels, and $\mathcal{L}_{\mathrm{rig}}$ is the mean over structures with at least 50 voxels.
 Each bone is fitted independently, so neighboring bones may move relative to each other, and the term involves no finite differences, so it does not constrain the tissue around a bone.
