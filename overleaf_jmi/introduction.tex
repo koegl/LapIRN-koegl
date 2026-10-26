@@ -18,7 +18,8 @@ Instance optimization (IO) refines the network's deformation field for each imag
 Whole-body images of the same patient can differ by large deformations, for example through different positioning of the arms, spine, and bowel.
 We therefore build on LapIRN~\cite{ref_lapirn}, a learning-based method that estimates the deformation coarse to fine on a Laplacian image pyramid.
 Its coarse levels recover large deformations and its finer levels add smaller ones, while the transformation remains smooth and invertible.
-With a network and optional IO, constraints that preserve MTV and TLG can act during training, during per-pair refinement, or at both stages; the choice affects both registration quality and runtime.
+With a network and optional IO, constraints that preserve MTV and TLG can act during training, during per-pair refinement, or at both stages.
+IO generally improves registration accuracy but adds runtime for every image pair~\cite{ref_learn2reg_alessa}.
 The label-guided IO studied here uses predicted organ and lesion masks for each pair; we evaluate its output against the provided labels.
 Its PET-preservation losses act on the predicted lesion mask, so a lesion absent from that mask receives no direct preservation constraint.
 
