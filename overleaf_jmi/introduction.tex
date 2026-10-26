@@ -52,9 +52,9 @@ The main contributions are:
 \includegraphics[width=\linewidth]{figures/overview.png}
 \end{center}
 \caption{\label{fig:pipeline}
-Registration pipeline.
+Our proposed registration pipeline.
 The follow-up (moving) and baseline (fixed) PET/CT images are aligned by an affine pre-registration, then by the LapIRN network, which predicts a dense deformation.
 Instance optimization (IO) refines this deformation per pair before the moving image is resampled into the fixed frame.
 Network training and IO use the same groups of loss terms: registration accuracy, bone rigidity, PET quantification, and deformation regularization (Sec.~\ref{sect:objective}).
-The bone-rigidity and PET-quantification terms can be used in training, in IO, or in both; our method uses them only in IO.}
+The bone-rigidity and PET-quantification terms can be used in training, in IO, or in both, whereas our method uses them only in IO.}
 \end{figure}
