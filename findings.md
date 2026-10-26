@@ -121,7 +121,9 @@ Source: `journal_results/erosion_leakage.py`, `journal_results/erosion_leakage/`
 
 - [x] **NiftyReg transfer.** The validation-selected NiftyReg configuration exceeded the 0.005% NDV threshold on 5 of 38 validation pairs and 8 of 38 test pairs, reaching up to 0.37% NDV.
 - [x] **Reason for selection.** The challenge ranking selected the least-regularized NiftyReg setting because accuracy separated settings more strongly than folding.
-- [x] **Our variants.** Our reported variants exceeded the NDV threshold on at most two test pairs and reached at most 0.026% NDV.
+- [x] **Selected method.** The selected method exceeded the NDV threshold on 2 of 38 test pairs (76 and 125 ppm).
+- [x] **Training plus IO.** The variant with both loss groups in training and IO exceeded the threshold on 1 of 38 test pairs (262 ppm), the maximum among our reported variants.
+- [x] **Aggregation.** NDV means and standard deviations are calculated from patient-level averages, whereas threshold exceedances count individual registration pairs.
 
 Source: `evaluation/test/B3.csv` and `journal_results/baselines/niftyreg/eval/val/`.
 
