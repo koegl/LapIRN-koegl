@@ -61,7 +61,7 @@ For each location $x$ on the fixed grid, $\varphi(x)$ gives the location sampled
 
 \paragraph{Affine pre-registration.}
 ANTs~\cite{ants} estimates an affine transform from the two CTs, using body masks, a $[-1000,1000]$~HU window, half-resolution images, and Mattes mutual information.
-It is converted to a dense displacement field.
+It is converted to a dense deformation field.
 
 \paragraph{Deformable network.}
 We use LapIRN~\cite{ref_lapirn} with three pyramid levels at quarter, half, and full resolution.
@@ -168,9 +168,9 @@ All generated code was reviewed and tested by the authors, and all text edits we
 \subsection{Evaluation Metrics}
 \label{sect:metrics}
 
-All metrics are computed with the provided labels of the test images by evaluating the full-resolution displacement fields directly.
+All metrics are computed with the provided labels of the test images by evaluating the full-resolution deformation fields directly.
 The moving image is warped with corner-aligned grid coordinates, and PET and labels are sampled by nearest-neighbor interpolation.
-Displacement fields of the baselines are converted to the same convention; ConvexAdam's fields, which its implementation computes with edge-aligned coordinates, are converted exactly before evaluation.
+Deformation fields of the baselines are converted to the same convention; ConvexAdam's fields, which its implementation computes with edge-aligned coordinates, are converted exactly before evaluation.
 Of the 28 test patients (38 pairs), 26 patients (30 pairs) have lesions in the moving image and contribute to the PET metrics.
 
 \paragraph{Alignment.}
