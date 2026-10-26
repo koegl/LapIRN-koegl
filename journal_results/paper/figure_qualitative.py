@@ -308,11 +308,11 @@ def main() -> None:
 \centering
 \includegraphics[width=\textwidth]{{figures/qualitative.png}}
 \caption{{Anatomical alignment example from the test set, registered by {RUN_LABEL[RUN]}; one coronal slice.
-Patient {case_id} was selected for its large between-scan change in lesion volume ({lesions["fixed"].sum()} voxels at baseline and {lesions["moving"].sum()} at follow-up), without considering the registration result.
+Patient {case_id} was selected for its large between-image change in lesion volume ({lesions["fixed"].sum()} voxels at baseline and {lesions["moving"].sum()} at follow-up), without considering the registration result.
 The example illustrates anatomical alignment and deformation.
 (a)~Fixed and (b)~moving CT with PET (SUV {SUV_RANGE[0]:g}--{SUV_RANGE[1]:g}, {100 * PET_ALPHA:.0f}\,\% opacity) and provided lesion contours (red).
-(c,~d)~CT of the fixed scan (green) overlaid with the moving scan (magenta) before~(c) and after~(d) registration; gray where they agree.
-(e,~f)~Organ labels that differ before~(e) and after~(f) registration: green where the fixed scan has a label that the moving scan lacks there, magenta where only the moving scan is labeled; bright, medium, and dark shades for bones, organs, and muscles.
+(c,~d)~CT of the fixed image (green) overlaid with the moving image (magenta) before~(c) and after~(d) registration; gray where they agree.
+(e,~f)~Organ labels that differ before~(e) and after~(f) registration: green where the fixed image has a label that the moving image lacks there, magenta where only the moving image is labeled; bright, medium, and dark shades for bones, organs, and muscles.
 (g)~Jacobian determinant of the fixed-to-moving sampling transform: white is volume-preserving (1), blue is below 1 and red is above 1; changes in the displayed warped anatomy have the opposite direction.
 (h)~Warped moving CT with PET and warped lesion contours.}}
 \label{{fig:qualitative}}

@@ -27,8 +27,8 @@ def main() -> None:
         "Metabolic tumor volume (MTV) and total lesion glycolysis (TLG) change of all 1435 provided "
         "lesion components in 26 test patients (30 pairs), grouped by how much of each component the "
         "predicted lesion mask used by instance optimization (IO) covers; the network is trained "
-        "without PET losses and IO uses the PET weights scaled by the stated factor. Per scan, the change of the "
-        "summed volume or uptake of the group's lesions relative to the unwarped moving scan, "
+        "without PET losses and IO uses the PET weights scaled by the stated factor. Per image, the change of the "
+        "summed volume or uptake of the group's lesions relative to the unwarped moving image, "
         r"in \%; mean over the patients with lesions in the group."
     )
     detection.write(detection.table(cells, groups, caption, "tab:detection_groups"), "detection_groups")

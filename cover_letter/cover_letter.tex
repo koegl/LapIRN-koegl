@@ -25,17 +25,17 @@ A preliminary version of the method, developed for the Learn2Reg 2026 PSMAReg ch
 The present manuscript is a substantially extended study, and none of its test results appear in the preprint.
 The challenge organizers have indicated that selected methods may later be included in a challenge summary publication; no such publication has been submitted for our method.
 
-In this paper, we report on registering follow-up to baseline PSMA PET/CT scans without changing the lesion quantities compared over time, the metabolic tumor volume (MTV) and total lesion glycolysis (TLG): a deformation that compresses or stretches a lesion alters both, so a measured change can be an artifact of the registration rather than of the disease.
+In this paper, we report on registering follow-up to baseline PSMA PET/CT images without changing the lesion quantities compared over time, the metabolic tumor volume (MTV) and total lesion glycolysis (TLG): a deformation that compresses or stretches a lesion alters both, so a measured change can be an artifact of the registration rather than of the disease.
 We use a learning-based pipeline (the LapIRN network followed by instance optimization) with losses that preserve the PET volume and uptake of lesions and keep bones rigid, and we study where these losses should act.
 On a held-out patient-level test set of the public PSMAReg data, with tuned NiftyReg and ConvexAdam baselines and patient-level statistics, we find that:
 \begin{itemize}
   \item our method is significantly more accurate than both baselines, with similar lesion volume and uptake change;
   \item with the preservation losses, instance optimization improves alignment by about three Dice points without measurably increasing the lesion volume and uptake change, whereas without them it increases this change;
   \item applying the losses only during instance optimization is more accurate than also training with them, with no significant difference in preservation; without instance optimization, which is about 14 times faster, training with the losses reduces the change at a cost in accuracy;
-  \item the remaining change comes mostly from lesions missed by the predicted lesion masks, and the scan-level MTV and TLG hide changes of individual lesions that neither provided masks nor per-lesion losses removed;
+  \item the remaining change comes mostly from lesions missed by the predicted lesion masks, and the image-level MTV and TLG hide changes of individual lesions that neither provided masks nor per-lesion losses removed;
   \item among three bone-rigidity penalties, a per-bone rigid fit yields the lowest within-bone distance distortion, avoiding the boundary leakage and loss of skeleton of finite-difference penalties; adding rigidity on top of the PET losses does not produce a detected further reduction in lesion-measurement change.
 \end{itemize}
-This is significant because registration can only be used for quantitative response assessment if its effect on lesion quantification is measured and controlled, not only its alignment accuracy; our results show how large this effect is, how it can be controlled without losing accuracy, and where scan-level preservation metrics fall short.
+This is significant because registration can only be used for quantitative response assessment if its effect on lesion quantification is measured and controlled, not only its alignment accuracy; our results show how large this effect is, how it can be controlled without losing accuracy, and where image-level preservation metrics fall short.
 
 The paper should be of interest to readers in the areas of deformable image registration, learning-based and optimization-based registration, and quantitative PET imaging.
 It addresses a central question of the special issue: how constraints on the deformation, learned during training or imposed at test time, affect clinically relevant quantities beyond image alignment.

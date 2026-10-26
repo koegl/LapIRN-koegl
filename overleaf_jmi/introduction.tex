@@ -3,18 +3,18 @@
 
 Prostate-specific membrane antigen (PSMA) PET/CT is now routinely used for staging prostate cancer, for planning and following radioligand therapy, and for assessing treatment response~\cite{ref_psma_clinical}.
 In such longitudinal imaging, patients are scanned before therapy (baseline) and again at one or more follow-up time points.
-Registering each follow-up to the baseline makes it possible to compare tumor burden voxel by voxel, track individual lesions, and accumulate dose~\cite{ref_psmareg_challenge}.
+Registering each follow-up image to the baseline image makes it possible to compare tumor burden voxel by voxel, track individual lesions, and accumulate dose~\cite{ref_psmareg_challenge}.
 For these uses, a registration must do two things at once: it has to align the anatomy, and it must not itself change the PET-derived quantities that are compared across time points.
 Two such quantities, under the names used by the Learn2Reg 2026 PSMAReg challenge~\cite{ref_psmareg_challenge}, are the metabolic tumor volume (MTV) and the total lesion glycolysis (TLG); for PSMA PET, they measure the PSMA-positive tumor volume and the total lesion PSMA uptake.
 A deformation that compresses or stretches a lesion changes both, so a change measured after registration can be an artifact of the registration rather than of the disease.
 When the registered follow-up is used to match lesions or compare them with baseline, such processing-induced changes could be mistaken for part of the longitudinal change and could therefore affect lesion tracking or response assessment.
-The challenge, part of the Learn2Reg series~\cite{ref_learn2reg_hansen,ref_learn2reg_alessa} and based on the PSMA-PET-CT-Lesions dataset~\cite{ref_psmaregdata}, formalizes this setting by warping each follow-up scan to its baseline with a dense displacement field.
+The challenge, part of the Learn2Reg series~\cite{ref_learn2reg_hansen,ref_learn2reg_alessa} and based on the PSMA-PET-CT-Lesions dataset~\cite{ref_psmaregdata}, formalizes this setting by warping each follow-up image to its baseline with a dense displacement field.
 It scores organ overlap, boundary distance, folding, and the change of MTV and TLG caused by the warp.
 The two goals can compete: limiting deformation may protect lesion measurements while leaving the anatomy misaligned, whereas improving alignment may distort the lesions being measured.
 
-Classical registration solves an optimization problem per image pair~\cite{ref_demons,ref_syn,bspline}; this is accurate but slow for whole-body scans.
+Classical registration solves an optimization problem per image pair~\cite{ref_demons,ref_syn,bspline}; this is accurate but slow for whole-body images.
 Learning-based registration replaces the per-pair optimization with one forward pass of a trained network~\cite{ref_voxelmorph_cvpr,ref_svf_voxelmorph,ref_transmorph}, and instance optimization (IO) can refine the network output per pair at test time.
-The coarse-to-fine Laplacian pyramid network LapIRN~\cite{ref_lapirn} recovers the large deformations between whole-body scans while keeping the transformation smooth and invertible.
+The coarse-to-fine Laplacian pyramid network LapIRN~\cite{ref_lapirn} recovers the large deformations between whole-body images while keeping the transformation smooth and invertible.
 With a network and optional IO, preservation constraints can act during training, during per-pair refinement, or at both stages; the choice affects both registration quality and runtime.
 The label-guided IO studied here uses predicted organ and lesion masks for each pair; we evaluate its output against the provided labels.
 Its PET-preservation losses act on the predicted lesion mask, so a lesion absent from that mask receives no direct preservation constraint.
@@ -32,9 +32,9 @@ Because many PSMA lesions lie in bone, we also compare rigidity penalties for lo
 Our contributions are:
 \begin{itemize}
   \item We compare PET-preservation and rigidity losses during network training, IO, or both.
-  Loss-guided IO improves alignment without a detected increase in scan-level MTV or TLG change relative to network output, and applying the losses only in IO gives higher alignment accuracy than using them at both stages.
+  Loss-guided IO improves alignment without a detected increase in image-level MTV or TLG change relative to network output, and applying the losses only in IO gives higher alignment accuracy than using them at both stages.
   \item We analyze the remaining change.
-  Missed lesions account for most of the residual scan-level PET change in the mask-coverage analysis, while scan-level MTV and TLG hide substantial changes to individual lesions even when provided masks are used.
+  Missed lesions account for most of the residual image-level PET change in the mask-coverage analysis, while image-level MTV and TLG hide substantial changes to individual lesions even when provided masks are used.
   \item We compare rigidity penalties for whole-body CT.
   A per-bone rigid fit avoids the boundary leakage of finite-difference penalties and the loss of skeleton under erosion, and yields the lowest within-bone distance distortion among the tested penalties.
   \item We provide a patient-level evaluation with the official challenge scorer, a selection rule that weighs preservation against a fixed Dice tolerance, and tuned NiftyReg and ConvexAdam baselines.
@@ -46,8 +46,8 @@ Our contributions are:
 \end{center}
 \caption{\label{fig:pipeline}
 Registration pipeline.
-The follow-up (moving) and baseline (fixed) PET/CT scans are aligned by an affine pre-registration, then by the LapIRN network, which predicts a dense deformation.
-Instance optimization (IO) refines this deformation per pair before the moving scan is resampled into the fixed frame.
+The follow-up (moving) and baseline (fixed) PET/CT images are aligned by an affine pre-registration, then by the LapIRN network, which predicts a dense deformation.
+Instance optimization (IO) refines this deformation per pair before the moving image is resampled into the fixed frame.
 Network training and IO use the same groups of loss terms: registration accuracy, bone rigidity, PET quantification, and deformation regularization (Sec.~\ref{sect:objective}).
 The bone-rigidity and PET-quantification terms can be used in training, in IO, or in both; our method uses them only in IO.}
 \end{figure}

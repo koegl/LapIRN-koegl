@@ -1,9 +1,9 @@
 \section{Discussion}
 \label{sect:discussion}
 
-The main result is a bounded practical choice: loss-guided IO improves alignment over network output when predicted masks and per-pair refinement time are available, but the present data do not establish better or equivalent scan-level PET preservation.
+The main result is a bounded practical choice: loss-guided IO improves alignment over network output when predicted masks and per-pair refinement time are available, but the present data do not establish better or equivalent image-level PET preservation.
 Applying the losses only during IO gives higher alignment accuracy than also using them in training, with an unresolved preservation trade-off.
-The remaining PET change reflects three limits of the method and evaluation: incomplete lesion masks, cancellation between lesions in scan totals, and a mismatch between the optimized and evaluated quantities.
+The remaining PET change reflects three limits of the method and evaluation: incomplete lesion masks, cancellation between lesions in image totals, and a mismatch between the optimized and evaluated quantities.
 Bone rigidity serves both as a PET-preservation strategy and as a constraint on within-bone geometry: rigidity alone reduced particular PET endpoints, but it provided no detected additional preservation benefit on top of the PET losses.
 
 \subsection{Choosing Where to Apply the Losses}
@@ -24,18 +24,18 @@ The comparison does not test what lesion information the registration network le
 
 \subsection{Limits of Lesion Preservation}
 Three mechanisms must be distinguished.
-First, incomplete lesion-mask coverage limits how far IO can reduce scan-level MTV and TLG change.
-Second, scan-level aggregation allows growth and shrinkage of different lesions to cancel.
+First, incomplete lesion-mask coverage limits how far IO can reduce image-level MTV and TLG change.
+Second, image-level aggregation allows growth and shrinkage of different lesions to cancel.
 Third, the soft quantities optimized by the losses differ from the nearest-neighbor quantities used for evaluation.
 The contrast between near-zero volume change on the predicted masks and substantial change on the provided masks shows that IO can satisfy its objective without controlling the evaluation endpoint.
 Missed lesions were the largest measured contributor to the residual, although they represented only 6\,\% of lesion volume; covered lesions also contributed, so incomplete coverage is not the sole explanation.
-Their weight comes from patients with little tumor volume because the metric is relative per scan and averaged over patients.
+Their weight comes from patients with little tumor volume because the metric is relative per image and averaged over patients.
 In the third of patients with the smallest lesion volume, missed lesions made up 33\,\% of the volume, compared with 23\,\% and 3\,\% in the other thirds.
 This group caused 72\,\% of the missed-lesion contribution.
 The post-hoc recall-biased mask increased lesion detection but sharply reduced precision and did not improve measured preservation (Sec.~\ref{sect:res_detection}).
 The additional false-positive regions may dilute the preservation constraints over voxels outside the lesions being evaluated, so this experiment does not show that recall gains are ineffective when precision can be retained.
-Conversely, the diagnostic run with provided lesion masks nearly eliminated scan-level MTV change while improving alignment.
-Together, these experiments identify mask quality as a major limit of scan-level preservation, but the remaining TLG change shows that segmentation does not explain all residual error.
+Conversely, the diagnostic run with provided lesion masks nearly eliminated image-level MTV change while improving alignment.
+Together, these experiments identify mask quality as a major limit of image-level preservation, but the remaining TLG change shows that segmentation does not explain all residual error.
 
 Because IO meets its objective on the predicted masks already at small weights, additional PET weight mainly costs alignment.
 The post-hoc sweep shows that the original validation grid did not sample the low-weight plateau, but a test-set observation cannot define a replacement operating point.
@@ -45,8 +45,8 @@ Mask coverage does not explain the second limit: aggregate MTV and TLG changes h
 Small lesions are especially sensitive because gaining or losing one or two voxels is already a large relative change.
 The location-specific effects were consistent with the losses: rigidity acted mainly on bone-associated lesions, whereas the PET losses acted in both locations.
 Nevertheless, IO with the losses did not reduce per-lesion change below the network output, even with provided lesion masks.
-The PET losses constrain the total volume and uptake of a scan, which can remain nearly unchanged while single lesions grow or shrink.
-Indeed, provided masks reduced scan-level MTV change to 0.1\,\%, while the median per-lesion change remained 13.5\,\%.
+The PET losses constrain the total volume and uptake of an image, which can remain nearly unchanged while single lesions grow or shrink.
+Indeed, provided masks reduced image-level MTV change to 0.1\,\%, while the median per-lesion change remained 13.5\,\%.
 
 The tested per-lesion terms did not solve this problem on the test set.
 They leave small and additional components unconstrained, depend on predicted components that may miss, merge, or split lesions, and use a soft interpolation surrogate that differs from the evaluation.
@@ -67,7 +67,7 @@ This makes the trade-off explicit, but it does not establish which balance is pr
 The MTV and TLG endpoints compare the same follow-up acquisition before and after warping, so they isolate change introduced by registration rather than biological change between examinations.
 This study does not define or validate a threshold at which such change alters lesion tracking, response classification, or another clinical decision.
 The reported differences should therefore be interpreted as technical fidelity measures rather than demonstrated clinical benefit.
-Because scan-level changes allow cancellation between lesions, per-lesion changes should accompany them when the intended application follows individual lesions.
+Because image-level changes allow cancellation between lesions, per-lesion changes should accompany them when the intended application follows individual lesions.
 
 Both measured alignment and preservation also depend on the labels: IO fits predicted masks more closely than the independent evaluation labels, and missed lesions receive no direct constraint.
 Better lesion masks can therefore improve the reported PET metrics, while organ-mask quality may affect measured alignment.
@@ -90,7 +90,7 @@ Rigidity alone did improve particular PET endpoints in Fig.~\ref{fig:q2}: it red
 Three factors may contribute to the absence of a detected additional benefit on top of the PET losses.
 First, the PET losses already constrain the predicted lesions.
 Second, the residual displacement from a rigid fit is still large enough to move boundary voxels of lesions that span only a few voxels.
-Third, the scan-level metrics are dominated by missed lesions, by cancellation between lesions, and by a few patients with large changes (Sec.~\ref{sect:res_detection}).
+Third, the image-level metrics are dominated by missed lesions, by cancellation between lesions, and by a few patients with large changes (Sec.~\ref{sect:res_detection}).
 The per-bone rigid fit therefore reduces measured within-bone distance distortion, with a measured cost in bone Dice.
 The present measures do not establish whether it improves bone placement, and a further PET-preservation benefit may require bones that are rigid to within a fraction of a voxel.
 
@@ -105,6 +105,6 @@ We studied one network architecture, and we measured the change caused by regist
 \label{sect:conclusion}
 
 For similar whole-body PSMA PET/CT data, loss-guided IO is a reasonable choice when predicted masks and per-pair runtime are available and additional anatomical alignment is desired, but the present results do not establish improved PET preservation over network output.
-Mask coverage, cancellation within scan totals, and loss--evaluation mismatch limit the current preservation strategy, so scan-level MTV and TLG change should be complemented by per-lesion analysis.
+Mask coverage, cancellation within image totals, and loss--evaluation mismatch limit the current preservation strategy, so image-level MTV and TLG change should be complemented by per-lesion analysis.
 The per-bone rigid fit improves measured preservation of internal bone shape, but neither correct bone placement nor additional PET preservation on top of the PET losses was established.
 Validation on downstream tasks such as lesion tracking and response assessment is needed to determine whether these technical differences are clinically consequential.

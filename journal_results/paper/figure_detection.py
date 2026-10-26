@@ -197,8 +197,8 @@ def main() -> None:
 \caption{{Registration-induced metabolic tumor volume (MTV) and total lesion glycolysis (TLG) change of all {shares["all"]} provided lesion components in {n_patients} test patients ({n_pairs} pairs), including components smaller than five voxels, grouped by coverage from the predicted lesion mask used by instance optimization (IO): missed ({shares["missed"]}), partly covered ({shares["partial"]}), and covered ({shares["covered"]}).
 The network is trained without PET losses; IO uses the PET weights scaled by the stated factor.
 Colors identify coverage groups.
-Left: absolute change within each group, computed per scan from the group's summed volume or uptake and averaged over patients with lesions in that group; gray dashed: all lesions, the evaluation metric.
-Right: contribution of each group to the scan-level evaluation metric, averaged over patients; gray ticks show the evaluation metric and lie below the stacked total when opposing lesion changes cancel.}}
+Left: absolute change within each group, computed per image from the group's summed volume or uptake and averaged over patients with lesions in that group; gray dashed: all lesions, the evaluation metric.
+Right: contribution of each group to the image-level evaluation metric, averaged over patients; gray ticks show the evaluation metric and lie below the stacked total when opposing lesion changes cancel.}}
 \label{{fig:detection}}
 \end{{figure}}
 """

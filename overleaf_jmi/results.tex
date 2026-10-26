@@ -4,8 +4,8 @@
 Unless stated otherwise, results are reported on the test set (28 patients, 38 pairs); values are mean$\pm$SD over patients, and differences are given in percentage points.
 Validation data are used only for choices made before test evaluation and are identified explicitly.
 Except where stated, IO uses predicted masks, while the reported alignment and PET-preservation metrics use the provided labels.
-We first ask whether the losses alter the balance between alignment and scan-level PET change, and whether they should act during training or only during IO.
-We then compare the selected configuration with baselines and investigate why residual scan-level and per-lesion changes remain.
+We first ask whether the losses alter the balance between alignment and image-level PET change, and whether they should act during training or only during IO.
+We then compare the selected configuration with baselines and investigate why residual image-level and per-lesion changes remain.
 Finally, we evaluate bone-rigidity penalties as an additional PET-preservation strategy and as a constraint on within-bone geometry.
 
 \subsection{Effect of the PET-Preservation and Rigidity Losses}
@@ -52,7 +52,7 @@ Our method, with the losses only in IO, reached 78.3\,\% CT Dice and 6.89~mm HD9
 Both were significantly better than NiftyReg (70.1\,\%, 8.85~mm), ConvexAdam (61.7\,\%, 9.16~mm), and the affine pre-registration (46.4\,\%, 14.00~mm).
 Its $|\Delta\mathrm{MTV}|$ (8.7\,\%) and $|\Delta\mathrm{TLG}|$ (11.3\,\%) did not differ significantly from those of NiftyReg (8.7\,\%, 10.2\,\%) or ConvexAdam (9.3\,\%, 10.8\,\%).
 Compared with the same network before IO, our method gained 2.9 Dice points (95\,\% CI 2.3 to 3.4).
-The paired changes in $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ were $-1.7$ points (95\,\% CI $-3.6$ to 0.3) and $-1.2$ points ($-3.6$ to 1.2), respectively, so an increase in scan-level PET change was not detected.
+The paired changes in $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ were $-1.7$ points (95\,\% CI $-3.6$ to 0.3) and $-1.2$ points ($-3.6$ to 1.2), respectively, so an increase in image-level PET change was not detected.
 The NDV summaries in Table~\ref{tab:baselines} are means over patients, whereas threshold exceedances count individual registration pairs.
 NiftyReg, tuned on the validation set, exceeded the folding threshold on 5 of 38 validation pairs and 8 of 38 test pairs (21\,\%), with up to 0.37\,\% NDV; ConvexAdam stayed below it on every pair.
 Our method exceeded it on two test pairs (76 and 125~ppm), and the variant with the losses also in training on one (262~ppm).
@@ -66,8 +66,8 @@ After correction for multiple comparisons, none of these preservation difference
 By the challenge's composite score, IO without the losses ranked first, our method second, and the variant with the losses in training and IO third, with overlapping bootstrap rank intervals (1--4, 1--4, and 1--5).
 The ranking was decided by accuracy: apart from the affine pre-registration on $|\Delta\mathrm{TLG}|$, no method won a significant comparison in preservation or folding.
 The network alone needs 11~s per pair, as fast as ConvexAdam and ten times faster than NiftyReg (108~s); IO adds about 2.5~minutes.
-Figure~\ref{fig:qualitative} illustrates anatomical alignment in a test pair selected for its tenfold between-scan change in lesion volume (from 2400 to 24\,191 voxels).
-The scans were initially far apart (CT Dice 3.5\,\%); our method aligned them to 83.7\,\% Dice (NiftyReg 70.8\,\%, ConvexAdam 65.7\,\%), and NDV remained below the challenge threshold.
+Figure~\ref{fig:qualitative} illustrates anatomical alignment in a test pair selected for its tenfold between-image change in lesion volume (from 2400 to 24\,191 voxels).
+The images were initially far apart (CT Dice 3.5\,\%); our method aligned them to 83.7\,\% Dice (NiftyReg 70.8\,\%, ConvexAdam 65.7\,\%), and NDV remained below the challenge threshold.
 Before registration, the CT overlay (Fig.~\ref{fig:qualitative}c) and label residual (e) show misalignment across the whole trunk.
 After registration (d, f), the residual is reduced to thin bands at organ boundaries and parts of the lumbar vertebrae.
 The warped lesion contours lie in the corresponding bones (h).
@@ -95,7 +95,7 @@ The same gap between the labels IO optimizes and the provided labels appeared fo
 
 In the diagnostic run with provided lesion masks (black diamonds), the measured changes fell from 9.3\,\% to 0.1\,\% for MTV and from 11.8\,\% to 4.5\,\% for TLG at the tuned factor; Dice rose from 78.6\,\% to 79.1\,\%.
 At $\times1$, the changes were similar (0.2\,\% MTV, 4.0\,\% TLG; 78.6\,\% Dice), so a larger weight hardly reduced the remaining uptake change even with provided masks.
-The near-zero volume change is that of the scan total, which this run optimizes directly; the change of individual lesions remained (Sec.~\ref{sect:res_lesions}).
+The near-zero volume change is that of the image total, which this run optimizes directly; the change of individual lesions remained (Sec.~\ref{sect:res_lesions}).
 This gap between optimization on predicted masks and evaluation on provided labels motivates an analysis of lesion coverage.
 
 \input{figures/tradeoff}
@@ -119,20 +119,20 @@ This agrees with the per-lesion analysis (Sec.~\ref{sect:res_lesions}), in which
 In the diagnostic run with provided lesion masks, the contribution of lesions that nnU-Net missed fell from 5.2 to 1.2 points of $|\Delta\mathrm{MTV}|$ and from 6.2 to 2.1 points of $|\Delta\mathrm{TLG}|$, and that of covered lesions from 3.3 to 0.9 and from 5.4 to 3.8 points.
 The near-zero overall change with provided masks does not mean that individual lesions kept their volumes.
 If only the missed, partly covered, or covered lesions had changed, MTV would have changed by 1.2, 1.2, and 0.9 points, respectively.
-Some lesions therefore grew while others shrank, and their changes canceled in the scan total measured by both the PET loss and the evaluation metric (see also Sec.~\ref{sect:res_lesions}).
+Some lesions therefore grew while others shrank, and their changes canceled in the image total measured by both the PET loss and the evaluation metric (see also Sec.~\ref{sect:res_lesions}).
 
 As a post-hoc attempt to increase lesion coverage, we combined the nnU-Net predictions with voxels above SUV 3 outside a 10-mm halo around predicted organs with physiological uptake, following the recall-biased approach of Dey and Dalca~\cite{dey2026registration}.
-On the moving test scans with lesions (mean over patients), lesion detection increased from 74\,\% to 91\,\%, while voxel-level precision fell from 0.71 to 0.22.
+On the moving test images with lesions (mean over patients), lesion detection increased from 74\,\% to 91\,\%, while voxel-level precision fell from 0.71 to 0.22.
 Compared with IO using the nnU-Net mask, MTV change was 10.3\,\% instead of 9.3\,\%, TLG change was 12.5\,\% instead of 11.8\,\%, and CT Dice was 79.3\,\% instead of 78.6\,\%.
 None of these differences was significant (two-sided Wilcoxon signed-rank test, uncorrected $p\geq0.09$).
 The per-lesion median was similar (13.5\,\% vs.\ 13.7\,\%).
-Thus, the tested recall-biased mask produced no detected reduction in either scan-level or per-lesion change despite detecting more lesions.
+Thus, the tested recall-biased mask produced no detected reduction in either image-level or per-lesion change despite detecting more lesions.
 
 \input{figures/detection}
 \subsection{Per-Lesion Volume Change}
 \label{sect:res_lesions}
 
-Mask coverage explains part of the residual scan-level change, but scan totals can also hide opposing changes in different lesions.
+Mask coverage explains part of the residual image-level change, but image totals can also hide opposing changes in different lesions.
 To reveal these changes, Fig.~\ref{fig:lesions} shows the volume change of 1327 lesions from 26 patients, after excluding 108 components smaller than five voxels.
 Small lesions changed most in every condition: for bone-associated lesions with IO and without the losses ($+$), the median change was 30\,\% (small), 19\,\% (medium), and 10\,\% (large).
 A small lesion has fewer than about 20 voxels, so gaining or losing one or two voxels is already a large relative change.
@@ -144,15 +144,15 @@ With IO, it lowered their median change for small, medium, and large lesions fro
 It left medium and large soft-tissue lesions unchanged at 19\,\% and 17\,\%.
 The PET losses (blue) acted in both locations, already without IO (squares), and with IO, for example from 19\,\% to 10\,\% for medium soft-tissue lesions and from 30\,\% to 16\,\% for small bone-associated lesions.
 With both groups (purple), bone-associated lesions changed by 14\,\%, 9\,\%, and 6\,\%, similar to the PET losses alone; only for large bone-associated lesions, the rigidity loss alone changed them less (5\,\%).
-With the losses, IO did not reduce the per-lesion change below that of the network output (circles vs.\ squares of the same color), while no scan-level preservation difference was detected either (Sec.~\ref{sect:res_q1}).
+With the losses, IO did not reduce the per-lesion change below that of the network output (circles vs.\ squares of the same color), while no image-level preservation difference was detected either (Sec.~\ref{sect:res_q1}).
 The PET losses in IO penalize the change in the total volume and uptake of the predicted lesion mask, so the growth of some lesions can offset the shrinkage of others.
-Even with the provided lesion masks in IO, which lowered the scan-level $|\Delta\mathrm{MTV}|$ to 0.1\,\% (Sec.~\ref{sect:res_tradeoff}), the median per-lesion change was 13.5\,\%, as with the predicted masks (13.7\,\%).
+Even with the provided lesion masks in IO, which lowered the image-level $|\Delta\mathrm{MTV}|$ to 0.1\,\% (Sec.~\ref{sect:res_tradeoff}), the median per-lesion change was 13.5\,\%, as with the predicted masks (13.7\,\%).
 
 We next tested whether terms on individual predicted components could prevent this cancellation in the intended test-time setting.
 On the validation set, the selection chose ten times the base weight and reduced the median per-lesion $|\Delta\mathrm{MTV}|$ from 12.5\,\% to 11.3\,\%.
 Adding the validation-selected per-lesion terms did not provide a consistent benefit on the test set.
 The median per-lesion volume change fell only from 13.7\,\% to 13.3\,\% and decreased for only 5 of 26 patients, while the median for small lesions was higher (20.0\,\% vs.\ 16.7\,\%).
-The mean scan-level $|\Delta\mathrm{MTV}|$ remained at 9.3\,\%, $|\Delta\mathrm{TLG}|$ changed from 11.8\,\% to 12.0\,\%, and Dice rose by 0.6 points.
+The mean image-level $|\Delta\mathrm{MTV}|$ remained at 9.3\,\%, $|\Delta\mathrm{TLG}|$ changed from 11.8\,\% to 12.0\,\%, and Dice rose by 0.6 points.
 In the separate diagnostic using provided lesion masks, the terms at their base weight also left the median per-lesion change unchanged at 13.5\,\%.
 The medians of small lesions take only a few distinct values (e.g.\ 12.5\,\%, 14.3\,\%, 33.3\,\%) because they are ratios of small voxel counts.
 
@@ -177,7 +177,7 @@ Because the four-term configuration was fixed before test evaluation, this diagn
 \label{sect:res_rigidity}
 Bones should retain their internal geometry during registration even when they move relative to one another.
 Because label overlap does not measure this property, we compare rigidity penalties by how well they preserve within-bone distances and report the accompanying changes in bone and soft-tissue alignment.
-In the finite-difference Staring penalty, 21.2\,\% of the stencil reads leave the bone of the center voxel across all 560 labeled challenge scans.
+In the finite-difference Staring penalty, 21.2\,\% of the stencil reads leave the bone of the center voxel across all 560 labeled challenge images.
 Eroding the bones removes this leakage but retains only 35.5\,\% of the bone voxels and removes 23\,\% of the bones entirely.
 For ribs, it retains 2.4\,\% of the voxels and removes 58\,\% of the structures.
 

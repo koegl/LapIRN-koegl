@@ -5,15 +5,15 @@
 \label{sect:data}
 
 We used the training set of the PSMAReg challenge, a longitudinal whole-body PSMA PET/CT cohort.
-Each scan consists of a CT and a PET image (in SUV), resampled to $2.7344\times2.7344\times3.27$~mm and cropped to $192\times192\times288$ voxels.
-For every scan, the challenge provides 117 CT organ labels (the TotalSegmentator~\cite{ref_totalsegmentator} classes) and a PSMA lesion mask.
-Following the challenge, a follow-up scan is always the moving image and the corresponding baseline scan the fixed image.
+Each image consists of a CT and a PET image (in SUV), resampled to $2.7344\times2.7344\times3.27$~mm and cropped to $192\times192\times288$ voxels.
+For every image, the challenge provides 117 CT organ labels (the TotalSegmentator~\cite{ref_totalsegmentator} classes) and a PSMA lesion mask.
+Following the challenge, a follow-up image is always the moving image and the corresponding baseline image the fixed image.
 The original dataset publication reports that release of the anonymized retrospective imaging data was approved by the Ethics Committee of the Medical Faculty, LMU Munich (applications 21-1230 and 21-0098)~\cite{ref_psma_dataset_article}.
 It also reports approval by the institutional data security and privacy review board.
 It also reports that the ethics committee waived individual informed consent because the images were fully anonymized.
 The present study is a secondary analysis of publicly released challenge data and involved no patient recruitment or contact.
 
-We split the 146 labeled patients with at least two scans at the patient level into training, validation, and test sets, aiming at 70/15/15\,\% of the registration pairs and balancing the sets for tumor burden and for bone- versus soft-tissue lesion location.
+We split the 146 labeled patients with at least two images at the patient level into training, validation, and test sets, aiming at 70/15/15\,\% of the registration pairs and balancing the sets for tumor burden and for bone- versus soft-tissue lesion location.
 Training uses all pairs of later onto earlier examinations of a patient; validation and testing use only follow-up-to-baseline pairs, as in the challenge.
 This gave 92/26/28 patients and 178/38/38 pairs.
 The split was built once with a fixed seed and frozen before any experiment of this study; all choices of settings, checkpoints, and methods were made on the validation set, and the test set was used only for the final evaluation.
@@ -21,15 +21,15 @@ All patients were part of the challenge training data used to develop the earlie
 
 \paragraph{Labels used by the method and for evaluation.}
 Network training uses the provided organ and lesion labels of the training patients.
-Instance optimization (Sec.~\ref{sect:io}) also needs organ and lesion labels of the scans being registered.
+Instance optimization (Sec.~\ref{sect:io}) also needs organ and lesion labels of the images being registered.
 In the main experiments, IO uses only predicted labels, while the provided validation and test labels are used for evaluation (Sec.~\ref{sect:metrics}).
 Organ labels are predicted from the CT by TotalSegmentator~\cite{ref_totalsegmentator}.
 Lesion masks are predicted from PET/CT by an nnU-Net~\cite{nnunet} configured as the winning autoPET~III solution~\cite{rokuss2024fdgpsmahitchhikersguide}.
 It is a residual-encoder U-Net (ResEnc-L) with $192^3$ patches, initialized from their pretrained weights, with an auxiliary organ-segmentation head and misalignment augmentation.
-It was trained with patient-grouped five-fold cross-validation on all 494 scans of the non-test patients, including patients with a single examination.
-Validation scans are segmented by the fold model that did not see the patient, and test scans by the ensemble of the five fold models.
+It was trained with patient-grouped five-fold cross-validation on all 494 images of the non-test patients, including patients with a single examination.
+Validation images are segmented by the fold model that did not see the patient, and test images by the ensemble of the five fold models.
 For validation, this prevents registration and IO tuning from relying on lesion predictions made by a model trained on the same patient.
-The predicted lesion masks reach a mean Dice of 0.56 on the validation scans and 0.51 on the test scans (medians 0.69 and 0.67).
+The predicted lesion masks reach a mean Dice of 0.56 on the validation images and 0.51 on the test images (medians 0.69 and 0.67).
 
 \paragraph{Preprocessing.}
 For the network and IO, CT was clipped to $[-1000,1500]$~HU and PET to $[0,20]$~SUV, and both were rescaled to $[0,1]$.
@@ -37,14 +37,14 @@ As in the ConvexAdam baseline of the challenge~\cite{ref_convexadam}, the patien
 All PET quantities in the evaluation are computed on the original SUV images.
 
 \paragraph{PET measures.}
-The challenge uses MTV and TLG to measure how registration changes the moving scan's lesion volume and uptake.
+The challenge uses MTV and TLG to measure how registration changes the moving image's lesion volume and uptake.
 For a PET image $P$ in SUV, binary lesion mask $M$, and voxel volume $v$, they are
 \begin{equation}
   \mathrm{MTV}(M) = v\sum_x M(x), \qquad
   \mathrm{TLG}(P,M) = v\sum_x P(x)M(x).
   \label{eq:pet_measures}
 \end{equation}
-Both quantities are computed on the same moving scan before and after warping it to the fixed frame; as in the challenge scorer, both PET and the lesion mask are warped by nearest-neighbor interpolation.
+Both quantities are computed on the same moving image before and after warping it to the fixed frame; as in the challenge scorer, both PET and the lesion mask are warped by nearest-neighbor interpolation.
 The reported preservation error for $Q\in\{\mathrm{MTV},\mathrm{TLG}\}$ is its absolute relative change,
 \begin{equation}
   |\Delta Q| = \frac{|Q_{\mathrm{after}} - Q_{\mathrm{before}}|}{\max(Q_{\mathrm{before}},10^{-6})}.
@@ -55,9 +55,9 @@ This measures change induced by registration, not change in disease burden betwe
 \subsection{Registration Pipeline}
 \label{sect:pipeline}
 
-The pipeline (Fig.~\ref{fig:pipeline}) has three stages, all estimated from the moving scan $(C_m, P_m)$ and the fixed scan $(C_f, P_f)$, where $C$ denotes CT and $P$ PET.
+The pipeline (Fig.~\ref{fig:pipeline}) has three stages, all estimated from the moving image $(C_m, P_m)$ and the fixed image $(C_f, P_f)$, where $C$ denotes CT and $P$ PET.
 We denote the affine sampling transform by $\varphi_{\mathrm{aff}}$, the network sampling transform by $\varphi_\theta$, and their composition by $\varphi$.
-For each location $x$ on the fixed grid, $\varphi(x)$ gives the location sampled in the original moving scan: the warped image is $\widetilde C_m(x)=C_m(\varphi(x))$, and the same convention applies to PET and labels.
+For each location $x$ on the fixed grid, $\varphi(x)$ gives the location sampled in the original moving image: the warped image is $\widetilde C_m(x)=C_m(\varphi(x))$, and the same convention applies to PET and labels.
 
 \paragraph{Affine pre-registration.}
 ANTs~\cite{ants} estimates an affine transform from the two CTs, using body masks, a $[-1000,1000]$~HU window, half-resolution images, and Mattes mutual information.
@@ -113,7 +113,7 @@ The volume and uptake terms penalize the relative change defined above, using th
 \end{equation}
 with $\epsilon=10^{-5}$.
 Two further terms act on $\det J_\varphi(x)$, the local volume scale of the total affine-plus-deformable sampling transform, computed by central differences on the fixed voxel grid.
-A determinant of one preserves local volume; values above and below one correspond to expansion and contraction, respectively, of the sampled region in the moving scan (the opposite change in the displayed warped lesion).
+A determinant of one preserves local volume; values above and below one correspond to expansion and contraction, respectively, of the sampled region in the moving image (the opposite change in the displayed warped lesion).
 Let $W_s$ and $W_h$ be the linearly and nearest-neighbor warped moving lesion masks, respectively, on that grid. Then
 \begin{equation}
   \mathcal{L}_{\overline{J}} = \left(\frac{\sum_x W_s(x)\det J_\varphi(x)}{\sum_x W_s(x)+\epsilon} - 1\right)^{2},
@@ -126,7 +126,7 @@ The mask $W_s$ is held fixed when differentiating $\mathcal{L}_{\overline{J}}$, 
 
 \paragraph{Bone rigidity.}
 Many PSMA lesions lie in bone, which moves rigidly between examinations.
-For each of the 61 skeletal labels of the fixed scan (in IO: the predicted labels), we fit a rigid transformation to the displacement of the structure in closed form~\cite{ref_kabsch,ref_umeyama}.
+For each of the 61 skeletal labels of the fixed image (in IO: the predicted labels), we fit a rigid transformation to the displacement of the structure in closed form~\cite{ref_kabsch,ref_umeyama}.
 We penalize the mean squared residual of its voxels, and $\mathcal{L}_{\mathrm{rig}}$ is the mean over structures with at least 50 voxels.
 Each bone is fitted independently, so neighboring bones may move relative to each other, and the term involves no finite differences, so it does not constrain the tissue around a bone.
 
@@ -168,17 +168,17 @@ All generated code was reviewed and tested by the authors, and all text edits we
 \subsection{Evaluation Metrics}
 \label{sect:metrics}
 
-All metrics are computed with the provided labels of the test scans by evaluating the full-resolution displacement fields directly.
-The moving scan is warped with corner-aligned grid coordinates, and PET and labels are sampled by nearest-neighbor interpolation.
+All metrics are computed with the provided labels of the test images by evaluating the full-resolution displacement fields directly.
+The moving image is warped with corner-aligned grid coordinates, and PET and labels are sampled by nearest-neighbor interpolation.
 Displacement fields of the baselines are converted to the same convention; ConvexAdam's fields, which its implementation computes with edge-aligned coordinates, are converted exactly before evaluation.
-Of the 28 test patients (38 pairs), 26 patients (30 pairs) have lesions in the moving scan and contribute to the PET metrics.
+Of the 28 test patients (38 pairs), 26 patients (30 pairs) have lesions in the moving image and contribute to the PET metrics.
 
 \paragraph{Alignment.}
 CT Dice and the 95th percentile of the Hausdorff distance (HD95), averaged over the 117 organ labels.
 
 \paragraph{PET-preservation metrics.}
-We compute $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ as defined in Eq.~\eqref{eq:pet_error}, using the provided moving-scan lesion masks.
-``Initial'' denotes the unregistered, unresampled scans; their MTV and TLG change is zero by construction and does not estimate an effect of resampling.
+We compute $|\Delta\mathrm{MTV}|$ and $|\Delta\mathrm{TLG}|$ as defined in Eq.~\eqref{eq:pet_error}, using the provided moving-image lesion masks.
+``Initial'' denotes the unregistered, unresampled images; their MTV and TLG change is zero by construction and does not estimate an effect of resampling.
 
 \paragraph{Per-lesion change.}
 The aggregate errors of Eq.~\eqref{eq:pet_error} can hide large changes of individual lesions that cancel.
@@ -186,14 +186,14 @@ We therefore also split the moving lesion mask into 26-connected components and 
 The 30 pairs with lesions contain 1435 components.
 For the per-lesion size and location analysis, we exclude 108 components smaller than five voxels: a one-voxel difference changes their volume by at least 25\,\%, making their relative changes highly quantized.
 This leaves 1327 lesions, grouped by size (small $<0.5$~ml, medium $<5$~ml, large) and location (bone-associated if at least half of the lesion lies on a skeletal label).
-Scan-level PET metrics and the lesion-coverage analysis retain all 1435 components so that the coverage decomposition includes the full evaluated lesion volume.
+Image-level PET metrics and the lesion-coverage analysis retain all 1435 components so that the coverage decomposition includes the full evaluated lesion volume.
 
 \paragraph{Deformation quality.}
 Percentage of non-diffeomorphic volume (NDV) as defined by the challenge~\cite{Liu2024}, within the challenge's mask (voxels where the fixed CT exceeds its minimum intensity).
 
 \paragraph{Bone metrics.}
 For the rigidity comparison, we additionally compute Dice and HD95 separately over bones and soft-tissue organs.
-We measure within-bone distance distortion as the mean relative change in physical distance between randomly sampled pairs of points in the same fixed-scan bone, including its boundary voxels.
+We measure within-bone distance distortion as the mean relative change in physical distance between randomly sampled pairs of points in the same fixed-image bone, including its boundary voxels.
 We compute this separately for short (5--15~mm) and long ($\geq15$~mm) distances; pairs below 5~mm are excluded because their relative change is sensitive to interpolation and discretization at this image resolution.
 Short distances characterize local deformation, whereas long distances characterize deformation across a larger part of the bone.
 We also compute NDV inside bones and in a three-voxel band around them and, as a secondary measure, the residual of a rigid fit to each bone's displacement (bone rigidity error).
@@ -204,7 +204,7 @@ Erosion does not restrict the point pairs used for distance distortion.
 \label{sect:statistics}
 
 A patient may contribute several pairs and many lesions.
-We average each metric over a patient's eligible pairs before analysis: CT Dice, HD95, and NDV comparisons include 28 test patients, whereas MTV and TLG comparisons include the 26 patients with moving-scan lesions.
+We average each metric over a patient's eligible pairs before analysis: CT Dice, HD95, and NDV comparisons include 28 test patients, whereas MTV and TLG comparisons include the 26 patients with moving-image lesions.
 Paired comparisons use only patients with values for both methods and a two-sided Wilcoxon signed-rank test~\cite{ref_wilcoxon}.
 The implementation doubles the smaller one-sided $p$-value, drops zero paired differences, assigns average ranks to tied nonzero magnitudes, and returns $p=1$ when all differences are zero.
 Holm correction~\cite{ref_holm} is applied separately per metric within each family.
@@ -213,7 +213,7 @@ The last family contains nine comparisons for CT, HD95, and NDV and eight for MT
 In the rigidity comparison, the three penalties are compared with IO without rigidity, and separately with each other (three pairs), each as one family per metric.
 Single post-hoc comparisons (the trade-off and recall-mask runs against their reference) are reported with uncorrected $p$-values; per-lesion medians are descriptive.
 We call a difference significant if its adjusted $p<0.05$.
-Confidence intervals are 95\,\% percentile patient-bootstrap intervals~\cite{ref_bootstrap}: scan-level plots show intervals for method means, whereas intervals stated for differences between two methods are for paired patient-mean differences.
+Confidence intervals are 95\,\% percentile patient-bootstrap intervals~\cite{ref_bootstrap}: image-level plots show intervals for method means, whereas intervals stated for differences between two methods are for paired patient-mean differences.
 For per-lesion medians, patients are resampled together with all their lesions (cluster bootstrap).
 
 For the comparison with baselines, we additionally apply the challenge's significance-based composite ranking and report 95\,\% patient-bootstrap rank intervals.
@@ -270,13 +270,13 @@ To probe the effect of lesion-mask quality, we additionally rerun IO with the pr
 This diagnostic run uses labels unavailable in the intended test-time setting.
 
 \paragraph{Lesion coverage in predicted masks.}
-Each provided lesion component of the moving scan is assigned to a group by the fraction of its voxels covered by the predicted lesion mask: missed (0\,\%), partly covered ($<50\,\%$), or covered ($\geq50\,\%$).
-For each group, we report two quantities computed per scan as in Eq.~\eqref{eq:pet_error} and averaged over patients.
+Each provided lesion component of the moving image is assigned to a group by the fraction of its voxels covered by the predicted lesion mask: missed (0\,\%), partly covered ($<50\,\%$), or covered ($\geq50\,\%$).
+For each group, we report two quantities computed per image as in Eq.~\eqref{eq:pet_error} and averaged over patients.
 The first is the change within the group using only its lesions.
 The second is the group's contribution to the evaluation metric: the change if only its lesions changed while all other lesions kept their volume and uptake.
-Since changes of different lesions in a scan partly cancel, the contributions add up to slightly more than the evaluation metric.
+Since changes of different lesions in an image partly cancel, the contributions add up to slightly more than the evaluation metric.
 \paragraph{Per-lesion terms.}
-Because the PET losses constrain the total volume and uptake of a scan, we test whether per-lesion terms can prevent changes in different lesions from canceling.
+Because the PET losses constrain the total volume and uptake of an image, we test whether per-lesion terms can prevent changes in different lesions from canceling.
 In the intended test-time setting, per-lesion versions of the volume, uptake, and mean-Jacobian terms are added to the PET terms during IO on the network trained without the losses.
 The predicted lesion mask is split into connected components.
 Each of the eight largest components with at least 20 voxels gets its own relative volume and uptake change and mean Jacobian determinant, and the terms are averaged over the components weighted by size.

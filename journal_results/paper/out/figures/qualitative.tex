@@ -1,6 +1,10 @@
 \begin{figure}[p]
 \centering
 \includegraphics[width=\textwidth]{figures/qualitative.png}
-\caption{Test pair with a large change in tumor volume (patient 0146; lesion volume 2400 voxels at baseline, 24191 at follow-up), registered by our method (PET and rigidity losses only in IO); one coronal slice. (a)~Fixed and (b)~moving CT with PET (SUV 0--8, 35\,\% opacity) and ground-truth lesion contours (red). (c,~d)~CT of the fixed scan (green) overlaid with the moving scan (magenta) before~(c) and after~(d) registration; gray where they agree. (e,~f)~Organ labels that differ before~(e) and after~(f) registration: green where the fixed scan has a label that the moving scan lacks there, magenta where only the moving scan is labeled; bright, medium, and dark shades for bones, organs, and muscles. (g)~Jacobian determinant of the fixed-to-moving sampling transform: white is volume-preserving (1), blue is below 1 and red is above 1; changes in the displayed warped anatomy have the opposite direction. (h)~Warped moving CT with PET and warped lesion contours.}
+\caption{Test pair with a large change in tumor volume (patient 0146; lesion volume 2400 voxels at baseline, 24191 at follow-up), registered by our method (PET and rigidity losses only in IO); one coronal slice.
+ (a)~Fixed and (b)~moving CT with PET (SUV 0--8, 35\,\% opacity) and ground-truth lesion contours (red).
+ (c,~d)~CT of the fixed image (green) overlaid with the moving image (magenta) before~(c) and after~(d) registration; gray where they agree.
+ (e,~f)~Organ labels that differ before~(e) and after~(f) registration: green where the fixed image has a label that the moving image lacks there, magenta where only the moving image is labeled; bright, medium, and dark shades for bones, organs, and muscles.
+ (g)~Jacobian determinant of the fixed-to-moving sampling transform: white is volume-preserving (1), blue is below 1 and red is above 1; changes in the displayed warped anatomy have the opposite direction. (h)~Warped moving CT with PET and warped lesion contours.}
 \label{fig:qualitative}
 \end{figure}

@@ -58,7 +58,7 @@ A finer level was trained jointly with the coarser ones after ten epochs.
 Convolutions ran in bfloat16 and all losses in single precision.
 Training took 18~h, 22~h, and 3.7~days for the three levels on one NVIDIA A100 (80~GB).
 The intensity augmentations were CT shifts of $\pm0.02$ in the normalized window (about $\pm50$~HU), CT scaling between 0.9 and 1.1, and PET scaling between 0.85 and 1.15.
-Spatial augmentations were left--right flipping ($p=0.5$) and field-of-view mismatch produced by cropping up to 40 axial slices from both scans and up to 10 further slices from each scan separately.
+Spatial augmentations were left--right flipping ($p=0.5$) and field-of-view mismatch produced by cropping up to 40 axial slices from both images and up to 10 further slices from each image separately.
 
 \paragraph{Challenge ranking.}
 For each metric, all 72 directed pairs among the nine resampled methods were compared with one-sided Wilcoxon tests and Holm correction, and a method scored (number of methods it significantly outperformed $+1$)/$K$ for $K$ methods.
