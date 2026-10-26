@@ -61,7 +61,7 @@ Re-reviewed 2026-10-25 after the corrected `align_corners` evaluations, using `m
 
 21. [x] **#21 — Keep lesion denominators explicit.** Twenty-six patients have 1435 moving-scan components; size/location analysis excludes 108 below five voxels, leaving 1327. Scan-level and coverage analyses retain all 1435. Recheck only if final inputs change (`methods.tex`, `results.tex`).
 
-22. [ ] **#22 — Reduce table density.** The baseline table has 11 columns and a long caption; ablation and rigidity tables carry secondary endpoints. Consider a compact decision-facing main table and full ablations, HD95, NDV, and rankings in appendices. Keep uncertainty and sample sizes visible (`tables/`).
+22. [x] **#22 — Reduce table density.** The baseline table has 11 columns and a long caption; ablation and rigidity tables carry secondary endpoints. Consider a compact decision-facing main table and full ablations, HD95, NDV, and rankings in appendices. Keep uncertainty and sample sizes visible (`tables/`).
 
 23. [x] **#23 — Shorten technical detail in the main narrative.** Methods now retains the training design, selection rules, chosen operating points, and information needed to interpret the primary comparisons. Numerical loss weights, the full training schedule and augmentations, the challenge ranking formula, tuning grids, and rigidity sweeps have moved to Appendix G (`methods.tex`, `appendix.tex`).
 
