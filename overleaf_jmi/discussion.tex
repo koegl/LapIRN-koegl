@@ -34,7 +34,7 @@ Their weight comes from patients with little tumor volume: the metric is relativ
 The post-hoc recall-biased mask increased lesion detection but sharply reduced precision and did not improve measured preservation (Sec.~\ref{sect:res_detection}).
 The additional false-positive regions may dilute the preservation constraints over voxels outside the lesions being evaluated, so this experiment does not show that recall gains are ineffective when precision can be retained.
 The diagnostic run with provided lesion masks reduced the measured changes from 9.3\,\% to 0.1\,\% for MTV and from 11.8\,\% to 4.5\,\% for TLG, while improving Dice from 78.6\,\% to 79.1\,\%.
-This supports mask quality as a major limit of scan-level preservation, but uptake change remains even with provided masks, and the intervention does not establish that segmentation explains all residual error.
+This supports mask quality as a major limit of scan-level preservation, but uptake change remains even with provided masks, and the result does not establish that segmentation explains all residual error.
 
 Because IO meets its objective on the predicted masks already at small weights, the PET weight mainly trades accuracy.
 A factor of $10^{-4}$ of the training-derived weights gave most of the preservation without a loss in Dice, whereas the factor chosen by the tuning on the validation set ($\times0.1$) cost 1.6 points more for the same volume change and 1.1 points less uptake change; the tuning grid contained no factor between 0 and $\times0.1$.
@@ -48,8 +48,10 @@ IO with the losses improved alignment without a detected difference in scan-leve
 The PET losses constrain the total volume and uptake of a scan, which can be preserved while single lesions grow or shrink.
 Indeed, provided masks reduced scan-level MTV change to 0.1\,\%, while the median per-lesion change remained 13.5\,\%.
 
-Per-lesion terms on the connected components of the predicted mask did not solve this: they reduced the per-lesion change on the validation set but not on the test set.
-They leave the small lesions, which change most, unconstrained (components below 20 voxels and beyond the eight largest), they act on the predicted components, which miss lesions and merge or split others, and they use the same soft, linearly warped masks as the scan-level terms, whose change differs from the evaluated one (Sec.~\ref{sect:res_loo}).
+Adding per-lesion terms to the connected components of the predicted mask reduced per-lesion change on the validation set but provided no consistent benefit on the test set.
+In the intended test-time setting, these terms constrain only the eight largest predicted components with at least 20 voxels, leaving smaller and additional components unconstrained.
+It also acts on predicted components, which can miss lesions or merge and split them, and uses the same soft, linearly warped masks as the scan-level terms, whose change differs from the evaluated one (Sec.~\ref{sect:res_loo}).
+A separate diagnostic using the provided lesion masks also failed to reduce the median per-lesion change, although these masks are unavailable in the intended setting.
 A per-lesion constraint may therefore require constraints for small lesions and a closer surrogate of the nearest-neighbor evaluation.
 
 The leave-one-out experiment exposes the third mechanism: the optimized surrogate does not always track the evaluated endpoint.

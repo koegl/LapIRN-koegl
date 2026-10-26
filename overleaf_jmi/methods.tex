@@ -268,16 +268,19 @@ Runtimes are per pair on one NVIDIA RTX A6000 GPU and include the affine step.
 On the network trained without the losses, IO with the PET terms (without rigidity) is run with all four PET weights scaled by $\{0,10^{-4},3\cdot10^{-4},0.001,0.003,0.01,0.03,0.1,0.3,1\}$ relative to the training-derived values; $\times0.1$ is the setting chosen by the IO tuning.
 Besides the evaluation on the ground-truth labels, we compute CT Dice, $|\Delta\mathrm{MTV}|$, and $|\Delta\mathrm{TLG}|$ on the predicted labels that IO optimizes, with the same definitions.
 To probe the effect of lesion-mask quality, we additionally rerun IO with the provided lesion masks instead of the predicted ones (organ labels remain predicted), at the tuned and full PET weights.
-This diagnostic intervention uses labels unavailable in the intended test-time setting.
+This diagnostic run uses labels unavailable in the intended test-time setting.
 
 \paragraph{Lesion coverage in predicted masks.}
 Each ground-truth lesion of the moving scan is assigned to a group by the fraction of its voxels covered by the predicted lesion mask: missed (0\,\%), partly covered ($<50\,\%$), or covered ($\geq50\,\%$).
 For each group, we report two quantities, both computed per scan as in Eq.~\eqref{eq:pet_error} and averaged over patients: the change within the group, using only the group's lesions, and the contribution of the group to the evaluation metric, i.e.\ the change if only the group's lesions changed and all other lesions kept their volume and uptake.
 Since changes of different lesions in a scan partly cancel, the contributions add up to slightly more than the evaluation metric.
 \paragraph{Per-lesion terms.}
-Because the PET losses constrain the total volume and uptake of a scan, we test per-lesion versions of the volume, uptake, and mean-Jacobian terms in IO, added to the PET terms on the network trained without the losses.
-The predicted lesion mask is split into connected components; each of the eight largest components with at least 20 voxels gets its own relative volume and uptake change and mean Jacobian determinant, and the terms are averaged over the components weighted by size, so that changes of different lesions cannot cancel.
+Because the PET losses constrain the total volume and uptake of a scan, we test whether per-lesion terms can prevent changes in different lesions from canceling.
+In the intended test-time setting, per-lesion versions of the volume, uptake, and mean-Jacobian terms are added to the PET terms during IO on the network trained without the losses.
+The predicted lesion mask is split into connected components.
+Each of the eight largest components with at least 20 voxels gets its own relative volume and uptake change and mean Jacobian determinant, and the terms are averaged over the components weighted by size.
 Their weight is selected on the validation set among $\{1,10,100\}$ times a base value scaled like the other PET weights, with the selection rule of Sec.~\ref{sect:tuning} applied to the median per-lesion $|\Delta\mathrm{MTV}|+|\Delta\mathrm{TLG}|$, the quantity these terms target.
+As a separate diagnostic, we also apply the terms at their base weight to components of the provided lesion masks, which are unavailable in the intended test-time setting.
 
 \paragraph{Contribution of each PET term.}
 On the network trained without the losses, IO with all four PET terms is compared with IO in which one term at a time is switched off.
