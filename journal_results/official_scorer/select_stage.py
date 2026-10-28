@@ -149,14 +149,15 @@ def ours() -> None:
 
 
 PER_LESION_CANDIDATES = {"x0": "I5", "x1": "P1", "x10": "P1x10", "x100": "P1x100"}
+PER_LESION_ALL_CANDIDATES = {"x0": "I5", "x1": "Q1", "x10": "Q1x10", "x100": "Q1x100"}
 
 
-def per_lesion() -> None:
+def per_lesion(candidates=PER_LESION_CANDIDATES, out_name="per_lesion") -> None:
     """Scale of the per-lesion weights (stage 6) on val: as select(), but the
     preservation criterion is the target of these terms, the median per-lesion
     |MTV change| + |TLG change| (lesions >= 5 voxels, as in the paper)."""
     table = {}
-    for scale, run in PER_LESION_CANDIDATES.items():
+    for scale, run in candidates.items():
         pairs = pd.read_csv(OUT / "val" / f"{run}.csv", dtype={"case_id": str})
         lesions = pd.read_csv(
             OUT / "val" / f"{run}_lesions.csv", dtype={"case_id": str}
@@ -181,7 +182,7 @@ def per_lesion() -> None:
         table["dice_ct"] >= table["dice_ct"].max() - DICE_TOLERANCE
     )
     chosen = table[table["within_tolerance"]]["lesion_preservation"].idxmin()
-    path = OUT / "per_lesion" / "chosen.json"
+    path = OUT / out_name / "chosen.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
@@ -298,6 +299,9 @@ if __name__ == "__main__":
     elif action == "perlesion":
         pull()
         per_lesion()
+    elif action == "perlesion_all":
+        pull()
+        per_lesion(PER_LESION_ALL_CANDIDATES, "per_lesion_all")
     elif action == "baselines":
         pull()
         baselines()

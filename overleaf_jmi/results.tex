@@ -68,10 +68,10 @@ The ranking was decided by accuracy: apart from the affine pre-registration on $
 The network alone needs 11~s per pair, as fast as ConvexAdam and more than ten times faster than NiftyReg (128~s); IO adds about 2.5~minutes.
 Figure~\ref{fig:qualitative} illustrates anatomical alignment in a test pair selected for its tenfold between-image change in lesion volume (from 2400 to 24\,191 voxels).
 The images were initially far apart (CT Dice 3.5\,\%); our method aligned them to 83.7\,\% Dice (NiftyReg 72.3\,\%, ConvexAdam 64.5\,\%), and NDV remained below the challenge threshold.
-Before registration, the CT overlay (Fig.~\ref{fig:qualitative}c) and label residual (e) show misalignment across the whole trunk.
+Before registration, the CT image overlay (Fig.~\ref{fig:qualitative}c) and label residual (e) show misalignment across the whole trunk.
 After registration (d, f), the residual is reduced to thin bands at organ boundaries and parts of the lumbar vertebrae.
 The warped lesion contours lie in the corresponding bones (h).
-The Jacobian determinant (g) shows fine-grained changes in the local volume scale of the sampling transform throughout the body, which IO adds to the smooth network field because it has no smoothness term ($\lambda_{\mathrm{smooth}}=0$).
+The Jacobian determinant (g) shows fine-grained changes in the local volume scale of the transformation throughout the body, which IO adds to the smooth network field because it has no smoothness term ($\lambda_{\mathrm{smooth}}=0$).
 
 \input{tables/baselines}
 \input{figures/qualitative}
@@ -167,7 +167,7 @@ The two direct measurement terms did not improve the evaluated endpoints in this
 Without $\mathcal{L}_{\mathrm{MTV}}$, Dice increased from 78.6\,\% to 79.3\,\% and $|\Delta\mathrm{TLG}|$ decreased to 10.7\,\% (both significant; $|\Delta\mathrm{MTV}|$ 8.6\,\%, not significant).
 Without $\mathcal{L}_{\mathrm{TLG}}$, $|\Delta\mathrm{TLG}|$ decreased to 9.8\,\% (significant), while Dice (78.7\,\%) and $|\Delta\mathrm{MTV}|$ (8.6\,\%) did not change significantly.
 Thus, the test-set results do not support a claim that every PET term improves the evaluated preservation metrics.
-One possible explanation is that both direct terms measure change on the linearly warped, soft mask and PET (Eq.~\ref{eq:mtv_tlg}), whereas the evaluation warps both by nearest neighbor.
+One possible explanation is that both direct terms measure change on the linearly warped, soft mask and PET image (Eq.~\ref{eq:mtv_tlg}), whereas the evaluation warps both by nearest neighbor.
 The ablation is consistent with this surrogate mismatch but does not establish it as the cause.
 Because the four-term configuration was fixed before test evaluation, this diagnostic ablation was not used to select a reduced loss.
 

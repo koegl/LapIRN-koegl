@@ -110,7 +110,19 @@ def main() -> None:
     n_pet_pairs = pairs[OURS]["mtv_bias"].notna().sum()
     tex = rf"""\begin{{table}}[t]
 \centering
-\caption{{Comparison with baselines on the test set ({n_patients} patients, {n_pairs} follow-up$\rightarrow$baseline pairs; PET: {n_pet} patients, {n_pet_pairs} pairs). Values are mean$\pm$SD over patients (a patient's eligible pairs are averaged first). HD95: 95th-percentile Hausdorff distance; MTV: metabolic tumor volume; TLG: total lesion glycolysis; NDV: non-diffeomorphic volume. Rank: descriptive challenge significance ranking, with the 95\,\% interval of the rank over {N_BOOTSTRAP} patient bootstrap samples in brackets, over all methods except Initial, which is a reference (its MTV/TLG change is 0 by construction because nothing is resampled). Training / IO: PET and rigidity losses (PET + rig.) used in training and in instance optimization (IO); IO ``--'': no IO, ``basic'': IO with the similarity and regularization terms only. $^{{\dagger}}$/$^{{\ddagger}}$: Ours + IO with PET + rig. only in IO (our method, chosen on the validation set) is significantly better/worse than this method (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over nine comparisons for CT/HD95/NDV and eight for PET within each column, $p<0.05$; NDV tested after the 0.005\,\% equivalence threshold). NDV is summarized as mean$\pm$SD over patients; $>$ thr. is the percentage of individual pairs with \%NDV above 0.005\,\%. Runtime per pair on one NVIDIA RTX A6000, including the affine step (our methods: measured in earlier runs with the same settings; NiftyReg: measured on the validation pairs). Affine + IO: our instance optimization directly after the affine pre-registration, without the network. Bold: best mean among ranked methods.}}
+\caption{{Comparison with baselines on the test set.
+CT-organ Dice, HD95, and NDV include {n_patients} patients and {n_pairs} follow-up$\rightarrow$baseline pairs.
+The PET-preservation metrics include {n_pet} patients and {n_pet_pairs} pairs.
+Values are mean$\pm$SD over patients.
+HD95 denotes the 95th-percentile Hausdorff distance, MTV metabolic tumor volume, TLG total lesion glycolysis, and NDV non-diffeomorphic volume.
+Rank is the descriptive challenge composite rank with its 95\,\% patient-bootstrap interval.
+Initial serves as a reference and is excluded from the ranking.
+The Training and IO columns show where the PET-preservation and bone-rigidity losses are applied.
+In the IO column, ``--'' denotes no IO and ``basic'' denotes IO with only the similarity and deformation-regularization terms.
+$^{{\dagger}}$ and $^{{\ddagger}}$ indicate that our selected method (last row) is significantly better or worse, respectively, after Holm correction at $p<0.05$ (Sec.~\ref{{sect:statistics}}).
+NDV tests apply the 0.005\,\% equivalence threshold, and $>$ thr. gives the percentage of individual pairs above this threshold.
+Runtime is reported per pair and includes affine pre-registration.
+Bold indicates the best mean among ranked methods.}}
 \label{{tab:baselines}}
 \scriptsize
 \setlength{{\tabcolsep}}{{2.5pt}}

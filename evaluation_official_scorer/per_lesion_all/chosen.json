@@ -1,0 +1,51 @@
+{
+  "chosen": "x10",
+  "run": "Q1x10",
+  "rule": "lowest median per-lesion |MTV| + |TLG| within 2 Dice points of the most accurate",
+  "table": [
+    {
+      "scale": "x0",
+      "run": "I5",
+      "dice_ct": 0.7955706389663303,
+      "mtv_bias": 0.07117172815752623,
+      "tlg_bias": 0.08937519514573948,
+      "lesion_mtv_median": 0.125,
+      "lesion_tlg_median": 0.13205071541666413,
+      "lesion_preservation": 0.25705071541666413,
+      "within_tolerance": true
+    },
+    {
+      "scale": "x1",
+      "run": "Q1",
+      "dice_ct": 0.7973026459254869,
+      "mtv_bias": 0.07314501475354279,
+      "tlg_bias": 0.09197747065824854,
+      "lesion_mtv_median": 0.115282392026578,
+      "lesion_tlg_median": 0.11910190097868155,
+      "lesion_preservation": 0.23438429300525954,
+      "within_tolerance": true
+    },
+    {
+      "scale": "x10",
+      "run": "Q1x10",
+      "dice_ct": 0.797665057268011,
+      "mtv_bias": 0.07473748948202846,
+      "tlg_bias": 0.09660743108987699,
+      "lesion_mtv_median": 0.09354166666666665,
+      "lesion_tlg_median": 0.1086743332951236,
+      "lesion_preservation": 0.20221599996179024,
+      "within_tolerance": true
+    },
+    {
+      "scale": "x100",
+      "run": "Q1x100",
+      "dice_ct": 0.7997200081977388,
+      "mtv_bias": 0.08146102095027258,
+      "tlg_bias": 0.12883342104064754,
+      "lesion_mtv_median": 0.09375,
+      "lesion_tlg_median": 0.13171882835520915,
+      "lesion_preservation": 0.22546882835520915,
+      "within_tolerance": true
+    }
+  ]
+}

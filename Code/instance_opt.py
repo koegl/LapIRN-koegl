@@ -3,14 +3,13 @@ import time
 from pathlib import Path
 from typing import Callable, Dict, Optional, Tuple
 
+import config
+import jacobian
 import numpy as np
+import synthetic
 import torch
 import torch.nn.functional as F
 import tqdm
-
-import config
-import jacobian
-import synthetic
 import utils
 from miccai2020_model_stage import (
     NCC,
@@ -237,7 +236,30 @@ def io_objective(
         use_cc = pet_cc_masks is not None and (
             cfg.w_io_mtv_cc > 0.0 or cfg.w_io_tlg_cc > 0.0 or cfg.w_io_mtv_avg_cc > 0.0
         )
-        if use_cc:
+        if use_cc and cfg.io_cc_mode == "scatter":
+            # pet_cc_masks is an integer label map here: per-component sums by
+            # scattering the trilinear weights (no per-component channels)
+            labels = pet_cc_masks
+            n_cc = int(labels.max())
+            sample_grid = grid + disp_unit.permute(0, 2, 3, 4, 1).float()
+            flat = labels.reshape(-1)
+            n_moving = torch.bincount(flat, minlength=n_cc + 1)[1:].float()
+            tlg_moving = torch.bincount(
+                flat, weights=moving_pet_image.reshape(-1).float(), minlength=n_cc + 1
+            )[1:]
+            n_warped, tlg_warped = utils.component_soft_sums(
+                labels, n_cc, sample_grid, [None, warped_pet_image]
+            )
+            # mean-det convention as below: mask detached, gradient via det(J)
+            jac_sum, size_fixed = utils.component_soft_sums(
+                labels, n_cc, sample_grid.detach(), [jac_det, None]
+            )
+            loss_mtv_cc, loss_tlg_cc, loss_mtv_avg_cc = (
+                utils.per_component_losses_from_sums(
+                    n_moving, n_warped, tlg_moving, tlg_warped, jac_sum, size_fixed
+                )
+            )
+        elif use_cc:
             warped_cc = utils.warp_binary_mask(pet_cc_masks, disp_unit, grid, transform)
             loss_mtv_cc = utils.mtv_bias_loss_per_component(warped_cc, pet_cc_masks)
             loss_tlg_cc = utils.tlg_bias_loss_per_component(
@@ -249,6 +271,7 @@ def io_objective(
             loss_mtv_avg_cc = utils.mtv_mean_bias_loss_per_component(
                 jac_det, warped_cc.detach()
             )
+        if use_cc:
             loss += (
                 cfg.w_io_mtv_cc * loss_mtv_cc
                 + cfg.w_io_tlg_cc * loss_tlg_cc
@@ -640,12 +663,22 @@ def run_io(
     if include_pet and (
         cfg.w_io_mtv_cc > 0.0 or cfg.w_io_tlg_cc > 0.0 or cfg.w_io_mtv_avg_cc > 0.0
     ):
-        pet_cc_masks = utils.lesion_component_masks(
+        component_fn = (
+            utils.lesion_component_labels
+            if cfg.io_cc_mode == "scatter"
+            else utils.lesion_component_masks
+        )
+        pet_cc_masks = component_fn(
             (x_lbl_pet == 1).float(),
             max_components=cfg.io_cc_max_components,
             min_voxels=cfg.io_cc_min_voxels,
         )
-        n_cc = 0 if pet_cc_masks is None else pet_cc_masks.shape[1]
+        if pet_cc_masks is None:
+            n_cc = 0
+        elif cfg.io_cc_mode == "scatter":
+            n_cc = int(pet_cc_masks.max())
+        else:
+            n_cc = pet_cc_masks.shape[1]
         print(f"IO: {n_cc} lesion component(s) under per-lesion tumour terms")
 
     base = f_x_y.detach()

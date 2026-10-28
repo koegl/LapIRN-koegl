@@ -4,7 +4,7 @@ import math
 import os
 from contextlib import ExitStack
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, Optional, Tuple
+from typing import Any, Callable, Dict, Iterator, Optional, Sequence, Tuple
 
 import hd95_official
 import jacobian
@@ -1359,6 +1359,117 @@ def lesion_component_masks(
     return torch.from_numpy(stack)[None].to(moving_pet_mask.device)
 
 
+def lesion_component_labels(
+    moving_pet_mask: torch.Tensor,
+    max_components: int,
+    min_voxels: int,
+) -> Optional[torch.Tensor]:
+    """Integer label map of the lesion connected components (scatter mode).
+
+    Same components as ``lesion_component_masks`` (6-connectivity, largest
+    first, at least ``min_voxels``; ``max_components`` <= 0 keeps all),
+    relabeled 1..C; background and dropped components are 0.
+
+    Returns:
+        (1, 1, D, H, W) long label map, or None if nothing survives the filters.
+    """
+    mask_np = moving_pet_mask[0, 0].detach().cpu().numpy() > 0.5
+    cc_np, n_cc = ndimage.label(mask_np)
+    if n_cc == 0:
+        return None
+    sizes = np.bincount(cc_np.ravel(), minlength=n_cc + 1)
+    sizes[0] = 0
+    keep = [i for i in np.argsort(sizes)[::-1] if sizes[i] >= min_voxels]
+    if max_components > 0:
+        keep = keep[:max_components]
+    if not keep:
+        return None
+    lut = np.zeros(n_cc + 1, dtype=np.int64)
+    lut[keep] = np.arange(1, len(keep) + 1)
+    return torch.from_numpy(lut[cc_np])[None, None].to(moving_pet_mask.device)
+
+
+def component_soft_sums(
+    labels: torch.Tensor,
+    n_components: int,
+    sample_grid: torch.Tensor,
+    values: Sequence[Optional[torch.Tensor]],
+) -> torch.Tensor:
+    """Per-component sums over the fixed grid of value(x) * warped indicator_k(x).
+
+    The warped indicator of component k is the trilinear sample of [labels == k]
+    at sample_grid, exactly as ``grid_sample(..., mode="bilinear",
+    padding_mode="border", align_corners=False)`` (SpatialTransform_unit) would
+    give for a one-hot stack. Because the components are disjoint, each of the
+    8 interpolation corners contributes its weight to the bin of its label, so
+    one pass gives every component (scatter_add is differentiable in the
+    weights, i.e. in the displacement).
+
+    Args:
+        labels: (1, 1, D, H, W) long label map in the moving frame (0 = none).
+        n_components: number of components C (labels 1..C).
+        sample_grid: (1, D, H, W, 3) normalized sampling positions (grid + flow).
+        values: per output row a (1, 1, D, H, W) value on the fixed grid, or None
+            for 1 (soft volume).
+
+    Returns:
+        (len(values), C) tensor.
+    """
+    lab = labels[0, 0]
+    size = lab.shape  # (D, H, W); grid channels are (x->W, y->H, z->D)
+    coords = []
+    for axis, n in ((2, size[2]), (1, size[1]), (0, size[0])):
+        c = sample_grid[0, ..., 2 - axis]
+        # unnormalize (align_corners=False), border padding = clamp
+        c = ((c + 1) * n - 1) / 2
+        coords.append(c.clamp(0, n - 1))
+    cx, cy, cz = coords  # along W, H, D
+    x0, y0, z0 = (c.detach().floor().long() for c in (cx, cy, cz))
+    fx, fy, fz = cx - x0, cy - y0, cz - z0
+    x1 = (x0 + 1).clamp(max=size[2] - 1)
+    y1 = (y0 + 1).clamp(max=size[1] - 1)
+    z1 = (z0 + 1).clamp(max=size[0] - 1)
+    vals = [None if v is None else v[0, 0] for v in values]
+    out = sample_grid.new_zeros(len(values), n_components + 1)
+    for zi, wz in ((z0, 1 - fz), (z1, fz)):
+        for yi, wy in ((y0, 1 - fy), (y1, fy)):
+            for xi, wx in ((x0, 1 - fx), (x1, fx)):
+                corner = lab[zi, yi, xi].reshape(-1)
+                w = (wz * wy * wx).reshape(-1)
+                rows = [w if v is None else w * v.reshape(-1) for v in vals]
+                out = out + torch.stack(
+                    [
+                        out.new_zeros(n_components + 1).scatter_add(0, corner, r)
+                        for r in rows
+                    ]
+                )
+    return out[:, 1:]
+
+
+def per_component_losses_from_sums(
+    n_moving: torch.Tensor,
+    n_warped: torch.Tensor,
+    tlg_moving: torch.Tensor,
+    tlg_warped: torch.Tensor,
+    jac_sum: torch.Tensor,
+    size_fixed: torch.Tensor,
+    eps: float = 1e-5,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """The three per-component terms (same formulas as the stack versions
+    below) from per-component sums, each a (C,) tensor.
+
+    Returns:
+        (mtv_cc, tlg_cc, mtv_avg_cc) scalars.
+    """
+    bias = (n_warped - n_moving) / (n_moving + eps)
+    mtv_cc = ((n_moving / (n_moving.sum() + eps)) * bias**2).sum()
+    tlg_bias = (tlg_warped - tlg_moving).abs() / (tlg_moving + eps)
+    tlg_cc = ((tlg_moving / (tlg_moving.sum() + eps)) * tlg_bias).sum()
+    mean_det = jac_sum / (size_fixed + eps)
+    mtv_avg_cc = ((size_fixed / (size_fixed.sum() + eps)) * (mean_det - 1.0) ** 2).sum()
+    return mtv_cc, tlg_cc, mtv_avg_cc
+
+
 def mtv_bias_loss_per_component(
     warped_cc: torch.Tensor,
     moving_cc: torch.Tensor,
@@ -1882,7 +1993,9 @@ def bone_label_map(labels: torch.Tensor, bone_values: torch.Tensor) -> torch.Ten
     """(B, 1, D, H, W) label map with every non-bone voxel set to 0."""
     labels = labels.round()
     return torch.where(
-        torch.isin(labels, bone_values.to(labels.dtype)), labels, torch.zeros_like(labels)
+        torch.isin(labels, bone_values.to(labels.dtype)),
+        labels,
+        torch.zeros_like(labels),
     )
 
 

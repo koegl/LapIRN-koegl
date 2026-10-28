@@ -57,7 +57,7 @@ We used a batch size of one with gradients accumulated over four pairs, a linear
 A finer level was trained jointly with the coarser ones after ten epochs.
 Convolutions ran in bfloat16 and all losses in single precision.
 Training took 18~h, 22~h, and 3.7~days for the three levels on one NVIDIA A100 (80~GB).
-The intensity augmentations were CT shifts of $\pm0.02$ in the normalized window (about $\pm50$~HU), CT scaling between 0.9 and 1.1, and PET scaling between 0.85 and 1.15.
+The intensity augmentations were CT image shifts of $\pm0.02$ in the normalized window (about $\pm50$~HU), CT image scaling between 0.9 and 1.1, and PET image scaling between 0.85 and 1.15.
 Spatial augmentations were left--right flipping ($p=0.5$) and field-of-view mismatch produced by cropping up to 40 axial slices from both images and up to 10 further slices from each image separately.
 
 \paragraph{Challenge ranking.}
@@ -73,7 +73,7 @@ IO was tuned step-wise on the network trained with both losses: first learning r
 The selected setting was a learning rate of 0.025 with 40 iterations and a PET factor of $\times0.1$ (Table~\ref{tab:io_tuning}).
 NiftyReg~\cite{MODAT2010,modat2014} used \texttt{reg\_aladin} followed by GPU \texttt{reg\_f3d} with normalized mutual information, because local NCC is unavailable on the GPU.
 Its grid combined bending-energy weights 0.0002, 0.0005, 0.001, 0.005, and 0.02 with final control-point spacings of 3, 5, 7, and 9 voxels; the selected setting used 0.0002 and 7 voxels.
-ConvexAdam~\cite{ref_convexadam} used its own ANTs affine registration with a $[-300,300]$~HU CT window and regularization weights $\lambda\in\{0.1,0.25,0.5,1.25,2,4\}$; the selected setting used 2.
+ConvexAdam~\cite{ref_convexadam} used its own ANTs affine registration with a $[-300,300]$~HU CT image window and regularization weights $\lambda\in\{0.1,0.25,0.5,1.25,2,4\}$; the selected setting used 2.
 Several selected settings lay at the edge of their grid, but extending the grids changed the validation scores only marginally.
 The post-hoc accuracy--preservation sweep used PET-weight factors $\{0,10^{-4},3\cdot10^{-4},0.001,0.003,0.01,0.03,0.1,0.3,1\}$ relative to the training-derived values.
 The per-lesion terms were tested at $\{1,10,100\}$ times base weights of 8 (volume), 8 (uptake), and 15 (mean Jacobian determinant), i.e.\ 0.1 times their initial values, like the other PET weights; the validation set selected $\times10$.

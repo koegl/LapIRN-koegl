@@ -87,6 +87,10 @@ STAGES: Dict[int, List[str]] = {
     + [f"base/convexadam/{c}" for c in CONVEXADAM_CONFIGS],
     9: ["basetest/niftyreg", "basetest/convexadam"],
     10: ["eval/test/M1"],  # PET IO with recall-biased lesion masks
+    # per-lesion terms on all components (scatter): val sweep, then the chosen
+    # scale on test (select_stage.py perlesion_all)
+    11: ["eval/val/Q1", "eval/val/Q1x10", "eval/val/Q1x100"],
+    12: ["eval/test/Q1x10"],  # chosen on val (select_stage.py perlesion_all)
 }
 BASELINE_RUN = {"niftyreg": "B3", "convexadam": "B4"}
 STAGE_WORKSTATION_FIRST = {3: WORKSTATION_ONLY}

@@ -19,13 +19,14 @@ from typing import Dict, Tuple
 import matplotlib
 
 matplotlib.use("Agg")
+import common  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
+from common import METRIC_COLUMNS, two_sided  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 
-import common  # noqa: E402
-from common import METRIC_COLUMNS, two_sided  # noqa: E402
+PAPER_FIGURE_DIR = common.REPO.parent / "psmareg-extension" / "figures"
 
 # losses used -> color (PET blue, rigidity red, both purple; none black)
 GROUPS = {
@@ -33,6 +34,11 @@ GROUPS = {
     "PET": "#2a78d6",
     "Rigidity": "#d1342f",
     "PET + rigidity": "#8b3fbf",
+}
+LOSS_LABELS = {
+    "PET": "PET preservation",
+    "Rigidity": "Bone rigidity",
+    "PET + rigidity": "PET preservation + bone rigidity",
 }
 # (losses used, where they act) -> run; "net" = only in training (no IO),
 # "both" = in training and IO, "io" = only in IO; for None: without / with IO
@@ -59,7 +65,7 @@ PAIRS = {"PET": ("I2", "I5"), "Rigidity": ("I3", "I6"), "PET + rigidity": ("I4",
 X_METRIC = "dice_ct"
 Y_METRICS = ("mtv_bias", "tlg_bias")
 AXIS_LABELS = {
-    "dice_ct": r"CT Dice (\%) $\uparrow$",
+    "dice_ct": r"CT Organ Dice (\%) $\uparrow$",
     "mtv_bias": r"$|\Delta\mathrm{MTV}|$ (\%) $\downarrow$",
     "tlg_bias": r"$|\Delta\mathrm{TLG}|$ (\%) $\downarrow$",
 }
@@ -171,7 +177,7 @@ def main() -> None:
             ax.spines[side].set_visible(False)
 
     loss_handles = [
-        Line2D([], [], marker="o", ls="", color=c, markersize=6, label=g)
+        Line2D([], [], marker="o", ls="", color=c, markersize=6, label=LOSS_LABELS[g])
         for g, c in GROUPS.items()
         if g != "None"
     ]
@@ -247,18 +253,19 @@ def main() -> None:
     )
     fig.legend(
         handles=placement_handles,
-        title="Where the losses act",
+        title="Loss placement",
         ncol=1,
         bbox_to_anchor=(0.72, 0.98),
         **style,
     )
     fig.tight_layout()
 
-    out_dir = common.OUT_DIR / "figures"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_dir / "q2.pdf", bbox_inches="tight", pad_inches=0)
+    PAPER_FIGURE_DIR.mkdir(parents=True, exist_ok=True)
+    fig.savefig(PAPER_FIGURE_DIR / "q2.pdf", bbox_inches="tight", pad_inches=0)
     text = effects(patients)
-    (out_dir / "q2_effects.txt").write_text(text + "\n")
+    analysis_out_dir = common.OUT_DIR / "figures"
+    analysis_out_dir.mkdir(parents=True, exist_ok=True)
+    (analysis_out_dir / "q2_effects.txt").write_text(text + "\n")
     n = len(patients["T1"])
     n_pet = patients["T1"]["mtv_bias"].notna().sum()
     pair_rows = common.load_run("T1")
@@ -267,15 +274,17 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/q2.pdf}}
-\caption{{Effect of the PET-preservation and rigidity losses and of where they act on the test set (CT Dice: {n} patients, {n_pairs} pairs; metabolic tumor volume [MTV] and total lesion glycolysis [TLG]: {n_pet} patients, {n_pet_pairs} pairs).
-Color identifies the loss group; markers identify where the losses act (square: only in network training, shown before IO; filled circle: in training and IO; hollow circle: only in IO, on the network trained without losses).
+\caption{{Effect of the PET-preservation and bone-rigidity losses and of where they act on the test set (CT-organ Dice: {n} patients, {n_pairs} pairs; metabolic tumor volume (MTV) and total lesion glycolysis (TLG): {n_pet} patients, {n_pet_pairs} pairs).
+Color identifies the loss group.
+Markers identify where the losses act: a square denotes network training only and is shown before IO, a filled circle denotes training and IO, and a hollow circle denotes IO only with the network trained without these losses.
 Without losses: network output ($\times$) and with IO ($+$).
 Lines connect configurations of the same loss group.
-Each point is the mean over patients after averaging each patient's eligible pairs; uncertainty and significance tests are reported in Table~\ref{{tab:ablations}}.}}
+Each point is the mean over patients after first averaging over image pairs within each patient.
+Uncertainty and significance tests are reported in Table~\ref{{tab:ablations}}.}}
 \label{{fig:q2}}
 \end{{figure}}
 """
-    (out_dir / "q2.tex").write_text(tex)
+    (PAPER_FIGURE_DIR / "q2.tex").write_text(tex)
     print(text)
 
 

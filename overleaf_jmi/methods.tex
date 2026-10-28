@@ -5,7 +5,7 @@
 \label{sect:data}
 
 We used the training set of the PSMAReg challenge, a longitudinal whole-body PSMA PET/CT cohort.
-Each session consists of a CT and a PET image (in SUV), resampled to $2.7344\times2.7344\times3.27$~mm and cropped to $192\times192\times288$ voxels.
+Each session consists of a CT image and a PET image (in SUV), resampled to $2.7344\times2.7344\times3.27$~mm and cropped to $192\times192\times288$ voxels.
 For every session, the challenge provides 117 CT organ labels (the TotalSegmentator~\cite{ref_totalsegmentator} classes) and a PSMA lesion mask.
 Following the challenge, a follow-up image is always the moving image and the corresponding baseline image the fixed image.
 The original dataset publication reports that release of the anonymized retrospective imaging data was approved by the Ethics Committee of the Medical Faculty, LMU Munich (applications 21-1230 and 21-0098)~\cite{ref_psma_dataset_article}.
@@ -26,8 +26,8 @@ Network training uses the provided organ and lesion labels of the training patie
 In the main experiments, IO requires labels for each image pair but uses only predicted labels.
 The provided validation and test labels are reserved for evaluation (Sec.~\ref{sect:metrics}).
 
-Organ labels are predicted from CT with TotalSegmentator~\cite{ref_totalsegmentator}.
-Lesion masks are predicted from PET/CT with a residual-encoder nnU-Net (ResEnc-L)~\cite{nnunet} configured according to the winning autoPET~III solution~\cite{rokuss2024fdgpsmahitchhikersguide}.
+Organ labels are predicted from the CT images with TotalSegmentator~\cite{ref_totalsegmentator}.
+Lesion masks are predicted from the PET/CT images with a residual-encoder nnU-Net (ResEnc-L)~\cite{nnunet} configured according to the winning autoPET~III solution~\cite{rokuss2024fdgpsmahitchhikersguide}.
 The network uses $192^3$ patches, the pretrained weights released by the winning team, an auxiliary organ-segmentation head, and misalignment augmentation.
 
 The lesion model was trained by patient-grouped five-fold cross-validation on all 494 images from the non-test patients, including patients who underwent only one imaging session.
@@ -37,7 +37,7 @@ The resulting lesion masks achieve mean Dice scores of 0.56 on the validation im
 
 
 \paragraph{Preprocessing.}
-For the network and IO, CT intensities were clipped to $[-1000,1500]$ Hounsfield units (HU), and PET intensities were clipped to $[0,20]$ standardized uptake values (SUV).
+For the network and IO, CT image intensities were clipped to $[-1000,1500]$ Hounsfield units (HU), and PET image intensities were clipped to $[0,20]$ standardized uptake values (SUV).
 Both were rescaled to $[0,1]$.
 As in the ConvexAdam baseline of the challenge~\cite{ref_convexadam}, the patient bed was algorithmically removed from the CT images during preprocessing.
 All PET quantities in the evaluation are computed on the original SUV maps.
@@ -52,7 +52,7 @@ For a PET image $P$ in SUV, binary lesion mask $M$, and voxel volume $v$, they a
   \label{eq:pet_measures}
 \end{equation}
 Both quantities are computed on the same moving image before and after warping it to the fixed-image grid.
-Following the challenge scorer, PET and the lesion mask are warped using nearest-neighbor interpolation.
+Following the challenge scorer, the PET image and lesion mask are warped using nearest-neighbor interpolation.
 The reported preservation error for $Q\in\{\mathrm{MTV},\mathrm{TLG}\}$ is the absolute value of its relative change:
 \begin{equation}
   |\Delta Q| = \frac{|Q_{\mathrm{after}} - Q_{\mathrm{before}}|}{\max(Q_{\mathrm{before}},10^{-6})}.
@@ -63,9 +63,12 @@ This measures change induced by registration, rather than changes in disease bur
 \subsection{Registration Framework}
 \label{sect:pipeline}
 
-The framework (Fig.~\ref{fig:pipeline}) has three stages, all estimated from the moving image $(C_m, P_m)$ and the fixed image $(C_f, P_f)$, where $C$ denotes CT and $P$ PET.
-We denote the affine sampling transform by $\varphi_{\mathrm{aff}}$, the network sampling transform by $\varphi_\theta$, and their composition by $\varphi$.
-For each location $x$ on the fixed grid, $\varphi(x)$ gives the location sampled in the original moving image: the warped image is $\widetilde C_m(x)=C_m(\varphi(x))$, and the same convention applies to PET and labels.
+Our proposed registration framework (Fig.~\ref{fig:pipeline}) has three stages.
+Each stage is estimated from the moving image volumes $(C_m, P_m)$ and the fixed image volumes $(C_f, P_f)$.
+Here, $C$ denotes a CT image volume and $P$ a PET image volume expressed in SUV.
+We denote the affine transformation by $\varphi_{\mathrm{aff}}$ and the network transformation by $\varphi_\theta$.
+Their composition is $\varphi=\varphi_{\mathrm{aff}}\circ\varphi_\theta$, such that $\varphi(x)=\varphi_{\mathrm{aff}}(\varphi_\theta(x))$.
+For each location $x$ on the fixed grid, $\varphi(x)$ gives the location sampled in the original moving image: the warped image is $\widetilde C_m(x)=C_m(\varphi(x))$, and the same convention applies to the PET image and labels.
 
 \paragraph{Affine pre-registration.}
 ANTs~\cite{ants} estimates an affine transform from the two CTs, using body masks, a $[-1000,1000]$~HU window, half-resolution images, and Mattes mutual information.
@@ -74,7 +77,7 @@ It is converted to a dense deformation field.
 \paragraph{Deformable network.}
 We use LapIRN~\cite{ref_lapirn} with three pyramid levels at quarter, half, and full resolution.
 Each level predicts a stationary velocity field that is added to the upsampled velocity of the coarser level and integrated by scaling and squaring~\cite{ref_arsigny} into $\varphi_\theta$.
-Each level receives four channels: the fixed CT and PET and the affinely aligned moving CT and PET.
+Each level receives four channels: the fixed CT and PET images and the affinely aligned moving CT and PET images.
 The levels are trained one after the other; a finer level is initialized from the coarser one, which is first kept frozen and then trained jointly.
 Each sub-network has 24 base channels and a trunk of ten residual blocks with an expansion factor of two.
 
@@ -105,12 +108,12 @@ The two coarse network levels never use them, because lesions and thin bones spa
 
 \paragraph{Registration accuracy.}
 $\mathcal{L}_{\mathrm{NCC}}$ is the negative local normalized cross-correlation of the CTs, summed over one to three scales depending on the pyramid level.
-PET is not used for similarity, because uptake changes between sessions with disease and therapy and a PET similarity would reward matching these changes.
+PET image intensities are not used for similarity because uptake changes between sessions with disease and therapy, and an intensity-similarity term would reward matching these changes.
 $\mathcal{L}_{\mathrm{DSC}}$ is a soft Dice loss on the CT organ labels.
 
 \paragraph{PET quantification.}
 The PET-preservation terms keep the PET measures of Eq.~\eqref{eq:pet_measures} unchanged by the registration.
-For the differentiable loss terms, let $M$ be the moving lesion mask and $\widetilde M$, $\widetilde P$ the linearly warped mask and PET.
+For the differentiable loss terms, let $M$ be the moving lesion mask and $\widetilde M$, $\widetilde P$ the linearly warped mask and PET image.
 Nearest-neighbor warping, as used in the evaluation, is piecewise constant in the displacement and gives no useful gradient; linear warping gives a soft lesion boundary instead.
 The volume and uptake terms penalize the relative change defined above, using the soft mask,
 \begin{equation}
@@ -120,7 +123,7 @@ The volume and uptake terms penalize the relative change defined above, using th
   \label{eq:mtv_tlg}
 \end{equation}
 with $\epsilon=10^{-5}$.
-Two further terms act on $\det J_\varphi(x)$, the local volume scale of the total affine-plus-deformable sampling transform, computed by central differences on the fixed voxel grid.
+Two further terms act on $\det J_\varphi(x)$, the local volume scale of the total affine-plus-deformable transformation, computed by central differences on the fixed voxel grid.
 A determinant of one preserves local volume; values above and below one correspond to expansion and contraction, respectively, of the sampled region in the moving image (the opposite change in the displayed warped lesion).
 Let $W_s$ and $W_h$ be the linearly and nearest-neighbor warped moving lesion masks, respectively, on that grid. Then
 \begin{equation}
@@ -177,7 +180,7 @@ All generated code was reviewed and tested by the authors, and all text edits we
 \label{sect:metrics}
 
 All metrics are computed with the provided labels of the test images by evaluating the full-resolution deformation fields directly.
-The moving image is warped with corner-aligned grid coordinates, and PET and labels are sampled by nearest-neighbor interpolation.
+The moving image is warped with corner-aligned grid coordinates, and the PET image and labels are sampled by nearest-neighbor interpolation.
 Deformation fields of the baselines are converted to the same convention; ConvexAdam's fields, which its implementation computes with edge-aligned coordinates, are converted exactly before evaluation.
 Of the 28 test patients (38 pairs), 26 patients (30 pairs) have lesions in the moving image and contribute to the PET metrics.
 
@@ -197,7 +200,7 @@ This leaves 1327 lesions, grouped by size (small $<0.5$~ml, medium $<5$~ml, larg
 Image-level PET metrics and the lesion-coverage analysis retain all 1435 components so that the coverage decomposition includes the full evaluated lesion volume.
 
 \paragraph{Deformation quality.}
-Percentage of non-diffeomorphic volume (NDV) as defined by the challenge~\cite{Liu2024}, within the challenge's mask (voxels where the fixed CT exceeds its minimum intensity).
+Percentage of non-diffeomorphic volume (NDV) as defined by the challenge~\cite{Liu2024}, within the challenge's mask (voxels where the fixed CT image exceeds its minimum intensity).
 
 \paragraph{Bone metrics.}
 For the rigidity comparison, we additionally compute Dice and HD95 separately over bones and soft-tissue organs.
@@ -263,8 +266,8 @@ To measure what the network contributes, IO with both losses is also run directl
 \paragraph{Comparison with baselines.}
 Initial alignment, the affine pre-registration, NiftyReg, ConvexAdam, IO after the affine, and our variants are compared on the test set.
 All registrations use the same follow-up-to-baseline pairs and are scored with the same provided organ and lesion labels and original-SUV PET images.
-NiftyReg and ConvexAdam use CT alone for registration, with no organ or lesion labels; both remove the patient bed, but each uses its own affine step and CT preprocessing (NiftyReg: \texttt{reg\_aladin} on bed-removed CT; ConvexAdam: ANTs with a $[-300,300]$~HU window).
-Our method uses CT and PET, the affine pre-registration described above, provided labels in network training, and predicted labels during IO.
+NiftyReg and ConvexAdam use CT images alone for registration, with no organ or lesion labels; both remove the patient bed, but each uses its own affine step and CT image preprocessing (NiftyReg: \texttt{reg\_aladin} on bed-removed CT images; ConvexAdam: ANTs with a $[-300,300]$~HU window).
+Our method uses CT and PET images, the affine pre-registration described above, provided labels in network training, and predicted labels during IO.
 The NiftyReg and ConvexAdam settings were selected on the validation pairs with the same selection rule as our settings (Sec.~\ref{sect:tuning}); the rule does not consider folding.
 Runtimes are per pair on one NVIDIA RTX A6000 GPU and include the affine step.
 

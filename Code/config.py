@@ -257,6 +257,12 @@ class TrainingConfig:
     io_cc_max_components: int = 8
     # below this the relative bias is dominated by interpolation noise
     io_cc_min_voxels: int = 20
+    # "stack": one full-resolution channel per component (the caps above apply);
+    # "scatter": one integer label map, per-component soft sums by scattering
+    # the trilinear weights into label bins (utils.component_soft_sums) --
+    # cost and memory independent of the number of components, so the caps
+    # can be lifted (io_cc_max_components = 0: no cap, io_cc_min_voxels = 1)
+    io_cc_mode: str = "stack"
 
     # Sub-weights inside the rigidity term, applied before w_bone_rigidity.
     # The three conditions have different natural magnitudes (det and ortho are

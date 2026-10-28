@@ -119,6 +119,9 @@ W_SCALES = (0.0, 0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.3, 1.0)
 
 CC_WEIGHTS = {"w_io_mtv_cc": 8.0, "w_io_tlg_cc": 8.0, "w_io_mtv_avg_cc": 15.0}
 CC_SCALES = (10.0, 100.0)
+# per-lesion terms on ALL predicted components (no size / count limits), via
+# the scatter implementation (config.io_cc_mode); Q1 = x1, Q1x10, Q1x100
+CC_ALL = {"io_cc_mode": "scatter", "io_cc_max_components": 0, "io_cc_min_voxels": 1}
 
 # --- evaluation runs: plan ID -> what to run ---
 # W* (PET-weight sweep) is added once the IO settings are frozen; B*
@@ -171,6 +174,20 @@ EVAL_RUNS: Dict[str, EvalRun] = {
             pet_label_dir=DATA_PATH / "PSMAReg/PSMAReg_dataset/labelsTr",
         ),
     ),
+    **{
+        name: EvalRun(
+            "T1",
+            IOSpec(
+                pet=True,
+                rigidity=False,
+                cfg_overrides={
+                    **CC_ALL,
+                    **{k: v * scale for k, v in CC_WEIGHTS.items()},
+                },
+            ),
+        )
+        for name, scale in (("Q1", 1.0), ("Q1x10", 10.0), ("Q1x100", 100.0))
+    },
     # PET IO with recall-biased lesion masks (journal_results/recall_masks.py:
     # SUV > 3 outside physiological organs, or nnU-Net): I5 with these masks
     "M1": EvalRun(
