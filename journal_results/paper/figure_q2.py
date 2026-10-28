@@ -4,7 +4,7 @@ All eleven variants on test in two panels (|MTV change| and |TLG change|
 against CT Dice; patient means): color = losses used (PET / rigidity / both),
 marker = where they act (square: only in training, no IO, T2-T4; filled
 circle: in training and IO, I2-I4; filled triangle: only in IO, I5-I7). No
-losses: black X (no IO, T1) and + (with IO, I1). A thin dashed line connects
+losses: black X (no IO, T1) and star (with IO, I1). A thin dashed line connects
 the variants of a loss group in this order. The significance tests are in the
 appendix table (table_ablations.py) and the text.
 
@@ -58,7 +58,7 @@ RUNS: Dict[Tuple[str, str], str] = {
 }
 PLACEMENT_ORDER = ("net", "both", "io")
 MARKER = {"net": "s", "both": "o", "io": "^"}
-NONE_MARKER = {"net": "x", "both": "+"}
+NONE_MARKER = {"net": "x", "both": "*"}
 # PET and PET + rigidity without IO nearly coincide: larger square below
 SIZE = {("PET", "net"): 80, ("PET + rigidity", "net"): 24}
 # Q2 pairs for the text: loss set -> (training and IO, only in IO)
@@ -153,7 +153,7 @@ def main() -> None:
                 ax.scatter(
                     x,
                     y,
-                    s=50,
+                    s=80 if placement == "both" else 50,
                     marker=NONE_MARKER[placement],
                     color=color,
                     linewidths=1.2,
@@ -176,6 +176,17 @@ def main() -> None:
         ax.set_axisbelow(True)
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
+    for ax, panel_label in zip(axes, ("(a)", "(b)")):
+        ax.text(
+            -0.12,
+            1.04,
+            panel_label,
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontweight="bold",
+            color=TEXT,
+        )
 
     loss_labels = {
         "None": "None",
@@ -194,34 +205,34 @@ def main() -> None:
         for group, color in GROUPS.items()
     ]
     placement_handles = [
-        Line2D(
+        axes[0].scatter(
             [],
             [],
+            s=40,
             marker="s",
-            ls="",
-            markerfacecolor=MUTED,
-            markeredgecolor=MUTED,
-            markersize=6,
+            facecolors=MUTED,
+            edgecolors=MUTED,
+            linewidths=1.4,
             label="Training only",
         ),
-        Line2D(
+        axes[0].scatter(
             [],
             [],
+            s=40,
             marker="o",
-            ls="",
-            markerfacecolor=MUTED,
-            markeredgecolor=MUTED,
-            markersize=6,
+            facecolors=MUTED,
+            edgecolors=MUTED,
+            linewidths=1.4,
             label="Training and IO",
         ),
-        Line2D(
+        axes[0].scatter(
             [],
             [],
+            s=40,
             marker="^",
-            ls="",
-            markerfacecolor=MUTED,
-            markeredgecolor=MUTED,
-            markersize=6,
+            facecolors=MUTED,
+            edgecolors=MUTED,
+            linewidths=1.4,
             label="IO only",
         ),
         Line2D(
@@ -230,14 +241,14 @@ def main() -> None:
             marker="x",
             ls="",
             color=TEXT,
-            markersize=7,
+            markersize=9,
             markeredgewidth=1.2,
             label="No losses, network output",
         ),
         Line2D(
             [],
             [],
-            marker="+",
+            marker="*",
             ls="",
             color=TEXT,
             markersize=7,
@@ -258,7 +269,7 @@ def main() -> None:
         title="PET-preservation and bone-rigidity losses used",
         ncol=2,
         loc="lower left",
-        bbox_to_anchor=(0.012, 0.965),
+        bbox_to_anchor=(0.012, 1.0135),
         **style,
     )
     fig.legend(
@@ -295,10 +306,11 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/q2.pdf}}
-\caption{{Effect of the PET-preservation and bone-rigidity losses and of where they act on the test set (CT-organ Dice: {n} patients, {n_pairs} pairs; metabolic tumor volume (MTV) and total lesion glycolysis (TLG): {n_pet} patients, {n_pet_pairs} pairs).
+\caption{{Effect of the PET-preservation and bone-rigidity losses and of where they act on the test set: (a) metabolic tumor volume (MTV) change and (b) total lesion glycolysis (TLG) change against CT-organ Dice.
+CT-organ Dice includes {n} patients and {n_pairs} pairs, while MTV and TLG include {n_pet} patients and {n_pet_pairs} pairs.
 Colors identify which PET-preservation and bone-rigidity losses are used, including the configuration without either loss group.
 Markers identify where the losses act: a square denotes the network output after training with the losses, a filled circle denotes the result after subsequent IO with the same losses, and a filled triangle denotes IO using a network trained without these losses.
-For the configuration without either loss group, $\times$ denotes the network output and $+$ denotes the result after IO.
+For the configuration without either loss group, $\times$ denotes the network output and $\star$ denotes the result after IO.
 Lines connect configurations with the same loss configuration.
 Each point is the mean over patients after first averaging over image pairs within each patient.
 Uncertainty and significance tests are reported in Table~\ref{{tab:ablations}}.}}

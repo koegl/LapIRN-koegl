@@ -55,6 +55,7 @@ COLORS = {"gt": "#2a78d6", "pred": "#eb6834"}
 TEXT = "#0b0b0b"
 MUTED = "#52514e"
 GAP = 1.5  # x distance between x 0 and the smallest non-zero scale
+PAPER_FIGURE_DIR = common.REPO.parent / "psmareg-extension" / "figures"
 
 
 def mean_ci(values: pd.Series, rng) -> Tuple[float, float, float]:
@@ -256,6 +257,17 @@ def main() -> None:
         ax.set_axisbelow(True)
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
+    for ax, panel_label in zip(axes, ("(a)", "(b)", "(c)")):
+        ax.text(
+            -0.12,
+            1.08,
+            panel_label,
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontweight="bold",
+            color=TEXT,
+        )
     handles, names = [], []
     for kind, mask in (
         ("gt", "provided labels"),
@@ -292,9 +304,8 @@ def main() -> None:
     fig.tight_layout(w_pad=1.0, rect=(0, 0.06, 1, 1))
     fig.supxlabel(r"PET-preservation weight scale in IO", fontsize=8, color=TEXT, y=0.0)
 
-    out_dir = common.OUT_DIR / "figures"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_dir / "tradeoff.pdf", bbox_inches="tight", pad_inches=0)
+    PAPER_FIGURE_DIR.mkdir(parents=True, exist_ok=True)
+    fig.savefig(PAPER_FIGURE_DIR / "tradeoff.pdf", bbox_inches="tight", pad_inches=0)
     n_dice = next(iter(dice.values()))["case_id"].nunique()
     n_masks = first["case_id"].nunique()
     n_dice_pairs = len(next(iter(dice.values())))
@@ -302,17 +313,18 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/tradeoff.pdf}}
-\caption{{Effect of the PET-loss weight in instance optimization (IO) on the test set: the network trained without PET losses (T1) is followed by IO with all PET weights scaled by the given factor (0: PET losses off; 1: training-derived weights).
-Metrics are computed on the predicted labels optimized by IO (orange squares; organs: TotalSegmentator, lesions: nnU-Net) and on the provided evaluation labels (blue circles).
-CT Dice includes {n_dice} patients and {n_dice_pairs} pairs; metabolic tumor volume (MTV) and total lesion glycolysis (TLG) change include {n_masks} patients and {n_mask_pairs} pairs with lesions in both label sets.
-Solid: after IO; dashed: network output before IO, the same for every factor.
-Outlined point and dotted line: operating point tuned on the validation set.
-Black diamonds: IO with the provided instead of the predicted lesion masks (at $\times0.1$ and $\times1$), evaluated on the provided labels.
-Curves show means over patients after averaging eligible pairs; bands show 95\,\% patient-bootstrap confidence intervals.}}
+\caption{{Effect of the PET-preservation loss weight during instance optimization (IO) on the test set: (a) CT-organ Dice, (b) metabolic tumor volume (MTV) change, and (c) total lesion glycolysis (TLG) change.
+The network trained without PET-preservation losses is followed by IO with all PET-preservation loss weights scaled by the stated factor, where 0 denotes no PET-preservation losses and 1 the training-derived weights.
+Metrics are computed on the predicted labels optimized during IO (orange squares) and on the provided evaluation labels (blue circles).
+CT-organ Dice includes {n_dice} patients and {n_dice_pairs} pairs, while MTV and TLG include {n_masks} patients and {n_mask_pairs} pairs with lesions in both label sets.
+Solid curves show the results after IO, and dashed lines show the network output before IO.
+The outlined point and dotted line identify the operating point selected on the validation set.
+Black diamonds show IO performed with the provided instead of the predicted lesion masks at $\times0.1$ and $\times1$, evaluated on the provided labels.
+Curves show means over patients after averaging eligible pairs, and bands show 95\,\% patient-bootstrap confidence intervals.}}
 \label{{fig:tradeoff}}
 \end{{figure}}
 """
-    (out_dir / "tradeoff.tex").write_text(tex)
+    (PAPER_FIGURE_DIR / "tradeoff.tex").write_text(tex)
     for s in RUNS:
         if s in masks:
             p = masks[s].groupby("case_id").mean(numeric_only=True) * 100

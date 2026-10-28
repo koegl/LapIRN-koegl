@@ -13,7 +13,7 @@ scripts' input folder, regenerate, copy to `overleaf_jmi/`.
 - [x] Stage 7: P1x10 on test -> no per-lesion effect (median MTV 13.7 -> 13.3 %, 5/26 patients better), Dice +0.6
 - [x] Stage 4: R2-R4 on test
 - [x] Stage 11: per-lesion terms on ALL components (scatter, no limits): val sweep -> x10 (per-lesion median MTV 12.5 -> 9.4 %, TLG 13.2 -> 10.9 %; image-level slightly worse)
-- [ ] Stage 12: Q1x10 on test
+- [x] Stage 12: Q1x10 on test -> per-lesion median MTV 13.7 -> 11.1 %, TLG 14.6 -> 13.6 % (>=5 voxels), 21/26 patients better (small lesions worse: 16.7 -> 23.1 %); image-level unchanged, Dice +0.3, IO runtime 30 -> 182 s
 - [x] Choice of "Ours" (I1-I8 val, new rule) -> I7
 - [x] (Optional) re-tune NiftyReg / ConvexAdam with the new rule -> NiftyReg be0.0002_sx7, ConvexAdam lambda2 (stages 8 / 9)
 

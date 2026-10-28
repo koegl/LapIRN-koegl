@@ -42,7 +42,7 @@ METRICS = (
 )
 TEXT = "#0b0b0b"
 MUTED = "#52514e"
-ALL_COLOR = "#8c8b86"  # all lesions (evaluation metric)
+ALL_COLOR = "#0b0b0b"  # all lesions (evaluation metric)
 PAPER_FIGURE_DIR = common.REPO.parent / "psmareg-extension" / "figures"
 
 
@@ -96,7 +96,6 @@ def main() -> None:
             color=ALL_COLOR,
             linewidth=0.8,
             linestyle=(0, (3, 2)),
-            alpha=0.6,
             zorder=3,
         )
         ax_w.scatter(
@@ -186,9 +185,11 @@ def main() -> None:
             marker="o",
             color=ALL_COLOR,
             linestyle=(0, (3, 2)),
+            markerfacecolor=ALL_COLOR,
+            markeredgecolor="white",
+            markeredgewidth=0.8,
             markersize=4,
             linewidth=0.8,
-            alpha=0.6,
             label="all lesions (evaluation metric)",
         )
     )
@@ -216,9 +217,9 @@ The predicted mask used during instance optimization (IO) defines three groups: 
 The groups contain {shares["missed"]}, {shares["partial"]}, and {shares["covered"]} lesions and account for 6\,\%, 6\,\%, and 88\,\% of total lesion volume, respectively.
 The network is trained without PET-preservation losses.
 For IO, PET $\times0$ denotes no PET-preservation losses, PET $\times0.1$ the validation-selected weights, and PET $\times1$ the training weights.
-Panels (a) and (c) show the absolute change within each coverage group, with the all-lesion evaluation metric shown by the gray dashed line.
+Panels (a) and (c) show the absolute change within each coverage group, with the all-lesion evaluation metric shown by the black dashed line.
 Panels (b) and (d) show each group's contribution to the image-level change.
-The stacked contributions can exceed the gray evaluation value because opposing signed changes cancel in the image total.}}
+The stacked contributions can exceed the black evaluation value because opposing signed changes cancel in the image total.}}
 \label{{fig:detection}}
 \end{{figure}}
 """

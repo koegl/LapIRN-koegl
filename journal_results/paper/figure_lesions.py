@@ -37,12 +37,13 @@ CONDITIONS: Dict[str, Tuple[str, str, str]] = {
     "PET + rigidity": ("T4", "I4", "#8b3fbf"),
 }
 DISPLAY_NAMES = {
+    "None": "None",
     "PET": "PET preservation",
     "Rigidity": "Bone rigidity",
     "PET + rigidity": "PET preservation + bone rigidity",
 }
 # markers as in figure_q2: block -> (with losses, without losses)
-MARKERS = (("s", "x"), ("o", "+"))
+MARKERS = (("s", "x"), ("o", "*"))
 BLOCKS = ("Network", "Network + IO")
 STRATA = [
     (False, "small"),
@@ -57,6 +58,7 @@ N_BOOTSTRAP = 1000
 SEED = 0
 TEXT = "#0b0b0b"
 MUTED = "#52514e"
+PAPER_FIGURE_DIR = common.REPO.parent / "psmareg-extension" / "figures"
 
 
 def load_lesions(run_id: str) -> pd.DataFrame:
@@ -141,7 +143,7 @@ def main(metric: str) -> None:
                     yerr=err,
                     fmt=marker,
                     color=runs[2],
-                    markersize=5 if name == "None" else 3.5,
+                    markersize=(7 if col == 1 else 5) if name == "None" else 3.5,
                     markeredgewidth=1.0,
                     elinewidth=0.8,
                     capsize=0,
@@ -167,38 +169,93 @@ def main(metric: str) -> None:
                 ha="center",
                 va="top",
             )
-    handles = [
+    for ax, panel_label in zip(axes.flat, ("(a)", "(b)")):
+        ax.text(
+            -0.10,
+            1.05,
+            panel_label,
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontweight="bold",
+            color=TEXT,
+        )
+    loss_handles = [
         Line2D(
             [],
             [],
-            marker="o",
-            ls="",
+            ls="-",
             color=c,
-            markersize=5,
+            linewidth=3.0,
             label=DISPLAY_NAMES[n],
         )
         for n, (_, _, c) in CONDITIONS.items()
-        if n != "None"
     ]
-    handles += [
+    placement_handles = [
+        axes[0, 0].scatter(
+            [],
+            [],
+            s=40,
+            marker="s",
+            facecolors=MUTED,
+            edgecolors=MUTED,
+            linewidths=1.4,
+            label="Training only",
+        ),
+        axes[0, 0].scatter(
+            [],
+            [],
+            s=40,
+            marker="o",
+            facecolors=MUTED,
+            edgecolors=MUTED,
+            linewidths=1.4,
+            label="Training and IO",
+        ),
         Line2D(
             [],
             [],
-            marker=m,
+            marker="x",
             ls="",
             color=CONDITIONS["None"][2],
             markersize=6,
             markeredgewidth=1.0,
-            label=label,
-        )
-        for m, label in (("x", "None, no IO"), ("+", "None, with IO"))
+            label="No losses, network output",
+        ),
+        Line2D(
+            [],
+            [],
+            marker="*",
+            ls="",
+            color=CONDITIONS["None"][2],
+            markersize=9,
+            markeredgewidth=1.0,
+            label="No losses, after IO",
+        ),
     ]
     fig.legend(
-        handles=handles,
-        loc="upper center",
-        ncol=len(handles),
-        frameon=False,
-        bbox_to_anchor=(0.5, 1.08),
+        handles=loss_handles,
+        title="PET-preservation and bone-rigidity losses used",
+        loc="lower left",
+        ncol=2,
+        frameon=True,
+        bbox_to_anchor=(0.01, 0.98),
+        fontsize=7,
+        title_fontsize=7,
+        handletextpad=0.5,
+        columnspacing=1.0,
+    )
+    fig.legend(
+        handles=placement_handles,
+        title="PET-preservation and bone-rigidity loss placement",
+        loc="lower right",
+        ncol=2,
+        frameon=True,
+        bbox_to_anchor=(0.99, 0.98),
+        fontsize=7,
+        title_fontsize=7,
+        handletextpad=0.5,
+        columnspacing=1.0,
     )
     fig.tight_layout()
 
@@ -216,24 +273,30 @@ def main(metric: str) -> None:
                     f"|TLG| {100 * s['tlg_bias'].median():.1f} %"
                 )
 
-    out_dir = common.OUT_DIR / "figures"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_dir / f"{name_out}.pdf", bbox_inches="tight", pad_inches=0)
-    (out_dir / "lesions_summary.txt").write_text("\n".join(lines) + "\n")
+    PAPER_FIGURE_DIR.mkdir(parents=True, exist_ok=True)
+    fig.savefig(PAPER_FIGURE_DIR / f"{name_out}.pdf", bbox_inches="tight", pad_inches=0)
+    (common.OUT_DIR / "figures").mkdir(parents=True, exist_ok=True)
+    (common.OUT_DIR / "figures" / "lesions_summary.txt").write_text("\n".join(lines) + "\n")
     n_lesions = len(lesions["T1"])
     n_excluded = len(pd.read_csv(common.EVAL_DIR / "T1_lesions.csv")) - n_lesions
     n_patients = lesions["T1"]["case_id"].nunique()
     n_pairs = lesions["T1"][["case_id", "tp_moving"]].drop_duplicates().shape[0]
     if metric == "MTV":
         caption = rf"""Per-lesion absolute volume change on the test set ({n_lesions} lesions from {n_patients} patients and {n_pairs} pairs after excluding {n_excluded} components smaller than five voxels), stratified by location (soft tissue or bone-associated, with $\geq$50\,\% of the lesion on bone) and size (small $<0.5$~ml, medium $0.5$ to $<5$~ml, large $\geq5$~ml).
-Points show the median $|\Delta\mathrm{{MTV}}|$ per lesion; left: network output, right: instance optimization (IO) with the same PET-preservation and bone-rigidity loss configuration.
-Within each size stratum, the loss groups are ordered PET preservation, bone rigidity, and both; squares and circles denote without and with IO, while $\times$ and $+$ denote the corresponding configurations without either loss group.
-Error bars: 95\,\% confidence intervals from a patient-cluster bootstrap."""
+Points show the median per-lesion $|\Delta\mathrm{{MTV}}|$.
+Panel (a) shows the network output, and panel (b) shows the result after instance optimization (IO) with the same PET-preservation and bone-rigidity loss configuration.
+Colors identify which PET-preservation and bone-rigidity losses are applied.
+Squares denote the network output after training with the losses, and circles denote the result after subsequent IO with the same losses.
+For the configuration without either loss group, $\times$ denotes the network output and $\star$ denotes the result after IO.
+Error bars show 95\,\% confidence intervals from a patient-cluster bootstrap."""
     else:
         caption = rf"""Per-lesion absolute total lesion glycolysis (TLG) change on the test set ({n_lesions} lesions from {n_patients} patients and {n_pairs} pairs after excluding {n_excluded} components smaller than five voxels), stratified by location (soft tissue or bone-associated, with $\geq$50\,\% of the lesion on bone) and size (small $<0.5$~ml, medium $0.5$ to $<5$~ml, large $\geq5$~ml).
-Points show the median $|\Delta\mathrm{{TLG}}|$ per lesion; left: network output, right: instance optimization (IO) with the same PET-preservation and bone-rigidity loss configuration.
-Within each size stratum, the loss groups are ordered PET preservation, bone rigidity, and both; squares and circles denote without and with IO, while $\times$ and $+$ denote the corresponding configurations without either loss group.
-Error bars: 95\,\% confidence intervals from a patient-cluster bootstrap."""
+Points show the median per-lesion $|\Delta\mathrm{{TLG}}|$.
+Panel (a) shows the network output, and panel (b) shows the result after instance optimization (IO) with the same PET-preservation and bone-rigidity loss configuration.
+Colors identify which PET-preservation and bone-rigidity losses are applied.
+Squares denote the network output after training with the losses, and circles denote the result after subsequent IO with the same losses.
+For the configuration without either loss group, $\times$ denotes the network output and $\star$ denotes the result after IO.
+Error bars show 95\,\% confidence intervals from a patient-cluster bootstrap."""
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/{name_out}.pdf}}
@@ -241,7 +304,7 @@ Error bars: 95\,\% confidence intervals from a patient-cluster bootstrap."""
 \label{{fig:{name_out}}}
 \end{{figure}}
 """
-    (out_dir / f"{name_out}.tex").write_text(tex)
+    (PAPER_FIGURE_DIR / f"{name_out}.tex").write_text(tex)
     print("\n".join(lines))
 
 
