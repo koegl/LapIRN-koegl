@@ -16,14 +16,13 @@ the predicted lesion mask (the one IO sees) covers. Rows: |MTV change|,
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
-from matplotlib.lines import Line2D  # noqa: E402
-from matplotlib.patches import Patch  # noqa: E402
-
 import common  # noqa: E402
 import detection  # noqa: E402
+import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.ticker as mticker  # noqa: E402
+import numpy as np  # noqa: E402
 from detection import RUNS  # noqa: E402
+from matplotlib.lines import Line2D  # noqa: E402
 
 # group -> (legend label, color); categorical slots 1-3 of the reference palette
 GROUP_STYLE = {
@@ -44,6 +43,7 @@ METRICS = (
 TEXT = "#0b0b0b"
 MUTED = "#52514e"
 ALL_COLOR = "#8c8b86"  # all lesions (evaluation metric)
+PAPER_FIGURE_DIR = common.REPO.parent / "psmareg-extension" / "figures"
 
 
 def main() -> None:
@@ -94,8 +94,9 @@ def main() -> None:
             x,
             all_lesions,
             color=ALL_COLOR,
-            linewidth=1.5,
-            linestyle=(0, (4, 2)),
+            linewidth=0.8,
+            linestyle=(0, (3, 2)),
+            alpha=0.6,
             zorder=3,
         )
         ax_w.scatter(
@@ -150,6 +151,8 @@ def main() -> None:
         ax_c.set_ylabel(ylabel)
 
         for ax in (ax_w, ax_c):
+            ax.yaxis.set_major_locator(mticker.MaxNLocator(nbins=6, integer=True))
+            ax.yaxis.set_major_formatter(mticker.FormatStrFormatter("%.0f"))
             ax.grid(axis="y", color="#e4e3df", linewidth=0.5)
             ax.set_axisbelow(True)
             for side in ("top", "right"):
@@ -158,19 +161,34 @@ def main() -> None:
     axes[0, 1].set_title(
         "Contribution to the evaluation metric", fontsize=8, color=TEXT
     )
+    for ax, panel_label in zip(axes.flat, ("(a)", "(b)", "(c)", "(d)")):
+        ax.text(
+            -0.15,
+            1.04,
+            panel_label,
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontweight="bold",
+            color=TEXT,
+        )
     for ax in axes[1]:
         ax.set_xticks(x, [RUN_LABELS[r] for r in runs], fontsize=7)
 
-    handles = [Patch(facecolor=c, label=label) for label, c in GROUP_STYLE.values()]
+    handles = [
+        Line2D([], [], color=c, linewidth=3.0, label=label)
+        for label, c in GROUP_STYLE.values()
+    ]
     handles.append(
         Line2D(
             [],
             [],
             marker="o",
             color=ALL_COLOR,
-            linestyle=(0, (4, 2)),
+            linestyle=(0, (3, 2)),
             markersize=4,
-            linewidth=1.5,
+            linewidth=0.8,
+            alpha=0.6,
             label="all lesions (evaluation metric)",
         )
     )
@@ -180,13 +198,12 @@ def main() -> None:
         ncol=4,
         frameon=False,
         bbox_to_anchor=(0.5, 1.04),
-        handlelength=1.2,
+        handlelength=2.0,
     )
     fig.tight_layout(h_pad=1.0, w_pad=2.0)
 
-    out_dir = common.OUT_DIR / "figures"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_dir / "detection.pdf", bbox_inches="tight", pad_inches=0)
+    PAPER_FIGURE_DIR.mkdir(parents=True, exist_ok=True)
+    fig.savefig(PAPER_FIGURE_DIR / "detection.pdf", bbox_inches="tight", pad_inches=0)
     shares = detection.shares()
     lesion_rows = detection.lesions("T1")
     n_patients = lesion_rows["case_id"].nunique()
@@ -194,15 +211,18 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/detection.pdf}}
-\caption{{Registration-induced metabolic tumor volume (MTV) and total lesion glycolysis (TLG) change of all {shares["all"]} provided lesion components in {n_patients} test patients ({n_pairs} pairs), including components smaller than five voxels, grouped by coverage from the predicted lesion mask used by instance optimization (IO): missed ({shares["missed"]}), partly covered ({shares["partial"]}), and covered ({shares["covered"]}).
-The network is trained without PET losses; IO uses the PET weights scaled by the stated factor.
-Colors identify coverage groups.
-Left: absolute change within each group, computed per image from the group's summed volume or uptake and averaged over patients with lesions in that group; gray dashed: all lesions, the evaluation metric.
-Right: contribution of each group to the image-level evaluation metric, averaged over patients; gray ticks show the evaluation metric and lie below the stacked total when opposing lesion changes cancel.}}
+\caption{{Effect of predicted lesion coverage on registration-induced metabolic tumor volume (MTV) and total lesion glycolysis (TLG) change in {n_patients} test patients ({shares["all"]} lesions, {n_pairs} image pairs).
+The predicted mask used during instance optimization (IO) defines three groups: missed (0\,\% coverage), partly covered ($<50\,\%$), and covered ($\geq50\,\%$).
+The groups contain {shares["missed"]}, {shares["partial"]}, and {shares["covered"]} lesions and account for 6\,\%, 6\,\%, and 88\,\% of total lesion volume, respectively.
+The network is trained without PET-preservation losses.
+For IO, PET $\times0$ denotes no PET-preservation losses, PET $\times0.1$ the validation-selected weights, and PET $\times1$ the training weights.
+Panels (a) and (c) show the absolute change within each coverage group, with the all-lesion evaluation metric shown by the gray dashed line.
+Panels (b) and (d) show each group's contribution to the image-level change.
+The stacked contributions can exceed the gray evaluation value because opposing signed changes cancel in the image total.}}
 \label{{fig:detection}}
 \end{{figure}}
 """
-    (out_dir / "detection.tex").write_text(tex)
+    (PAPER_FIGURE_DIR / "detection.tex").write_text(tex)
 
 
 if __name__ == "__main__":
