@@ -19,6 +19,8 @@ import matplotlib
 
 matplotlib.use("Agg")
 import common  # noqa: E402
+
+PAPER_FIGURE_DIR = common.REPO.parent / "psmareg-extension" / "figures"
 import matplotlib.pyplot as plt  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
@@ -209,7 +211,7 @@ def main() -> None:
     )
     fig.tight_layout(w_pad=1.5, h_pad=1.0)
 
-    out_dir = common.OUT_DIR / "figures"
+    out_dir = PAPER_FIGURE_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_dir / "rigidity.pdf", bbox_inches="tight", pad_inches=0)
     tex = r"""\begin{figure}[t]

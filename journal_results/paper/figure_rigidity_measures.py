@@ -24,6 +24,8 @@ import pandas as pd  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 
 import common  # noqa: E402
+
+PAPER_FIGURE_DIR = common.REPO.parent / "psmareg-extension" / "figures"
 import rigidity  # noqa: E402
 from rigidity import COLORS, RUNS  # noqa: E402
 
@@ -143,7 +145,7 @@ def main() -> None:
     )
     fig.tight_layout(w_pad=2.0)
 
-    out_dir = common.OUT_DIR / "figures"
+    out_dir = PAPER_FIGURE_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_dir / "rigidity_measures.pdf", bbox_inches="tight", pad_inches=0)
     n = len(reference)
