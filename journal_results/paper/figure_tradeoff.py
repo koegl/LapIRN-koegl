@@ -223,16 +223,13 @@ def main() -> None:
             (axes[2], "tlg_bias", mask_pairs),
         ):
             sub = df if pairs is None else df.merge(pairs, on=KEY)
-            mean, lo, hi = mean_ci(sub.groupby("case_id")[column].mean() * 100, rng)
-            ax.errorbar(
+            mean = (sub.groupby("case_id")[column].mean() * 100).mean()
+            ax.scatter(
                 xpos[scale],
                 mean,
-                yerr=[[mean - lo], [hi - mean]],
-                fmt="*",
-                markersize=9,
+                marker="*",
+                s=90,
                 color=GT_MASK_COLOR,
-                elinewidth=0.8,
-                capsize=0,
                 zorder=6,
             )
 

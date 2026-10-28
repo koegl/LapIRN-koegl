@@ -269,7 +269,7 @@ def main() -> None:
         title="PET-preservation and bone-rigidity losses used",
         ncol=2,
         loc="lower left",
-        bbox_to_anchor=(0.012, 1.0135),
+        bbox_to_anchor=(0.018, 1.0135),
         **style,
     )
     fig.legend(
@@ -277,7 +277,7 @@ def main() -> None:
         title="PET-preservation and bone-rigidity loss placement",
         ncol=2,
         loc="lower right",
-        bbox_to_anchor=(0.9865, 0.965),
+        bbox_to_anchor=(0.98, 0.965),
         **style,
     )
     fig.tight_layout()

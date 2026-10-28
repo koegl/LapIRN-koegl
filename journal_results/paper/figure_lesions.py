@@ -27,6 +27,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
+from matplotlib.transforms import Bbox  # noqa: E402
 
 # loss set -> (network run, network + IO run, color); colors as in figure_q2
 CONDITIONS: Dict[str, Tuple[str, str, str]] = {
@@ -238,7 +239,7 @@ def main(metric: str) -> None:
         loc="lower left",
         ncol=2,
         frameon=True,
-        bbox_to_anchor=(0.01, 0.98),
+        bbox_to_anchor=(0.04, 0.98),
         fontsize=7,
         title_fontsize=7,
         handletextpad=0.5,
@@ -250,7 +251,7 @@ def main(metric: str) -> None:
         loc="lower right",
         ncol=2,
         frameon=True,
-        bbox_to_anchor=(0.99, 0.98),
+        bbox_to_anchor=(0.97, 0.98),
         fontsize=7,
         title_fontsize=7,
         handletextpad=0.5,
@@ -273,7 +274,19 @@ def main(metric: str) -> None:
                 )
 
     PAPER_FIGURE_DIR.mkdir(parents=True, exist_ok=True)
-    fig.savefig(PAPER_FIGURE_DIR / f"{name_out}.pdf", bbox_inches="tight", pad_inches=0)
+    fig.canvas.draw()
+    tight_bbox = fig.get_tightbbox(fig.canvas.get_renderer())
+    top_extended_bbox = Bbox.from_extents(
+        tight_bbox.x0,
+        tight_bbox.y0,
+        tight_bbox.x1,
+        tight_bbox.y1 + 0.01,
+    )
+    fig.savefig(
+        PAPER_FIGURE_DIR / f"{name_out}.pdf",
+        bbox_inches=top_extended_bbox,
+        pad_inches=0,
+    )
     (common.OUT_DIR / "figures").mkdir(parents=True, exist_ok=True)
     (common.OUT_DIR / "figures" / "lesions_summary.txt").write_text(
         "\n".join(lines) + "\n"
