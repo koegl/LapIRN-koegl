@@ -162,8 +162,8 @@ def main() -> None:
     )
     for ax, panel_label in zip(axes.flat, ("(a)", "(b)", "(c)", "(d)")):
         ax.text(
-            -0.15,
-            1.04,
+            -0.145,
+            1.072,
             panel_label,
             transform=ax.transAxes,
             ha="left",

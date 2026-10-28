@@ -22,12 +22,11 @@ from typing import Dict, Tuple
 import matplotlib
 
 matplotlib.use("Agg")
+import common  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
-
-import common  # noqa: E402
 
 # loss set -> (network run, network + IO run, color); colors as in figure_q2
 CONDITIONS: Dict[str, Tuple[str, str, str]] = {
@@ -171,8 +170,8 @@ def main(metric: str) -> None:
             )
     for ax, panel_label in zip(axes.flat, ("(a)", "(b)")):
         ax.text(
-            -0.10,
-            1.05,
+            -0.128,
+            1.064,
             panel_label,
             transform=ax.transAxes,
             ha="left",
@@ -217,7 +216,7 @@ def main(metric: str) -> None:
             [],
             marker="x",
             ls="",
-            color=CONDITIONS["None"][2],
+            color=MUTED,
             markersize=6,
             markeredgewidth=1.0,
             label="No losses, network output",
@@ -227,7 +226,7 @@ def main(metric: str) -> None:
             [],
             marker="*",
             ls="",
-            color=CONDITIONS["None"][2],
+            color=MUTED,
             markersize=9,
             markeredgewidth=1.0,
             label="No losses, after IO",
@@ -276,7 +275,9 @@ def main(metric: str) -> None:
     PAPER_FIGURE_DIR.mkdir(parents=True, exist_ok=True)
     fig.savefig(PAPER_FIGURE_DIR / f"{name_out}.pdf", bbox_inches="tight", pad_inches=0)
     (common.OUT_DIR / "figures").mkdir(parents=True, exist_ok=True)
-    (common.OUT_DIR / "figures" / "lesions_summary.txt").write_text("\n".join(lines) + "\n")
+    (common.OUT_DIR / "figures" / "lesions_summary.txt").write_text(
+        "\n".join(lines) + "\n"
+    )
     n_lesions = len(lesions["T1"])
     n_excluded = len(pd.read_csv(common.EVAL_DIR / "T1_lesions.csv")) - n_lesions
     n_patients = lesions["T1"]["case_id"].nunique()

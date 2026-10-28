@@ -178,8 +178,8 @@ def main() -> None:
             ax.spines[side].set_visible(False)
     for ax, panel_label in zip(axes, ("(a)", "(b)")):
         ax.text(
-            -0.12,
-            1.04,
+            -0.18,
+            1.0555,
             panel_label,
             transform=ax.transAxes,
             ha="left",
@@ -240,9 +240,9 @@ def main() -> None:
             [],
             marker="x",
             ls="",
-            color=TEXT,
-            markersize=9,
-            markeredgewidth=1.2,
+            color=MUTED,
+            markersize=6,
+            markeredgewidth=1.0,
             label="No losses, network output",
         ),
         Line2D(
@@ -250,7 +250,7 @@ def main() -> None:
             [],
             marker="*",
             ls="",
-            color=TEXT,
+            color=MUTED,
             markersize=7,
             markeredgewidth=1.2,
             label="No losses, after IO",

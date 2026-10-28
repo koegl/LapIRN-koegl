@@ -24,6 +24,7 @@ from matplotlib.lines import Line2D  # noqa: E402
 
 import common  # noqa: E402
 
+PAPER_FIGURE_DIR = common.REPO.parent / "psmareg-extension" / "figures"
 SWEEP_DIR = common.REPO / "evaluation_official_scorer" / "rigidity_sweep"
 CALIBRATION = (
     common.REPO / "journal_results" / "rigidity_calibration" / "reference.json"
@@ -114,8 +115,17 @@ def main() -> None:
         ax.set_axisbelow(True)
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
-    axes[0].set_title("(a)", fontsize=8, loc="left")
-    axes[1].set_title("(b)", fontsize=8, loc="left")
+    for ax, panel_label in zip(axes, ("(a)", "(b)")):
+        ax.text(
+            -0.12,
+            1.04,
+            panel_label,
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontweight="bold",
+            color=TEXT,
+        )
 
     handles = [
         Line2D([], [], color=c, marker="o", markersize=3, linewidth=1.5, label=label)
@@ -152,7 +162,7 @@ def main() -> None:
     )
     fig.tight_layout(w_pad=2.0)
 
-    out_dir = common.OUT_DIR / "figures"
+    out_dir = PAPER_FIGURE_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
     fig.savefig(
         out_dir / "rigidity_preservation.pdf", bbox_inches="tight", pad_inches=0

@@ -104,7 +104,7 @@ def main() -> None:
     axes[0].axhline(100, color=MUTED, linewidth=0.8, linestyle=(0, (4, 2)), zorder=1)
     axes[0].set_ylabel(r"\% of no bone rigidity $\downarrow$")
     axes[0].set_ylim(bottom=0)
-    axes[0].set_title("(a) Bone rigidity", fontsize=8, loc="left")
+    axes[0].set_title("Bone rigidity", fontsize=8, loc="center")
 
     # (b) accuracy cost in Dice points
     dots(
@@ -114,7 +114,19 @@ def main() -> None:
     )
     axes[1].axhline(0, color=MUTED, linewidth=0.8, linestyle=(0, (4, 2)), zorder=1)
     axes[1].set_ylabel(r"Dice difference (points) $\uparrow$")
-    axes[1].set_title("(b) Alignment", fontsize=8, loc="left")
+    axes[1].set_title("Alignment", fontsize=8, loc="center")
+
+    for ax, panel_label in zip(axes, ("(a)", "(b)")):
+        ax.text(
+            -0.12,
+            1.04,
+            panel_label,
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontweight="bold",
+            color=TEXT,
+        )
 
     handles = [
         Line2D([], [], color=COLORS[r], marker=PENALTY_MARKERS[k], markersize=4, linestyle="")

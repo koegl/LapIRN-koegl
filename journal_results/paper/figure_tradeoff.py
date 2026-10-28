@@ -22,11 +22,10 @@ from typing import Dict, Optional, Tuple
 import matplotlib
 
 matplotlib.use("Agg")
+import common  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
-
-import common  # noqa: E402
 
 # weight scale -> run
 RUNS = {
@@ -229,8 +228,8 @@ def main() -> None:
                 xpos[scale],
                 mean,
                 yerr=[[mean - lo], [hi - mean]],
-                fmt="D",
-                markersize=4,
+                fmt="*",
+                markersize=9,
                 color=GT_MASK_COLOR,
                 elinewidth=0.8,
                 capsize=0,
@@ -252,15 +251,15 @@ def main() -> None:
             rotation=60,
             fontsize=6.5,
         )
-        ax.set_xlim(-0.5, xpos[nonzero[-1]] + 0.5)
+        ax.set_xlim(-0.0, xpos[nonzero[-1]] + 0.5)
         ax.grid(axis="y", color="#e4e3df", linewidth=0.5)
         ax.set_axisbelow(True)
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
     for ax, panel_label in zip(axes, ("(a)", "(b)", "(c)")):
         ax.text(
-            -0.12,
-            1.08,
+            -0.123,
+            1.1,
             panel_label,
             transform=ax.transAxes,
             ha="left",
@@ -288,7 +287,7 @@ def main() -> None:
         ]
         names += [f"{mask}, network output", f"{mask}, after IO"]
     handles.append(
-        plt.Line2D([], [], color=GT_MASK_COLOR, marker="D", markersize=4, linestyle="")
+        plt.Line2D([], [], color=GT_MASK_COLOR, marker="*", markersize=9, linestyle="")
     )
     names.append("IO with provided\nlesion masks")
     fig.legend(
@@ -319,7 +318,7 @@ Metrics are computed on the predicted labels optimized during IO (orange squares
 CT-organ Dice includes {n_dice} patients and {n_dice_pairs} pairs, while MTV and TLG include {n_masks} patients and {n_mask_pairs} pairs with lesions in both label sets.
 Solid curves show the results after IO, and dashed lines show the network output before IO.
 The outlined point and dotted line identify the operating point selected on the validation set.
-Black diamonds show IO performed with the provided instead of the predicted lesion masks at $\times0.1$ and $\times1$, evaluated on the provided labels.
+Black stars show IO performed with the provided instead of the predicted lesion masks at $\times0.1$ and $\times1$, evaluated on the provided labels.
 Curves show means over patients after averaging eligible pairs, and bands show 95\,\% patient-bootstrap confidence intervals.}}
 \label{{fig:tradeoff}}
 \end{{figure}}

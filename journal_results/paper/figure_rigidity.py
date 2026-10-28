@@ -162,8 +162,17 @@ def main() -> None:
         fontsize=6,
         color=MUTED,
     )
-    for ax, letter in zip(axes.flat, "abcd"):
-        ax.set_title(f"({letter})", fontsize=8, loc="left")
+    for ax, panel_label in zip(axes.flat, ("(a)", "(b)", "(c)", "(d)")):
+        ax.text(
+            -0.12,
+            1.04,
+            panel_label,
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontweight="bold",
+            color=TEXT,
+        )
 
     handles = [
         Line2D([], [], color=c, marker="o", markersize=3, linewidth=1.5, label=label)
