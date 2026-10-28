@@ -49,10 +49,10 @@ def main() -> None:
     body = "\n".join(lines[:-1])
     tex = rf"""\begin{{table}}[t]
 \centering
-\caption{{Instance-optimization (IO) tuning on the validation set (CT Dice: 26 patients, 38 pairs; metabolic tumor volume [MTV] and total lesion glycolysis [TLG]: 26 patients, 32 lesion-positive pairs), using the network trained with the PET-preservation and rigidity losses.
+\caption{{Instance-optimization (IO) tuning on the validation set (CT Dice: 26 patients, 38 pairs; metabolic tumor volume [MTV] and total lesion glycolysis [TLG]: 26 patients, 32 lesion-positive pairs), using the network trained with the PET-preservation and bone-rigidity losses.
 Stage 1 varies learning rate and iterations; stage 2 varies the common scale of the four PET weights relative to the training-derived values.
 Within each stage, the chosen setting (bold) has the lowest $|\Delta\mathrm{{MTV}}|+|\Delta\mathrm{{TLG}}|$ among candidates within two Dice points of the most accurate one (``Within'').
-Candidates are sorted by Dice; values are means over patients after averaging eligible pairs; the rigidity weight was fixed at 0.25 (Sec.~\ref{{sect:tuning}}).}}
+Candidates are sorted by Dice; values are means over patients after averaging eligible pairs; the bone-rigidity weight was fixed at 0.25 (Sec.~\ref{{sect:tuning}}).}}
 \label{{tab:io_tuning}}
 \resizebox{{\textwidth}}{{!}}{{%
 \begin{{tabular}}{{l{"c" * (N_COLUMNS - 1)}}}

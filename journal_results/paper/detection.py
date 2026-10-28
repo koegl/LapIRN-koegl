@@ -55,10 +55,15 @@ def coverage() -> pd.DataFrame:
         components, n = ndimage.label(gt, structure=evaluate.LESION_STRUCTURE)
         for lesion_id in range(1, n + 1):
             mask = components == lesion_id
-            rows.append({
-                "case_id": case_id, "tp_moving": int(tp), "lesion_id": lesion_id,
-                "coverage": float(pred[mask].mean()), "uptake": float(pet[mask].sum()),
-            })
+            rows.append(
+                {
+                    "case_id": case_id,
+                    "tp_moving": int(tp),
+                    "lesion_id": lesion_id,
+                    "coverage": float(pred[mask].mean()),
+                    "uptake": float(pet[mask].sum()),
+                }
+            )
     df = pd.DataFrame(rows)
     CACHE.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(CACHE, index=False)
@@ -108,12 +113,24 @@ def table(cells, groups, caption: str, label: str) -> str:
     """LaTeX table: rows RUNS, per group an MTV and a TLG column."""
     text = shares()
     header = " & ".join(rf"\multicolumn{{2}}{{c}}{{{name}}}" for _, name in groups)
-    sub_header = " & ".join(rf"\multicolumn{{2}}{{c}}{{\tiny {text[g]}}}" for g, _ in groups)
-    cmid = "".join(rf"\cmidrule(lr){{{2 + 2 * i}-{3 + 2 * i}}}" for i in range(len(groups)))
-    metrics = " & ".join([r"$|\Delta\mathrm{MTV}|$", r"$|\Delta\mathrm{TLG}|$"] * len(groups))
+    sub_header = " & ".join(
+        rf"\multicolumn{{2}}{{c}}{{\tiny {text[g]}}}" for g, _ in groups
+    )
+    cmid = "".join(
+        rf"\cmidrule(lr){{{2 + 2 * i}-{3 + 2 * i}}}" for i in range(len(groups))
+    )
+    metrics = " & ".join(
+        [r"$|\Delta\mathrm{MTV}|$", r"$|\Delta\mathrm{TLG}|$"] * len(groups)
+    )
     lines = []
     for run, name in RUNS.items():
-        lines.append(name + "".join(f" & {cells[run, g][0]:.1f} & {cells[run, g][1]:.1f}" for g, _ in groups) + r" \\")
+        lines.append(
+            name
+            + "".join(
+                f" & {cells[run, g][0]:.1f} & {cells[run, g][1]:.1f}" for g, _ in groups
+            )
+            + r" \\"
+        )
         if run == "T1":
             lines.append(r"\midrule")
     body = "\n".join(lines)

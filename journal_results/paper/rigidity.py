@@ -17,7 +17,7 @@ import common
 
 SOURCE = "test"
 RUNS: Dict[str, str] = {
-    "R1": "No rigidity",
+    "R1": "No bone rigidity",
     "R2": r"Staring ($\times$3)",
     "R3": r"Staring + erosion ($\times$100)",
     "R4": r"Per-bone rigid fit ($\times$100)",

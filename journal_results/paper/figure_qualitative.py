@@ -48,9 +48,9 @@ CASE: Tuple[str, str, str] = ("0146", "01", "00")
 # trained without losses followed by IO with both losses ("Ours")
 RUN = "I7"
 RUN_LABEL = {
-    "T4": "our network (PET and rigidity losses in training, no IO)",
-    "I4": "our network with PET and rigidity losses in training and IO",
-    "I7": "our method (PET and rigidity losses only in IO)",
+    "T4": "our network (PET-preservation and bone-rigidity losses in training, no IO)",
+    "I4": "our network with PET-preservation and bone-rigidity losses in training and IO",
+    "I7": "our method (PET-preservation and bone-rigidity losses only in IO)",
 }
 CT_WINDOW = (-400.0, 800.0)  # HU
 SUV_RANGE = (0.0, 8.0)  # PET, magma, no threshold

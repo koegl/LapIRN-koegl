@@ -26,7 +26,7 @@ from rigidity import MEASURES, RUNS
 GROUPS = (
     ("Alignment", ("dice_ct", "bone_dice", "soft_dice")),
     (
-        "Rigidity of bones",
+        "Bone rigidity",
         (
             "bre_mm",
             "staring_energy_bone",
@@ -54,7 +54,7 @@ FULL_GROUPS = (
         ),
     ),
     (
-        "Rigidity of bones",
+        "Bone rigidity",
         (
             "bre_mm",
             "staring_energy_bone",
@@ -114,10 +114,10 @@ def full_table(patients) -> str:
     n = len(patients["R1"])
     return rf"""\begin{{table}}[t]
 \centering
-\caption{{All measures of the rigidity comparison on the test set (alignment and rigidity: {n} patients, 38 pairs; PET preservation: 26 patients, 30 pairs), using the network trained with the PET losses followed by instance optimization (IO) with the PET terms and one rigidity penalty at the weight chosen on the validation set.
-Rigidity of bones: residual of a rigid fit to each bone (minimized by the rigid-fit penalty), Staring energy (minimized by the Staring penalty), and distortion of short (5--15~mm) and long ($\geq15$~mm) within-bone distances (minimized by neither).
+\caption{{All measures of the bone-rigidity comparison on the test set (alignment and bone rigidity: {n} patients, 38 pairs; PET preservation: 26 patients, 30 pairs), using the network trained with the PET-preservation losses followed by instance optimization (IO) with the PET-preservation terms and one bone-rigidity penalty at the weight chosen on the validation set.
+Bone rigidity: residual of a rigid fit to each bone (minimized by the rigid-fit penalty), Staring energy (minimized by the Staring penalty), and distortion of short (5--15~mm) and long ($\geq15$~mm) within-bone distances (minimized by neither).
 HD95: 95th-percentile Hausdorff distance over bones and soft-tissue organs; near-bone soft tissue: soft-tissue organs within three voxels of a bone; Staring energy: sum of its properness, orthonormality, and affinity terms on the whole bone; NDV: non-diffeomorphic volume; NDV in bone band: in a three-voxel band around the bones.
-Mean$\pm$SD over patients; $^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than without rigidity (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over the three penalties per row, $p<0.05$).}}
+Mean$\pm$SD over patients; $^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than without bone rigidity (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over the three penalties per row, $p<0.05$).}}
 \label{{tab:rigidity_full}}
 \resizebox{{\textwidth}}{{!}}{{%
 \begin{{tabular}}{{l{"c" * len(RUNS)}}}
@@ -175,14 +175,14 @@ def main() -> None:
     n = len(patients["R1"])
     tex = rf"""\begin{{table}}[t]
 \centering
-\caption{{Rigidity penalties compared ({rigidity.split_label()}, {n} patients): network trained with the PET losses, IO with the PET terms and one rigidity penalty at the weight chosen on the validation set. Rigidity of bones is measured in three ways: the residual of a rigid fit to each bone (the quantity the rigid-fit penalty minimizes), the Staring energy, i.e.\ the Staring penalty (properness, orthonormality, and affinity) on the whole bone (the quantity the Staring penalty minimizes), and the distortion of short (5--15~mm) and long ($\geq$15~mm) within-bone distances (minimized by neither). Mean$\pm$SD over patients. $^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than without rigidity (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over the three penalties per column, $p<0.05$).}}
+\caption{{Bone-rigidity penalties compared ({rigidity.split_label()}, {n} patients): network trained with the PET-preservation losses, IO with the PET-preservation terms and one bone-rigidity penalty at the weight chosen on the validation set. Bone rigidity is measured in three ways: the residual of a rigid fit to each bone (the quantity the rigid-fit penalty minimizes), the Staring energy, i.e.\ the Staring penalty (properness, orthonormality, and affinity) on the whole bone (the quantity the Staring penalty minimizes), and the distortion of short (5--15~mm) and long ($\geq$15~mm) within-bone distances (minimized by neither). Mean$\pm$SD over patients. $^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than without bone rigidity (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over the three penalties per column, $p<0.05$).}}
 \label{{tab:rigidity}}
 \resizebox{{\textwidth}}{{!}}{{%
 \begin{{tabular}}{{l{"c" * len(columns)}}}
 \toprule
  & {header_groups} \\
 {cmid}
-Rigidity penalty & {header} \\
+Bone-rigidity penalty & {header} \\
 \midrule
 {body}
 \bottomrule

@@ -29,11 +29,17 @@ CONDITIONS: Dict[str, Tuple[str, str, Optional[str]]] = {
     "Rigidity": ("T3", "I3", "I6"),
     "PET + rigidity": ("T4", "I4", "I7"),
 }
+DISPLAY_NAMES = {
+    "None": "None",
+    "PET": "PET preservation",
+    "Rigidity": "Bone rigidity",
+    "PET + rigidity": "PET preservation + bone rigidity",
+}
 METRICS = ("dice_ct", "mtv_bias", "tlg_bias")
 BLOCKS = (
-    "Losses only in training (no IO)",
-    "Losses in training and IO",
-    "Losses only in IO",
+    "Applied only in training (no IO)",
+    "Applied in training and IO",
+    "Applied only in IO",
 )
 
 
@@ -86,7 +92,10 @@ def main() -> None:
 
     headers = [METRIC_COLUMNS[m][0] for m in METRICS]
     n_cols = len(METRICS)
-    rows = [f"{name} & " + " & ".join(c) + r" \\" for name, c in cells.items()]
+    rows = [
+        f"{DISPLAY_NAMES[name]} & " + " & ".join(c) + r" \\"
+        for name, c in cells.items()
+    ]
     first = CONDITIONS[reference][0]
     n = len(patients[first])
     n_pairs = len(common.load_run(first))
@@ -101,17 +110,17 @@ def main() -> None:
     )
     tex = rf"""\begin{{table}}[t]
 \centering
-\caption{{Effect of the PET-preservation and rigidity losses and of where they act on the test set (CT Dice: {n} patients, {n_pairs} pairs; metabolic tumor volume [MTV] and total lesion glycolysis [TLG]: {n_pet} patients, {n_pet_pairs} pairs); numerical values from Fig.~\ref{{fig:q2}}.
-Left: network trained with the losses, without instance optimization (IO); middle: the same network followed by IO with the same losses; right: the network trained without losses followed by IO with the losses.
+\caption{{Effect of the PET-preservation and bone-rigidity losses and of where they act on the test set (CT Dice: {n} patients, {n_pairs} pairs; metabolic tumor volume [MTV] and total lesion glycolysis [TLG]: {n_pet} patients, {n_pet_pairs} pairs); numerical values from Fig.~\ref{{fig:q2}}.
+Left: network trained with a given PET-preservation and bone-rigidity loss configuration, without instance optimization (IO); middle: the same network followed by IO with the same configuration; right: the network trained without either loss group followed by IO with the stated configuration.
 Values are mean$\pm$SD over patients after averaging each patient's eligible pairs.
-$^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than without losses in the same block (for the right block: the network without losses with IO); $^{{*}}$: significantly different from the same losses in training and IO (two-sided Wilcoxon signed-rank tests on patient values, Holm-corrected over three comparisons within each column, $p<0.05$).}}
+$^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than without either loss group in the same block (for the right block: the network without either group followed by IO); $^{{*}}$: significantly different from the same configuration in training and IO (two-sided Wilcoxon signed-rank tests on patient values, Holm-corrected over three comparisons within each column, $p<0.05$).}}
 \label{{tab:ablations}}
 \resizebox{{\textwidth}}{{!}}{{%
 \begin{{tabular}}{{l{"c" * (len(BLOCKS) * n_cols)}}}
 \toprule
  & {groups} \\
 {cmid}
-Losses & {" & ".join(headers * len(BLOCKS))} \\
+Loss configuration & {" & ".join(headers * len(BLOCKS))} \\
 \midrule
 {chr(10).join(rows)}
 \bottomrule

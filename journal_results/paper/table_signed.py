@@ -41,10 +41,11 @@ def main() -> None:
     tex = rf"""\begin{{table}}[t]
 \centering
 \caption{{Signed change in metabolic tumor volume (MTV) and total lesion glycolysis (TLG) caused by registration on the test set ({len(n_patients)} patients, 30 lesion-positive pairs): positive values mean that the warped lesions are larger or have greater total uptake.
-Methods are as in Table~\ref{{tab:baselines}}; Training / IO indicates where losses are used, and PET + rig. denotes PET-preservation and rigidity losses.
+Methods are as in Table~\ref{{tab:baselines}}; Training / IO indicates where losses are used, and PET + rig. denotes PET-preservation and bone-rigidity losses.
 Values are mean$\pm$SD and median over patients after averaging each patient's eligible pairs.}}
 \label{{tab:signed}}
 \small
+\resizebox{{\textwidth}}{{!}}{{%
 \begin{{tabular}}{{lllcccc}}
 \toprule
  & & & {header} \\
@@ -53,7 +54,7 @@ Method & Training & IO & Mean$\pm$SD & Median & Mean$\pm$SD & Median \\
 \midrule
 {body}
 \bottomrule
-\end{{tabular}}
+\end{{tabular}}}}
 \end{{table}}
 """
     out_dir = common.OUT_DIR / "tables"

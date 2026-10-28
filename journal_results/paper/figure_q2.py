@@ -3,7 +3,7 @@
 All eleven variants on test in two panels (|MTV change| and |TLG change|
 against CT Dice; patient means): color = losses used (PET / rigidity / both),
 marker = where they act (square: only in training, no IO, T2-T4; filled
-circle: in training and IO, I2-I4; hollow circle: only in IO, I5-I7). No
+circle: in training and IO, I2-I4; filled triangle: only in IO, I5-I7). No
 losses: black X (no IO, T1) and + (with IO, I1). A thin dashed line connects
 the variants of a loss group in this order. The significance tests are in the
 appendix table (table_ablations.py) and the text.
@@ -25,6 +25,7 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from common import METRIC_COLUMNS, two_sided  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
+from matplotlib.transforms import Bbox  # noqa: E402
 
 PAPER_FIGURE_DIR = common.REPO.parent / "psmareg-extension" / "figures"
 
@@ -56,7 +57,7 @@ RUNS: Dict[Tuple[str, str], str] = {
     ("PET + rigidity", "io"): "I7",
 }
 PLACEMENT_ORDER = ("net", "both", "io")
-MARKER = {"net": "s", "both": "o", "io": "o"}
+MARKER = {"net": "s", "both": "o", "io": "^"}
 NONE_MARKER = {"net": "x", "both": "+"}
 # PET and PET + rigidity without IO nearly coincide: larger square below
 SIZE = {("PET", "net"): 80, ("PET + rigidity", "net"): 24}
@@ -164,7 +165,7 @@ def main() -> None:
                 y,
                 s=SIZE.get((group, placement), 40),
                 marker=MARKER[placement],
-                facecolors="white" if placement == "io" else color,
+                facecolors=color,
                 edgecolors=color,
                 linewidths=1.4,
                 zorder=4,
@@ -176,32 +177,21 @@ def main() -> None:
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
 
+    loss_labels = {
+        "None": "None",
+        "PET": "PET preservation",
+        "Rigidity": "Bone rigidity",
+        "PET + rigidity": "PET preservation + bone rigidity",
+    }
     loss_handles = [
-        Line2D([], [], marker="o", ls="", color=c, markersize=6, label=LOSS_LABELS[g])
-        for g, c in GROUPS.items()
-        if g != "None"
-    ]
-    loss_handles += [
         Line2D(
             [],
             [],
-            marker="x",
-            ls="",
-            color=GROUPS["None"],
-            markersize=7,
-            markeredgewidth=1.2,
-            label="None, no IO",
-        ),
-        Line2D(
-            [],
-            [],
-            marker="+",
-            ls="",
-            color=GROUPS["None"],
-            markersize=7,
-            markeredgewidth=1.2,
-            label="None, with IO",
-        ),
+            color=color,
+            linewidth=3.0,
+            label=loss_labels[group],
+        )
+        for group, color in GROUPS.items()
     ]
     placement_handles = [
         Line2D(
@@ -212,7 +202,7 @@ def main() -> None:
             markerfacecolor=MUTED,
             markeredgecolor=MUTED,
             markersize=6,
-            label="Losses only in training (no IO)",
+            label="Training only",
         ),
         Line2D(
             [],
@@ -222,46 +212,77 @@ def main() -> None:
             markerfacecolor=MUTED,
             markeredgecolor=MUTED,
             markersize=6,
-            label="Losses in training and IO",
+            label="Training and IO",
         ),
         Line2D(
             [],
             [],
-            marker="o",
+            marker="^",
             ls="",
-            markerfacecolor="white",
+            markerfacecolor=MUTED,
             markeredgecolor=MUTED,
             markersize=6,
-            label="Losses only in IO",
+            label="IO only",
+        ),
+        Line2D(
+            [],
+            [],
+            marker="x",
+            ls="",
+            color=TEXT,
+            markersize=7,
+            markeredgewidth=1.2,
+            label="No losses, network output",
+        ),
+        Line2D(
+            [],
+            [],
+            marker="+",
+            ls="",
+            color=TEXT,
+            markersize=7,
+            markeredgewidth=1.2,
+            label="No losses, after IO",
         ),
     ]
     style = dict(
-        loc="lower center",
         frameon=True,
         edgecolor="#c9c8c3",
         fontsize=7,
         title_fontsize=7,
-        handletextpad=0.3,
+        handletextpad=0.5,
         columnspacing=1.0,
     )
     fig.legend(
         handles=loss_handles,
-        title="Losses used",
+        title="PET-preservation and bone-rigidity losses used",
         ncol=2,
-        bbox_to_anchor=(0.3, 0.98),
+        loc="lower left",
+        bbox_to_anchor=(0.012, 0.965),
         **style,
     )
     fig.legend(
         handles=placement_handles,
-        title="Loss placement",
-        ncol=1,
-        bbox_to_anchor=(0.72, 0.98),
+        title="PET-preservation and bone-rigidity loss placement",
+        ncol=2,
+        loc="lower right",
+        bbox_to_anchor=(0.9865, 0.965),
         **style,
     )
     fig.tight_layout()
 
     PAPER_FIGURE_DIR.mkdir(parents=True, exist_ok=True)
-    fig.savefig(PAPER_FIGURE_DIR / "q2.pdf", bbox_inches="tight", pad_inches=0)
+    fig.canvas.draw()
+    tight_bbox = fig.get_tightbbox(fig.canvas.get_renderer())
+    top_extended_bbox = Bbox.from_extents(
+        tight_bbox.x0,
+        tight_bbox.y0,
+        tight_bbox.x1,
+        tight_bbox.y1 + 0.01,
+    )
+    fig.savefig(
+        PAPER_FIGURE_DIR / "q2.pdf", bbox_inches=top_extended_bbox, pad_inches=0
+    )
     text = effects(patients)
     analysis_out_dir = common.OUT_DIR / "figures"
     analysis_out_dir.mkdir(parents=True, exist_ok=True)
@@ -275,10 +296,10 @@ def main() -> None:
 \centering
 \includegraphics[width=\textwidth]{{figures/q2.pdf}}
 \caption{{Effect of the PET-preservation and bone-rigidity losses and of where they act on the test set (CT-organ Dice: {n} patients, {n_pairs} pairs; metabolic tumor volume (MTV) and total lesion glycolysis (TLG): {n_pet} patients, {n_pet_pairs} pairs).
-Color identifies the loss group.
-Markers identify where the losses act: a square denotes network training only and is shown before IO, a filled circle denotes training and IO, and a hollow circle denotes IO only with the network trained without these losses.
-Without losses: network output ($\times$) and with IO ($+$).
-Lines connect configurations of the same loss group.
+Colors identify which PET-preservation and bone-rigidity losses are used, including the configuration without either loss group.
+Markers identify where the losses act: a square denotes the network output after training with the losses, a filled circle denotes the result after subsequent IO with the same losses, and a filled triangle denotes IO using a network trained without these losses.
+For the configuration without either loss group, $\times$ denotes the network output and $+$ denotes the result after IO.
+Lines connect configurations with the same loss configuration.
 Each point is the mean over patients after first averaging over image pairs within each patient.
 Uncertainty and significance tests are reported in Table~\ref{{tab:ablations}}.}}
 \label{{fig:q2}}
