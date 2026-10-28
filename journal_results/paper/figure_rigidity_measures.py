@@ -18,12 +18,11 @@ from typing import Tuple
 import matplotlib
 
 matplotlib.use("Agg")
+import common  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
-
-import common  # noqa: E402
 
 PAPER_FIGURE_DIR = common.REPO.parent / "psmareg-extension" / "figures"
 import rigidity  # noqa: E402
@@ -119,19 +118,38 @@ def main() -> None:
     axes[1].set_title("Alignment", fontsize=8, loc="center")
 
     for ax, panel_label in zip(axes, ("(a)", "(b)")):
-        ax.text(
-            -0.12,
-            1.04,
-            panel_label,
-            transform=ax.transAxes,
-            ha="left",
-            va="top",
-            fontweight="bold",
-            color=TEXT,
-        )
+        if panel_label == "(a)":
+            ax.text(
+                -0.135,
+                1.065,
+                panel_label,
+                transform=ax.transAxes,
+                ha="left",
+                va="top",
+                fontweight="bold",
+                color=TEXT,
+            )
+        else:
+            ax.text(
+                -0.22,
+                1.065,
+                panel_label,
+                transform=ax.transAxes,
+                ha="left",
+                va="top",
+                fontweight="bold",
+                color=TEXT,
+            )
 
     handles = [
-        Line2D([], [], color=COLORS[r], marker=PENALTY_MARKERS[k], markersize=4, linestyle="")
+        Line2D(
+            [],
+            [],
+            color=COLORS[r],
+            marker=PENALTY_MARKERS[k],
+            markersize=4,
+            linestyle="",
+        )
         for k, r in enumerate(penalties)
     ]
     handles.append(Line2D([], [], color=MUTED, linewidth=0.8, linestyle=(0, (4, 2))))

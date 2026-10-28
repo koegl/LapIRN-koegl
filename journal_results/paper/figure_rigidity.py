@@ -165,16 +165,28 @@ def main() -> None:
         color=MUTED,
     )
     for ax, panel_label in zip(axes.flat, ("(a)", "(b)", "(c)", "(d)")):
-        ax.text(
-            -0.12,
-            1.04,
-            panel_label,
-            transform=ax.transAxes,
-            ha="left",
-            va="top",
-            fontweight="bold",
-            color=TEXT,
-        )
+        if panel_label in ("(a)", "(c)"):
+            ax.text(
+                -0.175,
+                1.065,
+                panel_label,
+                transform=ax.transAxes,
+                ha="left",
+                va="top",
+                fontweight="bold",
+                color=TEXT,
+            )
+        else:
+            ax.text(
+                -0.12,
+                1.065,
+                panel_label,
+                transform=ax.transAxes,
+                ha="left",
+                va="top",
+                fontweight="bold",
+                color=TEXT,
+            )
 
     handles = [
         Line2D([], [], color=c, marker="o", markersize=3, linewidth=1.5, label=label)

@@ -17,12 +17,11 @@ import json
 import matplotlib
 
 matplotlib.use("Agg")
+import common  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
-
-import common  # noqa: E402
 
 PAPER_FIGURE_DIR = common.REPO.parent / "psmareg-extension" / "figures"
 SWEEP_DIR = common.REPO / "evaluation_official_scorer" / "rigidity_sweep"
@@ -117,8 +116,8 @@ def main() -> None:
             ax.spines[side].set_visible(False)
     for ax, panel_label in zip(axes, ("(a)", "(b)")):
         ax.text(
-            -0.12,
-            1.04,
+            -0.16,
+            1.07,
             panel_label,
             transform=ax.transAxes,
             ha="left",
