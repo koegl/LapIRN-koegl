@@ -306,7 +306,10 @@ Squares denote the network output after training with the losses, and circles de
 For the configuration without either loss group, $\times$ denotes the network output and $\star$ denotes the result after IO.
 Error bars show 95\,\% confidence intervals from a patient-cluster bootstrap."""
     else:
-        caption = rf"""Per-lesion absolute total lesion glycolysis (TLG) change on the test set ({n_lesions} lesions from {n_patients} patients and {n_pairs} pairs after excluding {n_excluded} components smaller than five voxels), stratified by location (soft tissue or bone-associated, with $\geq$50\,\% of the lesion on bone) and size (small $<0.5$~ml, medium $0.5$ to $<5$~ml, large $\geq5$~ml).
+        caption = rf"""Per-lesion absolute total lesion glycolysis (TLG) change on the test set, stratified by location and size.
+The analysis includes {n_lesions} lesions from {n_patients} patients and {n_pairs} pairs after excluding {n_excluded} components smaller than five voxels.
+Lesions are classified as soft-tissue or bone-associated, with bone association defined by at least 50\,\% overlap with bone.
+Size groups are small ($<0.5$~ml), medium ($0.5$ to $<5$~ml), and large ($\geq5$~ml).
 Points show the median per-lesion $|\Delta\mathrm{{TLG}}|$.
 Panel (a) shows the network output, and panel (b) shows the result after instance optimization (IO) with the same PET-preservation and bone-rigidity loss configuration.
 Colors identify which PET-preservation and bone-rigidity losses are applied.

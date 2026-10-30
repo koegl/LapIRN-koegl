@@ -229,7 +229,9 @@ def main() -> None:
     tex = r"""\begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/rigidity.pdf}
-\caption{Sweep of bone-rigidity weights on the validation set (26 patients, 38 pairs): network trained with the PET-preservation losses, followed by instance optimization (IO) with the PET-preservation terms and one bone-rigidity penalty at $0.1$ to $100$ times its calibrated reference weight (factors at the ends of each line).
+\caption{Sweep of bone-rigidity weights on the validation set (26 patients, 38 pairs).
+The network was trained with the PET-preservation losses and followed by instance optimization (IO) with the PET-preservation terms and one bone-rigidity penalty at $0.1$ to $100$ times its calibrated reference weight.
+The factors are shown at the ends of each line.
 The top row shows CT-organ Dice, and the bottom row shows bone Dice.
 The left column shows distortion of short (5--15~mm) within-bone distances, and the right column shows distortion of long ($\geq15$~mm) distances.
 Distortion is the mean absolute relative change in distance between point pairs in the same bone.

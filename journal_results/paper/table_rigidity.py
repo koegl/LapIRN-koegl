@@ -114,7 +114,8 @@ def full_table(patients) -> str:
     n = len(patients["R1"])
     return rf"""\begin{{table}}[t]
 \centering
-\caption{{All measures of the bone-rigidity comparison on the test set using the network trained with the PET-preservation losses followed by instance optimization (IO) with the PET-preservation terms and one bone-rigidity penalty at the weight chosen on the validation set.
+\caption{{Bone-rigidity comparison on the test set.
+The network was trained with the PET-preservation losses and followed by instance optimization (IO) with the PET-preservation terms and one validation-selected bone-rigidity penalty.
 Alignment and bone-rigidity measures include {n} patients and 38 pairs, whereas PET-preservation measures include 26 patients and 30 pairs.
 Bone rigidity: residual of a rigid fit to each bone (minimized by the rigid-fit penalty), Staring energy (minimized by the Staring penalty), and distortion of short (5--15~mm) and long ($\geq15$~mm) within-bone distances (minimized by neither).
 HD95 denotes the 95th-percentile Hausdorff distance over bones and soft-tissue organs.

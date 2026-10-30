@@ -169,7 +169,8 @@ def main() -> None:
     tex = r"""\begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{figures/rigidity_preservation.pdf}
-\caption{Effect of bone-rigidity weight on lesion preservation on the validation set (26 patients, 32 lesion-positive pairs): network trained with the PET-preservation losses, followed by instance optimization (IO) with the PET-preservation terms and one bone-rigidity penalty at $0.1$ to $100$ times its calibrated reference weight.
+\caption{Effect of bone-rigidity weight on lesion preservation on the validation set (26 patients, 32 lesion-positive pairs).
+The network was trained with the PET-preservation losses and followed by instance optimization (IO) with the PET-preservation terms and one bone-rigidity penalty at $0.1$ to $100$ times its calibrated reference weight.
 (a)~Absolute metabolic tumor volume (MTV) change and (b)~absolute total lesion glycolysis (TLG) change.
 Color identifies the bone-rigidity penalty.
 The star and dashed line denote IO without bone rigidity (weight 0).
