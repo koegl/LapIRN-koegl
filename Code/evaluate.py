@@ -18,6 +18,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn.functional as F
+import tqdm
+from scipy import ndimage
+
 import affine_reg
 import bone_metrics
 import Functions
@@ -26,14 +33,8 @@ import instance_opt
 import jacobian
 import miccai2020_model_stage
 import my_data
-import numpy as np
-import pandas as pd
 import synthetic
-import torch
-import torch.nn.functional as F
-import tqdm
 from config import DATA_PATH, TrainingConfig
-from scipy import ndimage
 
 # --- training runs: plan ID -> cluster run name (as in the .pth file names) ---
 TRAINING_RUNS: Dict[str, str] = {
@@ -82,6 +83,9 @@ class EvalRun:
     # False: score the moving scan as it is (no resampling at all); only for
     # the identity, where it gives the exact "initial" row (MTV / TLG change 0)
     warp: bool = True
+    # True: the network sees PET channels set to zero (CT-only inference); the
+    # evaluation still uses the real PET
+    zero_pet: bool = False
 
 
 IO_NONE = IOSpec(pet=False, rigidity=False)
@@ -131,6 +135,8 @@ EVAL_RUNS: Dict[str, EvalRun] = {
     "T2": EvalRun("T2"),
     "T3": EvalRun("T3"),
     "T4": EvalRun("T4"),
+    "T1-ct": EvalRun("T1", zero_pet=True),  # CT-only inference (PET input zero)
+    "T4-ct": EvalRun("T4", zero_pet=True),  # CT-only inference (PET input zero)
     "T1-tum": EvalRun("T1", checkpoint="best_tumour"),
     "I1": EvalRun("T1", IO_NONE),
     "I2": EvalRun("T2", IO_PET),
@@ -538,7 +544,13 @@ def register_pair(
     else:
         with torch.no_grad():
             X_affine = transform(X, flow_affine, grid_full)
-            F_X_Y, _, _, _, _, _, _ = model(X_affine, Y)
+            Y_in = Y
+            if run.zero_pet:
+                X_affine = X_affine.clone()
+                X_affine[:, 1] = 0.0
+                Y_in = Y.clone()
+                Y_in[:, 1] = 0.0
+            F_X_Y, _, _, _, _, _, _ = model(X_affine, Y_in)
 
     # compose affine (outer) with the network field (inner), so IO optimises
     # and the evaluation scores the TOTAL transform of the original moving image

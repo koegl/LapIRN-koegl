@@ -110,10 +110,15 @@ def main() -> None:
     )
     tex = rf"""\begin{{table}}[t]
 \centering
-\caption{{Effect of the PET-preservation and bone-rigidity losses and of where they act on the test set (CT Dice: {n} patients, {n_pairs} pairs; metabolic tumor volume [MTV] and total lesion glycolysis [TLG]: {n_pet} patients, {n_pet_pairs} pairs); numerical values from Fig.~\ref{{fig:q2}}.
-Left: network trained with a given PET-preservation and bone-rigidity loss configuration, without instance optimization (IO); middle: the same network followed by IO with the same configuration; right: the network trained without either loss group followed by IO with the stated configuration.
-Values are mean$\pm$SD over patients after averaging each patient's eligible pairs.
-$^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than without either loss group in the same block (for the right block: the network without either group followed by IO); $^{{*}}$: significantly different from the same configuration in training and IO (two-sided Wilcoxon signed-rank tests on patient values, Holm-corrected over three comparisons within each column, $p<0.05$).}}
+\caption{{Effect of the PET-preservation and bone-rigidity losses and of where they act on the test set, with numerical values from Fig.~\ref{{fig:q2}}.
+CT-organ Dice includes {n} patients and {n_pairs} pairs, whereas metabolic tumor volume (MTV) and total lesion glycolysis (TLG) include {n_pet} patients and {n_pet_pairs} pairs.
+The left block shows each network without instance optimization (IO).
+The middle block shows the same network followed by IO with the same loss configuration.
+The right block shows the network trained without either loss group followed by IO with the stated configuration.
+Values are mean$\pm$standard deviation (SD) over patients after averaging each patient's eligible pairs.
+$^{{\dagger}}$/$^{{\ddagger}}$ denote significantly better/worse results than without either loss group in the same block.
+For the right block, the reference is the network without either loss group followed by IO.
+$^{{*}}$ denotes a significant difference from the same configuration in training and IO (two-sided Wilcoxon signed-rank tests on patient values, Holm-corrected over three comparisons within each column, $p<0.05$).}}
 \label{{tab:ablations}}
 \resizebox{{\textwidth}}{{!}}{{%
 \begin{{tabular}}{{l{"c" * (len(BLOCKS) * n_cols)}}}

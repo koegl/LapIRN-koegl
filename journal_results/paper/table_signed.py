@@ -40,9 +40,10 @@ def main() -> None:
     header = " & ".join(rf"\multicolumn{{2}}{{c}}{{{name}}}" for _, name in COLUMNS)
     tex = rf"""\begin{{table}}[t]
 \centering
-\caption{{Signed change in metabolic tumor volume (MTV) and total lesion glycolysis (TLG) caused by registration on the test set ({len(n_patients)} patients, 30 lesion-positive pairs): positive values mean that the warped lesions are larger or have greater total uptake.
-Methods are as in Table~\ref{{tab:baselines}}; Training / IO indicates where losses are used, and PET + rig. denotes PET-preservation and bone-rigidity losses.
-Values are mean$\pm$SD and median over patients after averaging each patient's eligible pairs.}}
+\caption{{Registration-induced signed change in metabolic tumor volume (MTV) and total lesion glycolysis (TLG) on the test set ({len(n_patients)} patients, 30 lesion-positive pairs): positive values mean that the warped lesions are larger or have greater total uptake.
+Training and instance optimization (IO) indicate where losses are applied, and PET + rig. denotes the PET-preservation and bone-rigidity losses.
+A dash denotes no losses or no IO, and basic denotes IO with only similarity and deformation-regularization terms.
+Values are mean$\pm$standard deviation (SD) and median over patients after averaging each patient's eligible pairs.}}
 \label{{tab:signed}}
 \small
 \resizebox{{\textwidth}}{{!}}{{%

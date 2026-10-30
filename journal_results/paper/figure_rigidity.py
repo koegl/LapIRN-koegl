@@ -41,7 +41,7 @@ X_AXES = (
     ("dist_distortion_long", r"Long-distance distortion (\%) $\downarrow$"),
 )
 Y_AXES = (
-    ("dice_ct", r"CT Dice (\%) $\uparrow$"),
+    ("dice_ct", r"CT-organ Dice (\%) $\uparrow$"),
     ("bone_dice", r"Bone Dice (\%) $\uparrow$"),
 )
 REFERENCE_COLOR = "#0b0b0b"
@@ -230,9 +230,13 @@ def main() -> None:
 \centering
 \includegraphics[width=\textwidth]{figures/rigidity.pdf}
 \caption{Sweep of bone-rigidity weights on the validation set (26 patients, 38 pairs): network trained with the PET-preservation losses, followed by instance optimization (IO) with the PET-preservation terms and one bone-rigidity penalty at $0.1$ to $100$ times its calibrated reference weight (factors at the ends of each line).
-Top: CT Dice; bottom: bone Dice; left: distortion of short (5--15~mm) and right: long ($\geq15$~mm) within-bone distances, defined as the mean absolute relative change in distance between point pairs in the same bone.
+The top row shows CT-organ Dice, and the bottom row shows bone Dice.
+The left column shows distortion of short (5--15~mm) within-bone distances, and the right column shows distortion of long ($\geq15$~mm) distances.
+Distortion is the mean absolute relative change in distance between point pairs in the same bone.
 Color identifies the bone-rigidity penalty.
-Star: IO without bone rigidity; dashed line in (a,~b): selection threshold two Dice points below the reference; outlined marker: weight chosen for the test set, the largest within the threshold up to $\times100$.
+The star denotes IO without bone rigidity.
+The dashed line in (a,~b) denotes the selection threshold two Dice points below the reference.
+The outlined marker denotes the weight chosen for the test set, which is the largest within the threshold up to $\times100$.
 Points are means over patients after averaging each patient's pairs.}
 \label{fig:rigidity}
 \end{figure}

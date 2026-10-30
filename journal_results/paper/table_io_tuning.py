@@ -4,7 +4,7 @@ The two tuning stages of journal_results/official_scorer (select_stage.py,
 evaluation_official_scorer/io_tuning/chosen.json): learning rate x iterations,
 then a common scale of the four PET weights, on the network trained with both
 losses. Selection rule: the lowest |MTV change| + |TLG change| among the
-candidates within 2 Dice points of the most accurate one. Patient means.
+candidates within 2 CT-organ Dice points of the most accurate one. Patient means.
 
     ../../.venv/bin/python table_io_tuning.py  ->  out/tables/io_tuning.tex
 """
@@ -49,15 +49,19 @@ def main() -> None:
     body = "\n".join(lines[:-1])
     tex = rf"""\begin{{table}}[t]
 \centering
-\caption{{Instance-optimization (IO) tuning on the validation set (CT Dice: 26 patients, 38 pairs; metabolic tumor volume [MTV] and total lesion glycolysis [TLG]: 26 patients, 32 lesion-positive pairs), using the network trained with the PET-preservation and bone-rigidity losses.
-Stage 1 varies learning rate and iterations; stage 2 varies the common scale of the four PET weights relative to the training-derived values.
-Within each stage, the chosen setting (bold) has the lowest $|\Delta\mathrm{{MTV}}|+|\Delta\mathrm{{TLG}}|$ among candidates within two Dice points of the most accurate one (``Within'').
-Candidates are sorted by Dice; values are means over patients after averaging eligible pairs; the bone-rigidity weight was fixed at 0.25 (Sec.~\ref{{sect:tuning}}).}}
+\caption{{Instance-optimization (IO) tuning on the validation set using the network trained with the PET-preservation and bone-rigidity losses.
+CT-organ Dice includes 26 patients and 38 pairs, whereas metabolic tumor volume (MTV) and total lesion glycolysis (TLG) include 26 patients and 32 lesion-positive pairs.
+Stage 1 varies learning rate and iterations.
+Stage 2 varies the common scale of the four PET-preservation loss weights relative to the training-derived values.
+Within each stage, the chosen setting (bold) has the lowest $|\Delta\mathrm{{MTV}}|+|\Delta\mathrm{{TLG}}|$ among candidates within two points of the highest CT-organ Dice (``Within'').
+HD95 denotes the 95th-percentile Hausdorff distance, NDV non-diffeomorphic volume, and ppm parts per million.
+Candidates are sorted by CT-organ Dice.
+Values are means over patients after averaging eligible pairs, and the bone-rigidity weight was fixed at 0.25 (Sec.~\ref{{sect:tuning}}).}}
 \label{{tab:io_tuning}}
 \resizebox{{\textwidth}}{{!}}{{%
 \begin{{tabular}}{{l{"c" * (N_COLUMNS - 1)}}}
 \toprule
-Candidate & Dice (\%) & HD95 (mm) & $|\Delta\mathrm{{MTV}}|$ (\%) & $|\Delta\mathrm{{TLG}}|$ (\%) & Sum (\%) & NDV (ppm) & Within \\
+Candidate & CT-organ Dice (\%) & HD95 (mm) & $|\Delta\mathrm{{MTV}}|$ (\%) & $|\Delta\mathrm{{TLG}}|$ (\%) & Sum (\%) & NDV (ppm) & Within \\
 \midrule
 {body}
 \bottomrule

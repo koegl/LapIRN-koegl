@@ -296,7 +296,9 @@ def main(metric: str) -> None:
     n_patients = lesions["T1"]["case_id"].nunique()
     n_pairs = lesions["T1"][["case_id", "tp_moving"]].drop_duplicates().shape[0]
     if metric == "MTV":
-        caption = rf"""Per-lesion absolute volume change on the test set ({n_lesions} lesions from {n_patients} patients and {n_pairs} pairs after excluding {n_excluded} components smaller than five voxels), stratified by location (soft tissue or bone-associated, with $\geq$50\,\% of the lesion on bone) and size (small $<0.5$~ml, medium $0.5$ to $<5$~ml, large $\geq5$~ml).
+        caption = rf"""Per-lesion absolute metabolic tumor volume (MTV) change on the test set, stratified by lesion location and size.
+The analysis includes {n_lesions} lesions from {n_patients} patients and {n_pairs} pairs after excluding {n_excluded} components smaller than five voxels.
+Lesions are classified as soft tissue or bone-associated ($\geq50\,\%$ on bone) and as small ($<0.5$~ml), medium ($0.5$ to $<5$~ml), or large ($\geq5$~ml).
 Points show the median per-lesion $|\Delta\mathrm{{MTV}}|$.
 Panel (a) shows the network output, and panel (b) shows the result after instance optimization (IO) with the same PET-preservation and bone-rigidity loss configuration.
 Colors identify which PET-preservation and bone-rigidity losses are applied.

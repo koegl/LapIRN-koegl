@@ -113,15 +113,16 @@ def main() -> None:
 \caption{{Comparison with baselines on the test set.
 CT-organ Dice, HD95, and NDV include {n_patients} patients and {n_pairs} follow-up$\rightarrow$baseline pairs.
 The PET-preservation metrics include {n_pet} patients and {n_pet_pairs} pairs.
-Values are mean$\pm$SD over patients.
-HD95 denotes the 95th-percentile Hausdorff distance, MTV metabolic tumor volume, TLG total lesion glycolysis, and NDV non-diffeomorphic volume.
+Values are mean$\pm$standard deviation (SD) over patients.
+HD95 denotes the 95th-percentile Hausdorff distance, MTV metabolic tumor volume, TLG total lesion glycolysis, NDV non-diffeomorphic volume, and ppm parts per million.
 Rank is the descriptive challenge composite rank with its 95\,\% patient-bootstrap interval.
 Initial serves as a reference and is excluded from the ranking.
-The Training and IO columns show where the PET-preservation and bone-rigidity losses are applied.
+The Training and instance optimization (IO) columns show where the PET-preservation and bone-rigidity losses are applied.
+``PET + rig.'' denotes both loss groups together.
 In the IO column, ``--'' denotes no IO and ``basic'' denotes IO with only the similarity and deformation-regularization terms.
 $^{{\dagger}}$ and $^{{\ddagger}}$ indicate that our selected method (last row) is significantly better or worse, respectively, after Holm correction at $p<0.05$ (Sec.~\ref{{sect:statistics}}).
 NDV tests apply the 0.005\,\% equivalence threshold, and $>$ thr. gives the percentage of individual pairs above this threshold.
-Runtime is reported per pair and includes affine pre-registration.
+Runtime is reported per pair and includes affine registration.
 Bold indicates the best mean among ranked methods.}}
 \label{{tab:baselines}}
 \scriptsize

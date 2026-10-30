@@ -120,7 +120,8 @@ def table(cells, groups, caption: str, label: str) -> str:
         rf"\cmidrule(lr){{{2 + 2 * i}-{3 + 2 * i}}}" for i in range(len(groups))
     )
     metrics = " & ".join(
-        [r"$|\Delta\mathrm{MTV}|$", r"$|\Delta\mathrm{TLG}|$"] * len(groups)
+        [r"MTV (\%)", r"TLG (\%)"]
+        * len(groups)
     )
     lines = []
     for run, name in RUNS.items():

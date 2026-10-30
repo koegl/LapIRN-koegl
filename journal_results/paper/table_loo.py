@@ -61,16 +61,18 @@ def main() -> None:
     n_pet_pairs = pair_rows["mtv_bias"].notna().sum()
     tex = rf"""\begin{{table}}[t]
 \centering
-\caption{{Diagnostic contribution analysis of each PET term in instance optimization (IO) on the test set (CT Dice: {n} patients, {n_pairs} pairs; metabolic tumor volume [MTV] and total lesion glycolysis [TLG]: {n_pet} patients, {n_pet_pairs} pairs): network trained without PET losses (T1), followed by IO with all PET terms or with one term removed.
-Mean$\pm$SD over patients.
+\caption{{Diagnostic contribution analysis of each PET-preservation term in instance optimization (IO) on the test set.
+CT-organ Dice includes {n} patients and {n_pairs} pairs, whereas metabolic tumor volume (MTV) and total lesion glycolysis (TLG) include {n_pet} patients and {n_pet_pairs} pairs.
+The network is trained without PET-preservation losses and followed by IO with all PET-preservation terms or with one term removed.
+Mean$\pm$standard deviation (SD) over patients.
 $^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than with all terms (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over four comparisons within each column, $p<0.05$).
-This test-set analysis was not used to select a reduced loss.}}
+This test-set analysis was not used to select a reduced PET-preservation objective.}}
 \label{{tab:loo}}
 \scriptsize
 \setlength{{\tabcolsep}}{{3pt}}
 \begin{{tabular}}{{l{"c" * len(METRICS)}}}
 \toprule
-IO PET terms & {" & ".join(METRIC_COLUMNS[m][0] for m in METRICS)} \\
+IO PET-preservation terms & {" & ".join(METRIC_COLUMNS[m][0] for m in METRICS)} \\
 \midrule
 {chr(10).join(rows)}
 \bottomrule

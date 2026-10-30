@@ -83,7 +83,7 @@ EXTERNAL_TIMINGS = {"B3": "niftyreg", "B4": "convexadam"}
 
 # column -> (header, higher is better, scale, decimals, test column)
 METRIC_COLUMNS: Dict[str, tuple] = {
-    "dice_ct": (r"Dice (\%) $\uparrow$", True, 100.0, 1, "dice_ct"),
+    "dice_ct": (r"CT-organ Dice (\%) $\uparrow$", True, 100.0, 1, "dice_ct"),
     "hd95": (r"HD95 (mm) $\downarrow$", False, 1.0, 2, "hd95"),
     "mtv_bias": (
         r"$|\Delta\mathrm{MTV}|$ (\%) $\downarrow$",

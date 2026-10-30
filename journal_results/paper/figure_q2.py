@@ -66,7 +66,7 @@ PAIRS = {"PET": ("I2", "I5"), "Rigidity": ("I3", "I6"), "PET + rigidity": ("I4",
 X_METRIC = "dice_ct"
 Y_METRICS = ("mtv_bias", "tlg_bias")
 AXIS_LABELS = {
-    "dice_ct": r"CT Organ Dice (\%) $\uparrow$",
+    "dice_ct": r"CT-organ Dice (\%) $\uparrow$",
     "mtv_bias": r"$|\Delta\mathrm{MTV}|$ (\%) $\downarrow$",
     "tlg_bias": r"$|\Delta\mathrm{TLG}|$ (\%) $\downarrow$",
 }
@@ -309,7 +309,7 @@ def main() -> None:
 \caption{{Effect of the PET-preservation and bone-rigidity losses and of where they act on the test set: (a) metabolic tumor volume (MTV) change and (b) total lesion glycolysis (TLG) change against CT-organ Dice.
 CT-organ Dice includes {n} patients and {n_pairs} pairs, while MTV and TLG include {n_pet} patients and {n_pet_pairs} pairs.
 Colors identify which PET-preservation and bone-rigidity losses are used, including the configuration without either loss group.
-Markers identify where the losses act: a square denotes the network output after training with the losses, a filled circle denotes the result after subsequent IO with the same losses, and a filled triangle denotes IO using a network trained without these losses.
+Markers identify where the losses act: a square denotes the network output after training with the losses, a filled circle denotes the result after subsequent instance optimization (IO) with the same losses, and a filled triangle denotes IO using a network trained without these losses.
 For the configuration without either loss group, $\times$ denotes the network output and $\star$ denotes the result after IO.
 Lines connect configurations with the same loss configuration.
 Each point is the mean over patients after first averaging over image pairs within each patient.

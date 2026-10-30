@@ -195,7 +195,7 @@ def main() -> None:
         network_line(axes[0], before, COLORS[kind])
         x, stats = series(dice, f"{kind}_dice_1")
         curve(axes[0], x, stats, COLORS[kind], kind_marker[kind])
-    axes[0].set_title(r"CT Dice (\%) $\uparrow$", fontsize=8, color=TEXT)
+    axes[0].set_title(r"CT-organ Dice (\%) $\uparrow$", fontsize=8, color=TEXT)
 
     first = next(iter(masks.values()))
     for ax, metric, title in (
@@ -266,8 +266,8 @@ def main() -> None:
         )
     handles, names = [], []
     for kind, mask in (
-        ("gt", "provided labels"),
-        ("pred", "predicted labels (seen by IO)"),
+        ("gt", "reference masks"),
+        ("pred", "predicted masks (used by IO)"),
     ):
         handles += [
             plt.Line2D(
@@ -286,7 +286,7 @@ def main() -> None:
     handles.append(
         plt.Line2D([], [], color=GT_MASK_COLOR, marker="*", markersize=9, linestyle="")
     )
-    names.append("IO with provided\nlesion masks")
+    names.append("IO with reference\nlesion masks")
     fig.legend(
         handles,
         names,
@@ -311,12 +311,13 @@ def main() -> None:
 \includegraphics[width=\textwidth]{{figures/tradeoff.pdf}}
 \caption{{Effect of the PET-preservation loss weight during instance optimization (IO) on the test set: (a) CT-organ Dice, (b) metabolic tumor volume (MTV) change, and (c) total lesion glycolysis (TLG) change.
 The network trained without PET-preservation losses is followed by IO with all PET-preservation loss weights scaled by the stated factor, where 0 denotes no PET-preservation losses and 1 the training-derived weights.
-Metrics are computed on the predicted labels optimized during IO (orange squares) and on the provided evaluation labels (blue circles).
-CT-organ Dice includes {n_dice} patients and {n_dice_pairs} pairs, while MTV and TLG include {n_masks} patients and {n_mask_pairs} pairs with lesions in both label sets.
+Metrics are computed on the predicted organ and lesion masks optimized during IO (orange squares) and on the reference organ and lesion masks (blue circles).
+CT-organ Dice includes {n_dice} patients and {n_dice_pairs} pairs, while MTV and TLG include {n_masks} patients and {n_mask_pairs} pairs with lesions in both mask sets.
 Solid curves show the results after IO, and dashed lines show the network output before IO.
 The outlined point and dotted line identify the operating point selected on the validation set.
-Black stars show IO performed with the provided instead of the predicted lesion masks at $\times0.1$ and $\times1$, evaluated on the provided labels.
-Curves show means over patients after averaging eligible pairs, and bands show 95\,\% patient-bootstrap confidence intervals.}}
+Black stars show IO performed with the reference instead of the predicted lesion masks at $\times0.1$ and $\times1$, evaluated on the reference organ and lesion masks.
+The isolated black stars are shown without confidence intervals.
+Curves show means over patients after averaging eligible pairs, and their bands show 95\,\% patient-bootstrap confidence intervals.}}
 \label{{fig:tradeoff}}
 \end{{figure}}
 """

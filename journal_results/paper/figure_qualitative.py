@@ -6,7 +6,7 @@ of its own frame):
     row 1: fixed (CT with PET), moving (CT with PET), CT overlay of fixed and
            moving, CT overlay of fixed and warped moving (fixed green, other
            magenta: gray where they agree)
-    row 2: label residual (fixed minus moving / warped moving label ID, black
+    row 2: mask residual (fixed minus moving / warped moving mask, black
            where they agree); Jacobian determinant of the transform; warped
            moving (CT with PET)
 Ground-truth lesion masks are drawn as red contours on the CT + PET panels.
@@ -56,7 +56,7 @@ CT_WINDOW = (-400.0, 800.0)  # HU
 SUV_RANGE = (0.0, 8.0)  # PET, magma, no threshold
 PET_ALPHA = 0.35
 LESION_COLOR = "#e8000b"
-# label residual: shade per label group (bone full, organ medium, muscle dark)
+# mask residual: shade per mask group (bone full, organ medium, muscle dark)
 MUSCLE_LABELS = tuple(range(80, 90))  # gluteus, autochthon, iliopsoas
 GROUP_SHADE = np.full(118, 0.6)  # organs (incl. vessels)
 SACRUM = 25  # bone, but not in the rigidity label set
@@ -244,7 +244,7 @@ def main() -> None:
         )  # fixed green, other magenta
 
     def show_labels(ax, other) -> float:
-        """Label residual, colored as the CT overlay: green where the fixed
+        """Mask residual, colored as the CT overlay: green where the fixed
         scan's organ label is not matched by the other scan (unlabelled there
         or a different organ), magenta where only the other scan is labeled;
         black where the labels agree. The shade gives the group of the shown
@@ -282,7 +282,7 @@ def main() -> None:
 
     titles = [
         ["Fixed (baseline)", "Moving (follow-up)", "Fixed / moving", "Fixed / warped"],
-        ["Label residual before", "Label residual after", r"$\det J$", "Warped moving"],
+        ["Mask residual before", "Mask residual after", r"$\det J$", "Warped moving"],
     ]
     for i in range(2):
         for j in range(4):
@@ -307,14 +307,19 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[p]
 \centering
 \includegraphics[width=\textwidth]{{figures/qualitative.png}}
-\caption{{Anatomical alignment example from the test set, registered by {RUN_LABEL[RUN]}; one coronal slice.
-Patient {case_id} was selected for its large between-image change in lesion volume ({lesions["fixed"].sum()} voxels at baseline and {lesions["moving"].sum()} at follow-up), without considering the registration result.
+\caption{{Anatomical alignment example from the test set, registered by {RUN_LABEL[RUN]}.
+One coronal slice is shown.
+Patient {case_id} was selected for its large between-image change in lesion volume ({lesions["fixed"].sum()} voxels at baseline and {lesions["moving"].sum()} at follow-up).
 The example illustrates anatomical alignment and deformation.
-(a)~Fixed and (b)~moving CT with PET (SUV {SUV_RANGE[0]:g}--{SUV_RANGE[1]:g}, {100 * PET_ALPHA:.0f}\,\% opacity) and provided lesion contours (red).
-(c,~d)~CT of the fixed image (green) overlaid with the moving image (magenta) before~(c) and after~(d) registration; gray where they agree.
-(e,~f)~Organ labels that differ before~(e) and after~(f) registration: green where the fixed image has a label that the moving image lacks there, magenta where only the moving image is labeled; bright, medium, and dark shades for bones, organs, and muscles.
-(g)~Jacobian determinant of the fixed-to-moving sampling transform: white is volume-preserving (1), blue is below 1 and red is above 1; changes in the displayed warped anatomy have the opposite direction.
-(h)~Warped moving CT with PET and warped lesion contours.}}
+(a)~Fixed and (b)~moving CT images overlaid with the corresponding PET images (standardized uptake value (SUV) {SUV_RANGE[0]:g}--{SUV_RANGE[1]:g}, {100 * PET_ALPHA:.0f}\,\% opacity) and reference lesion contours (red).
+(c,~d)~Fixed CT image (green) overlaid with the moving CT image (magenta) before~(c) and after~(d) registration, with gray indicating agreement.
+(e,~f)~Organ masks that differ before~(e) and after~(f) registration.
+Green indicates that only the fixed mask is present, and magenta indicates that only the moving mask is present.
+Bright, medium, and dark shades denote bones, organs, and muscles.
+(g)~Jacobian determinant of the fixed-to-moving transformation.
+White is volume-preserving (1), blue is below 1, and red is above 1.
+Changes in the displayed warped anatomy have the opposite direction.
+(h)~Warped moving CT image overlaid with the corresponding PET image and warped lesion contours.}}
 \label{{fig:qualitative}}
 \end{{figure}}
 """

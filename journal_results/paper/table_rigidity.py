@@ -114,10 +114,15 @@ def full_table(patients) -> str:
     n = len(patients["R1"])
     return rf"""\begin{{table}}[t]
 \centering
-\caption{{All measures of the bone-rigidity comparison on the test set (alignment and bone rigidity: {n} patients, 38 pairs; PET preservation: 26 patients, 30 pairs), using the network trained with the PET-preservation losses followed by instance optimization (IO) with the PET-preservation terms and one bone-rigidity penalty at the weight chosen on the validation set.
+\caption{{All measures of the bone-rigidity comparison on the test set using the network trained with the PET-preservation losses followed by instance optimization (IO) with the PET-preservation terms and one bone-rigidity penalty at the weight chosen on the validation set.
+Alignment and bone-rigidity measures include {n} patients and 38 pairs, whereas PET-preservation measures include 26 patients and 30 pairs.
 Bone rigidity: residual of a rigid fit to each bone (minimized by the rigid-fit penalty), Staring energy (minimized by the Staring penalty), and distortion of short (5--15~mm) and long ($\geq15$~mm) within-bone distances (minimized by neither).
-HD95: 95th-percentile Hausdorff distance over bones and soft-tissue organs; near-bone soft tissue: soft-tissue organs within three voxels of a bone; Staring energy: sum of its properness, orthonormality, and affinity terms on the whole bone; NDV: non-diffeomorphic volume; NDV in bone band: in a three-voxel band around the bones.
-Mean$\pm$SD over patients; $^{{\dagger}}$/$^{{\ddagger}}$: significantly better/worse than without bone rigidity (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over the three penalties per row, $p<0.05$).}}
+HD95 denotes the 95th-percentile Hausdorff distance over bones and soft-tissue organs.
+Near-bone soft tissue denotes soft-tissue organs within three voxels of a bone.
+Staring energy is the sum of its properness, orthonormality, and affinity terms on the whole bone.
+NDV denotes non-diffeomorphic volume, ppm parts per million, and the bone band a three-voxel band around the bones.
+Values are mean$\pm$standard deviation (SD) over patients.
+$^{{\dagger}}$/$^{{\ddagger}}$ denote significantly better/worse results than without bone rigidity (two-sided Wilcoxon signed-rank test on patient values, Holm-corrected over the three penalties per row, $p<0.05$).}}
 \label{{tab:rigidity_full}}
 \resizebox{{\textwidth}}{{!}}{{%
 \begin{{tabular}}{{l{"c" * len(RUNS)}}}

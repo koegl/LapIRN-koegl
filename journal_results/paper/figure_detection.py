@@ -212,13 +212,14 @@ def main() -> None:
     tex = rf"""\begin{{figure}}[t]
 \centering
 \includegraphics[width=\textwidth]{{figures/detection.pdf}}
-\caption{{Effect of predicted lesion coverage on registration-induced metabolic tumor volume (MTV) and total lesion glycolysis (TLG) change in {n_patients} test patients ({shares["all"]} lesions, {n_pairs} image pairs).
+\caption{{Effect of predicted lesion coverage on registration-induced metabolic tumor volume (MTV) and total lesion glycolysis (TLG) change in {n_patients} test patients ({shares["all"]}, {n_pairs} image pairs).
 The predicted mask used during instance optimization (IO) defines three groups: missed (0\,\% coverage), partly covered ($<50\,\%$), and covered ($\geq50\,\%$).
 The groups contain {shares["missed"]}, {shares["partial"]}, and {shares["covered"]} lesions and account for 6\,\%, 6\,\%, and 88\,\% of total lesion volume, respectively.
 The network is trained without PET-preservation losses.
 For IO, PET $\times0$ denotes no PET-preservation losses, PET $\times0.1$ the validation-selected weights, and PET $\times1$ the training weights.
 Panels (a) and (c) show the absolute change within each coverage group, with the all-lesion evaluation metric shown by the black dashed line.
 Panels (b) and (d) show each group's contribution to the image-level change.
+Values are means over patients after averaging eligible image pairs within each patient.
 The stacked contributions can exceed the black evaluation value because opposing signed changes cancel in the image total.}}
 \label{{fig:detection}}
 \end{{figure}}

@@ -24,12 +24,14 @@ def main() -> None:
             )
         print(run, "  ".join(f"{g}: {cells[run, g][0]:.1f} / {cells[run, g][1]:.1f}" for g, _ in groups))
     caption = (
-        "Metabolic tumor volume (MTV) and total lesion glycolysis (TLG) change of all 1435 provided "
-        "lesion components in 26 test patients (30 pairs), grouped by how much of each component the "
-        "predicted lesion mask used by instance optimization (IO) covers; the network is trained "
-        "without PET losses and IO uses the PET weights scaled by the stated factor. Per image, the change of the "
-        "summed volume or uptake of the group's lesions relative to the unwarped moving image, "
-        r"in \%; mean over the patients with lesions in the group."
+        "Metabolic tumor volume (MTV) and total lesion glycolysis (TLG) change within lesion-coverage groups "
+        "in 26 test patients (1435 reference lesion components, 30 pairs). Components are grouped by the "
+        "fraction covered by the predicted lesion mask used during instance optimization (IO). Missed denotes "
+        "0\\,% coverage, partly covered less than 50\\,%, and covered at least 50\\,%. "
+        "The network is trained without PET-preservation losses. PET $\\times0$ denotes IO without "
+        "PET-preservation losses, PET $\\times0.1$ the tuned weights, and PET $\\times1$ the weights used "
+        "in network training. Values are percentage changes in the summed volume or uptake of each group "
+        "relative to the unwarped moving image, averaged over patients after averaging eligible image pairs."
     )
     detection.write(detection.table(cells, groups, caption, "tab:detection_groups"), "detection_groups")
 
